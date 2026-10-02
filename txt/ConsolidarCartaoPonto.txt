@@ -1,0 +1,814 @@
+' ==============================================================================================================
+' CONSOLIDAR CARTÃO PONTO - VERSÃO CORRIGIDA
+'
+' VISÃO GERAL (de onde vem / para onde vai)
+' -----------------------------------------------------------------------------------
+' DE ONDE VEM: a aba ATIVA no momento em que a macro é executada (wsOrigem = ActiveSheet).
+'   Espera-se que seja o export bruto e "impresso" do sistema Senior: um relatório com um
+'   bloco de texto solto por colaborador (linhas "Empregado:"/"Cargo:"/"Horários:") seguido
+'   de uma mini-tabela de dias (começando na linha "DT"), repetido para cada colaborador.
+'
+' PARA ONDE VAI: uma nova aba chamada "Cartao_Consolidado" (criada do zero, ou limpa e
+'   reaproveitada se já existir), com UMA LINHA POR DIA TRABALHADO de cada colaborador —
+'   é essa aba consolidada, no formato tabela normal, que alimenta o restante do fluxo de
+'   RH (ex.: é uma das fontes de entrada do macro GerarCSVPonto, que por sua vez alimenta
+'   o Painel de Ponto). Além de copiar os dados, este macro já calcula, nas últimas 5
+'   colunas ("Painel de Auditoria Estatística"), alguns sinais de inconsistência que
+'   ajudam o RH a revisar dias suspeitos sem precisar vasculhar o relatório original.
+'
+' PORQUE EXISTE: o relatório bruto do Senior não é uma tabela (não dá para filtrar, somar
+'   ou cruzar com outras planilhas do jeito que está). Este macro faz essa conversão uma
+'   vez por mês, sobre um arquivo que muda de "cara" a cada exportação (nomes, datas e
+'   quantidade de linhas variam), por isso a leitura é sempre pelo TEXTO dos rótulos
+'   ("Empregado:", "DT", "Horas normais:") e nunca por posição fixa de linha.
+'
+' O QUE FOI CORRIGIDO (4 correções). Procure por "*** CORREÇÃO n ***" no código.
+'
+' 1) LEITURA DO PERÍODO  -> era a causa do erro de mês. Agora lê o VALOR da célula
+'    (número de série de data), não o texto exibido. Não depende mais da largura da coluna.
+' 2) DATA VALIDADA PELO DIA DA SEMANA -> usa a coluna "Sem" do Senior (que é confiável)
+'    para descobrir o mês correto. Auto-corrige mesmo se o período vier torto.
+' 3) ÚLTIMA LINHA -> UsedRange.Rows.Count contava linhas, não retornava a última linha.
+'    Podia truncar o arquivo.
+' 4) CABEÇALHOS "50%", "60%" -> o Excel convertia em 0,5 e 0,6. Agora vão como texto.
+'
+' Se o período NÃO for encontrado, agora a macro AVISA e pergunta, em vez de assumir
+' silenciosamente o mês atual do computador (que era exatamente o que gerava o erro).
+'
+' MUDANÇA 5 - HORÁRIO DE CADA DIA (procure por "*** MUDANÇA 5 ***")
+' -----------------------------------------------------------------------------------
+' O cartão original tem, em cada dia, a coluna "Hor" com o CÓDIGO do horário que a pessoa
+' fez naquele dia (ex.: 0985, 3303, 9999 = DSR...), e no cabeçalho do colaborador a lista
+' "Horários:" com o código -> descrição de cada horário (ex.: 0985 = 08:00 12:00 13:12 18:00).
+' Um colaborador pode ter VÁRIOS horários no mesmo período (uma linha para cada, logo abaixo
+' de "Horários:").
+' Antes a macro ignorava a coluna "Hor" e gravava, em todos os dias, só a descrição do
+' PRIMEIRO horário da lista - ou seja, quem trocou de horário no meio do período aparecia com
+' o horário errado. Agora:
+'   - a coluna "Cód. Horário" traz o código do horário daquele dia, igual ao cartão original;
+'   - a coluna "Horário" traz a descrição DESSE código (buscada na lista "Horários:" do
+'     próprio colaborador). Códigos que não estão na lista (DSR, Compensado, Feriado...)
+'     ficam com "Horário" em branco - o que aconteceu no dia já aparece em "Descrição
+'     Marcação".
+' As colunas foram reorganizadas para seguir a ordem do cartão original (DT, Sem, Hor,
+' Marcações...): Matrícula, Nome, Cargo, Setor, DT, Sem, Cód. Horário, Horário, Ponto 1..6,
+' Descrição Marcação, Trabalho, BH, Just., Injus., 50%, 60%, 100%, 120%, Ad. Not. e as 5 colunas
+' de auditoria. Quem lê esta aba depois (GerarCSVPonto) procura as colunas pelo NOME do
+' cabeçalho, então a mudança de posição não quebra nada lá.
+' ==============================================================================================================
+
+' Posição de cada coluna na aba de DESTINO (Cartao_Consolidado). Tudo que escreve ou lê o
+' destino usa estas constantes: para mudar a ordem das colunas, basta mexer aqui (e no array
+' "cabecalhos", mais abaixo, que tem que seguir a mesma ordem).
+Private Const COL_MATRICULA As Integer = 1
+Private Const COL_NOME As Integer = 2
+Private Const COL_CARGO As Integer = 3
+Private Const COL_SETOR As Integer = 4
+Private Const COL_DT As Integer = 5
+Private Const COL_SEM As Integer = 6
+Private Const COL_COD_HORARIO As Integer = 7
+Private Const COL_HORARIO As Integer = 8
+Private Const COL_PONTO1 As Integer = 9          ' Ponto 1 a Ponto 6 = colunas 9 a 14
+Private Const COL_DESCRICAO As Integer = 15
+Private Const COL_TRABALHO As Integer = 16       ' Trabalho, BH, Just., Injus., 50%, 60%, 100%, 120%, Ad. Not. = 16 a 24
+Private Const COL_BH As Integer = 17
+Private Const COL_EXTRA50 As Integer = 20
+Private Const COL_EXTRA120 As Integer = 23
+Private Const COL_BANCO As Integer = 25
+Private Const COL_FALTANDO As Integer = 26
+Private Const COL_MAIS4 As Integer = 27
+Private Const COL_TOLERANCIA As Integer = 28
+Private Const COL_PROXIMOS As Integer = 29
+
+Sub ConsolidarCartaoPontoDefinitivo()
+
+    Dim wsOrigem As Worksheet
+    Dim wsDestino As Worksheet
+    Dim uLinha As Long
+    Dim i As Long
+    Dim j As Long
+    Dim linDestino As Long
+
+    Dim vMatricula As String, vNome As String, vCargo As String
+    Dim vSetor As String
+    Dim vCodHorario As String, vHorarioDoDia As String
+
+    ' *** MUDANÇA 5 *** código do horário -> descrição, do colaborador atual (lista "Horários:").
+    Dim dictHorarios As Object
+    Set dictHorarios = CreateObject("Scripting.Dictionary")
+    Dim lendoHorarios As Boolean
+
+    Dim flagPodeCapturar As Boolean
+    Dim celA As String, celB As String
+
+    Dim dataInicioRelatorio As Date, dataFimRelatorio As Date
+    Dim temPeriodo As Boolean
+    Dim diaAtual As Integer, mesAtual As Integer, anoAtual As Integer
+    Dim diaAnterior As Integer
+    Dim dataCompleta As Date
+    Dim semSenior As String
+
+    Dim celMarcacoes As String
+    Dim horarios() As String
+    Dim txtDescricao As String
+    Dim possuiHorarios As Boolean
+
+    Dim pt1 As String, pt2 As String, pt3 As String, pt4 As String
+    Dim pontosPreenchidos As Integer
+    Dim extraMenor15 As Boolean, faltaMenor15 As Boolean
+    Dim txtExtra As String, txtFalta As String
+    Dim txtP1 As String, txtP2 As String
+    Dim tempo1 As Date, tempo2 As Date
+    Dim diferenca As Double, minutosDiff As Double
+
+    Set wsOrigem = ActiveSheet
+
+    ' *** CORREÇÃO 3 ***
+    ' Antes: uLinha = wsOrigem.UsedRange.Rows.Count  -> isso devolve a QUANTIDADE de linhas.
+    ' Se o UsedRange não começar na linha 1 (o export do Senior começa com a linha 1 vazia),
+    ' o número fica menor que a última linha real e o laço para antes do fim do arquivo.
+    uLinha = wsOrigem.UsedRange.Row + wsOrigem.UsedRange.Rows.Count - 1
+
+    ' ==================================================================================================
+    ' 1. CRIAÇÃO DA PLANILHA DE DESTINO
+    ' ==================================================================================================
+    On Error Resume Next
+    Set wsDestino = Sheets("Cartao_Consolidado")
+    On Error GoTo 0
+
+    If wsDestino Is Nothing Then
+        Set wsDestino = Sheets.Add(After:=wsOrigem)
+        wsDestino.Name = "Cartao_Consolidado"
+    Else
+        wsDestino.Cells.Clear
+    End If
+
+    Application.ScreenUpdating = False
+    Application.Calculation = xlCalculationManual
+
+    ' ==================================================================================================
+    ' 2. CAPTURA DO PERÍODO
+    ' ==================================================================================================
+    temPeriodo = ExtrairPeriodoDoCabecalho(wsOrigem, dataInicioRelatorio, dataFimRelatorio)
+
+    ' *** CORREÇÃO 1 (parte 2) ***
+    ' Antes, se falhasse, ele assumia CALADO o mês atual do computador:
+    '   dataInicioRelatorio = DateSerial(Year(Date), Month(Date), 1)
+    ' Era isso que fazia a planilha sair sempre com o mês errado.
+    ' Agora a macro avisa e deixa você digitar o período.
+    If Not temPeriodo Then
+        Dim respIni As String, respFim As String
+        respIni = InputBox("Não consegui ler o período no cabeçalho do relatório." & vbCrLf & vbCrLf & _
+                           "Digite a DATA INICIAL do período (dd/mm/aaaa):", "Período não encontrado")
+        If respIni = "" Then GoTo Sair
+        respFim = InputBox("Digite a DATA FINAL do período (dd/mm/aaaa):", "Período não encontrado")
+        If respFim = "" Then GoTo Sair
+
+        On Error Resume Next
+        dataInicioRelatorio = CDate(respIni)
+        dataFimRelatorio = CDate(respFim)
+        If Err.Number <> 0 Then
+            MsgBox "Data inválida. Processo cancelado.", vbExclamation
+            GoTo Sair
+        End If
+        On Error GoTo 0
+    End If
+
+    mesAtual = Month(dataInicioRelatorio)
+    anoAtual = Year(dataInicioRelatorio)
+    diaAnterior = 0
+
+    ' ==================================================================================================
+    ' 3. CABEÇALHO DA PLANILHA DE DESTINO
+    ' ==================================================================================================
+    With wsDestino
+        .Range("A1:P1").Interior.Color = RGB(30, 30, 30)
+
+        With .Range("Q1:S1")
+            .Merge
+            .Value = "Horas faltas"
+            .Interior.Color = RGB(165, 0, 0)
+        End With
+
+        With .Range("T1:W1")
+            .Merge
+            .Value = "Horas extras"
+            .Interior.Color = RGB(0, 102, 51)
+        End With
+
+        .Range("X1:AC1").Interior.Color = RGB(30, 30, 30)
+        .Range("Y1").Value = "Painel de Auditoria Estatística"
+        .Range("Y1:AC1").Merge
+
+        ' *** CORREÇÃO 4 ***
+        ' Força a linha 2 a ser TEXTO antes de escrever. Sem isso o Excel lê "50%"
+        ' como percentual e guarda 0,5 — foi por isso que os cabeçalhos viraram 0,5 / 0,6 / 1 / 1,2.
+        .Range("A2:AC2").NumberFormat = "@"
+
+        ' Mesma ordem das constantes COL_... do topo do arquivo.
+        Dim cabecalhos As Variant
+        cabecalhos = Array("Matrícula", "Nome", "Cargo", "Setor", "DT", "Sem", "Cód. Horário", "Horário", _
+                           "Ponto 1", "Ponto 2", "Ponto 3", "Ponto 4", "Ponto 5", "Ponto 6", "Descrição Marcação", _
+                           "Trabalho", "BH", "Just.", "Injus.", "50%", "60%", "100%", "120%", "Ad. Not.", _
+                           "Banco de horas e extra no mesmo dia", "Ponto faltando", "Mais de 4 pontos", "Tolerância < 15min", "Batidas < 30min")
+
+        Dim col As Integer
+        For col = 0 To UBound(cabecalhos)
+            .Cells(2, col + 1).Value = cabecalhos(col)
+        Next col
+
+        .Range("A2:P2").Interior.Color = RGB(30, 30, 30)
+        .Range("Q2:S2").Interior.Color = RGB(165, 0, 0)
+        .Range("T2:W2").Interior.Color = RGB(0, 102, 51)
+        .Range("X2:AC2").Interior.Color = RGB(45, 45, 45)
+
+        With .Range("A1:AC2")
+            .Font.Name = "Arial"
+            .Font.Size = 9
+            .Font.Bold = True
+            .Font.Color = RGB(255, 255, 255)
+            .HorizontalAlignment = xlCenter
+            .VerticalAlignment = xlCenter
+            .WrapText = True
+        End With
+    End With
+
+    linDestino = 3
+    flagPodeCapturar = False
+
+    ' ==================================================================================================
+    ' 4. VARREDURA E EXTRAÇÃO
+    ' --------------------------------------------------------------------------------------------------
+    ' O QUE ESTA SEÇÃO FAZ, EM RESUMO:
+    ' O export do Senior (aba de ORIGEM) não é uma tabela: é um relatório "impresso" com um bloco de
+    ' texto solto para cada colaborador (linhas "Empregado:", "Cargo:", "Horários:") seguido de uma
+    ' mini-tabela de dias trabalhados (começando na linha cujo texto é exatamente "DT") e encerrado
+    ' por uma linha "Horas normais:". Este loop percorre a planilha de ORIGEM linha a linha, de cima
+    ' a baixo, e faz duas coisas ao mesmo tempo:
+    '   a) Reconhece essas linhas de "cabeçalho de bloco" (Empregado/Cargo/Horários/DT/Horas normais)
+    '      e usa elas só para ATUALIZAR variáveis de contexto (vMatricula, vNome, vCargo, vSetor e
+    '      a lista de horários dictHorarios) — nenhuma delas vira uma linha na planilha de DESTINO
+    '      sozinha.
+    '   b) Quando está "dentro" do bloco de dias (flagPodeCapturar = True) e encontra uma linha de
+    '      dia de verdade (coluna A numérica = dia do mês), copia os dados daquele dia para a próxima
+    '      linha livre da planilha de DESTINO (wsDestino), junto com o contexto (matrícula/nome/cargo/
+    '      setor/horário) capturado no passo (a) — é assim que cada linha de dia "herda" os dados do
+    '      colaborador a que pertence, mesmo sem essa informação estar repetida em cada linha do Senior.
+    '
+    ' flagPodeCapturar é o "interruptor": liga na linha "DT" (início da tabela de dias daquele
+    ' colaborador) e desliga na linha "Horas normais:" (fim da tabela). Isso impede que linhas de
+    ' rodapé/resumo do relatório (que também podem ter números na coluna A) sejam confundidas com
+    ' dias de trabalho.
+    ' ==================================================================================================
+    For i = 1 To uLinha
+
+        ' Lê o texto das colunas A e B desta linha da ORIGEM, em maiúsculas e sem o caractere de
+        ' espaço "não-quebrável" (Chr(160)) que exports do Senior costumam trazer — sem essa limpeza,
+        ' comparações como celA = "DT" falhariam silenciosamente por causa de um espaço invisível.
+        celA = UCase(Replace(Trim(wsOrigem.Cells(i, 1).Text), Chr(160), ""))
+        celB = UCase(Replace(Trim(wsOrigem.Cells(i, 2).Text), Chr(160), ""))
+
+        ' --------------------------------------------------------------------------------------------
+        ' Linha "Empregado: <matrícula> ... <nome>" -> início de um NOVO bloco de colaborador.
+        ' Reseta também o "relógio" de mês/ano (mesAtual/anoAtual) e diaAnterior para o início do
+        ' período do relatório: cada colaborador começa a contagem de dias do zero, senão um dia "31"
+        ' no fim do bloco do colaborador anterior enganaria a lógica sequencial (ver CORREÇÃO 2 mais
+        ' abaixo) do colaborador seguinte.
+        ' --------------------------------------------------------------------------------------------
+        If InStr(celA, "EMPREGADO:") > 0 Then
+            vMatricula = Trim(wsOrigem.Cells(i, 2).Value)   ' matrícula: coluna B da própria linha "Empregado:"
+            vNome = Trim(wsOrigem.Cells(i, 4).Value)        ' nome: coluna D da mesma linha
+            mesAtual = Month(dataInicioRelatorio)
+            anoAtual = Year(dataInicioRelatorio)
+            diaAnterior = 0
+            ' Novo colaborador: esquece o setor e a lista de horários do anterior.
+            vSetor = ""
+            dictHorarios.RemoveAll
+            lendoHorarios = False
+        End If
+
+        ' Linha "Cargo: <cargo>" -> guarda o cargo do colaborador atual (coluna B).
+        If InStr(celA, "CARGO:") > 0 Then
+            vCargo = Trim(wsOrigem.Cells(i, 2).Value)
+        End If
+
+        ' Linha "Localização: <código> ... <descrição>" -> o setor é a descrição, na coluna D.
+        If InStr(celA, "LOCALIZAÇÃO:") > 0 Or InStr(celA, "LOCALIZACAO:") > 0 Then
+            vSetor = Trim(wsOrigem.Cells(i, 4).Value)
+        End If
+
+        ' --------------------------------------------------------------------------------------------
+        ' *** MUDANÇA 5 *** Lista de horários do colaborador.
+        ' Formato no cartão original:
+        '     Horários:   3303   10:00 14:00 15:12 20:00     <- linha "Horários:" (1º horário)
+        '                 0985   08:00 12:00 13:12 18:00     <- coluna A vazia (2º, 3º... horário)
+        ' Coluna B = código, coluna C = descrição. A lista termina quando aparece qualquer linha com
+        ' texto na coluna A (normalmente "DT") ou uma linha sem código na coluna B ("Horas Faltas").
+        ' --------------------------------------------------------------------------------------------
+        If InStr(celA, "HORÁRIOS:") > 0 Or InStr(celA, "HORARIOS:") > 0 Then
+            lendoHorarios = True
+            ' Setor de reserva, caso o cartão não tenha a linha "Localização:" (layout antigo: o
+            ' setor fica na coluna D da linha ANTERIOR a "Horários:").
+            If vSetor = "" Then vSetor = Trim(wsOrigem.Cells(i - 1, 4).Value)
+        ElseIf celA <> "" Or celB = "" Then
+            lendoHorarios = False
+        End If
+
+        If lendoHorarios And celB <> "" Then
+            If Not dictHorarios.Exists(celB) Then
+                dictHorarios.Add celB, Trim(wsOrigem.Cells(i, 3).Text)
+            End If
+        End If
+
+        ' Linha cujo texto é exatamente "DT" -> é o CABEÇALHO da mini-tabela de dias deste
+        ' colaborador (as colunas seguintes viram "Ponto 1", "Ponto 2" etc. na planilha de destino).
+        ' Liga o interruptor de captura e pula direto para a próxima linha (GoTo ContinuarLoop): a
+        ' própria linha "DT" não tem dado de dia nenhum, só o rótulo.
+        If celA = "DT" Then
+            flagPodeCapturar = True
+            lendoHorarios = False
+            diaAnterior = 0
+            GoTo ContinuarLoop
+        End If
+
+        ' Linha "Horas normais:" -> fim da tabela de dias deste colaborador. Desliga o interruptor
+        ' até a próxima linha "DT" (do próximo colaborador) ligá-lo de novo.
+        If InStr(celA, "HORAS NORMAIS:") > 0 Then
+            flagPodeCapturar = False
+        End If
+
+        ' Só processa como "linha de dia" se: (1) o interruptor está ligado, (2) as colunas A e B não
+        ' estão vazias, (3) não é a própria linha "DT" (já tratada acima) e (4) a coluna A é um número
+        ' (o dia do mês) — é essa última checagem que filtra linhas em branco/rótulos residuais dentro
+        ' do bloco sem precisar de um segundo "fim de bloco" explícito.
+        If flagPodeCapturar Then
+            If celA <> "" And celB <> "" And celA <> "DT" And IsNumeric(celA) Then
+
+                diaAtual = CInt(celA)
+                semSenior = celB
+
+                ' --------------------------------------------------------------------------------
+                ' *** CORREÇÃO 2 ***
+                ' O Senior grava o dia da semana correto na coluna B. Usamos ele para descobrir
+                ' o mês certo, em vez de depender só da sequência dos dias.
+                ' A função procura, dentro do período do relatório, a única data que tem
+                ' ao mesmo tempo esse DIA DO MÊS e esse DIA DA SEMANA.
+                ' --------------------------------------------------------------------------------
+                dataCompleta = ResolverDataPorDiaSemana(diaAtual, semSenior, _
+                                                        dataInicioRelatorio, dataFimRelatorio)
+
+                If dataCompleta = 0 Then
+                    ' Não achou pelo dia da semana. Volta para a lógica sequencial original.
+                    If diaAnterior > 0 And diaAtual < diaAnterior Then
+                        mesAtual = mesAtual + 1
+                        If mesAtual > 12 Then
+                            mesAtual = 1
+                            anoAtual = anoAtual + 1
+                        End If
+                    End If
+                    On Error Resume Next
+                    dataCompleta = DateSerial(anoAtual, mesAtual, diaAtual)
+                    On Error GoTo 0
+                Else
+                    ' Mantém as âncoras sincronizadas com a data que acabou de ser resolvida.
+                    mesAtual = Month(dataCompleta)
+                    anoAtual = Year(dataCompleta)
+                End If
+
+                diaAnterior = diaAtual
+
+                ' ----------------------------------------------------------------------------------
+                ' Colunas de CONTEXTO do colaborador (capturados lá em cima, nas linhas "Empregado:"/
+                ' "Cargo:"/"Localização:") + a data já resolvida acima + o texto original da coluna
+                ' "Sem" (dia da semana, só para conferência visual — a data em si já está correta).
+                ' ----------------------------------------------------------------------------------
+                wsDestino.Cells(linDestino, COL_MATRICULA).Value = vMatricula
+                wsDestino.Cells(linDestino, COL_NOME).Value = vNome
+                wsDestino.Cells(linDestino, COL_CARGO).Value = vCargo
+                wsDestino.Cells(linDestino, COL_SETOR).Value = vSetor
+                wsDestino.Cells(linDestino, COL_DT).Value = dataCompleta
+                wsDestino.Cells(linDestino, COL_SEM).Value = wsOrigem.Cells(i, 2).Value
+
+                ' *** MUDANÇA 5 *** Código do horário DESTE dia (coluna C, "Hor", do cartão
+                ' original) e a descrição desse código na lista "Horários:" do colaborador.
+                ' O código é gravado como TEXTO para não perder o zero à esquerda ("0985").
+                ' (Mesma limpeza usada em celB, que é a chave da lista dictHorarios.)
+                vCodHorario = UCase(Replace(Trim(wsOrigem.Cells(i, 3).Text), Chr(160), ""))
+                vHorarioDoDia = ""
+                If vCodHorario <> "" Then
+                    If dictHorarios.Exists(vCodHorario) Then vHorarioDoDia = dictHorarios(vCodHorario)
+                End If
+                wsDestino.Cells(linDestino, COL_COD_HORARIO).NumberFormat = "@"
+                wsDestino.Cells(linDestino, COL_COD_HORARIO).Value = vCodHorario
+                wsDestino.Cells(linDestino, COL_HORARIO).Value = vHorarioDoDia
+
+                ' ----------------------------------------------------------------------------------
+                ' Coluna D da ORIGEM (nesta linha de dia) traz, tudo junto num único texto, as
+                ' batidas de ponto do dia (horários tipo "07:00") misturadas com texto descritivo
+                ' (ex.: "Folga", "Atestado"). SepararMarcacoesERecursos (função auxiliar no fim do
+                ' arquivo) usa uma Regex para separar os dois: devolve os horários encontrados em
+                ' "horarios()" e o texto restante (sem os horários) em "txtDescricao".
+                ' Cada horário encontrado vai para uma das colunas "Ponto 1" a "Ponto 6" do destino
+                ' (COL_PONTO1 em diante) — no máximo 6 batidas por dia são suportadas aqui.
+                ' ----------------------------------------------------------------------------------
+                celMarcacoes = Trim(wsOrigem.Cells(i, 4).Value)
+                possuiHorarios = SepararMarcacoesERecursos(celMarcacoes, horarios, txtDescricao)
+
+                If possuiHorarios Then
+                    Dim p As Integer
+                    Dim limiteSuperior As Integer
+                    limiteSuperior = UBound(horarios)
+
+                    For p = 0 To 5
+                        If p <= limiteSuperior Then
+                            If horarios(p) <> "" Then
+                                wsDestino.Cells(linDestino, COL_PONTO1 + p).Value = CDate(horarios(p))
+                                wsDestino.Cells(linDestino, COL_PONTO1 + p).NumberFormat = "hh:mm"
+                            End If
+                        End If
+                    Next p
+                End If
+
+                ' Texto descritivo restante (ex.: "Folga", "Atestado médico") vai para a coluna
+                ' "Descrição Marcação" do destino.
+                wsDestino.Cells(linDestino, COL_DESCRICAO).Value = txtDescricao
+
+                ' --------------------------------------------------------------------------------
+                ' Colunas "Trabalho" a "Ad. Not." do destino ("Trabalho", "BH", "Just.", "Injus.", "50%", "60%",
+                ' "100%", "120%", "Ad. Not."): vêm diretamente das colunas 7 a 15 da linha de dia na
+                ' ORIGEM (o Senior já calcula esses totais, este macro só copia). Arredondadas ao
+                ' minuto para eliminar os milissegundos residuais que o Senior exporta na fração de
+                ' dia (ex.: 0,0111111 = 15:59,999 em vez de 16:00 exato) — sem isso, comparações
+                ' futuras como "extra menor que 15 minutos" (mais abaixo) poderiam falhar por causa
+                ' de uma diferença de frações de segundo.
+                ' --------------------------------------------------------------------------------
+                For j = 7 To 15
+                    Dim vTemp As Variant
+                    vTemp = wsOrigem.Cells(i, j).Value
+                    If IsNumeric(vTemp) And vTemp <> "" Then
+                        wsDestino.Cells(linDestino, COL_TRABALHO + (j - 7)).Value = Round(CDbl(vTemp) * 1440, 0) / 1440
+                    Else
+                        wsDestino.Cells(linDestino, COL_TRABALHO + (j - 7)).Value = vTemp
+                    End If
+                Next j
+
+                ' ==============================================================================
+                ' MÓDULO DE AUDITORIA
+                ' ------------------------------------------------------------------------------
+                ' Daqui em diante, nada mais é copiado da ORIGEM: as 5 últimas colunas do destino
+                ' ("Painel de Auditoria Estatística") são calculadas AQUI, a partir dos próprios
+                ' valores que acabaram de ser gravados nas colunas anteriores desta mesma linha de
+                ' destino. Cada bloco abaixo cuida de uma coluna de auditoria diferente.
+                ' ==============================================================================
+
+                ' ---- Auditoria 1: "Banco de horas e extra no mesmo dia" -------------------------
+                ' Sinaliza "Sim" quando, no MESMO dia, a coluna "BH" (banco de horas) está
+                ' preenchida E pelo menos uma das colunas de hora extra (50%/60%/100%/120%)
+                ' também está. Isso é usado depois pela GerarCSVPonto como indício de inconsistência
+                ' (ver "Auditoria de 3 meses" na documentação daquele outro macro).
+                Dim temExtra As Boolean
+                temExtra = False
+                For j = COL_EXTRA50 To COL_EXTRA120
+                    If Trim(wsDestino.Cells(linDestino, j).Value) <> "" Then temExtra = True
+                Next j
+
+                If Trim(wsDestino.Cells(linDestino, COL_BH).Value) <> "" And temExtra Then
+                    wsDestino.Cells(linDestino, COL_BANCO).Value = "Sim"
+                End If
+
+                ' ---- Auditoria 2: "Ponto faltando" ----------------------------------------------
+                ' Olha só para os 4 primeiros pontos do dia (Ponto 1 a Ponto 4).
+                ' Sinaliza um padrão específico de assimetria: os 2 primeiros pontos vazios com os 2
+                ' últimos preenchidos (pode faltar a entrada), ou o oposto (pode faltar a saída) —
+                ' um jeito simples de pegar o caso mais comum de batida esquecida sem precisar de
+                ' regras mais complexas sobre pares de entrada/saída.
+                pt1 = Trim(wsDestino.Cells(linDestino, COL_PONTO1).Text)
+                pt2 = Trim(wsDestino.Cells(linDestino, COL_PONTO1 + 1).Text)
+                pt3 = Trim(wsDestino.Cells(linDestino, COL_PONTO1 + 2).Text)
+                pt4 = Trim(wsDestino.Cells(linDestino, COL_PONTO1 + 3).Text)
+
+                If pt1 = "" And pt2 = "" And pt3 <> "" And pt4 <> "" Then
+                    wsDestino.Cells(linDestino, COL_FALTANDO).Value = "Falta ponto"
+                ElseIf pt1 <> "" And pt2 <> "" And pt3 = "" And pt4 = "" Then
+                    wsDestino.Cells(linDestino, COL_FALTANDO).Value = "Falta ponto"
+                End If
+
+                ' ---- Auditoria 3: "Mais de 4 pontos" --------------------------------------------
+                ' Conta quantos dos 6 pontos possíveis (Ponto 1 a Ponto 6) estão preenchidos neste dia.
+                ' Mais de 4 batidas no mesmo dia é incomum (jornada normal tem 4: entrada, saída
+                ' almoço, retorno almoço, saída) e costuma indicar ajuste manual ou dia atípico —
+                ' sinalizado aqui para o RH revisar.
+                pontosPreenchidos = 0
+                For j = COL_PONTO1 To COL_PONTO1 + 5
+                    If Trim(wsDestino.Cells(linDestino, j).Value) <> "" Then
+                        pontosPreenchidos = pontosPreenchidos + 1
+                    End If
+                Next j
+                If pontosPreenchidos > 4 Then
+                    wsDestino.Cells(linDestino, COL_MAIS4).Value = "Sim"
+                End If
+
+                ' --------------------------------------------------------------------------------
+                ' Auditoria 4: Tolerância < 15 min.
+                ' Observação: compara com o VALOR numérico, não com o texto. A versão anterior
+                ' exigia InStr(txt, ":") > 0, então quando a célula estava formatada de outro jeito
+                ' a regra nunca disparava — foi por isso que essa coluna saiu 100% vazia.
+                ' --------------------------------------------------------------------------------
+                extraMenor15 = False
+                faltaMenor15 = False
+
+                Dim vExtra As Variant, vFalta As Variant
+                vExtra = wsDestino.Cells(linDestino, COL_EXTRA50).Value
+                vFalta = wsDestino.Cells(linDestino, COL_BH).Value
+
+                If IsNumeric(vExtra) And vExtra <> "" Then
+                    If CDbl(vExtra) > 0 And CDbl(vExtra) < TimeSerial(0, 15, 0) Then extraMenor15 = True
+                End If
+
+                If IsNumeric(vFalta) And vFalta <> "" Then
+                    If CDbl(vFalta) > 0 And CDbl(vFalta) < TimeSerial(0, 15, 0) Then faltaMenor15 = True
+                End If
+
+                If extraMenor15 And faltaMenor15 Then
+                    wsDestino.Cells(linDestino, COL_TOLERANCIA).Value = "Extra e Falta < 15min"
+                ElseIf extraMenor15 Then
+                    wsDestino.Cells(linDestino, COL_TOLERANCIA).Value = "Extra < 15min"
+                ElseIf faltaMenor15 Then
+                    wsDestino.Cells(linDestino, COL_TOLERANCIA).Value = "Falta < 15min"
+                End If
+
+                ' ---- Auditoria 5: "Batidas < 30min" ---------------------------------------------
+                ' Compara cada par de pontos CONSECUTIVOS do dia (Ponto1-Ponto2, Ponto2-Ponto3, ...,
+                ' até Ponto5-Ponto6) e sinaliza o primeiro par cuja diferença seja de 30 minutos ou
+                ' menos — duas batidas tão próximas costumam ser erro de registro (dedo duplo no
+                ' relógio de ponto, por exemplo). Para no primeiro par encontrado (Exit For): só
+                ' precisa sinalizar que o dia tem o problema, não listar todos os pares.
+                For j = COL_PONTO1 To COL_PONTO1 + 4
+                    txtP1 = Trim(wsDestino.Cells(linDestino, j).Text)
+                    txtP2 = Trim(wsDestino.Cells(linDestino, j + 1).Text)
+
+                    If txtP1 <> "" And txtP2 <> "" And InStr(txtP1, ":") > 0 And InStr(txtP2, ":") > 0 Then
+                        On Error Resume Next
+                        tempo1 = CDate(txtP1)
+                        tempo2 = CDate(txtP2)
+
+                        If Err.Number = 0 Then
+                            diferenca = Abs(tempo2 - tempo1)
+                            minutosDiff = diferenca * 24 * 60
+
+                            If Round(minutosDiff, 0) <= 30 Then
+                                wsDestino.Cells(linDestino, COL_PROXIMOS).Value = "Sim (" & Format(tempo1, "hh:mm") & " e " & Format(tempo2, "hh:mm") & ")"
+                                Exit For
+                            End If
+                        End If
+                        On Error GoTo 0
+                    End If
+                Next j
+
+                linDestino = linDestino + 1
+            End If
+        End If
+
+ContinuarLoop:
+    Next i
+
+    ' ==================================================================================================
+    ' 5. FORMATAÇÃO FINAL
+    ' ==================================================================================================
+    With wsDestino
+        If linDestino > 3 Then
+            Dim rngDados As Range
+            Set rngDados = .Range("A3:AC" & linDestino - 1)
+            rngDados.Font.Name = "Arial"
+            rngDados.Font.Size = 9
+
+            .Range("E3:E" & linDestino - 1).NumberFormat = "dd/mm/yyyy"
+            .Range("I3:N" & linDestino - 1).NumberFormat = "hh:mm"
+            .Range("P3:X" & linDestino - 1).NumberFormat = "[h]:mm"
+
+            .Range("A3:D" & linDestino - 1).HorizontalAlignment = xlLeft
+            .Range("E3:G" & linDestino - 1).HorizontalAlignment = xlCenter
+            .Range("H3:H" & linDestino - 1).HorizontalAlignment = xlLeft
+            .Range("I3:N" & linDestino - 1).HorizontalAlignment = xlCenter
+            .Range("O3:O" & linDestino - 1).HorizontalAlignment = xlLeft
+            .Range("P3:X" & linDestino - 1).HorizontalAlignment = xlCenter
+            .Range("Y3:AC" & linDestino - 1).HorizontalAlignment = xlCenter
+        End If
+
+        .Columns("A:AC").AutoFit
+        .Range("A1").Select
+    End With
+
+Sair:
+    Application.Calculation = xlCalculationAutomatic
+    Application.ScreenUpdating = True
+
+    If linDestino > 3 Then
+        MsgBox "Planilha unificada com sucesso!" & vbCrLf & vbCrLf & _
+               "Período lido: " & Format(dataInicioRelatorio, "dd/mm/yyyy") & " a " & Format(dataFimRelatorio, "dd/mm/yyyy") & vbCrLf & _
+               "Linhas geradas: " & (linDestino - 3), vbInformation, "Automação Concluída"
+    End If
+End Sub
+
+
+' ==============================================================================================================
+' *** CORREÇÃO 2 *** FUNÇÃO NOVA
+' Descobre a data correta usando o DIA DO MÊS + o DIA DA SEMANA que o Senior informa.
+' Dentro de um período de poucos meses existe só uma data que combina os dois — por isso
+' esse método corrige sozinho qualquer erro de mês.
+' Devolve 0 se não conseguir resolver (aí o código principal usa a lógica sequencial).
+' ==============================================================================================================
+Private Function ResolverDataPorDiaSemana(ByVal dia As Integer, ByVal semTexto As String, _
+                                          ByVal dtIni As Date, ByVal dtFim As Date) As Date
+
+    Dim alvo As Integer
+    Dim tentativa As Date
+    Dim m As Integer, a As Integer
+    Dim achou As Date
+    Dim qtd As Integer
+
+    ResolverDataPorDiaSemana = 0
+
+    ' Converte a sigla do Senior no número do dia da semana (1 = Domingo, padrão do VBA).
+    Select Case UCase(Trim(semTexto))
+        Case "DOM": alvo = 1
+        Case "SEG": alvo = 2
+        Case "TER": alvo = 3
+        Case "QUA": alvo = 4
+        Case "QUI": alvo = 5
+        Case "SEX": alvo = 6
+        Case "SAB", "SÁB": alvo = 7
+        Case Else: Exit Function     ' Sigla desconhecida: deixa o código principal decidir.
+    End Select
+
+    If dia < 1 Or dia > 31 Then Exit Function
+
+    qtd = 0
+    m = Month(dtIni)
+    a = Year(dtIni)
+
+    ' Percorre todos os meses cobertos pelo período (com 1 mês de folga nas pontas).
+    Do
+        On Error Resume Next
+        Err.Clear
+        tentativa = DateSerial(a, m, dia)
+        If Err.Number = 0 Then
+            ' DateSerial "estica" datas inválidas (31/06 vira 01/07). Só aceita se o dia bateu.
+            If Day(tentativa) = dia Then
+                If tentativa >= DateAdd("d", -1, dtIni) And tentativa <= DateAdd("d", 1, dtFim) Then
+                    If Weekday(tentativa) = alvo Then
+                        achou = tentativa
+                        qtd = qtd + 1
+                    End If
+                End If
+            End If
+        End If
+        On Error GoTo 0
+
+        m = m + 1
+        If m > 12 Then
+            m = 1
+            a = a + 1
+        End If
+    Loop Until DateSerial(a, m, 1) > DateAdd("m", 1, dtFim)
+
+    ' Só aceita se houver UMA única data possível. Se houver ambiguidade, devolve 0.
+    If qtd = 1 Then ResolverDataPorDiaSemana = achou
+End Function
+
+
+' ==============================================================================================================
+' *** CORREÇÃO 1 *** FUNÇÃO REESCRITA
+'
+' O PROBLEMA ORIGINAL:
+' O export do Senior grava o período (ex.: 28/05/2026) como NÚMERO DE SÉRIE de data,
+' e não define largura de coluna. Na largura padrão do Excel, "28/05/2026" (10 caracteres)
+' não cabe e a célula exibe "##########".
+' A função antiga lia .Text — ou seja, lia os "#" — a Regex não encontrava data nenhuma,
+' a função retornava False e o código principal assumia o mês atual do COMPUTADOR.
+' Era exatamente isso que fazia a planilha sair sempre com o mês errado.
+'
+' A CORREÇÃO:
+' Agora a função lê primeiro o .Value (o número por trás), que independe da largura da coluna.
+' Só usa a Regex sobre o .Text como último recurso.
+' ==============================================================================================================
+Private Function ExtrairPeriodoDoCabecalho(ByRef ws As Worksheet, ByRef dtInicio As Date, ByRef dtFim As Date) As Boolean
+
+    Dim i As Long, j As Long
+    Dim v As Variant
+    Dim datasEncontradas() As Date
+    Dim qtd As Integer
+
+    ExtrairPeriodoDoCabecalho = False
+    ReDim datasEncontradas(0 To 50)
+    qtd = 0
+
+    ' -------------------------------------------------------------------------------------
+    ' TENTATIVA 1 (a que resolve): lê o VALOR das células, não o texto exibido.
+    ' -------------------------------------------------------------------------------------
+    For i = 1 To 20
+        For j = 1 To 12
+            v = ws.Cells(i, j).Value
+
+            ' Aceita tanto data de verdade quanto número de série de data.
+            If IsDate(v) Then
+                If qtd <= 50 Then
+                    datasEncontradas(qtd) = CDate(v)
+                    qtd = qtd + 1
+                End If
+            ElseIf IsNumeric(v) And v <> "" Then
+                ' Faixa de segurança: número de série entre 01/01/2000 e 31/12/2100.
+                If CDbl(v) > 36526 And CDbl(v) < 73415 Then
+                    If qtd <= 50 Then
+                        datasEncontradas(qtd) = CDate(CDbl(v))
+                        qtd = qtd + 1
+                    End If
+                End If
+            End If
+        Next j
+
+        ' Se já achou 2 datas nesta linha do cabeçalho, é o período.
+        If qtd >= 2 Then
+            dtInicio = datasEncontradas(0)
+            dtFim = datasEncontradas(1)
+            If dtFim < dtInicio Then
+                Dim tmp As Date
+                tmp = dtInicio: dtInicio = dtFim: dtFim = tmp
+            End If
+            ExtrairPeriodoDoCabecalho = True
+            Exit Function
+        End If
+
+        qtd = 0   ' reinicia a contagem a cada linha
+    Next i
+
+    ' -------------------------------------------------------------------------------------
+    ' TENTATIVA 2 (reserva): Regex sobre o texto exibido, como era antes.
+    ' -------------------------------------------------------------------------------------
+    Dim regEx As Object, matches As Object
+    Dim textoLinha As String
+
+    Set regEx = CreateObject("VBScript.RegExp")
+    With regEx
+        .Pattern = "\b(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/(\d{2}|\d{4})\b"
+        .Global = True
+    End With
+
+    For i = 1 To 20
+        textoLinha = ""
+        For j = 1 To 12
+            textoLinha = textoLinha & " " & ws.Cells(i, j).Text
+        Next j
+
+        If regEx.Test(textoLinha) Then
+            Set matches = regEx.Execute(textoLinha)
+            If matches.Count >= 2 Then
+                On Error Resume Next
+                dtInicio = CDate(matches(0).Value)
+                dtFim = CDate(matches(1).Value)
+                If Err.Number = 0 Then
+                    ExtrairPeriodoDoCabecalho = True
+                    Exit Function
+                End If
+                On Error GoTo 0
+            End If
+        End If
+    Next i
+End Function
+
+
+' ==============================================================================================================
+' FUNÇÃO AUXILIAR: REGEX PARA MARCAÇÕES (sem alterações — estava correta)
+' ==============================================================================================================
+Private Function SepararMarcacoesERecursos(ByVal textoOriginal As String, ByRef outHorarios() As String, ByRef outDescricao As String) As Boolean
+    Dim regEx As Object
+    Dim matches As Object
+    Dim match As Object
+    Dim i As Integer
+
+    outDescricao = Trim(textoOriginal)
+    SepararMarcacoesERecursos = False
+
+    If textoOriginal = "" Then Exit Function
+
+    Set regEx = CreateObject("VBScript.RegExp")
+    With regEx
+        .Pattern = "(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]"
+        .Global = True
+    End With
+
+    If regEx.Test(textoOriginal) Then
+        Set matches = regEx.Execute(textoOriginal)
+        ReDim outHorarios(0 To matches.Count - 1)
+
+        i = 0
+        For Each match In matches
+            outHorarios(i) = match.Value
+            textoOriginal = Replace(textoOriginal, match.Value, "")
+            i = i + 1
+        Next match
+
+        outDescricao = Trim(textoOriginal)
+        SepararMarcacoesERecursos = True
+    End If
+End Function

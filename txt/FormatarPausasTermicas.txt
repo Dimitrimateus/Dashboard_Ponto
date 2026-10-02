@@ -1,0 +1,313 @@
+Attribute VB_Name = "modFormatarPausas"
+Option Explicit
+
+' ============================================================================
+' FormatarPausasTermicas
+'
+' DE ONDE VEM: a aba ATIVA no momento em que a macro é executada (ws =
+'   ActiveSheet). Espera-se que seja o "Relatório Analítico de Pausas
+'   Térmicas" bruto, exportado como um único "dump" de impressão: cabeçalhos
+'   de página repetidos a cada colaborador, uma tabela de marcações por dia,
+'   um bloco "Total do Colaborador" ao final de cada colaborador, e um bloco
+'   "Total Geral" (com a legenda e o rodapé do relatório) no final do
+'   arquivo inteiro.
+'
+' PARA ONDE VAI E O QUE ESTE MACRO FAZ: reescreve essa MESMA aba (in-place),
+'   substituindo o "dump" bruto por apenas DUAS tabelas limpas, uma abaixo
+'   da outra, e NADA MAIS (sem título em cima, sem legenda/rodapé/"Soma dos
+'   itens" embaixo):
+'     1) Tabela de colaboradores - começa na linha 1 (cabeçalho) e tem uma
+'        linha por colaborador, com os 7 números que o próprio relatório
+'        original já calcula (Pausa corretas/menor/maior 0:20, Trabalho
+'        correto/maior/menor 1:40, Marcações Ímpares).
+'     2) Tabela de total - depois de UMA linha em branco, com o "Total
+'        Geral" desses mesmos 7 números para todos os colaboradores, também
+'        já calculado pelo relatório original.
+'   A linha em branco entre as duas é proposital: é ela que marca o fim da
+'   tabela de colaboradores para quem lê esta aba depois (GerarCSVPonto).
+'   Este macro NÃO recalcula nada: ele só ENCONTRA esses dois blocos dentro
+'   do relatório bruto (que já vêm prontos do sistema de ponto) e os copia
+'   para um layout de tabela normal, descartando o cabeçalho de página, a
+'   legenda, a tabela de marcações dia a dia e o rodapé — nada disso é usado
+'   por quem consome o resultado (a aba "Totais por Colaborador" é lida
+'   depois pelo macro GerarCSVPonto, na função GerarResumoPausasTermicas,
+'   que só precisa dessas duas tabelas).
+'
+' POR QUE SÓ ESSAS DUAS TABELAS (e não a tabela detalhada de marcações):
+'   Este macro já teve uma versão que também reconstruía uma tabela com uma
+'   linha por marcação de ponto (classificando cada intervalo em "pausa
+'   correta/curta" e "trabalho correto/curto/longo"), mais a legenda de
+'   classificação e o cabeçalho do relatório. Essa versão foi simplificada a
+'   pedido do RH: o que realmente é consumido no fluxo (GerarCSVPonto) são
+'   só os totais por colaborador e o total geral, então o macro agora entrega
+'   só isso, sem título/legenda/tabela de marcações.
+'
+' Rode este macro numa CÓPIA da planilha antes de usar em produção — ele
+' reescreve a aba ativa por completo (Ctrl+Z desfaz se rodar por engano).
+' ============================================================================
+
+Sub FormatarPausasTermicas()
+
+    Dim ws As Worksheet
+    Set ws = ActiveSheet
+
+    Dim lastRow As Long
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    If lastRow < 2 Then
+        MsgBox "Nenhum dado encontrado na aba ativa.", vbExclamation
+        Exit Sub
+    End If
+
+    If MsgBox("Este macro vai REESCREVER completamente a aba """ & ws.Name & _
+              """, deixando só os totais por colaborador e o total geral." & vbCrLf & vbCrLf & _
+              "Recomendado: rode numa CÓPIA do arquivo." & vbCrLf & vbCrLf & _
+              "Continuar?", vbYesNo + vbQuestion, "Formatar Pausas Térmicas") = vbNo Then
+        Exit Sub
+    End If
+
+    Application.ScreenUpdating = False
+    Application.Calculation = xlCalculationManual
+    Application.StatusBar = "Lendo dados originais..."
+
+    ' ---------- Totais gerais originais (bloco "Total Geral" do relatório) ----------
+    Dim geralPausaCorretas As Variant, geralPausaMenor As Variant, geralPausaMaior As Variant
+    Dim geralTrabCorreto As Variant, geralTrabMaior As Variant, geralTrabMenor As Variant
+    Dim geralMarcacoesImpares As Variant
+    Dim temGeral As Boolean
+
+    ' ---------- Totais por colaborador (um item por colaborador, bloco "Total do Colaborador") ----------
+    Dim totColMatricula As Collection, totColNome As Collection, totColCargo As Collection
+    Dim totColVals As Collection    ' cada item é um array(1 to 7)
+    Set totColMatricula = New Collection
+    Set totColNome = New Collection
+    Set totColCargo = New Collection
+    Set totColVals = New Collection
+
+    ' Contexto do colaborador "atual" enquanto varremos o relatório de cima a baixo: atualizado
+    ' sempre que passamos pela linha de identificação do colaborador, e usado quando encontramos o
+    ' bloco "Total do Colaborador" logo depois (esse bloco não repete matrícula/nome/cargo, então
+    ' precisamos ter guardado isso momentos antes).
+    Dim curMatricula As String, curNome As String, curCargo As String
+
+    ' ============================================================
+    ' Varredura do relatório bruto, linha a linha.
+    ' Este relatório é um "dump" de impressão, não uma tabela: cada tipo de linha (marcação de dia,
+    ' identificação do colaborador, subtotal do colaborador, total geral) tem um formato de
+    ' texto/posição próprio, reconhecido aqui pelo conteúdo das colunas A/B/F. Linhas que não
+    ' interessam para o resultado final (cabeçalho de página, legenda, "Soma dos itens", marcação
+    ' dia a dia, rodapé) são simplesmente puladas (ramo Else, ao final) — não precisamos extrair nada
+    ' delas, já que a saída deste macro não as usa.
+    ' ============================================================
+    Dim r As Long
+    r = 1
+    Do While r <= lastRow
+
+        Dim a1 As Variant, b1 As Variant, f1 As Variant
+        a1 = ws.Cells(r, 1).Value
+        b1 = ws.Cells(r, 2).Value
+        f1 = ws.Cells(r, 6).Value
+
+        If UCase(ws.Cells(r, 1).NumberFormat) = "DD/MM/YYYY" And IsNumeric(a1) And Len(Trim(CStr(a1))) > 0 Then
+            ' ---------------- Linha de marcações do dia (uma data + as batidas de ponto daquele
+            ' dia, nas colunas B, D, F...) ----------------
+            ' Esses dados alimentavam a antiga tabela detalhada (uma linha por marcação), que não
+            ' faz mais parte da saída deste macro (ver cabeçalho do arquivo). Os números que
+            ' interessam (Pausa corretas/menor/maior, Trabalho correto/maior/menor, Marcações
+            ' Ímpares) não são recalculados a partir dessas marcações: eles já vêm prontos, por
+            ' colaborador, no bloco "Total do Colaborador" mais abaixo no relatório - por isso esta
+            ' linha só precisa ser pulada.
+            r = r + 1
+
+        ElseIf IsNumeric(a1) And ws.Cells(r, 1).NumberFormat <> "DD/MM/YYYY" _
+                And Len(Trim(CStr(b1))) > 0 And Not IsNumeric(b1) _
+                And Len(Trim(CStr(f1))) > 0 Then
+            ' ---------------- Linha de identificação do colaborador ----------------
+            ' Formato: coluna A = matrícula (número, mas SEM o formato de data DD/MM/YYYY das
+            ' linhas de marcação), coluna B = nome (texto), coluna F = cargo (texto). Guardamos os
+            ' três em curMatricula/curNome/curCargo para rotular o bloco "Total do Colaborador"
+            ' deste mesmo colaborador, que vem logo a seguir no relatório.
+            curMatricula = CStr(CLng(a1))
+            curNome = Trim(CStr(b1))
+            curCargo = Trim(CStr(f1))
+            r = r + 1
+
+        ElseIf Trim(CStr(a1)) = "Total do Colaborador" Then
+            ' ---------------- Subtotais do colaborador (já calculados pelo relatório original) ----
+            ' Os 7 números ficam sempre 2 linhas abaixo do rótulo "Total do Colaborador", em
+            ' colunas fixas (posições definidas pelo layout de impressão do relatório original) -
+            ' por isso os deslocamentos "r + 2" e os números de coluna abaixo são fixos, não
+            ' calculados por cabeçalho como em outras partes deste projeto.
+            Dim valsCol(1 To 7) As Variant
+            valsCol(1) = ws.Cells(r + 2, 1).Value  ' Pausa corretas
+            valsCol(2) = ws.Cells(r + 2, 2).Value  ' Pausa menor 0:20
+            valsCol(3) = ws.Cells(r + 2, 4).Value  ' Pausa maior 0:20
+            valsCol(4) = ws.Cells(r + 2, 6).Value  ' Trabalho correto 1:40
+            valsCol(5) = ws.Cells(r + 2, 8).Value  ' Trabalho maior 1:40
+            valsCol(6) = ws.Cells(r + 2, 10).Value ' Trabalho menor 1:40
+            valsCol(7) = ws.Cells(r + 2, 11).Value ' Marcações Ímpares
+
+            totColMatricula.Add curMatricula
+            totColNome.Add curNome
+            totColCargo.Add curCargo
+            totColVals.Add valsCol
+
+            r = r + 3
+
+        ElseIf Trim(CStr(a1)) = "Total" And Trim(CStr(b1)) = "Geral" Then
+            ' ---------------- Total geral (soma de todos os colaboradores, já calculada) ----------
+            ' Mesma lógica de deslocamento fixo "r + 2" do bloco "Total do Colaborador" acima, só
+            ' que aqui é a única ocorrência do relatório inteiro (por isso a flag temGeral, usada
+            ' na hora de escrever a saída: só escrevemos a seção "Total Geral" se ela existir).
+            geralPausaCorretas = ws.Cells(r + 2, 1).Value
+            geralPausaMenor = ws.Cells(r + 2, 2).Value
+            geralPausaMaior = ws.Cells(r + 2, 4).Value
+            geralTrabCorreto = ws.Cells(r + 2, 6).Value
+            geralTrabMaior = ws.Cells(r + 2, 8).Value
+            geralTrabMenor = ws.Cells(r + 2, 10).Value
+            geralMarcacoesImpares = ws.Cells(r + 2, 11).Value
+            temGeral = True
+            r = r + 3
+
+        Else
+            ' ---------------- Qualquer outra linha: cabeçalho de página, legenda original do
+            ' relatório, "Soma dos itens 1 e 3...", rodapé (linhas "HRES...") etc. ----------------
+            ' Nenhuma dessas informações faz parte da saída deste macro (pedido do RH: "só as
+            ' tabelas dos colaboradores e a tabela de total, mais nada"), então essas linhas são
+            ' simplesmente ignoradas - avançamos uma linha e seguimos procurando os blocos que
+            ' interessam.
+            r = r + 1
+        End If
+    Loop
+
+    Application.StatusBar = "Reescrevendo a planilha..."
+
+    ' Cells.Clear apaga valores/formatos, mas não desfaz o AutoFiltro nem o congelamento de
+    ' painéis de uma execução anterior nesta mesma aba - por isso os dois são desligados antes.
+    If ws.AutoFilterMode Then ws.AutoFilterMode = False
+    ws.Cells.Clear
+    ActiveWindow.FreezePanes = False
+
+    Dim subHeaders As Variant
+    subHeaders = Array("Matrícula", "Colaborador", "Cargo", "Pausa corretas", _
+                        "Pausa menor 0:20", "Pausa maior 0:20", "Trabalho correto 1:40", _
+                        "Trabalho maior 1:40", "Trabalho menor 1:40", "Marcações Ímpares")
+
+    ' ============================================================
+    ' 1) Tabela de colaboradores (cabeçalho na linha 1, sem título em cima)
+    ' ============================================================
+    Dim writeRow As Long, shRow As Long, hcol As Long
+    shRow = 1
+    For hcol = 1 To 10
+        ws.Cells(shRow, hcol).Value = subHeaders(hcol - 1)
+    Next hcol
+    FormatarCabecalho ws.Range(ws.Cells(shRow, 1), ws.Cells(shRow, 10))
+    writeRow = shRow + 1
+
+    Dim ti As Long, k As Long
+    For ti = 1 To totColMatricula.Count
+        Dim vv As Variant
+        vv = totColVals(ti)
+        ws.Cells(writeRow, 1).Value = totColMatricula(ti)
+        ws.Cells(writeRow, 2).Value = totColNome(ti)
+        ws.Cells(writeRow, 3).Value = totColCargo(ti)
+        For k = 1 To 7
+            ws.Cells(writeRow, 3 + k).Value = vv(k)
+        Next k
+        writeRow = writeRow + 1
+    Next ti
+
+    If totColMatricula.Count > 0 Then
+        With ws.Range(ws.Cells(shRow, 1), ws.Cells(writeRow - 1, 10))
+            .Borders.LineStyle = xlContinuous
+            .Borders.Weight = xlThin
+        End With
+
+        ' Ativa o AutoFiltro na tabela e congela a linha de cabeçalho, para facilitar a
+        ' conferência quando a lista de colaboradores for longa.
+        ws.Range(ws.Cells(shRow, 1), ws.Cells(writeRow - 1, 10)).AutoFilter
+        ws.Activate
+        ws.Rows(shRow + 1).Select
+        ActiveWindow.FreezePanes = True
+    End If
+
+    ' ============================================================
+    ' 2) Tabela de total (uma linha em branco depois da tabela de colaboradores)
+    '    As colunas D:J são as mesmas da tabela de cima, para os números ficarem
+    '    alinhados; A:C viram uma única célula de rótulo.
+    ' ============================================================
+    If temGeral Then
+        writeRow = writeRow + 1
+
+        With ws.Range(ws.Cells(writeRow, 1), ws.Cells(writeRow, 3))
+            .Merge
+            .Value = "Total Geral"
+        End With
+        For hcol = 4 To 10
+            ws.Cells(writeRow, hcol).Value = subHeaders(hcol - 1)
+        Next hcol
+        FormatarCabecalho ws.Range(ws.Cells(writeRow, 1), ws.Cells(writeRow, 10))
+        writeRow = writeRow + 1
+
+        With ws.Range(ws.Cells(writeRow, 1), ws.Cells(writeRow, 3))
+            .Merge
+            .Value = "Todos os colaboradores"
+        End With
+        ws.Cells(writeRow, 4).Value = geralPausaCorretas
+        ws.Cells(writeRow, 5).Value = geralPausaMenor
+        ws.Cells(writeRow, 6).Value = geralPausaMaior
+        ws.Cells(writeRow, 7).Value = geralTrabCorreto
+        ws.Cells(writeRow, 8).Value = geralTrabMaior
+        ws.Cells(writeRow, 9).Value = geralTrabMenor
+        ws.Cells(writeRow, 10).Value = geralMarcacoesImpares
+        ws.Range(ws.Cells(writeRow, 1), ws.Cells(writeRow, 10)).Font.Bold = True
+
+        With ws.Range(ws.Cells(writeRow - 1, 1), ws.Cells(writeRow, 10))
+            .Borders.LineStyle = xlContinuous
+            .Borders.Weight = xlThin
+        End With
+    End If
+
+    ' ============================================================
+    ' Ajustes finais de layout
+    ' ============================================================
+    ws.Cells.Font.Name = "Calibri"
+    ws.Cells.Font.Size = 10
+
+    ws.Columns("A").ColumnWidth = 12
+    ws.Columns("B").ColumnWidth = 32
+    ws.Columns("C").ColumnWidth = 28
+    ws.Columns("D").ColumnWidth = 14
+    ws.Columns("E").ColumnWidth = 14
+    ws.Columns("F").ColumnWidth = 14
+    ws.Columns("G").ColumnWidth = 18
+    ws.Columns("H").ColumnWidth = 16
+    ws.Columns("I").ColumnWidth = 16
+    ws.Columns("J").ColumnWidth = 16
+
+    ws.Range("D:J").HorizontalAlignment = xlCenter
+
+    ws.Cells(1, 1).Select
+
+    Application.ScreenUpdating = True
+    Application.Calculation = xlCalculationAutomatic
+    Application.StatusBar = False
+
+    MsgBox "Formatação concluída." & vbCrLf & _
+           totColMatricula.Count & " colaborador(es) na tabela de colaboradores." & vbCrLf & _
+           IIf(temGeral, "Total Geral incluído.", "Bloco ""Total Geral"" não encontrado no relatório original."), _
+           vbInformation, "Formatar Pausas Térmicas"
+
+End Sub
+
+
+' Visual padrão das linhas de cabeçalho das duas tabelas (negrito, fundo cinza, borda).
+Private Sub FormatarCabecalho(rng As Range)
+    With rng
+        .Font.Bold = True
+        .Interior.Color = RGB(217, 217, 217)
+        .Borders.LineStyle = xlContinuous
+        .HorizontalAlignment = xlCenter
+        .VerticalAlignment = xlCenter
+        .WrapText = True
+    End With
+End Sub
