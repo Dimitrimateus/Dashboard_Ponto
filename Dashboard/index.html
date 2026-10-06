@@ -72,6 +72,75 @@
     overflow:hidden; text-overflow:ellipsis; max-width:46vw;
   }
 
+  /* Período no topo (sempre visível, na faixa preta) */
+  .topbar-period{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    line-height:1.1; padding:4px 16px; border-radius:10px;
+    background:rgba(247,147,30,.14); border:1px solid rgba(247,147,30,.55);
+    min-width:0;
+  }
+  .topbar-period .tp-label{ font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--c-orange); }
+  .topbar-period .tp-value{ font-size:17px; font-weight:800; color:#FFFFFF; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .topbar-right{ display:flex; align-items:center; gap:10px; min-width:0; }
+  .btn-explica{
+    display:inline-flex; align-items:center; gap:6px; flex:none;
+    background:transparent; color:#FFFFFF; border:1px solid rgba(255,255,255,.35);
+    border-radius:var(--radius-pill); padding:7px 13px; font-size:12.5px; font-weight:700; cursor:pointer;
+  }
+  .btn-explica:hover{ border-color:var(--c-orange); color:var(--c-orange); }
+  .btn-explica .q{ display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:var(--c-orange); color:#fff; font-size:12px; font-weight:800; }
+  body.modo-explicacao .btn-explica{ background:var(--c-orange); border-color:var(--c-orange); color:#fff; }
+  body.modo-explicacao .btn-explica .q{ background:#fff; color:var(--c-orange); }
+
+  /* ---------- Modo explicação ("Entenda o painel") ---------- */
+  .card-fonte{ display:none; }
+  body.modo-explicacao .card-fonte{
+    display:block; margin:0 0 12px; padding:10px 12px;
+    background:#FFF6EA; border:1px solid #F5C894; border-left:4px solid var(--c-orange);
+    border-radius:var(--radius-card); font-size:12.5px; line-height:1.5; color:#3A2A14;
+  }
+  body.modo-explicacao .card-fonte strong{ color:#1A1A1A; }
+  body.modo-explicacao .card-fonte .fonte-origem{
+    display:inline-block; margin-bottom:4px; font-size:10.5px; font-weight:800; letter-spacing:.06em;
+    text-transform:uppercase; color:#8A4B12;
+  }
+  body.modo-explicacao .card-fonte p{ margin:4px 0 0; }
+  .kpi-tile .card-fonte{ margin-top:10px !important; margin-bottom:0 !important; }
+  .explica-banner{ display:none; }
+  body.modo-explicacao .explica-banner{
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    background:var(--c-navy-dark); color:#fff; border-radius:var(--radius-panel);
+    padding:14px 16px; margin-bottom:18px; border-left:5px solid var(--c-orange);
+  }
+  .explica-banner p{ margin:0; flex:1 1 320px; font-size:13px; line-height:1.5; }
+  .explica-banner strong{ color:var(--c-orange); }
+
+  /* ---------- Colaborador clicável + card do colaborador ---------- */
+  [data-colab]{ cursor:pointer; }
+  svg [data-colab]:hover{ opacity:.82; }
+  svg text[data-colab]:hover{ text-decoration:underline; }
+  .colab-link{ color:inherit; text-decoration:none; border-bottom:1px dotted var(--c-muted-2); }
+  .colab-link:hover{ color:var(--c-orange); border-bottom-color:var(--c-orange); }
+  .modal-panel.colab-panel{ width:min(900px, 96vw); }
+  .colab-modal-body{ overflow:auto; }
+  .colab-meta{ display:flex; flex-wrap:wrap; gap:6px 18px; font-size:12.5px; color:var(--c-muted); margin-top:4px; }
+  .colab-meta b{ color:var(--c-ink); font-weight:700; }
+  .colab-kpis{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:10px; margin-bottom:14px; }
+  .colab-kpi{ background:var(--c-paper); border:1px solid var(--c-line); border-radius:var(--radius-card); padding:10px 12px; }
+  .colab-kpi .ck-label{ font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--c-muted); }
+  .colab-kpi .ck-value{ font-size:20px; font-weight:800; color:var(--c-navy-dark); font-variant-numeric:tabular-nums; margin-top:2px; }
+  .colab-kpi .ck-sub{ font-size:11px; color:var(--c-muted-2); }
+  .colab-kpi.pos .ck-value{ color:#2E7D32; }
+  .colab-kpi.neg .ck-value{ color:#C62828; }
+  .colab-kpi.alerta{ background:#FDECEC; border-color:#F3B5B5; }
+  .colab-section{ font-size:13px; margin:16px 0 8px; color:var(--c-navy-dark); }
+  .colab-tags{ display:flex; flex-wrap:wrap; gap:6px; }
+  .colab-tag{ font-size:12px; background:var(--c-paper-dim); border:1px solid var(--c-line); border-radius:var(--radius-pill); padding:3px 10px; }
+  .colab-tag b{ margin-left:4px; }
+  .saldo-pos{ color:#2E7D32; font-weight:800; }
+  .saldo-neg{ color:#C62828; font-weight:800; }
+  .card-toolbar{ display:flex; justify-content:flex-end; margin-top:8px; }
+
   /* ---------- Layout ---------- */
   .layout{ display:flex; align-items:flex-start; }
   .content{ flex:1 1 auto; min-width:0; padding:22px 24px 60px; }
@@ -392,6 +461,20 @@
     .grid{ grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); }
     .topbar-status{ display:none; }
   }
+  @media (max-width: 760px){
+    .brand-sub{ display:none; }
+    .topbar{ padding:0 10px; gap:8px; }
+    .topbar-period{ padding:3px 10px; }
+    .topbar-period .tp-value{ font-size:14px; }
+    .btn-explica .txt{ display:none; }
+    .btn-explica{ padding:6px 8px; }
+    .colab-kpis{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+  }
+  @media (max-width: 420px){
+    .brand-mark{ height:26px; }
+    .topbar-period .tp-label{ font-size:9px; }
+    .topbar-period .tp-value{ font-size:12.5px; }
+  }
   /* Tablet range: keep the real table, but let it scroll horizontally with the first column pinned */
   @media (min-width: 769px) and (max-width: 980px){
     .table-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
@@ -472,7 +555,16 @@
         <span class="brand-sub">Painel de Ponto &middot; Ocorrências dos Colaboradores</span>
       </div>
     </div>
-    <div class="topbar-status" id="fileStatus">Nenhum arquivo carregado</div>
+    <div class="topbar-period" id="topbarPeriod" hidden title="Período das ocorrências exibidas (muda com o filtro de período)">
+      <span class="tp-label" id="topbarPeriodLabel">Período</span>
+      <span class="tp-value" id="topbarPeriodValue"></span>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-status" id="fileStatus">Nenhum arquivo carregado</div>
+      <button type="button" class="btn-explica" id="btnExplica" aria-pressed="false" title="Mostra, em cada gráfico, de onde vem a informação">
+        <span class="q" aria-hidden="true">?</span><span class="txt" id="btnExplicaTxt">Entenda o painel</span>
+      </button>
+    </div>
   </header>
 
   <div class="orientation-banner" id="orientationBanner" hidden>
@@ -483,6 +575,11 @@
 
   <div class="layout">
     <main class="content" id="content">
+
+      <section class="explica-banner" id="explicaBanner">
+        <p><strong>Modo explicação.</strong> É o mesmo painel, com uma caixa laranja em cada número, gráfico e tabela dizendo de onde vem a informação e como ela é calculada. Os filtros continuam funcionando. Clique em <strong>Voltar ao painel</strong> para esconder as explicações.</p>
+        <button type="button" class="btn" id="btnExplicaVoltar">Voltar ao painel</button>
+      </section>
 
       <section class="empty-state" id="emptyState">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -495,16 +592,19 @@
           <div class="kpi-label">Colaboradores envolvidos</div>
           <div class="kpi-value" id="kpiColaboradores">0</div>
           <div class="kpi-sub" id="kpiColaboradoresSub"></div>
+          <div class="card-fonte"><span class="fonte-origem">De onde vem: planilha de Tratamento, coluna Nome</span><p>Quantas pessoas <strong>diferentes</strong> aparecem nas ocorrências do período filtrado. O número menor embaixo é o total de pessoas do arquivo, contando também quem só aparece no Cartão Ponto ou nas Pausas Térmicas.</p></div>
         </div>
         <div class="kpi-tile">
           <div class="kpi-label">Ocorrências no período</div>
           <div class="kpi-value" id="kpiOcorrencias">0</div>
           <div class="kpi-sub" id="kpiOcorrenciasSub"></div>
+          <div class="card-fonte"><span class="fonte-origem">De onde vem: planilha de Tratamento, uma linha = uma ocorrência</span><p>Conta todas as linhas de ocorrência da Tratamento. <strong>Não entram:</strong> linhas com Check = S (o RH conferiu e não é problema), situação vazia ou “Sem alteração” e “Problema horário”. Hora extra, ocorrências curtas e os resumos têm vistas próprias e não entram nesta conta.</p></div>
         </div>
         <div class="kpi-tile k-slate">
           <div class="kpi-label">Demora média no PontoNet</div>
           <div class="kpi-value" id="kpiDemora">&ndash;</div>
           <div class="kpi-sub" id="kpiDemoraSub">Da ocorrência até a tratativa</div>
+          <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório baixado direto do PontoNet</span><p>Para cada ocorrência já <strong>INTEGRADA</strong> no PontoNet, mede o tempo entre a data da ocorrência e a data “Avaliado em”. O card mostra a média. Ocorrências ainda em aberto não entram, porque a data delas é provisória.</p></div>
         </div>
       </section>
 
@@ -515,26 +615,31 @@
           <div class="card">
             <div class="card-title">Ocorrências por tipo</div>
             <div class="card-hint">Distribuição das ocorrências registradas por tipo</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: planilha de Tratamento, coluna Situação</span><p>Cada fatia é uma situação (Falta ponto de saída, Sem marcação, Registro duplo…). O número no meio é o total, igual ao card “Ocorrências no período”.</p></div>
             <div class="card-body donut-wrap" id="chartTipo"></div>
           </div>
           <div class="card">
             <div class="card-title">Ocorrências por dia da semana</div>
             <div class="card-hint">Em qual dia da semana as ocorrências mais acontecem</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: data da ocorrência (já vem no relatório do sistema)</span><p>As ocorrências baixadas do sistema já vêm com a data; o painel transforma a data no dia da semana e conta quantas caem em cada um.</p></div>
             <div class="card-body" id="chartDiaSemana"></div>
           </div>
           <div class="card wide">
             <div class="card-title">Ocorrências por data</div>
             <div class="card-hint">Evolução diária no período filtrado</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: data da ocorrência (já vem no relatório do sistema)</span><p>Quantas ocorrências aconteceram em cada dia do período filtrado. Passe o mouse num ponto para ver o número exato daquele dia.</p></div>
             <div class="card-body" id="chartPorData"></div>
           </div>
           <div class="card">
             <div class="card-title">Ocorrências por gestor</div>
             <div class="card-hint">Volume de ocorrências das equipes de cada gestor</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: relação colaborador × gestor</span><p>O gestor de cada linha vem da relação colaborador × gestor (coluna Gestor da Tratamento). “Sem gestor” = matrícula que não está na relação. Mostra os 12 gestores com mais ocorrências.</p></div>
             <div class="card-body" id="chartPorGestor"></div>
           </div>
           <div class="card">
             <div class="card-title">Ocorrências por cargo</div>
             <div class="card-hint">Volume de ocorrências por cargo/função</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: cargo de cada colaborador (cadastro RE)</span><p>Puxamos o cargo de cada um: primeiro a coluna Cargo da Tratamento; se estiver vazia, o cadastro (aba RE). Mostra os 12 cargos com mais ocorrências.</p></div>
             <div class="card-body" id="chartPorCargo"></div>
           </div>
         </section>
@@ -544,22 +649,27 @@
           <div class="card">
             <div class="card-title">Colaboradores com mais ocorrências</div>
             <div class="card-hint">Top 10 no período filtrado</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: planilha de Tratamento, coluna Nome</span><p>Contamos quantas vezes cada colaborador aparece na Tratamento (depois das mesmas exclusões do card “Ocorrências no período”). <strong>Clique no nome</strong> para abrir o card do colaborador.</p></div>
             <div class="card-body" id="chartTopColaboradores"></div>
           </div>
           <div class="card">
             <div class="card-title">Extra e falta no mesmo dia</div>
             <div class="card-hint">Este mês e total dos últimos 3 meses &middot; linhas em vermelho atingiram 10+ ocorrências na soma dos 3 meses (pontuação negativa na auditoria)</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: Cartão Ponto (mês atual e os 2 anteriores) + fórmula</span><p>Puxamos o cartão ponto e uma fórmula marca “Sim” na coluna <strong>Banco de horas e extra no mesmo dia</strong> quando, no mesmo dia, a pessoa teve hora extra e lançamento no banco de horas. Contamos os “Sim”: <strong>Este mês</strong> = Cartão atual; <strong>3 meses</strong> = soma dos 3 Cartões. Com 10 ou mais, a linha fica vermelha. Não muda com o filtro de período.</p></div>
             <div class="card-body" id="tableExtraFalta"></div>
           </div>
           <div class="card">
             <div class="card-title">Ocorrências curtas (&lt; 15 minutos)</div>
             <div class="card-hint">Colaboradores com mais faltas/atrasos ou horas extra registrados com menos de 15 minutos</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: Cartão Ponto do mês atual + fórmula</span><p>Puxamos o cartão ponto e uma fórmula preenche a coluna <strong>Tolerância &lt; 15min</strong> quando o dia teve falta/atraso ou hora extra de menos de 15 minutos. Cada dia marcado conta 1 (“Extra e Falta” conta 1 em cada coluna). Não depende do Check da Tratamento.</p></div>
             <div class="card-body" id="tableCurtas"></div>
           </div>
           <div class="card">
             <div class="card-title">Banco de horas e hora extra por colaborador</div>
-            <div class="card-hint">Top 10 &middot; horas extra destinadas a banco de horas ou pagamento</div>
+            <div class="card-hint" id="hintBancoHoras">Mês atual do Cartão Ponto &middot; verde = hora extra, vermelho = banco de horas, à direita o saldo (extra &minus; banco)</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: Cartão Ponto do mês atual, somado por colaborador</span><p>Puxamos o cartão ponto e somamos o mês inteiro de cada pessoa. <strong>Verde</strong> = hora extra (colunas 50% e 100%). <strong>Vermelho</strong> = banco de horas (coluna BH: horas descontadas do banco por falta, atraso ou saída antecipada). <strong>À direita</strong>, o saldo = extra &minus; banco: verde com “+” quando a pessoa fez mais extra do que faltou; vermelho com “&minus;” quando faltou mais. Não depende da Tratamento, do Check nem do filtro de período. Ordem: quem tem mais horas somadas (extra + banco).</p></div>
             <div class="card-body" id="chartBancoHoras"></div>
+            <div class="card-toolbar"><button type="button" class="btn-ghost" id="btnBancoTodos" hidden>Mostrar todos</button></div>
           </div>
         </section>
 
@@ -568,6 +678,7 @@
           <div class="card wide">
             <div class="card-title">Resumo por colaborador</div>
             <div class="card-hint">Pausas e intervalos de trabalho classificados no relatório de Pausas Térmicas do mês atual &middot; linhas em vermelho têm marcações inválidas registradas</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Pausas Térmicas do sistema (HRES114)</span><p>Puxamos o relatório de pausas térmicas direto do sistema e a macro deixa só a tabela por colaborador. Para cada pessoa: pausas corretas (20 min), pausas mais curtas ou mais longas que 20 min, blocos de trabalho de 1h40 corretos, maiores ou menores, e marcações ímpares (batida faltando). Nada é recalculado: o painel mostra os números do relatório.</p></div>
             <button class="btn" id="btnAbrirPausas" type="button">Abrir resumo completo</button>
           </div>
         </section>
@@ -577,17 +688,20 @@
           <div class="card wide">
             <div class="card-title">Média e maior demora por gestor</div>
             <div class="card-hint">Tempo entre a ocorrência e a tratativa/aprovação no sistema, por gestor</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório baixado direto do PontoNet</span><p>Mesmo cálculo do card “Demora média no PontoNet” (da data da ocorrência até o “Avaliado em”, só casos INTEGRADOS), agrupado pelo gestor: quantas foram tratadas, a demora média e a maior.</p></div>
             <div class="card-body" id="tableDemoraGestor"></div>
           </div>
           <div class="card wide">
             <div class="card-title">Média e maior demora por colaborador</div>
             <div class="card-hint">Tempo entre a ocorrência e a tratativa/aprovação no sistema, por colaborador</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório baixado direto do PontoNet</span><p>Mesmo cálculo, agrupado pelo colaborador. Ajuda a ver quem tem justificativas que ficam muito tempo paradas. Clique no nome para abrir o card do colaborador.</p></div>
             <div class="card-body" id="tableDemoraColaborador"></div>
           </div>
         </section>
 
         <h3 class="section-title">Histórico de ocorrências</h3>
         <section class="card wide" id="historySection">
+          <div class="card-fonte"><span class="fonte-origem">De onde vem: planilha de Tratamento + PontoNet</span><p>Todas as ocorrências do filtro, linha a linha — as mesmas contadas no card “Ocorrências no período”. A situação mostrada é a justificativa do PontoNet quando existe; senão, a situação da Tratamento. Status “Regularizado” = Tratado na planilha; o resto aparece como “Pendente”.</p></div>
           <div class="history-toolbar">
             <input type="text" id="historySearch" placeholder="Buscar por colaborador, gestor, setor...">
             <span id="historyCount" style="font-size:12px;color:var(--c-muted);"></span>
@@ -723,6 +837,19 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="colabModalOverlay" hidden>
+    <div class="modal-panel colab-panel" role="dialog" aria-modal="true" aria-labelledby="colabModalTitle">
+      <div class="modal-header">
+        <div style="flex:1 1 auto;min-width:0;">
+          <h2 class="modal-title" id="colabModalTitle"></h2>
+          <div class="colab-meta" id="colabModalMeta"></div>
+        </div>
+        <button class="modal-close" id="colabModalClose" type="button" aria-label="Fechar">&times;</button>
+      </div>
+      <div class="modal-body colab-modal-body" id="colabModalBody"></div>
+    </div>
+  </div>
+
 <script>
 (function(){
   "use strict";
@@ -844,7 +971,9 @@
     trabalhoMaior140: ["trabalho_maior_140"],
     trabalhoMenor140: ["trabalho_menor_140"],
     pausasMarcacoesImpares: ["pausas_marcacoes_impares","pausa_marcacoes_impares"],
-    grupo: ["grupo","grupo_colaborador","interno_externo"]
+    grupo: ["grupo","grupo_colaborador","interno_externo"],
+    minHoraExtraCartao: ["minutos_hora_extra_cartao"],
+    minBancoHorasCartao: ["minutos_banco_horas_cartao"]
   };
 
   // Situações que o painel ignora mesmo que venham no CSV (o GerarCSV
@@ -860,10 +989,15 @@
   var TIPO_AUDITORIA_EXTRA_FALTA = "Auditoria Extra e Falta (3 Meses)";
   var LIMITE_AUDITORIA_EXTRA_FALTA = 10;
   var TIPO_RESUMO_PAUSAS_TERMICAS = "Resumo Pausas Térmicas";
+  // Uma linha por colaborador com o total de hora extra (50% + 100%) e de
+  // banco de horas (BH) do Cartão Ponto do mês atual inteiro (gerada pelo
+  // GerarResumoHorasCartao do macro). Alimenta o gráfico "Banco de horas e
+  // hora extra por colaborador" e o card do colaborador.
+  var TIPO_RESUMO_HORAS_CARTAO = "Resumo Horas Cartão";
   // tipos que são "linhas-resumo" por colaborador (não ocorrências
   // datadas de verdade) — ficam de fora dos gráficos/KPIs/histórico
   // gerais e só alimentam suas próprias vistas dedicadas.
-  var TIPOS_RESUMO = [TIPO_AUDITORIA_EXTRA_FALTA, TIPO_RESUMO_PAUSAS_TERMICAS];
+  var TIPOS_RESUMO = [TIPO_AUDITORIA_EXTRA_FALTA, TIPO_RESUMO_PAUSAS_TERMICAS, TIPO_RESUMO_HORAS_CARTAO];
   function isTipoResumo(tipo){ return TIPOS_RESUMO.indexOf(tipo) !== -1; }
 
   // "Falta < 15min" / "Extra < 15min": não contam como ocorrência normal
@@ -903,7 +1037,8 @@
     colorMaps: { gestor:{}, setor:{}, cargo:{}, tipo:{}, status:{} },
     historySort: { key:"data", dir:"desc" },
     historyPage: 1,
-    historyPageSize: 25
+    historyPageSize: 25,
+    bancoMostrarTodos: false
   };
 
   /* =========================================================
@@ -1135,7 +1270,9 @@
         trabalhoMaior140: idx.trabalhoMaior140 != null ? parseNumber(r[idx.trabalhoMaior140]) : 0,
         trabalhoMenor140: idx.trabalhoMenor140 != null ? parseNumber(r[idx.trabalhoMenor140]) : 0,
         pausasMarcacoesImpares: idx.pausasMarcacoesImpares != null ? parseNumber(r[idx.pausasMarcacoesImpares]) : 0,
-        grupo: idx.grupo != null ? textoCampo(r[idx.grupo]) : ""
+        grupo: idx.grupo != null ? textoCampo(r[idx.grupo]) : "",
+        minHoraExtraCartao: idx.minHoraExtraCartao != null ? parseNumber(r[idx.minHoraExtraCartao]) : 0,
+        minBancoHorasCartao: idx.minBancoHorasCartao != null ? parseNumber(r[idx.minBancoHorasCartao]) : 0
       };
       out.push(rec);
     }
@@ -1240,9 +1377,13 @@
       var label = svgEl("text", { x: leftW-8, y: y+rowH/2+4, class:"chart-label", "text-anchor":"end" });
       label.textContent = truncate(it.label, 15);
       svg.appendChild(label);
-      svg.appendChild(svgEl("rect", { x:leftW, y:y, width:plotW, height:rowH, class:"chart-track", rx:3 }));
-      var bar = svgEl("rect", { x:leftW, y:y, width:w, height:rowH, fill: it.color || "var(--c-orange)", class:"chart-bar", rx:3, "data-tooltip": it.label + ": " + formatNum(it.value) });
+      var track = svgEl("rect", { x:leftW, y:y, width:plotW, height:rowH, class:"chart-track", rx:3 });
+      svg.appendChild(track);
+      var bar = svgEl("rect", { x:leftW, y:y, width:w, height:rowH, fill: it.color || "var(--c-orange)", class:"chart-bar", rx:3, "data-tooltip": it.label + ": " + formatNum(it.value) + (opts.colab ? " · clique para ver o colaborador" : "") });
       svg.appendChild(bar);
+      // opts.colab: cada linha é um colaborador — nome, trilho e barra
+      // abrem o card do colaborador (ver abrirCardColaborador, seção 9)
+      if (opts.colab){ [label, track, bar].forEach(function(el){ el.setAttribute("data-colab", it.label); }); }
       var val = svgEl("text", { x: leftW + w + 8, y: y+rowH/2+4, class:"chart-value" });
       val.textContent = formatNum(it.value);
       svg.appendChild(val);
@@ -1251,41 +1392,49 @@
     wireTooltips(svg);
   }
 
-  // Igual a renderBarH, mas cada barra é dividida em 2 segmentos (it.a
-  // = banco de horas, it.b = pagamento) — usado só no gráfico "Banco
-  // de horas e hora extra por colaborador", que precisa mostrar as duas
-  // naturezas de hora extra lado a lado na mesma barra, não em barras
-  // separadas.
-  function renderStackedH(container, items, opts){
-    opts = opts || {};
+  // "Banco de horas e hora extra por colaborador": cada barra tem a parte
+  // verde (hora extra, it.extra) e a parte vermelha (banco de horas,
+  // it.banco) lado a lado, na mesma escala; à direita vem o saldo
+  // (extra - banco), verde com "+" ou vermelho com "−". Nome, barra e
+  // saldo abrem o card do colaborador.
+  var COR_EXTRA = "#2E8B45", COR_BANCO = "#E31E24";
+  function formatSaldo(min){
+    min = Math.round(min||0);
+    if (min === 0) return "0h";
+    return (min > 0 ? "+" : "\u2212") + formatHoras(min);
+  }
+  function renderSaldoH(container, items){
     container.innerHTML = "";
     if (!items.length){ container.appendChild(emptyMsg()); return; }
-    var max = niceMax(Math.max.apply(null, items.map(function(i){ return i.a + i.b; })));
-    var rowH = 24, gap = 9, leftW = 128, rightW = 54, topPad = 4;
+    var max = niceMax(Math.max.apply(null, items.map(function(i){ return i.extra + i.banco; })));
+    var rowH = 24, gap = 9, leftW = 128, rightW = 92, topPad = 4, legendH = 22;
     var W = containerWidth(container, 520);
-    var H = topPad*2 + items.length*(rowH+gap) - gap + 20;
+    var H = legendH + topPad*2 + items.length*(rowH+gap) - gap;
     var svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, class:"chart-svg" });
     var plotW = W - leftW - rightW;
-    // legend — banco de horas em vermelho, pagamento (extra) em verde
-    var COR_BANCO = "#E31E24", COR_EXTRA = "#2E8B45";
-    var legendY = 10;
-    svg.appendChild(svgEl("rect", { x:leftW, y:0, width:10, height:10, fill: COR_BANCO }));
-    var t1 = svgEl("text", { x:leftW+14, y:9, class:"axis-label" }); t1.textContent = "Banco de horas"; svg.appendChild(t1);
-    svg.appendChild(svgEl("rect", { x:leftW+110, y:0, width:10, height:10, fill: COR_EXTRA }));
-    var t2 = svgEl("text", { x:leftW+124, y:9, class:"axis-label" }); t2.textContent = "Pagamento"; svg.appendChild(t2);
+    svg.appendChild(svgEl("rect", { x:leftW, y:1, width:10, height:10, fill: COR_EXTRA, rx:2 }));
+    var t1 = svgEl("text", { x:leftW+14, y:10, class:"axis-label" }); t1.textContent = "Hora extra"; svg.appendChild(t1);
+    svg.appendChild(svgEl("rect", { x:leftW+86, y:1, width:10, height:10, fill: COR_BANCO, rx:2 }));
+    var t2 = svgEl("text", { x:leftW+100, y:10, class:"axis-label" }); t2.textContent = "Banco de horas"; svg.appendChild(t2);
+    var t3 = svgEl("text", { x:W-4, y:10, class:"axis-label", "text-anchor":"end" }); t3.textContent = "Saldo"; svg.appendChild(t3);
 
     items.forEach(function(it, idx){
-      var y = 20 + topPad + idx*(rowH+gap);
-      var wa = max ? (it.a/max) * plotW : 0;
-      var wb = max ? (it.b/max) * plotW : 0;
-      var label = svgEl("text", { x: leftW-8, y: y+rowH/2+4, class:"chart-label", "text-anchor":"end" });
+      var y = legendH + topPad + idx*(rowH+gap);
+      var we = max ? (it.extra/max) * plotW : 0;
+      var wb = max ? (it.banco/max) * plotW : 0;
+      if (it.extra > 0) we = Math.max(we, 2);
+      if (it.banco > 0) wb = Math.max(wb, 2);
+      var dica = it.label + " · Hora extra: " + formatHoras(it.extra) + " · Banco de horas: " + formatHoras(it.banco) + " · Saldo: " + formatSaldo(it.extra - it.banco);
+      var label = svgEl("text", { x: leftW-8, y: y+rowH/2+4, class:"chart-label", "text-anchor":"end", "data-colab": it.label });
       label.textContent = truncate(it.label, 15);
       svg.appendChild(label);
-      svg.appendChild(svgEl("rect", { x:leftW, y:y, width:plotW, height:rowH, class:"chart-track", rx:3 }));
-      if (it.a > 0) svg.appendChild(svgEl("rect", { x:leftW, y:y, width:Math.max(wa,it.a?2:0), height:rowH, fill: COR_BANCO, rx:3, "data-tooltip": it.label + " · Banco de horas: " + formatHoras(it.a) }));
-      if (it.b > 0) svg.appendChild(svgEl("rect", { x:leftW+wa, y:y, width:Math.max(wb,it.b?2:0), height:rowH, fill: COR_EXTRA, rx:3, "data-tooltip": it.label + " · Pagamento: " + formatHoras(it.b) }));
-      var val = svgEl("text", { x: leftW + Math.max(wa+wb, 4) + 8, y: y+rowH/2+4, class:"chart-value" });
-      val.textContent = formatHoras(it.a+it.b);
+      svg.appendChild(svgEl("rect", { x:leftW, y:y, width:plotW, height:rowH, class:"chart-track", rx:3, "data-colab": it.label, "data-tooltip": dica }));
+      if (it.extra > 0) svg.appendChild(svgEl("rect", { x:leftW, y:y, width:we, height:rowH, fill: COR_EXTRA, rx:3, "data-colab": it.label, "data-tooltip": dica }));
+      if (it.banco > 0) svg.appendChild(svgEl("rect", { x:leftW+we, y:y, width:wb, height:rowH, fill: COR_BANCO, rx:3, "data-colab": it.label, "data-tooltip": dica }));
+      var saldo = it.extra - it.banco;
+      var val = svgEl("text", { x: W-4, y: y+rowH/2+4, class:"chart-value", "text-anchor":"end", "data-colab": it.label,
+        style: "fill:" + (saldo > 0 ? "#2E7D32" : (saldo < 0 ? "#C62828" : "var(--c-muted)")) });
+      val.textContent = formatSaldo(saldo);
       svg.appendChild(val);
     });
     container.appendChild(svg);
@@ -1609,24 +1758,32 @@
       return b.qtd-a.qtd || b.faltas-a.faltas || a.colaborador.localeCompare(b.colaborador,"pt-BR");
     }).slice(0,n);
   }
-  // Duração positiva (hora extra) só, dividida entre "banco de horas"
-  // (destino_horas_extra contém "banco") e "pagamento" (qualquer outro
-  // destino) — alimenta tanto os totais dos KPIs quanto o gráfico
-  // empilhado renderStackedH (seção 3) via o campo "top".
-  function bancoDeHorasEExtra(records, n){
-    var totals = { banco:0, pagamento:0 };
+  // Hora extra e banco de horas do mês por colaborador. Fonte principal:
+  // as linhas "Resumo Horas Cartão" (o Cartão Ponto do mês atual inteiro,
+  // somado pelo macro) — respeitam gestor/grupo/cargo/colaborador, mas
+  // não o período (são o total do mês). CSV antigo, sem essas linhas: cai
+  // para as linhas da Tratamento (Hora Extra = verde, duração negativa =
+  // vermelho), que só cobrem os dias que viraram ocorrência.
+  function horasCartaoPorColaborador(records){
+    var resumo = getResumoRecords(TIPO_RESUMO_HORAS_CARTAO);
     var perColab = {};
-    records.forEach(function(r){
-      if (r.duracao > 0){
-        var destino = r.destinoExtra || "";
-        var isBanco = /banco/i.test(destino);
-        if (isBanco) totals.banco += r.duracao; else totals.pagamento += r.duracao;
-        if (!perColab[r.colaborador]) perColab[r.colaborador] = { label:r.colaborador, a:0, b:0 };
-        if (isBanco) perColab[r.colaborador].a += r.duracao; else perColab[r.colaborador].b += r.duracao;
-      }
-    });
-    var top = Object.values(perColab).sort(function(x,y){ return (y.a+y.b)-(x.a+x.b); }).slice(0,n);
-    return { totals:totals, top:top };
+    if (resumo.length){
+      resumo.forEach(function(r){
+        if (!perColab[r.colaborador]) perColab[r.colaborador] = { label:r.colaborador, extra:0, banco:0 };
+        perColab[r.colaborador].extra += r.minHoraExtraCartao || 0;
+        perColab[r.colaborador].banco += r.minBancoHorasCartao || 0;
+      });
+    } else {
+      records.forEach(function(r){
+        if (r.duracao === 0) return;
+        if (!perColab[r.colaborador]) perColab[r.colaborador] = { label:r.colaborador, extra:0, banco:0 };
+        if (r.duracao > 0 && isTipoHoraExtra(r.tipo)) perColab[r.colaborador].extra += r.duracao;
+        else if (r.duracao < 0) perColab[r.colaborador].banco += -r.duracao;
+      });
+    }
+    var lista = Object.values(perColab).filter(function(x){ return x.extra > 0 || x.banco > 0; });
+    lista.sort(function(x,y){ return (y.extra+y.banco)-(x.extra+x.banco) || x.label.localeCompare(y.label,"pt-BR"); });
+    return { lista: lista, doCartao: resumo.length > 0 };
   }
   // Tempo entre a ocorrência (r.data) e a tratativa do gestor no
   // PontoNet (r.tratativa), em horas, agrupado por keyFn (gestor ou
@@ -1653,12 +1810,6 @@
   /* =========================================================
      5. FILTROS
   ========================================================= */
-  // Registros "normais" pro cálculo de período/datas: sem as
-  // linhas-resumo (auditoria, pausas térmicas), ocorrências curtas ou
-  // hora extra (que têm suas próprias vistas dedicadas).
-  function recordsGerais(){
-    return state.records.filter(function(r){ return !isTipoNaoOcorrencia(r.tipo); });
-  }
   // Valores distintos de keyFn(record) em ordem alfabética pt-BR
   // (localeCompare com locale "pt-BR" ordena "Á" junto de "A", não
   // depois de "Z" como faria uma comparação de string ingênua) — usado
@@ -1725,16 +1876,10 @@
       statusGroup.appendChild(chip);
     });
 
-    // pré-preenche o período com o intervalo total dos dados (sem contar
-    // as linhas de auditoria de 3 meses, que não são ocorrências datadas)
-    var recordsParaPeriodo = recordsGerais();
-    if (recordsParaPeriodo.length){
-      var dates = recordsParaPeriodo.map(function(r){ return r.data.getTime(); });
-      var minD = new Date(Math.min.apply(null, dates));
-      var maxD = new Date(Math.max.apply(null, dates));
-      $("fDataIni").value = toISODate(minD);
-      $("fDataFim").value = toISODate(maxD);
-    }
+    // pré-preenche o período com o intervalo total do arquivo (ver
+    // periodoCompleto: do primeiro dia com ocorrência ao fim do Cartão)
+    var total = periodoCompleto();
+    if (total){ $("fDataIni").value = total.ini; $("fDataFim").value = total.fim; }
   }
   function toISODate(d){
     return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
@@ -1845,13 +1990,10 @@
     if ($("fColab").value.trim()) n++;
     if (document.querySelectorAll("#fTipo .chip.active").length) n++;
     if (document.querySelectorAll("#fStatus .chip.active").length) n++;
-    var recordsParaPeriodo = recordsGerais();
-    if (recordsParaPeriodo.length){
-      var dates = recordsParaPeriodo.map(function(r){ return r.data.getTime(); });
-      var minISO = toISODate(new Date(Math.min.apply(null, dates)));
-      var maxISO = toISODate(new Date(Math.max.apply(null, dates)));
-      if ($("fDataIni").value && $("fDataIni").value !== minISO) n++;
-      if ($("fDataFim").value && $("fDataFim").value !== maxISO) n++;
+    var total = periodoCompleto();
+    if (total){
+      if ($("fDataIni").value && $("fDataIni").value !== total.ini) n++;
+      if ($("fDataFim").value && $("fDataFim").value !== total.fim) n++;
     }
     return n;
   }
@@ -1923,6 +2065,30 @@
       $("kpiDemoraSub").textContent = "Nenhuma tratativa registrada";
     }
   }
+  // Período em destaque na faixa preta do topo: é o período do filtro
+  // (o mesmo dos campos de data), então muda junto quando o usuário
+  // filtra. Rótulo "Período filtrado" quando difere do período inteiro
+  // do arquivo.
+  // Período inteiro do arquivo: as ocorrências da Tratamento, as curtas
+  // (dia a dia do Cartão) e a data das linhas-resumo do Cartão (= último
+  // dia do Cartão atual, o fim do ciclo, ex.: 27/09). Fica de fora só o
+  // resumo de pausas, cuja data cai em "hoje" quando não há Cartão.
+  function periodoCompleto(){
+    var recs = state.records.filter(function(r){ return r.tipo !== TIPO_RESUMO_PAUSAS_TERMICAS; });
+    if (!recs.length) return null;
+    var dates = recs.map(function(r){ return r.data.getTime(); });
+    return { ini: toISODate(new Date(Math.min.apply(null, dates))), fim: toISODate(new Date(Math.max.apply(null, dates))) };
+  }
+  function isoParaBR(iso){ return iso ? iso.split("-").reverse().join("/") : ""; }
+  function atualizarPeriodoTopo(){
+    var ini = $("fDataIni").value, fim = $("fDataFim").value;
+    if (!state.records.length || (!ini && !fim)){ $("topbarPeriod").hidden = true; return; }
+    var total = periodoCompleto();
+    var filtrado = total && (ini !== total.ini || fim !== total.fim);
+    $("topbarPeriodLabel").textContent = filtrado ? "Período filtrado" : "Período";
+    $("topbarPeriodValue").textContent = (ini ? isoParaBR(ini) : "início") + " a " + (fim ? isoParaBR(fim) : "fim");
+    $("topbarPeriod").hidden = false;
+  }
   function formatDateSpan(records){
     var dates = records.map(function(r){ return r.data.getTime(); });
     var minD = new Date(Math.min.apply(null,dates)), maxD = new Date(Math.max.apply(null,dates));
@@ -1937,6 +2103,11 @@
   // de dado do usuário); data-label em cada <td> é o que a versão
   // mobile (tabela vira cards empilhados, ver CSS) usa pra mostrar o
   // rótulo da coluna ao lado do valor.
+  // Nome de colaborador clicável dentro de uma tabela (abre o card do
+  // colaborador — o clique é tratado por delegação, ver seção 9).
+  function colabLink(nome){
+    return '<a href="#" class="colab-link" data-colab="'+escapeHtml(nome)+'">'+escapeHtml(nome)+'</a>';
+  }
   function renderTableSimple(container, columns, rows, opts){
     opts = opts || {};
     if (!rows.length){ container.innerHTML=""; container.appendChild(emptyMsg()); return; }
@@ -1970,10 +2141,10 @@
     renderBarH($("chartPorGestor"), ocorrenciasPorGestor(ocorrenciasRecords, 12));
     renderBarH($("chartPorCargo"), ocorrenciasPorCargo(ocorrenciasRecords, 12));
 
-    renderBarH($("chartTopColaboradores"), topColaboradores(ocorrenciasRecords, 10));
+    renderBarH($("chartTopColaboradores"), topColaboradores(ocorrenciasRecords, 10), { colab:true });
 
     renderTableSimple($("tableExtraFalta"),
-      [{label:"Colaborador", render:function(r){return escapeHtml(r.colaborador);}},
+      [{label:"Colaborador", render:function(r){return colabLink(r.colaborador);}},
        {label:"Gestor", render:function(r){return escapeHtml(r.gestor);}},
        {label:"Este mês", width:"76px", render:function(r){return r.mesAtual;}},
        {label:"3 meses (total)", width:"96px", render:function(r){
@@ -1983,17 +2154,23 @@
       {rowClass:function(r){ return r.auditoria ? "row-alert" : ""; }});
 
     renderTableSimple($("tableCurtas"),
-      [{label:"Colaborador", render:function(r){return escapeHtml(r.colaborador);}},
+      [{label:"Colaborador", render:function(r){return colabLink(r.colaborador);}},
        {label:"Faltas", width:"64px", render:function(r){return r.faltas;}},
        {label:"Extras", width:"64px", render:function(r){return r.extras;}},
        {label:"Total", width:"64px", render:function(r){return '<strong>'+r.qtd+'</strong>';}}],
       curtasPorColaborador(getCurtasRecords(), 10));
 
-    var banco = bancoDeHorasEExtra(records, 10);
-    renderStackedH($("chartBancoHoras"), banco.top);
+    var horas = horasCartaoPorColaborador(records);
+    var limiteBanco = 10;
+    renderSaldoH($("chartBancoHoras"), state.bancoMostrarTodos ? horas.lista : horas.lista.slice(0, limiteBanco));
+    $("btnBancoTodos").hidden = horas.lista.length <= limiteBanco;
+    $("btnBancoTodos").textContent = state.bancoMostrarTodos ? "Mostrar só os 10 primeiros" : "Mostrar todos (" + horas.lista.length + ")";
+    $("hintBancoHoras").innerHTML = horas.doCartao
+      ? "Mês atual do Cartão Ponto &middot; verde = hora extra, vermelho = banco de horas, à direita o saldo (extra &minus; banco)"
+      : "CSV antigo (sem o resumo do Cartão): só os dias que viraram ocorrência na Tratamento &middot; gere o CSV de novo com a macro atual";
 
     renderTableSimple($("tablePausasTermicas"),
-      [{label:"Colaborador", width:"210px", render:function(r){return escapeHtml(r.colaborador);}},
+      [{label:"Colaborador", width:"210px", render:function(r){return colabLink(r.colaborador);}},
        {label:"Cargo", width:"210px", render:function(r){return escapeHtml(r.cargo);}},
        {label:"Pausa correta", width:"130px", render:function(r){return r.pausaCorretas;}},
        {label:"Pausa curta (<0:20)", width:"150px", render:function(r){return r.pausaMenor20;}},
@@ -2013,13 +2190,14 @@
       demoraStats(records, function(r){ return r.gestor; }));
 
     renderTableSimple($("tableDemoraColaborador"),
-      [{label:"Colaborador", render:function(r){return escapeHtml(r.label);}},
+      [{label:"Colaborador", render:function(r){return colabLink(r.label);}},
        {label:"Ocorrências tratadas", width:"140px", render:function(r){return formatNum(r.qtd);}},
        {label:"Demora média", width:"110px", render:function(r){return formatDelay(r.media);}},
        {label:"Maior demora", width:"110px", render:function(r){return formatDelay(r.maior);}}],
       demoraStats(records, function(r){ return r.colaborador; }));
 
     renderHistory(ocorrenciasRecords);
+    atualizarPeriodoTopo();
     updateFiltersBadge();
     setTimeout(updateScrollHints, 0);
   }
@@ -2085,7 +2263,7 @@
       body.innerHTML = pageRows.map(function(r){
         return "<tr>"+
           "<td data-label=\"Data\">"+formatDateBR(r.data)+"</td>"+
-          "<td data-label=\"Colaborador\">"+escapeHtml(r.colaborador)+"</td>"+
+          "<td data-label=\"Colaborador\">"+colabLink(r.colaborador)+"</td>"+
           "<td data-label=\"Gestor\">"+escapeHtml(r.gestor)+"</td>"+
           "<td data-label=\"Setor\">"+escapeHtml(r.setor)+"</td>"+
           "<td data-label=\"Tipo\">"+escapeHtml(r.tipo)+"</td>"+
@@ -2158,6 +2336,7 @@
       }
       state.records = result.records;
       state.colorMaps = { gestor:{}, setor:{}, cargo:{}, tipo:{}, status:{} };
+      limparControlesFiltro();
 
       // state.records inclui linhas que não são ocorrência (resumos, curtas,
       // hora extra), por isso aqui é "linhas", não "ocorrências".
@@ -2204,6 +2383,16 @@
 
   $("resetBtn").addEventListener("click", function(){
     state.records = [];
+    limparControlesFiltro();
+    // as opções dos filtros eram do arquivo que saiu: esvazia
+    $("fGestor").innerHTML = '<option value="">Todos os gestores</option>';
+    $("fGrupo").innerHTML = '<option value="">Internos e externos</option>';
+    $("fGrupoGroup").hidden = true;
+    $("fCargo").innerHTML = '<option value="">Todos os cargos</option>';
+    $("colabList").innerHTML = ""; $("fTipo").innerHTML = ""; $("fStatus").innerHTML = "";
+    $("filtersBadge").hidden = true;
+    $("topbarPeriod").hidden = true;
+    fecharModalColab();
     $("fileInput").value = "";
     $("fileSummary").hidden = true;
     $("dropZone").hidden = false;
@@ -2217,26 +2406,37 @@
     orientationDismissed = false;
     $("orientationBanner").hidden = true;
     $("orientationBanner").classList.remove("dismissed");
+    if (modoExplicacao) mostrarEsqueletoExplicacao();
   });
 
   ["fGestor","fGrupo","fCargo"].forEach(function(id){ $(id).addEventListener("change", applyFilters); });
   $("fColab").addEventListener("input", debounce(applyFilters, 200));
   $("fDataIni").addEventListener("change", applyFilters);
   $("fDataFim").addEventListener("change", applyFilters);
-  $("clearFilters").addEventListener("click", function(){
+  // Volta todos os filtros ao estado inicial. Usada pelo botão "Limpar
+  // filtros", ao tirar o arquivo ("Carregar outro arquivo") e ao carregar
+  // um arquivo novo — sem isso, um colaborador digitado, um período ou a
+  // busca do histórico do arquivo anterior continuavam valendo e o painel
+  // abria já filtrado. O período volta ao intervalo inteiro dos dados
+  // (periodoCompleto, a mesma referência de populateFilterOptions e
+  // countActiveFilters) ou fica vazio sem arquivo.
+  function limparControlesFiltro(){
     $("fGestor").value = ""; $("fGrupo").value = ""; $("fCargo").value = ""; $("fColab").value = "";
-    document.querySelectorAll(".chip").forEach(function(c){ c.classList.remove("active"); });
-    // mesma fonte de datas que populateFilterOptions()/countActiveFilters()
-    // usam (recordsGerais(), sem as linhas-resumo) — usar state.records
-    // aqui geraria um intervalo diferente do "período padrão" que essas
-    // duas funções conhecem, e o selo de filtros ativos ficaria aceso
-    // mesmo logo depois de "Limpar filtros".
-    var recordsParaPeriodo = recordsGerais();
-    if (recordsParaPeriodo.length){
-      var dates = recordsParaPeriodo.map(function(r){ return r.data.getTime(); });
-      $("fDataIni").value = toISODate(new Date(Math.min.apply(null,dates)));
-      $("fDataFim").value = toISODate(new Date(Math.max.apply(null,dates)));
-    }
+    document.querySelectorAll("#fTipo .chip, #fStatus .chip").forEach(function(c){ c.classList.remove("active"); });
+    var total = periodoCompleto();
+    $("fDataIni").value = total ? total.ini : "";
+    $("fDataFim").value = total ? total.fim : "";
+    $("historySearch").value = "";
+    state.historySort = { key:"data", dir:"desc" };
+    state.historyPage = 1;
+    state.bancoMostrarTodos = false;
+  }
+  $("clearFilters").addEventListener("click", function(){
+    limparControlesFiltro();
+    applyFilters();
+  });
+  $("btnBancoTodos").addEventListener("click", function(){
+    state.bancoMostrarTodos = !state.bancoMostrarTodos;
     applyFilters();
   });
 
@@ -2281,16 +2481,162 @@
   }
   function fecharModalPausas(){
     $("pausasModalOverlay").hidden = true;
-    document.body.style.overflow = "";
+    if ($("colabModalOverlay").hidden) document.body.style.overflow = "";
   }
   $("btnAbrirPausas").addEventListener("click", abrirModalPausas);
   $("pausasModalClose").addEventListener("click", fecharModalPausas);
   $("pausasModalOverlay").addEventListener("click", function(e){
     if (e.target === $("pausasModalOverlay")) fecharModalPausas();
   });
+  // Esc fecha o modal de cima primeiro: o card do colaborador pode ter
+  // sido aberto de dentro do resumo de Pausas Térmicas.
   document.addEventListener("keydown", function(e){
-    if (e.key === "Escape" && !$("pausasModalOverlay").hidden) fecharModalPausas();
+    if (e.key !== "Escape") return;
+    if (!$("colabModalOverlay").hidden) fecharModalColab();
+    else if (!$("pausasModalOverlay").hidden) fecharModalPausas();
   });
+
+  /* ---------- Card do colaborador ----------
+     Clicar no nome de um colaborador (gráficos "Colaboradores com mais
+     ocorrências" e "Banco de horas e hora extra", e qualquer tabela,
+     inclusive o histórico e o resumo de pausas) abre um card com tudo o
+     que o arquivo tem sobre a pessoa. Um único listener por delegação
+     (document) trata todo elemento com data-colab, inclusive os que são
+     redesenhados a cada filtro. As ocorrências do card respeitam só o
+     PERÍODO do filtro (todos os tipos e status), para mostrar o quadro
+     completo da pessoa; os resumos (horas do Cartão, extra e falta no
+     mesmo dia, pausas) são do mês/3 meses, como nos cards do painel. */
+  document.addEventListener("click", function(e){
+    var el = e.target.closest ? e.target.closest("[data-colab]") : null;
+    if (!el) return;
+    e.preventDefault();
+    abrirCardColaborador(el.getAttribute("data-colab"));
+  });
+  function fecharModalColab(){
+    $("colabModalOverlay").hidden = true;
+    if ($("pausasModalOverlay").hidden) document.body.style.overflow = "";
+  }
+  $("colabModalClose").addEventListener("click", fecharModalColab);
+  $("colabModalOverlay").addEventListener("click", function(e){
+    if (e.target === $("colabModalOverlay")) fecharModalColab();
+  });
+
+  function abrirCardColaborador(nome){
+    if (!nome || !state.records.length) return;
+    hideTooltip();
+    var todas = state.records.filter(function(r){ return r.colaborador === nome; });
+    if (!todas.length) return;
+    function primeiro(campo, vazio){
+      for (var i=0; i<todas.length; i++){ var v = todas[i][campo]; if (v && v !== vazio) return v; }
+      return "";
+    }
+    var dIni = $("fDataIni").value ? new Date($("fDataIni").value+"T00:00:00") : null;
+    var dFim = $("fDataFim").value ? new Date($("fDataFim").value+"T23:59:59") : null;
+    function noPeriodo(r){ return (!dIni || r.data >= dIni) && (!dFim || r.data <= dFim); }
+
+    var ocorrencias = todas.filter(function(r){ return !isTipoNaoOcorrencia(r.tipo) && noPeriodo(r); })
+      .sort(function(a,b){ return b.data - a.data; });
+    var curtas = todas.filter(function(r){ return isTipoCurta(r.tipo) && noPeriodo(r); });
+    var horas = todas.filter(function(r){ return r.tipo === TIPO_RESUMO_HORAS_CARTAO; })[0];
+    var aud = todas.filter(function(r){ return r.tipo === TIPO_AUDITORIA_EXTRA_FALTA; })[0];
+    var pausa = todas.filter(function(r){ return r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS; })[0];
+
+    var demoras = [];
+    todas.forEach(function(r){
+      if (r.tratativa && noPeriodo(r) && !isTipoNaoOcorrencia(r.tipo)){
+        var h = (r.tratativa - r.data)/3600000; if (h >= 0) demoras.push(h);
+      }
+    });
+
+    $("colabModalTitle").textContent = nome;
+    var meta = [["Matrícula", primeiro("matricula")], ["Gestor", primeiro("gestor","Sem gestor") || "Sem gestor"],
+                ["Cargo", primeiro("cargo","Sem cargo") || "Sem cargo"], ["Setor", primeiro("setor","Sem setor") || "Sem setor"],
+                ["Grupo", primeiro("grupo")]];
+    $("colabModalMeta").innerHTML = meta.filter(function(m){ return m[1]; }).map(function(m){
+      return "<span>"+m[0]+": <b>"+escapeHtml(m[1])+"</b></span>";
+    }).join("");
+
+    function tile(label, valor, sub, cls){
+      return '<div class="colab-kpi'+(cls?' '+cls:'')+'"><div class="ck-label">'+label+'</div><div class="ck-value">'+valor+'</div>'+
+             (sub ? '<div class="ck-sub">'+sub+'</div>' : '')+'</div>';
+    }
+    var periodoTxt = (dIni ? formatDateBR(dIni) : "início") + " a " + (dFim ? formatDateBR(dFim) : "fim");
+    var saldo = horas ? (horas.minHoraExtraCartao - horas.minBancoHorasCartao) : 0;
+    var cFaltas = curtas.filter(function(r){ return r.tipo === "Falta < 15min"; }).length;
+    var html = '<div class="colab-kpis">' +
+      tile("Ocorrências", formatNum(ocorrencias.length), periodoTxt) +
+      tile("Hora extra", horas ? formatHoras(horas.minHoraExtraCartao) : "&ndash;", "Cartão do mês atual") +
+      tile("Banco de horas", horas ? formatHoras(horas.minBancoHorasCartao) : "&ndash;", "Cartão do mês atual") +
+      tile("Saldo", horas ? formatSaldo(saldo) : "&ndash;", "extra &minus; banco", horas ? (saldo > 0 ? "pos" : (saldo < 0 ? "neg" : "")) : "") +
+      tile("Extra e falta no mesmo dia", aud ? (aud.extraFaltaMesAtual + " / " + aud.extraFaltaTotal3Meses) : "0", "este mês / 3 meses",
+           aud && aud.extraFaltaTotal3Meses >= LIMITE_AUDITORIA_EXTRA_FALTA ? "alerta" : "") +
+      tile("Ocorrências curtas", formatNum(curtas.length), cFaltas + " falta(s) &middot; " + (curtas.length - cFaltas) + " extra(s)") +
+      tile("Demora no PontoNet", demoras.length ? formatDelay(demoras.reduce(function(a,b){return a+b;},0)/demoras.length) : "&ndash;",
+           demoras.length ? formatNum(demoras.length) + " tratada(s), média" : "nenhuma tratativa") +
+      tile("Pausas térmicas", pausa ? formatNum(pausa.pausaCorretas) : "&ndash;",
+           pausa ? "corretas &middot; " + pausa.pausaMenor20 + " curta(s) &middot; " + pausa.pausasMarcacoesImpares + " marcação(ões) ímpar(es)" : "fora do relatório",
+           pausa && pausa.pausasMarcacoesImpares > 0 ? "alerta" : "") +
+      '</div>';
+
+    var porTipo = ocorrenciasPorTipo(ocorrencias);
+    if (porTipo.length){
+      html += '<h3 class="colab-section">Ocorrências por tipo</h3><div class="colab-tags">' +
+        porTipo.map(function(t){ return '<span class="colab-tag">'+escapeHtml(t.label)+'<b>'+t.value+'</b></span>'; }).join("") + '</div>';
+    }
+    html += '<h3 class="colab-section">Ocorrências no período ('+periodoTxt+')</h3>';
+    if (ocorrencias.length){
+      html += '<div class="table-scroll" style="max-height:none;"><table class="data-table"><colgroup><col style="width:92px"><col><col><col style="width:84px"><col style="width:112px"></colgroup>' +
+        '<thead><tr><th>Data</th><th>Tipo</th><th>Situação</th><th>Falta</th><th>Status</th></tr></thead><tbody>' +
+        ocorrencias.map(function(r){
+          return '<tr><td data-label="Data">'+formatDateBR(r.data)+'</td><td data-label="Tipo">'+escapeHtml(r.tipo)+'</td>'+
+                 '<td data-label="Situação" title="'+escapeHtml(r.situacao)+'">'+escapeHtml(r.situacao)+'</td>'+
+                 '<td data-label="Falta">'+(r.duracao < 0 ? formatHoras(r.duracao) : "&ndash;")+'</td>'+
+                 '<td data-label="Status"><span class="status-pill status-'+escapeHtml(r.status)+'">'+escapeHtml(r.status)+'</span></td></tr>';
+        }).join("") + '</tbody></table></div>';
+    } else {
+      html += '<div class="chart-empty">Nenhuma ocorrência da Tratamento neste período.</div>';
+    }
+    $("colabModalBody").innerHTML = html;
+    $("colabModalOverlay").hidden = false;
+    $("colabModalBody").scrollTop = 0;
+    document.body.style.overflow = "hidden";
+  }
+
+  /* ---------- Modo explicação ("Entenda o painel") ----------
+     É o próprio painel com as caixas .card-fonte visíveis (CSS:
+     body.modo-explicacao) — assim a explicação fica ao lado do gráfico
+     de verdade, com os dados e filtros atuais. Sem arquivo carregado,
+     mostra o "esqueleto" dos cards com as explicações, para quem quer
+     entender o painel antes de abrir um CSV. */
+  var modoExplicacao = false;
+  function mostrarEsqueletoExplicacao(){
+    $("emptyState").hidden = true;
+    $("kpiRow").hidden = false;
+    $("dashboardBody").hidden = false;
+    ["kpiColaboradores","kpiOcorrencias","kpiDemora"].forEach(function(id){ $(id).innerHTML = "&ndash;"; });
+    ["kpiColaboradoresSub","kpiOcorrenciasSub"].forEach(function(id){ $(id).textContent = ""; });
+    $("kpiDemoraSub").textContent = "Da ocorrência até a tratativa";
+    ["chartTipo","chartDiaSemana","chartPorData","chartPorGestor","chartPorCargo","chartTopColaboradores",
+     "tableExtraFalta","tableCurtas","chartBancoHoras","tableDemoraGestor","tableDemoraColaborador"].forEach(function(id){
+      $(id).innerHTML = ""; $(id).appendChild(emptyMsg("Carregue o CSV para ver os dados deste quadro."));
+    });
+    $("btnBancoTodos").hidden = true;
+    $("historyBody").innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--c-muted-2);padding:20px;">Carregue o CSV para ver o histórico.</td></tr>';
+    $("historyPagination").innerHTML = ""; $("historyCount").textContent = "";
+  }
+  function setModoExplicacao(on){
+    modoExplicacao = on;
+    document.body.classList.toggle("modo-explicacao", on);
+    $("btnExplica").setAttribute("aria-pressed", on ? "true" : "false");
+    $("btnExplicaTxt").textContent = on ? "Voltar ao painel" : "Entenda o painel";
+    if (!state.records.length){
+      if (on) mostrarEsqueletoExplicacao();
+      else { $("emptyState").hidden = false; $("kpiRow").hidden = true; $("dashboardBody").hidden = true; }
+    }
+    window.scrollTo({ top:0, behavior:"smooth" });
+  }
+  $("btnExplica").addEventListener("click", function(){ setModoExplicacao(!modoExplicacao); });
+  $("btnExplicaVoltar").addEventListener("click", function(){ setModoExplicacao(false); });
 
   window.addEventListener("resize", debounce(function(){
     if (state.records.length) renderDashboard();

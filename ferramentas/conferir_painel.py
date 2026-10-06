@@ -23,7 +23,9 @@ for r in T[1:]:
        extra=(nz(r[th['Extras']])+nz(r[th['Extra 100%']]))*1440, falta=nz(r[th['Faltas']])*1440))
 res=[]
 def chk(nome,ok,det=''): res.append((nome,ok,det)); print(('OK   ' if ok else 'FALHA')+' '+nome+(' -> '+det if det else ''))
-def tips(lst): return {t.rsplit(': ',1)[0]: int(t.rsplit(': ',1)[1].replace('.','')) for t in lst}
+def tips(lst):  # ignora o complemento " · clique para ver o colaborador"
+    lst=[t.split(' · ')[0] for t in lst]
+    return {t.rsplit(': ',1)[0]: int(t.rsplit(': ',1)[1].replace('.','')) for t in lst}
 kp={k[0]:k for k in ui['kpis']}
 chk('KPI Ocorrências no período', kp['Ocorrências no período'][1]==str(len(E)), f"painel {kp['Ocorrências no período'][1]} / fonte {len(E)}")
 chk('KPI Colaboradores envolvidos', kp['Colaboradores envolvidos'][1]==str(len({e['nome'] for e in E})), f"painel {kp['Colaboradores envolvidos'][1]} / fonte {len({e['nome'] for e in E})}")
@@ -54,21 +56,30 @@ for r in cur[2:]:
     m=s(r[ch['Matrícula']]); dt=r[ch['DT']]
     if m and isinstance(dt,datetime.datetime):
         k=(m,dt.date()); cart[k][0]+=nz(r[ch['BH']])*1440; cart[k][1]+=nz(r[ch['50%']])*1440; cart[k][2]+=nz(r[ch['100%']])*1440
-hx=C()
-for e in E:
-    bh,e50,e100=cart.get((e['mat'],e['data'].date()),(0,0,0))
-    if e['extra']>0: hx[e['nome']]+=round(e50 if e50>0 else e['extra'])
-    if e100>0: hx[e['nome']]+=round(e100)
+# banco de horas / hora extra: Cartão atual inteiro, por colaborador (extra = 50%+100%, banco = BH)
 def hm(t):
-    t=t.split(': ',1)[1]; h=m=0
-    for p in t.split():
+    h=m=0
+    for p in t.replace('\u2212','').replace('+','').split():
         if p.endswith('min'): m=int(p[:-3])
         elif p.endswith('h'): h=int(p[:-1])
     return h*60+m
-gotb=collections.Counter()
-for t in ui['banco']: gotb[t.split(' · ')[0]]+=hm(t)
-ok=all(hx[k]==v for k,v in gotb.items()) and len(gotb)==min(10,len(hx))
-chk('Banco de horas e hora extra por colaborador', ok, f"{len(gotb)} colaboradores, minutos batem" if ok else f"painel {dict(gotb)} / fonte {hx.most_common(10)}")
+src=collections.defaultdict(lambda:[0.0,0.0]); nomeMat={}
+for r in cur[2:]:
+    m=s(r[ch['Matrícula']])
+    if not m: continue
+    src[m][0]+=(nz(r[ch['50%']])+nz(r[ch['100%']]))*1440; src[m][1]+=nz(r[ch['BH']])*1440
+    nomeMat.setdefault(m, s(r[ch['Nome']]))
+fonte={nomeMat[m]:(round(v[0]),round(v[1])) for m,v in src.items() if round(v[0])>0 or round(v[1])>0}
+gotb={}
+for t in ui['banco']:
+    p=t.split(' · ')
+    if len(p)==4: gotb[p[0]]=(hm(p[1].split(': ')[1]), hm(p[2].split(': ')[1]), p[3].split(': ')[1])
+okv=all(fonte.get(k)==v[:2] for k,v in gotb.items())
+oks=all((v[0]-v[1]==0 and v[2]=='0h') or (v[2].startswith('+')==(v[0]>v[1]) and hm(v[2])==abs(v[0]-v[1])) for v in gotb.values())
+corte=min(sum(v[:2]) for v in gotb.values()) if gotb else 0
+okt=len(gotb)==min(10,len(fonte)) and all(sum(v)<=corte for k,v in fonte.items() if k not in gotb)
+chk('Banco de horas e hora extra por colaborador (Cartão atual)', okv and oks and okt,
+    f"top {len(gotb)} de {len(fonte)} colaboradores; extra, banco e saldo batem com o Cartão" if okv and oks and okt else f"painel {gotb} / fonte {sorted(fonte.items(), key=lambda kv:-sum(kv[1]))[:10]}")
 # extra e falta mesmo dia
 cards=['Cartão atual','Cartão Agosto','Cartão Julho']; tot=C(); mes=C(); nomes={}
 for n in cards:

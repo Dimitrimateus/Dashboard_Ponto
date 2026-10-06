@@ -91,17 +91,20 @@ Option Explicit
 ' -----------------------------------------------------------------
 ' PRA ONDE CADA COISA VAI: A ABA "CSV" (formato de saída)
 '
-' Uma linha = um evento. O cabeçalho tem 23 colunas (ver
+' Uma linha = um evento. O cabeçalho tem 25 colunas (ver
 ' PrepararAbaCSV); a maioria das linhas só preenche as primeiras 13
 ' (ocorrência normal — extra, falta, hora extra 100%, curta etc.) e a
-' última ("grupo" = Interno/Externo, preenchida em toda linha cujo
+' 23ª ("grupo" = Interno/Externo, preenchida em toda linha cujo
 ' colaborador aparece numa das abas de Tratamento); as colunas 14 a
-' 22 só existem em 3 tipos de linha "resumo por colaborador" que não
-' representam um dia específico (ver EscreverLinhaCSV):
+' 22, 24 e 25 só existem em 3 tipos de linha "resumo por colaborador"
+' que não representam um dia específico (ver EscreverLinhaCSV):
 '   - tipo_ocorrencia = "Auditoria Extra e Falta (3 Meses)" → preenche
 '     ocorrencias_extra_falta_mes_atual / _3_meses.
 '   - tipo_ocorrencia = "Resumo Pausas Térmicas" → preenche as 7
 '     colunas pausas_.../trabalho_....
+'   - tipo_ocorrencia = "Resumo Horas Cartão" → preenche
+'     minutos_hora_extra_cartao / minutos_banco_horas_cartao (total do
+'     mês atual, direto do Cartão Ponto, ver GerarResumoHorasCartao).
 '   - qualquer outro tipo (Hora Extra, Falta, Atraso, Falta < 15min,
 '     Extra < 15min, ...) → só usa as 13 primeiras colunas.
 ' O painel (index.html) sabe diferenciar esses 3 casos pelo próprio
@@ -123,6 +126,12 @@ Option Explicit
 ' sempre reportada em linha separada, com Check "S" ou "N", nunca
 ' somada à hora extra "normal". As colunas "60%"/"120%" não são usadas
 ' em lugar nenhum (pedido do RH).
+'
+' O gráfico "Banco de horas e hora extra por colaborador" do painel NÃO
+' usa essas linhas de "Hora Extra"/falta: ele usa a linha "Resumo Horas
+' Cartão" de cada colaborador, que soma o Cartão Ponto do mês atual
+' inteiro (50% + 100% = hora extra; BH = banco de horas), sem passar
+' pela Tratamento nem pelo Check (pedido do RH, 06/10).
 '
 ' -----------------------------------------------------------------
 ' REGRAS DE EXCLUSÃO (quando uma linha da Tratamento NÃO vira nada)
@@ -593,6 +602,22 @@ ProximaAbaTratamento:
     End If
 
     ' =====================================================================
+    ' Horas do mês por colaborador, direto do Cartão Ponto do mês atual
+    ' ---------------------------------------------------------------------
+    ' Uma linha "Resumo Horas Cartão" por matrícula com o total de hora
+    ' extra (50% + 100%) e de banco de horas (BH) do mês inteiro. É o que
+    ' alimenta o gráfico "Banco de horas e hora extra por colaborador" do
+    ' painel (verde = extra, vermelho = banco, saldo à direita). Não
+    ' depende da Tratamento nem do Check: é o Cartão como ele está.
+    ' =====================================================================
+    Dim qtdResumoHoras As Long
+    qtdResumoHoras = 0
+    If Not wsCartao Is Nothing Then
+        GerarResumoHorasCartao wsCartao, dictRE, dictGestorPorMatricula, dictGrupoPorMatricula, _
+            wsCSV, linhaSaida, dataAtualCartao, qtdResumoHoras
+    End If
+
+    ' =====================================================================
     ' Resumo de Pausas Térmicas por colaborador (se a aba existir)
     ' ---------------------------------------------------------------------
     ' Usa a tabela de colaboradores que o macro FormatarPausasTermicas já
@@ -626,6 +651,7 @@ ProximaAbaTratamento:
         msgAuditoria = msgAuditoria & vbCrLf & "Nenhuma aba ""Cartão ..."" encontrada; auditoria de 3 meses não gerada."
     End If
     msgAuditoria = msgAuditoria & vbCrLf & qtdCurtas & " ocorrência(s) curta(s) (<15min) direto do Cartão Ponto."
+    msgAuditoria = msgAuditoria & vbCrLf & qtdResumoHoras & " colaborador(es) com hora extra ou banco de horas no Cartão Ponto do mês atual."
     msgAuditoria = msgAuditoria & vbCrLf & IIf(wsPausas Is Nothing, _
         "Nenhuma aba de Pausas Térmicas (já formatada) encontrada; resumo de pausas térmicas não gerado.", _
         qtdResumoPausas & " colaborador(es) no resumo de Pausas Térmicas.")
@@ -974,6 +1000,74 @@ Private Sub GerarOcorrenciasCurtasDoCartao(ws As Worksheet, dictRE As Object, di
 
 ProximaLinhaCurta:
     Next r
+End Sub
+
+' Soma, por matrícula, as horas do Cartão Ponto do mês atual inteiro e
+' grava uma linha "Resumo Horas Cartão" por colaborador que tenha
+' alguma hora extra ou banco de horas:
+'   - hora extra = colunas "50%" + "100%" ("60%"/"120%" não entram,
+'     pedido do RH);
+'   - banco de horas = coluna "BH" (no Cartão ela é sempre positiva e
+'     representa horas DEBITADAS do banco: dias de "Falta (Banco
+'     Horas)" inteiros e minutos de atraso/saída antecipada em dias
+'     "Trabalhando").
+' O painel desenha extra (verde) e banco (vermelho) na mesma barra e
+' mostra o saldo (extra - banco) à direita.
+Private Sub GerarResumoHorasCartao(ws As Worksheet, dictRE As Object, dictGestorPorMatricula As Object, _
+    dictGrupoPorMatricula As Object, wsCSV As Worksheet, ByRef linhaSaida As Long, dataRef As Variant, _
+    ByRef qtdGerada As Long)
+
+    Dim colMat As Long, colNome As Long, colBH As Long, col50 As Long, col100 As Long
+    colMat = ColunaPorCabecalho(ws, "Matrícula", 2)
+    colNome = ColunaPorCabecalho(ws, "Nome", 2)
+    colBH = ColunaPorCabecalho(ws, "BH", 2)
+    col50 = ColunaPorCabecalho(ws, "50%", 2)
+    col100 = ColunaPorCabecalho(ws, "100%", 2)
+    If colMat = 0 Then Exit Sub
+
+    ' matrícula -> Array(minutos de extra, minutos de banco); dictNomesHoras
+    ' guarda o nome na ordem em que a matrícula aparece no Cartão.
+    Dim dictHoras As Object, dictNomesHoras As Object
+    Set dictHoras = CreateObject("Scripting.Dictionary")
+    Set dictNomesHoras = CreateObject("Scripting.Dictionary")
+
+    Dim ultimaLinha As Long, r As Long, mat As String
+    Dim minExtraDia As Double, minBancoDia As Double, somaAtual As Variant
+    ultimaLinha = UltimaLinhaPreenchida(ws, colMat)
+    For r = 3 To ultimaLinha
+        mat = TextoLimpo(ws.Cells(r, colMat).Value)
+        If mat <> "" Then
+            minExtraDia = (IIf(col50 > 0, NzNum(ws.Cells(r, col50).Value), 0) _
+                         + IIf(col100 > 0, NzNum(ws.Cells(r, col100).Value), 0)) * 24 * 60
+            minBancoDia = IIf(colBH > 0, NzNum(ws.Cells(r, colBH).Value), 0) * 24 * 60
+            If dictHoras.Exists(mat) Then
+                somaAtual = dictHoras(mat)
+                dictHoras(mat) = Array(somaAtual(0) + minExtraDia, somaAtual(1) + minBancoDia)
+            Else
+                dictHoras(mat) = Array(minExtraDia, minBancoDia)
+                dictNomesHoras(mat) = IIf(colNome > 0, TextoLimpo(ws.Cells(r, colNome).Value), "")
+            End If
+        End If
+    Next r
+
+    Dim matK As Variant, totais As Variant, nomeHoras As String
+    Dim setorNome As String, cargoNome As String
+    For Each matK In dictHoras.Keys
+        totais = dictHoras(matK)
+        If Round(totais(0), 0) > 0 Or Round(totais(1), 0) > 0 Then
+            nomeHoras = dictNomesHoras(matK)
+            If nomeHoras = "" Then nomeHoras = "Matrícula " & matK
+            ObterSetorCargo dictRE, CStr(matK), setorNome, cargoNome
+
+            EscreverLinhaCSV wsCSV, linhaSaida, dataRef, nomeHoras, CStr(matK), _
+                TextoDoDicionario(dictGestorPorMatricula, CStr(matK)), setorNome, cargoNome, _
+                "Resumo Horas Cartão", "", "Pendente", 0, "", Empty, _
+                grupo:=TextoDoDicionario(dictGrupoPorMatricula, CStr(matK)), _
+                minHoraExtraCartao:=Round(totais(0), 0), minBancoHorasCartao:=Round(totais(1), 0)
+            linhaSaida = linhaSaida + 1
+            qtdGerada = qtdGerada + 1
+        End If
+    Next matK
 End Sub
 
 ' Procura, em todas as abas, a tabela de colaboradores que o macro
@@ -1430,7 +1524,8 @@ Private Function PrepararAbaCSV(wb As Workbook) As Worksheet
                         "situacao", "status", "duracao_minutos", "destino_horas_extra", "data_tratativa_pontonet", _
                         "horas_excedentes", "ocorrencias_extra_falta_mes_atual", "ocorrencias_extra_falta_3_meses", _
                         "pausas_corretas", "pausas_menor_20min", "pausas_maior_20min", "trabalho_correto_140", _
-                        "trabalho_maior_140", "trabalho_menor_140", "pausas_marcacoes_impares", "grupo")
+                        "trabalho_maior_140", "trabalho_menor_140", "pausas_marcacoes_impares", "grupo", _
+                        "minutos_hora_extra_cartao", "minutos_banco_horas_cartao")
     For i = LBound(cabecalhos) To UBound(cabecalhos)
         ws.Cells(1, i + 1).Value = cabecalhos(i)
     Next i
@@ -1441,7 +1536,8 @@ End Function
 
 ' Ordem das colunas tem que casar com PrepararAbaCSV. Os parâmetros
 ' opcionais no fim só são preenchidos nas linhas especiais (auditoria de
-' extra+falta e resumo de pausas térmicas, uma linha por colaborador);
+' extra+falta, resumo de pausas térmicas e resumo de horas do Cartão, uma
+' linha por colaborador);
 ' nas linhas normais de ocorrência ficam em branco. Use argumentos
 ' nomeados (ex.: pausaCorretas:=5) pra pular os que não interessam.
 ' "grupo" (Interno/Externo, última coluna) vale para qualquer tipo de
@@ -1454,7 +1550,8 @@ Private Sub EscreverLinhaCSV(ws As Worksheet, linha As Long, dataOcorrencia As V
     Optional pausaMenor20 As Variant = Empty, Optional pausaMaior20 As Variant = Empty, _
     Optional trabalhoCorreto140 As Variant = Empty, Optional trabalhoMaior140 As Variant = Empty, _
     Optional trabalhoMenor140 As Variant = Empty, Optional pausasMarcacoesImpares As Variant = Empty, _
-    Optional grupo As String = "")
+    Optional grupo As String = "", Optional minHoraExtraCartao As Variant = Empty, _
+    Optional minBancoHorasCartao As Variant = Empty)
 
     ws.Cells(linha, 1).Value = CDate(dataOcorrencia)
     ws.Cells(linha, 2).Value = nome
@@ -1483,6 +1580,8 @@ Private Sub EscreverLinhaCSV(ws As Worksheet, linha As Long, dataOcorrencia As V
     If Not IsEmpty(trabalhoMenor140) Then ws.Cells(linha, 21).Value = trabalhoMenor140
     If Not IsEmpty(pausasMarcacoesImpares) Then ws.Cells(linha, 22).Value = pausasMarcacoesImpares
     ws.Cells(linha, 23).Value = grupo
+    If Not IsEmpty(minHoraExtraCartao) Then ws.Cells(linha, 24).Value = minHoraExtraCartao
+    If Not IsEmpty(minBancoHorasCartao) Then ws.Cells(linha, 25).Value = minBancoHorasCartao
 End Sub
 
 ' Pede ao usuário a pasta de destino dos CSVs exportados por

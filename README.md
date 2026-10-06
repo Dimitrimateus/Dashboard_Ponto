@@ -98,6 +98,39 @@ térmicas, demora no PontoNet e histórico).
 - Pausas Térmicas: nova coluna "Pausa longa (>0:20)" (o dado já vinha no CSV e não aparecia).
 - O topo mostra "N linhas" em vez de "N ocorrências" (o arquivo tem linhas de resumo).
 
+## Painel: horas do Cartão, período, card do colaborador e modo explicação (06/10)
+
+### GerarCSVPonto
+- Nova linha **"Resumo Horas Cartão"**, uma por colaborador: soma o **Cartão atual inteiro**
+  (hora extra = colunas 50% + 100%; banco de horas = coluna BH). Não depende da Tratamento,
+  do Check nem do período.
+- O CSV ganhou 2 colunas no fim (agora são 25): `minutos_hora_extra_cartao` e
+  `minutos_banco_horas_cartao`. Só essa linha nova as preenche.
+- A mensagem final diz quantos colaboradores entraram nesse resumo.
+
+### Painel (index.html)
+- **Banco de horas e hora extra por colaborador**: a barra tem a parte **verde** (hora extra)
+  e a **vermelha** (banco de horas), e à direita vem o **saldo** (extra − banco), em verde com
+  "+" ou em vermelho com "−". Os números vêm do resumo novo do Cartão. O botão "Mostrar todos"
+  abre a lista inteira. Com um CSV antigo (sem o resumo), o gráfico usa as linhas da
+  Tratamento e avisa que o CSV precisa ser gerado de novo.
+- **Período em destaque** no centro da faixa preta do topo. Ele acompanha o filtro de período
+  (aparece "Período filtrado" quando o filtro muda) e agora vai até o último dia do Cartão
+  (ex.: 28/08 a 27/09).
+- **Filtros limpos automaticamente** quando o arquivo sai ("Carregar outro arquivo") e quando
+  um arquivo novo é aberto. Antes, o colaborador digitado e a busca do histórico continuavam
+  valendo.
+- **Card do colaborador**: clicar num nome (gráficos de top colaboradores e de banco de horas,
+  e em qualquer tabela: histórico, extra e falta, curtas, pausas, demora) abre um card com
+  matrícula, gestor, cargo, setor, ocorrências no período (por tipo e linha a linha), horas do
+  Cartão e saldo, extra e falta no mesmo dia, curtas, demora no PontoNet e pausas.
+- **Entenda o painel** (botão no topo): liga o modo explicação. É o mesmo painel, com uma
+  caixa laranja em cada número, gráfico e tabela dizendo de onde vem a informação. Funciona
+  também sem arquivo carregado.
+
+A conferência das ferramentas (`ferramentas/`) foi atualizada: 15/15 itens batem com a
+planilha de 28/08 a 27/09 (versão _2), incluindo extra, banco e saldo de cada colaborador.
+
 ## Ordem de uso no mês
 
 1. Rodar `ConsolidarCartaoPonto` no HRCP102 e colar o resultado numa aba `Cartão <Mês>`.

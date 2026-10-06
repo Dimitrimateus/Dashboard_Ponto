@@ -1,6 +1,6 @@
 # CONTEXTO DO PROJETO — Tratamento de Ponto e Painel de Ocorrências (AuroraCoop)
 
-> Arquivo de contexto para o Claude Code. Estado em **02/10/2026**. Leia inteiro antes de propor
+> Arquivo de contexto para o Claude Code. Estado em **06/10/2026**. Leia inteiro antes de propor
 > qualquer mudança: várias regras abaixo já foram discutidas e decididas com o Dimitri, e as
 > "armadilhas" já custaram retrabalho.
 
@@ -130,19 +130,25 @@ conteúdo num módulo.
      ("Extra e Falta" gera 2 linhas). **Não dependem do Check da Tratamento**: está em aberto com o
      Dimitri se um dia com Check "S" deve sair dessa lista.
    - "Resumo Pausas Térmicas": uma por colaborador da tabela de pausas.
+   - "Resumo Horas Cartão" (06/10): uma por matrícula do Cartão atual com o total do mês de
+     hora extra (50% + 100%) e de banco de horas (BH). Sem Tratamento, sem Check, sem período.
+     No Cartão, BH é sempre positivo e é **débito** (dias de "Falta (Banco Horas)" e minutos de
+     atraso em dias "Trabalhando").
    Gestor e grupo dessas linhas vêm do primeiro gestor/grupo visto para a matrícula na Tratamento.
 9. **Antes de ler, tira os filtros de todas as abas** (`LimparFiltros`) e acha a última linha com
    `UltimaLinhaPreenchida` (não usa `End(xlUp)`).
 10. `TextoLimpo`: erro do Excel (`#N/A`) vira "", quebras de linha viram espaço.
 
-**Saída: contrato do CSV (23 colunas, nesta ordem):**
+**Saída: contrato do CSV (25 colunas, nesta ordem):**
 ```
 data, colaborador, matricula, gestor, setor, cargo, tipo_ocorrencia, situacao, status,
 duracao_minutos, destino_horas_extra, data_tratativa_pontonet, horas_excedentes,
 ocorrencias_extra_falta_mes_atual, ocorrencias_extra_falta_3_meses, pausas_corretas,
 pausas_menor_20min, pausas_maior_20min, trabalho_correto_140, trabalho_maior_140,
-trabalho_menor_140, pausas_marcacoes_impares, grupo
+trabalho_menor_140, pausas_marcacoes_impares, grupo,
+minutos_hora_extra_cartao, minutos_banco_horas_cartao
 ```
+(as duas últimas só na linha "Resumo Horas Cartão")
 - Separador **vírgula**; campo com vírgula/aspas/quebra vai entre aspas (RFC 4180); UTF-8 com BOM
   (`ADODB.Stream`); datas `dd/mm/aaaa` (`dd/mm/aaaa hh:mm` quando tem hora); duração em minutos
   inteiros (negativo = falta); `grupo` = Interno/Externo pelo nome da aba (vazio na planilha antiga).
@@ -164,6 +170,19 @@ trabalho_menor_140, pausas_marcacoes_impares, grupo
   vistas gerais e têm vistas próprias; `TIPOS_HORA_EXTRA` entram só nas horas do gráfico de banco
   de horas, **não** na contagem de ocorrências. `isTipoIgnorado` descarta "Problema horário" na
   leitura (proteção para CSV antigo); `textoCampo` transforma "Erro 2042"/`#N/D` em vazio.
+- `TIPOS_RESUMO` = auditoria, pausas e "Resumo Horas Cartão". O gráfico de banco de horas usa
+  esse resumo (verde = extra, vermelho = banco, saldo à direita, "Mostrar todos"); sem ele (CSV
+  antigo) cai para as linhas da Tratamento e avisa no subtítulo.
+- Topo (faixa preta): **período** em destaque = valores do filtro de período; o período padrão
+  (`periodoCompleto`) vai da 1ª data das ocorrências/curtas até a data das linhas-resumo do
+  Cartão (fim do ciclo). Botão **"Entenda o painel"** liga `body.modo-explicacao`, que mostra
+  as caixas `.card-fonte` (texto de "de onde vem" de cada card, escrito a partir do guia do
+  Dimitri); sem arquivo, mostra o esqueleto dos cards.
+- `limparControlesFiltro()` zera filtros, busca e ordenação: usada em "Limpar filtros", ao tirar
+  o arquivo e ao carregar um novo.
+- **Card do colaborador**: qualquer elemento com `data-colab` (nomes nos gráficos de top e de
+  banco de horas, `colabLink` nas tabelas) abre `abrirCardColaborador` por delegação. As
+  ocorrências do card respeitam só o período do filtro; os resumos são do mês/3 meses.
 - Cards (KPI): Colaboradores envolvidos · Ocorrências no período · Demora média no PontoNet.
   (**Os cards de total de horas extra e de horas falta foram retirados a pedido do Dimitri.**)
 - Gráficos/tabelas: por tipo (rosca), por dia da semana, por data (linha), por gestor (top 12),
@@ -187,6 +206,9 @@ Bugs achados e corrigidos nessa revisão:
 - `#N/A` do gestor ia para o CSV como "Erro 2042".
 - O GerarCSV antigo procurava abas "Cartão ponto…" e não achava "Cartão Agosto/atual": a
   auditoria e as curtas saíam vazias.
+
+Conferência de 06/10 (planilha versão _2, 138 ocorrências): 15/15 de novo, com o item de banco
+de horas agora comparando extra, banco e saldo de cada colaborador com o Cartão atual somado.
 
 ## 8. Armadilhas técnicas — não repetir
 
@@ -221,6 +243,11 @@ Bugs achados e corrigidos nessa revisão:
 - A planilha de 28/08 a 27/09 ainda está no formato antigo (aba única "Tratamento"). Separar em
   Internos/Externos depende de um **critério** que o Dimitri ainda não deu.
 - Regra de `destino_horas_extra` (banco × pagamento) não confirmada.
+- **Absenteísmo** (pedido de 06/10): juntar as ausências dos 3 Cartões (coluna "Descrição
+  Marcação": Atestado, Auxílio Doença, Acidente Trabalho, Doação Sangue, Licença Falecimento,
+  Maternidade, Paternidade, Acomp. Médico Gestante). Sugestões de visões apresentadas ao
+  Dimitri; **aguardando ele escolher** e decidir se "Falta (Banco Horas)", "Horas Faltas",
+  "Faltas Injustificadas" e "Sem Marcação" entram, e se conta dia corrido ou só dia útil.
 - Sugestões para o painel ainda não aprovadas: comparativo com o mês anterior; pendências mais
   antigas ("há X dias"); % tratado por gestor; reincidentes (3+ do mesmo tipo); ocorrências por
   colaborador da equipe; mapa de calor colaborador × dia (a sexta concentrou 51 de 141); exportar
@@ -247,3 +274,6 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   Internos/Externos, RE e Cartão achados por prefixo.
 - 01/10: index versionado; filtros, Check S, Problema horário, ocorrência só com extra, Erro 2042;
   cards de horas retirados; filtro de grupo; conferência 15/15.
+- 06/10: resumo de horas do Cartão (CSV com 25 colunas) e gráfico verde/vermelho com saldo;
+  período no topo; filtros limpos ao tirar/carregar arquivo; card do colaborador; modo
+  "Entenda o painel".
