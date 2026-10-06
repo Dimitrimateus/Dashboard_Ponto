@@ -23,9 +23,9 @@ for r in T[1:]:
        extra=(nz(r[th['Extras']])+nz(r[th['Extra 100%']]))*1440, falta=nz(r[th['Faltas']])*1440))
 res=[]
 def chk(nome,ok,det=''): res.append((nome,ok,det)); print(('OK   ' if ok else 'FALHA')+' '+nome+(' -> '+det if det else ''))
-def tips(lst):  # ignora o complemento " · clique para ver o colaborador"
-    lst=[t.split(' · ')[0] for t in lst]
-    return {t.rsplit(': ',1)[0]: int(t.rsplit(': ',1)[1].replace('.','')) for t in lst}
+def tips(lst):  # ignora os complementos " (...)" e " · clique para ver o colaborador"
+    lst=[t.split(' · ')[0].rsplit(': ',1) for t in lst]
+    return {n: int(v.split(' (')[0].replace('.','')) for n,v in lst}
 kp={k[0]:k for k in ui['kpis']}
 chk('KPI Ocorrências no período', kp['Ocorrências no período'][1]==str(len(E)), f"painel {kp['Ocorrências no período'][1]} / fonte {len(E)}")
 chk('KPI Colaboradores envolvidos', kp['Colaboradores envolvidos'][1]==str(len({e['nome'] for e in E})), f"painel {kp['Colaboradores envolvidos'][1]} / fonte {len({e['nome'] for e in E})}")
@@ -156,3 +156,16 @@ if 'ORG' in d and ui.get('orgResumo'):
     okn=ui['orgResumo'].split()[0]==str(total) and ui['orgLinhas']==total
     chk('Lista de colaboradores (ORG) e fora do ORG', okn and sorted(ui['orgFora'])==fora,
         f"{total} no ORG; fora do ORG: {len(fora)}" if okn and sorted(ui['orgFora'])==fora else f"painel {ui['orgResumo']!r} {ui['orgFora']} / fonte {total} {fora}")
+# marcações digitadas: total, pessoas, por motivo e top 10, direto da aba formatada
+abaDig=next((n for n,rw in d.items() if rw and all(k in hdrmap(rw[0]) for k in ('Matrícula','Data','Hora','Motivo','Justificativa'))), None)
+if abaDig and ui.get('digKpis'):
+    rw=d[abaDig]; hd=hdrmap(rw[0])
+    linhasD=[r for r in rw[1:] if s(r[hd['Matrícula']]) and isinstance(r[hd['Data']],datetime.datetime)]
+    mot=C(s(r[hd['Motivo']]) for r in linhasD); pes=C(s(r[hd['Colaborador']]) for r in linhasD)
+    k=ui['digKpis'].split('\n')
+    okk=k[1]==str(len(linhasD)) and k[4]==str(len({s(r[hd['Matrícula']]) for r in linhasD})) and ui['digLinhas']==len(linhasD)
+    okm={a:int(b) for a,b in ui['digMotivo']}==dict(mot)
+    gt=tips(ui['digTop']); corte=min(gt.values()) if gt else 0
+    okt=all(pes[n]==v for n,v in gt.items()) and len(gt)==min(10,len(pes)) and all(v<=corte for n,v in pes.items() if n not in gt)
+    chk('Marcações digitadas (total, pessoas, motivo, top 10)', okk and okm and okt,
+        f"{len(linhasD)} batidas de {len({s(r[hd['Matrícula']]) for r in linhasD})} pessoas; {dict(mot)}" if okk and okm and okt else f"painel {k} {ui['digMotivo']} {gt} / fonte {len(linhasD)} {dict(mot)} {pes.most_common(10)}")

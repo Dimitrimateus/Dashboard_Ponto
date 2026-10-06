@@ -18,6 +18,7 @@ Fluxo mensal:
 ```
 HRCP102 (cartão ponto, sistema Senior) ──► ConsolidarCartaoPonto ──► aba "Cartão <mês>"
 HRES114 (pausas térmicas, Senior)      ──► FormatarPausasTermicas ──► aba "Pausas Térmicas"
+Marcações digitadas (Senior)           ──► FormatarMarcacoesDigitadas ──► aba "Marcações Digitadas"
 aba PURO (exportação de ocorrências)   ──► PURO_Para_EDITADO      ──► aba EDITADO_MESAA ─► (Dimitri trata) ─► "Tratamento - Internos" / "Tratamento - Externos"
                                                          todas as abas ──► GerarAbaCSV ──► aba "CSV" ──► ExportarCSVPorGestor ──► dados_<gestor>.csv + dados_TODOS.csv
                                                                                                                                   └──► index.html (abre no navegador)
@@ -47,6 +48,7 @@ aba PURO (exportação de ocorrências)   ──► PURO_Para_EDITADO      ─�
 | `CartaoPonto/ConsolidarCartaoPonto.bas` | HRCP102 → aba `Cartao_Consolidado` (1 linha por colaborador/dia) |
 | `PausasTermicas/FormatarPausasTermicas.bas` | HRES114 → a mesma aba, só com a tabela de colaboradores e a de total |
 | `PuroParaEditado/PURO_Para_EDITADO.bas` | aba `PURO` → `EDITADO_MESAA` (reordena, X→SIM, tira espaços) |
+| `MarcacoesDigitadas/FormatarMarcacoesDigitadas.bas` | relatório "Marcações digitadas" → a mesma aba como tabela (renomeada "Marcações Digitadas") |
 | `GerarCSVPonto/GerarCSVPonto.bas` | `GerarAbaCSV` (monta a aba CSV) e `ExportarCSVPorGestor` (grava os .csv) |
 | `Dashboard/index.html` | O painel. Contém o logo em base64 (linha enorme, ~60 KB); não leia o arquivo inteiro de uma vez |
 | `txt/*.txt` | As mesmas macros em `.txt`, CRLF, prontas para colar |
@@ -97,6 +99,19 @@ conteúdo num módulo.
 - `LimparTexto`: tira os espaços das pontas de **todo texto** (o sistema completa com espaços até
   uma largura fixa); célula só com espaços vira vazia; datas, horas e números ficam intactos.
 
+### 5.3b FormatarMarcacoesDigitadas (aba ativa = relatório bruto)
+- Dump de impressão: cabeçalho de página repetido ("Crachá | Colaborador | Cargo | Local | Ori. |
+  Data | Hora | Coletor | Função | Justificativa") com os valores **deslocados**: nome = coluna de
+  "Colaborador" + 1; cargo = código (col. "Cargo") + descrição (+1); motivo = col. "Justificativa";
+  texto livre = col. "Justificativa" + 2. Crachá = matrícula. Data e hora em colunas separadas.
+- Motivo longo quebra em duas linhas: a linha seguinte só tem o resto na coluna do motivo
+  ("ponto"); a macro junta. Lê com `.Value2` (com `.Value`, data vira Date e `IsNumeric` dá False).
+- Saída (linha 1): `Matrícula, Colaborador, Cód. Cargo, Cargo, Cód. Local, Local, Origem, Data,
+  Hora, Dia da semana, Coletor, Função, Motivo, Justificativa`.
+- Relatório de 28/08 a 27/09: 434 batidas, 137 pessoas; motivos: atividade externa 167,
+  dispositivo 157, esquecimento 109, exclusão por erro 1; Origem D 422 / E 12 (**significado de
+  "E" não confirmado com o Dimitri**).
+
 ### 5.4 GerarCSVPonto
 **Entradas (achadas por nome/cabeçalho, nunca por posição):**
 - Abas cujo nome começa com **"Tratamento"** e que têm a coluna `Matricula` na linha 1:
@@ -110,6 +125,7 @@ conteúdo num módulo.
 - `PontoNet` (opcional; se faltar, abre um seletor de arquivo): `Data falta, Matrícula, Situação
   atual, Justificativa, Avaliado em:`.
 - A tabela de pausas, achada em qualquer aba pela linha que tem `Matrícula` + `Pausa corretas`.
+- **Marcações Digitadas**: aba com `Matrícula, Data, Hora, Motivo, Justificativa` na linha 1.
 - **ORG** (relação colaborador × gestor): aba que começa com "ORG" com `Matricula`, `COLABORADOR`,
   `Descrição`, `Cargo`, `Unidade`, `GESTOR` na linha 1 (busca de cabeçalho sem acento/maiúscula,
   `ColunaSemAcento`). A coluna Matricula do ORG é fórmula e às vezes dá `#N/A`.
@@ -137,6 +153,8 @@ conteúdo num módulo.
      hora extra (50% + 100%) e de banco de horas (BH). Sem Tratamento, sem Check, sem período.
      No Cartão, BH é sempre positivo e é **débito** (dias de "Falta (Banco Horas)" e minutos de
      atraso em dias "Trabalhando").
+   - "Marcação Digitada": uma por batida da aba Marcações Digitadas; data = dia + hora (minuto);
+     situacao = motivo; colunas 26/27 = justificativa / origem. Sem Tratamento nem Check.
    - "Cadastro ORG": uma por pessoa do ORG (matrícula repetida = 1ª linha; matrícula `#N/A` entra
      sem matrícula, salvo se o nome já existe com matrícula válida); situacao = área do ORG.
    Gestor e grupo dessas linhas vêm do primeiro gestor/grupo visto para a matrícula na Tratamento;
@@ -145,16 +163,16 @@ conteúdo num módulo.
    `UltimaLinhaPreenchida` (não usa `End(xlUp)`).
 10. `TextoLimpo`: erro do Excel (`#N/A`) vira "", quebras de linha viram espaço.
 
-**Saída: contrato do CSV (25 colunas, nesta ordem):**
+**Saída: contrato do CSV (27 colunas, nesta ordem):**
 ```
 data, colaborador, matricula, gestor, setor, cargo, tipo_ocorrencia, situacao, status,
 duracao_minutos, destino_horas_extra, data_tratativa_pontonet, horas_excedentes,
 ocorrencias_extra_falta_mes_atual, ocorrencias_extra_falta_3_meses, pausas_corretas,
 pausas_menor_20min, pausas_maior_20min, trabalho_correto_140, trabalho_maior_140,
 trabalho_menor_140, pausas_marcacoes_impares, grupo,
-minutos_hora_extra_cartao, minutos_banco_horas_cartao
+minutos_hora_extra_cartao, minutos_banco_horas_cartao, justificativa_marcacao, origem_marcacao
 ```
-(as duas últimas só na linha "Resumo Horas Cartão")
+(24/25 só na linha "Resumo Horas Cartão"; 26/27 só na "Marcação Digitada")
 - Separador **vírgula**; campo com vírgula/aspas/quebra vai entre aspas (RFC 4180); UTF-8 com BOM
   (`ADODB.Stream`); datas `dd/mm/aaaa` (`dd/mm/aaaa hh:mm` quando tem hora); duração em minutos
   inteiros (negativo = falta); `grupo` = Interno/Externo pelo nome da aba (vazio na planilha antiga).
@@ -192,6 +210,11 @@ minutos_hora_extra_cartao, minutos_banco_horas_cartao
 - **Lista de colaboradores (ORG)** (`renderListaORG`): linhas "Cadastro ORG" casadas por
   matrícula (`chavePessoa`) com ocorrências do filtro e horas do Cartão; aviso de quem tem dados
   mas não está no ORG (`pessoasForaDoORG`, ignora filtros).
+- **Marcações digitadas** (`renderDigitadas`, filtro `getDigitadasRecords`: gestor/grupo/cargo/
+  colaborador/período, sem chips): KPIs, motivo, dia da semana, data, top 10, gestor, hora, esquecimento
+  repetido, justificativas (agrupadas por `chaveTexto`), lista com busca. "No dia de uma ocorrência" =
+  mesma matrícula + dia de uma ocorrência da Tratamento. `isTipoDigitada` entra em
+  `isTipoNaoOcorrencia` e é excluído de `getFilteredRecords`.
 - Cards (KPI): Colaboradores envolvidos · Ocorrências no período · Demora média no PontoNet.
   (**Os cards de total de horas extra e de horas falta foram retirados a pedido do Dimitri.**)
 - Gráficos/tabelas: por tipo (rosca), por dia da semana, por data (linha), por gestor (top 12),
@@ -223,6 +246,9 @@ Achados no ORG da versão _2 (06/10): nenhum gestor em branco; 22 matrículas re
 com matrícula `#N/A` (2 duplicatas de quem já está com matrícula; o resto é desligado ou nome
 diferente da RE); 10 pessoas da RE fora do ORG. Lista nominal só na conversa com o Dimitri
 (dados pessoais), nunca no repositório. Conferência: 16/16.
+
+Marcações digitadas (06/10): aba inserida na planilha _2 com `ferramentas/adicionar_aba_xlsx.py`
+(sem openpyxl; só índices do pacote + estilos no fim mudam). Conferência: 17/17.
 
 ## 8. Armadilhas técnicas — não repetir
 
@@ -257,6 +283,8 @@ diferente da RE); 10 pessoas da RE fora do ORG. Lista nominal só na conversa co
 - A planilha de 28/08 a 27/09 ainda está no formato antigo (aba única "Tratamento"). Separar em
   Internos/Externos depende de um **critério** que o Dimitri ainda não deu.
 - Regra de `destino_horas_extra` (banco × pagamento) não confirmada.
+- Marcações digitadas: o que é Origem "E"? Dá para separar o que o colaborador incluiu no PontoNet
+  do que o RH lançou? (o relatório não traz quem digitou).
 - **Absenteísmo** (pedido de 06/10): juntar as ausências dos 3 Cartões (coluna "Descrição
   Marcação": Atestado, Auxílio Doença, Acidente Trabalho, Doação Sangue, Licença Falecimento,
   Maternidade, Paternidade, Acomp. Médico Gestante). Sugestões de visões apresentadas ao
@@ -292,3 +320,5 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   período no topo; filtros limpos ao tirar/carregar arquivo; card do colaborador; modo
   "Entenda o painel". Depois: lista do ORG no CSV ("Cadastro ORG") e seção "Lista de
   colaboradores (ORG)" com aviso de quem está fora do ORG; gestor das linhas-resumo pelo ORG.
+  Depois: macro FormatarMarcacoesDigitadas, linhas "Marcação Digitada" no CSV (27 colunas) e seção
+  "Marcações digitadas" no painel.

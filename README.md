@@ -8,6 +8,7 @@ no fim, no CSV que alimenta o painel dos gestores.
 | `CartaoPonto/` | `ConsolidarCartaoPonto` | Relatório HRCP102 (aba ativa) → aba `Cartao_Consolidado`, uma linha por colaborador/dia |
 | `PausasTermicas/` | `FormatarPausasTermicas` | Relatório HRES114 (aba ativa) → a mesma aba, só com as duas tabelas (colaboradores e total) |
 | `PuroParaEditado/` | `PURO_Para_EDITADO` | Aba `PURO` → nova aba `EDITADO_MESAA` |
+| `MarcacoesDigitadas/` | `FormatarMarcacoesDigitadas` | Relatório "Marcações digitadas" (aba ativa) → a mesma aba, como tabela (`Marcações Digitadas`) |
 | `GerarCSVPonto/` | `GerarAbaCSV` / `ExportarCSVPorGestor` | Abas de Tratamento, RE, Cartão e Pausas → aba `CSV` → arquivos `.csv` |
 | `Dashboard/` | `index.html` | CSV → painel no navegador (gestores e supervisor) |
 
@@ -151,12 +152,49 @@ planilha de 28/08 a 27/09 (versão _2), incluindo extra, banco e saldo de cada c
   com uma letra diferente).
 - O card do colaborador mostra a área do ORG e avisa "Não está no ORG".
 
+## Marcações digitadas (06/10)
+
+Marcação digitada é a batida que não veio do relógio: o colaborador incluiu no PontoNet com
+justificativa, ou o RH lançou no sistema.
+
+### FormatarMarcacoesDigitadas (nova macro)
+- Rode com o relatório "Marcações digitadas" aberto (aba ativa, numa cópia). A aba vira uma
+  tabela com cabeçalho na linha 1 e é renomeada para `Marcações Digitadas`:
+  `Matrícula · Colaborador · Cód. Cargo · Cargo · Cód. Local · Local · Origem · Data · Hora ·
+  Dia da semana · Coletor · Função · Motivo · Justificativa`.
+- Descarta os cabeçalhos de página repetidos, separa o código e a descrição do local e junta o
+  motivo que o relatório quebra em duas linhas ("Problemas no dispositivo de registro de" +
+  "ponto"). As colunas são achadas pelo cabeçalho do relatório.
+- Depois, traga a aba para a planilha de Tratamento (Mover ou copiar).
+
+### GerarCSVPonto
+- Acha a aba pelo cabeçalho (Matrícula, Data, Hora, Motivo, Justificativa) e grava uma linha
+  **"Marcação Digitada"** por batida: data com a hora (arredondada ao minuto), motivo em
+  `situacao`, gestor (Tratamento ou ORG), setor e cargo.
+- O CSV ganhou 2 colunas no fim (agora são 27): `justificativa_marcacao` e `origem_marcacao`.
+
+### Painel
+- Nova seção **Marcações digitadas**: indicadores (total, pessoas, % por esquecimento, quantas
+  caem num dia que também tem ocorrência na Tratamento, % em horário redondo), motivo, dia da
+  semana, data, top 10 colaboradores, por gestor, horário da batida, esquecimento repetido,
+  justificativas mais usadas e a lista completa com busca. Respeita os filtros de gestor, grupo,
+  cargo, colaborador e período.
+- A lista do ORG ganhou a coluna "Digitadas", o card do colaborador mostra as batidas digitadas
+  dele e o aviso "fora do ORG" passa a considerar as digitadas.
+
+### Ferramentas
+- `formatar_marcacoes.py`: a mesma formatação da macro, em Python (para conferir sem Excel).
+- `adicionar_aba_xlsx.py`: acrescenta a aba formatada à planilha de Tratamento sem regravar o
+  resto do arquivo (só mexe nos índices do pacote e acrescenta estilos no fim).
+- Conferência: 17/17.
+
 ## Ordem de uso no mês
 
 1. Rodar `ConsolidarCartaoPonto` no HRCP102 e colar o resultado numa aba `Cartão <Mês>`.
 2. Rodar `FormatarPausasTermicas` no HRES114 (numa cópia) e trazer a aba para a pasta de Tratamento.
 3. Rodar `PURO_Para_EDITADO` e tratar as ocorrências em `Tratamento - Internos` / `Tratamento - Externos`.
-4. Rodar `GerarAbaCSV` e depois `ExportarCSVPorGestor`.
+4. Rodar `FormatarMarcacoesDigitadas` no relatório de Marcações digitadas e trazer a aba.
+5. Rodar `GerarAbaCSV` e depois `ExportarCSVPorGestor`.
 
 > Estes macros foram escritos e revisados fora do Excel: a lógica foi conferida simulando-a em
 > Python sobre os arquivos reais. Rode sempre numa **cópia** da planilha na primeira vez.

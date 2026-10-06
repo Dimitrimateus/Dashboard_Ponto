@@ -154,6 +154,20 @@ for r in Pz[1:]:
     se,ca=setorcargo(m)
     W(dmax,s(r[pz['Colaborador']]),m,gestorPor.get(m,''),se,s(r[pz['Cargo']]) or ca,'Resumo Pausas Térmicas','','Pendente',0,
       pc=nz(r[pz['Pausa corretas']]),pm=nz(r[pz['Pausa menor 0:20']]),pM=nz(r[pz['Pausa maior 0:20']]),tc=nz(r[pz['Trabalho correto 1:40']]),tM=nz(r[pz['Trabalho maior 1:40']]),tm=nz(r[pz['Trabalho menor 1:40']]),imp=nz(r[pz['Marcações Ímpares']]))
+# marcações digitadas (GerarLinhasDigitadas): aba achada pelo cabeçalho; data = dia + hora (minuto)
+for nome_aba,rows_d in d.items():
+    if not rows_d: continue
+    hd=hdrmap(rows_d[0])
+    if all(k in hd for k in ('Matrícula','Data','Hora','Motivo','Justificativa')):
+        for r in rows_d[1:]:
+            m=s(r[hd['Matrícula']]); dt=r[hd['Data']]
+            if not m or not isinstance(dt,datetime.datetime): continue
+            hr=r[hd['Hora']]
+            if isinstance(hr,datetime.time): dt=dt+datetime.timedelta(minutes=round(hr.hour*60+hr.minute+hr.second/60+hr.microsecond/6e7))
+            se,caRE=setorcargo(m)
+            W(dt,s(r[hd['Colaborador']]) or 'Matrícula '+m,m,gestorPor.get(m,''),se,caRE or s(r[hd['Cargo']]),'Marcação Digitada',
+              s(r[hd['Motivo']]),'Pendente',0,just=s(r[hd['Justificativa']]),orig=s(r[hd['Origem']]) if 'Origem' in hd else '')
+        break
 for m,nm,ar,ca,g in listaORG:
     se,caRE=setorcargo(m) if m else ('Sem setor','')
     if se=='Sem setor' and ar: se=ar
@@ -163,7 +177,7 @@ print('cartoes',cards); print(len(out), collections.Counter(o['tipo'] for o in o
 
 def exportar_csv(linhas, caminho='dados_TODOS.csv'):
     """Mesmo formato do ExportarLinhasParaCSV: vírgula, UTF-8 com BOM, datas dd/mm/aaaa."""
-    cab=["data","colaborador","matricula","gestor","setor","cargo","tipo_ocorrencia","situacao","status","duracao_minutos","destino_horas_extra","data_tratativa_pontonet","horas_excedentes","ocorrencias_extra_falta_mes_atual","ocorrencias_extra_falta_3_meses","pausas_corretas","pausas_menor_20min","pausas_maior_20min","trabalho_correto_140","trabalho_maior_140","trabalho_menor_140","pausas_marcacoes_impares","grupo","minutos_hora_extra_cartao","minutos_banco_horas_cartao"]
+    cab=["data","colaborador","matricula","gestor","setor","cargo","tipo_ocorrencia","situacao","status","duracao_minutos","destino_horas_extra","data_tratativa_pontonet","horas_excedentes","ocorrencias_extra_falta_mes_atual","ocorrencias_extra_falta_3_meses","pausas_corretas","pausas_menor_20min","pausas_maior_20min","trabalho_correto_140","trabalho_maior_140","trabalho_menor_140","pausas_marcacoes_impares","grupo","minutos_hora_extra_cartao","minutos_banco_horas_cartao","justificativa_marcacao","origem_marcacao"]
     def t(v):
         if v is None: return ''
         if isinstance(v,datetime.datetime): return v.strftime('%d/%m/%Y') if v.hour==0 and v.minute==0 else v.strftime('%d/%m/%Y %H:%M')
@@ -172,7 +186,7 @@ def exportar_csv(linhas, caminho='dados_TODOS.csv'):
     q=lambda x: '"'+x.replace('"','""')+'"' if (',' in x or '"' in x or '\n' in x) else x
     out=[','.join(cab)]
     for o in linhas:
-        v=[o['data'],o['colaborador'],o['matricula'],o['gestor'],o['setor'],o['cargo'],o['tipo'],o['situacao'],o['status'],o['duracao'],'',o['tratativa'],'',o.get('mesAtual'),o.get('total3'),o.get('pc'),o.get('pm'),o.get('pM'),o.get('tc'),o.get('tM'),o.get('tm'),o.get('imp'),o.get('grupo',''),o.get('hx'),o.get('hb')]
+        v=[o['data'],o['colaborador'],o['matricula'],o['gestor'],o['setor'],o['cargo'],o['tipo'],o['situacao'],o['status'],o['duracao'],'',o['tratativa'],'',o.get('mesAtual'),o.get('total3'),o.get('pc'),o.get('pm'),o.get('pM'),o.get('tc'),o.get('tM'),o.get('tm'),o.get('imp'),o.get('grupo',''),o.get('hx'),o.get('hb'),o.get('just'),o.get('orig')]
         out.append(','.join(q(t(x)) for x in v))
     open(caminho,'w',encoding='utf-8-sig').write('\n'.join(out)+'\n')
 

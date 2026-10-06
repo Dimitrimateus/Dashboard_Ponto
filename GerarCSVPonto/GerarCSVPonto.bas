@@ -91,7 +91,7 @@ Option Explicit
 ' -----------------------------------------------------------------
 ' PRA ONDE CADA COISA VAI: A ABA "CSV" (formato de saída)
 '
-' Uma linha = um evento. O cabeçalho tem 25 colunas (ver
+' Uma linha = um evento. O cabeçalho tem 27 colunas (ver
 ' PrepararAbaCSV); a maioria das linhas só preenche as primeiras 13
 ' (ocorrência normal — extra, falta, hora extra 100%, curta etc.) e a
 ' 23ª ("grupo" = Interno/Externo, preenchida em toda linha cujo
@@ -102,6 +102,10 @@ Option Explicit
 '     ocorrencias_extra_falta_mes_atual / _3_meses.
 '   - tipo_ocorrencia = "Resumo Pausas Térmicas" → preenche as 7
 '     colunas pausas_.../trabalho_....
+'   - tipo_ocorrencia = "Marcação Digitada" → uma por marcação da aba
+'     de Marcações digitadas (formatada pelo FormatarMarcacoesDigitadas):
+'     data = dia + hora da marcação, situacao = motivo, e as colunas
+'     justificativa_marcacao (texto livre) / origem_marcacao (D/E).
 '   - tipo_ocorrencia = "Cadastro ORG" → uma por pessoa da aba ORG
 '     (nome, matrícula, gestor, cargo; situacao = área do ORG); não
 '     usa as colunas extras. Alimenta a lista de colaboradores do painel.
@@ -667,6 +671,21 @@ ProximaAbaTratamento:
             IIf(Not wsCartao Is Nothing, dataAtualCartao, Date), qtdResumoPausas
     End If
 
+    ' =====================================================================
+    ' Marcações digitadas (aba formatada pelo FormatarMarcacoesDigitadas,
+    ' achada pelo cabeçalho): uma linha "Marcação Digitada" por marcação,
+    ' com o dia e a hora, o motivo, a justificativa e a origem. Não depende
+    ' da Tratamento nem do Check: é o relatório como veio do sistema.
+    ' =====================================================================
+    Dim qtdDigitadas As Long
+    qtdDigitadas = 0
+    Dim wsDigitadas As Worksheet
+    Set wsDigitadas = EncontrarAbaDigitadas(wbTrat)
+    If Not wsDigitadas Is Nothing Then
+        GerarLinhasDigitadas wsDigitadas, dictRE, dictGestorPorMatricula, dictGrupoPorMatricula, _
+            wsCSV, linhaSaida, qtdDigitadas
+    End If
+
     ' Uma linha "Cadastro ORG" por pessoa da lista do ORG (ver acima).
     Dim qtdORG As Long
     qtdORG = 0
@@ -685,6 +704,11 @@ ProximaAbaTratamento:
     End If
     msgAuditoria = msgAuditoria & vbCrLf & qtdCurtas & " ocorrência(s) curta(s) (<15min) direto do Cartão Ponto."
     msgAuditoria = msgAuditoria & vbCrLf & qtdResumoHoras & " colaborador(es) com hora extra ou banco de horas no Cartão Ponto do mês atual."
+    If wsDigitadas Is Nothing Then
+        msgAuditoria = msgAuditoria & vbCrLf & "Aba de Marcações Digitadas não encontrada; essa parte do painel fica vazia."
+    Else
+        msgAuditoria = msgAuditoria & vbCrLf & qtdDigitadas & " marcação(ões) digitada(s) (aba " & wsDigitadas.Name & ")."
+    End If
     ' If em vez de IIf: o IIf avalia os dois lados e wsORG.Name daria erro
     ' quando a aba não existe.
     If wsORG Is Nothing Then
@@ -1108,6 +1132,72 @@ Private Sub GerarResumoHorasCartao(ws As Worksheet, dictRE As Object, dictGestor
             qtdGerada = qtdGerada + 1
         End If
     Next matK
+End Sub
+
+' Aba de Marcações digitadas já formatada: a primeira que tiver, na linha
+' 1, as colunas Matrícula, Data, Hora, Motivo e Justificativa.
+Private Function EncontrarAbaDigitadas(wb As Workbook) As Worksheet
+    Dim ws As Worksheet
+    For Each ws In wb.Worksheets
+        If ColunaPorCabecalho(ws, "Matrícula") > 0 And ColunaPorCabecalho(ws, "Data") > 0 And _
+           ColunaPorCabecalho(ws, "Hora") > 0 And ColunaPorCabecalho(ws, "Motivo") > 0 And _
+           ColunaPorCabecalho(ws, "Justificativa") > 0 Then
+            Set EncontrarAbaDigitadas = ws
+            Exit Function
+        End If
+    Next ws
+    Set EncontrarAbaDigitadas = Nothing
+End Function
+
+' Uma linha "Marcação Digitada" por linha da aba. A data do CSV leva a hora
+' da marcação (arredondada ao minuto: o sistema grava a hora com 7 casas e
+' 07:00 pode vir como 06:59:59,99). Setor vem da RE; cargo, da RE ou da
+' própria aba; gestor e grupo, dos dicionários (Tratamento, depois ORG).
+Private Sub GerarLinhasDigitadas(ws As Worksheet, dictRE As Object, dictGestorPorMatricula As Object, _
+    dictGrupoPorMatricula As Object, wsCSV As Worksheet, ByRef linhaSaida As Long, ByRef qtdGerada As Long)
+
+    Dim colMat As Long, colNome As Long, colCargo As Long, colOrigem As Long
+    Dim colData As Long, colHora As Long, colMotivo As Long, colJust As Long
+    colMat = ColunaPorCabecalho(ws, "Matrícula")
+    colNome = ColunaPorCabecalho(ws, "Colaborador")
+    colCargo = ColunaPorCabecalho(ws, "Cargo")
+    colOrigem = ColunaPorCabecalho(ws, "Origem")
+    colData = ColunaPorCabecalho(ws, "Data")
+    colHora = ColunaPorCabecalho(ws, "Hora")
+    colMotivo = ColunaPorCabecalho(ws, "Motivo")
+    colJust = ColunaPorCabecalho(ws, "Justificativa")
+    If colMat = 0 Or colData = 0 Then Exit Sub
+
+    Dim ultimaLinha As Long, r As Long
+    Dim mat As String, nomeDig As String, vData As Variant, vHora As Variant
+    Dim dataHora As Date, setorNome As String, cargoNome As String
+    ultimaLinha = UltimaLinhaPreenchida(ws, colMat)
+    For r = 2 To ultimaLinha
+        mat = TextoLimpo(ws.Cells(r, colMat).Value)
+        vData = ws.Cells(r, colData).Value2
+        If mat = "" Or Not IsNumeric(vData) Or IsEmpty(vData) Then GoTo ProximaDigitada
+
+        dataHora = CDate(Int(CDbl(vData)))
+        If colHora > 0 Then
+            vHora = ws.Cells(r, colHora).Value2
+            If IsNumeric(vHora) And Not IsEmpty(vHora) Then
+                dataHora = dataHora + CDate(Round((CDbl(vHora) - Int(CDbl(vHora))) * 1440, 0) / 1440)
+            End If
+        End If
+
+        nomeDig = TextoDaCelula(ws, r, colNome)
+        If nomeDig = "" Then nomeDig = "Matrícula " & mat
+        ObterSetorCargo dictRE, mat, setorNome, cargoNome
+        If cargoNome = "" Then cargoNome = TextoDaCelula(ws, r, colCargo)
+
+        EscreverLinhaCSV wsCSV, linhaSaida, dataHora, nomeDig, mat, TextoDoDicionario(dictGestorPorMatricula, mat), _
+            setorNome, cargoNome, "Marcação Digitada", TextoDaCelula(ws, r, colMotivo), "Pendente", 0, "", Empty, _
+            grupo:=TextoDoDicionario(dictGrupoPorMatricula, mat), _
+            justificativaMarcacao:=TextoDaCelula(ws, r, colJust), origemMarcacao:=TextoDaCelula(ws, r, colOrigem)
+        linhaSaida = linhaSaida + 1
+        qtdGerada = qtdGerada + 1
+ProximaDigitada:
+    Next r
 End Sub
 
 ' Aba ORG (relação colaborador x gestor): a que começa com "ORG" e tem as
@@ -1698,7 +1788,8 @@ Private Function PrepararAbaCSV(wb As Workbook) As Worksheet
                         "horas_excedentes", "ocorrencias_extra_falta_mes_atual", "ocorrencias_extra_falta_3_meses", _
                         "pausas_corretas", "pausas_menor_20min", "pausas_maior_20min", "trabalho_correto_140", _
                         "trabalho_maior_140", "trabalho_menor_140", "pausas_marcacoes_impares", "grupo", _
-                        "minutos_hora_extra_cartao", "minutos_banco_horas_cartao")
+                        "minutos_hora_extra_cartao", "minutos_banco_horas_cartao", _
+                        "justificativa_marcacao", "origem_marcacao")
     For i = LBound(cabecalhos) To UBound(cabecalhos)
         ws.Cells(1, i + 1).Value = cabecalhos(i)
     Next i
@@ -1724,7 +1815,8 @@ Private Sub EscreverLinhaCSV(ws As Worksheet, linha As Long, dataOcorrencia As V
     Optional trabalhoCorreto140 As Variant = Empty, Optional trabalhoMaior140 As Variant = Empty, _
     Optional trabalhoMenor140 As Variant = Empty, Optional pausasMarcacoesImpares As Variant = Empty, _
     Optional grupo As String = "", Optional minHoraExtraCartao As Variant = Empty, _
-    Optional minBancoHorasCartao As Variant = Empty)
+    Optional minBancoHorasCartao As Variant = Empty, Optional justificativaMarcacao As String = "", _
+    Optional origemMarcacao As String = "")
 
     ws.Cells(linha, 1).Value = CDate(dataOcorrencia)
     ws.Cells(linha, 2).Value = nome
@@ -1755,6 +1847,8 @@ Private Sub EscreverLinhaCSV(ws As Worksheet, linha As Long, dataOcorrencia As V
     ws.Cells(linha, 23).Value = grupo
     If Not IsEmpty(minHoraExtraCartao) Then ws.Cells(linha, 24).Value = minHoraExtraCartao
     If Not IsEmpty(minBancoHorasCartao) Then ws.Cells(linha, 25).Value = minBancoHorasCartao
+    If justificativaMarcacao <> "" Then ws.Cells(linha, 26).Value = justificativaMarcacao
+    If origemMarcacao <> "" Then ws.Cells(linha, 27).Value = origemMarcacao
 End Sub
 
 ' Pede ao usuário a pasta de destino dos CSVs exportados por

@@ -141,6 +141,11 @@
   .saldo-neg{ color:#C62828; font-weight:800; }
   .card-toolbar{ display:flex; justify-content:flex-end; margin-top:8px; }
 
+  /* ---------- Marcações digitadas ---------- */
+  .dig-kpis{ display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:10px; margin-bottom:14px; }
+  @media (max-width: 980px){ .dig-kpis{ grid-template-columns:repeat(3, minmax(0,1fr)); } }
+  @media (max-width: 620px){ .dig-kpis{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
+
   /* ---------- Lista de colaboradores (ORG) ---------- */
   .org-resumo{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
   .org-pill{ font-size:12px; background:var(--c-paper-dim); border:1px solid var(--c-line); border-radius:var(--radius-pill); padding:4px 11px; }
@@ -701,6 +706,70 @@
           </div>
         </section>
 
+        <h3 class="section-title">Marcações digitadas</h3>
+        <div id="digSemDados" class="card wide" hidden><div class="chart-empty">Este CSV não traz as marcações digitadas. Formate o relatório com a macro FormatarMarcacoesDigitadas, traga a aba para a planilha de Tratamento e gere o CSV de novo.</div></div>
+        <div id="digCorpo">
+          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema</span><p>Marcação digitada é a batida que <strong>não veio do relógio</strong>: o colaborador incluiu no PontoNet com uma justificativa, ou o RH lançou no sistema. Cada linha do relatório é uma marcação (uma batida), com o dia, a hora, o <strong>motivo</strong> (Inclusão por esquecimento, por atividade externa, problema no dispositivo...) e o texto da justificativa. Respeita os filtros de gestor, grupo, cargo, colaborador e período; não usa os filtros de tipo e status, que são das ocorrências da Tratamento.</p></div>
+          <section class="dig-kpis" id="digKpis"></section>
+          <section class="grid">
+            <div class="card">
+              <div class="card-title">Marcações digitadas por motivo</div>
+              <div class="card-hint">Por que a batida foi digitada</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema, coluna Motivo</span><p>O motivo escolhido na hora de incluir a marcação. “Esquecimento” é o que mais depende do colaborador; “dispositivo” e “atividade externa” costumam apontar relógio com problema ou trabalho fora do local.</p></div>
+              <div class="card-body donut-wrap" id="chartDigMotivo"></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Por dia da semana</div>
+              <div class="card-hint">Em que dia as batidas digitadas acontecem</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema, coluna Data</span><p>O dia da batida digitada (não o dia em que ela foi lançada no sistema).</p></div>
+              <div class="card-body" id="chartDigDiaSemana"></div>
+            </div>
+            <div class="card wide">
+              <div class="card-title">Por data</div>
+              <div class="card-hint">Batidas digitadas dia a dia no período filtrado</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema, coluna Data</span><p>Quantas batidas digitadas existem para cada dia. Picos costumam coincidir com relógio parado ou com atividade externa da equipe.</p></div>
+              <div class="card-body" id="chartDigData"></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Colaboradores com mais marcações digitadas</div>
+              <div class="card-hint">Top 10 &middot; clique no nome para ver o colaborador</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema</span><p>Conta as batidas digitadas de cada pessoa. Passe o mouse para ver quantas foram por esquecimento.</p></div>
+              <div class="card-body" id="chartDigTop"></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Marcações digitadas por gestor</div>
+              <div class="card-hint">Equipes que mais digitam batidas</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema + relação colaborador × gestor</span><p>O gestor vem da Tratamento ou, se a pessoa não aparece lá, da aba ORG. Mostra os 12 maiores.</p></div>
+              <div class="card-body" id="chartDigGestor"></div>
+            </div>
+            <div class="card wide">
+              <div class="card-title">Horário das marcações digitadas</div>
+              <div class="card-hint">Hora da batida digitada &middot; mostra se o que se digita é a entrada, o intervalo ou a saída</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema, coluna Hora</span><p>Batidas digitadas agrupadas pela hora cheia (7h = de 07:00 a 07:59).</p></div>
+              <div class="card-body" id="chartDigHora"></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Esquecimento repetido</div>
+              <div class="card-hint">Quem mais digitou batida por esquecimento no período</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema, motivo “Inclusão por esquecimento”</span><p>Só as batidas com o motivo de esquecimento, por colaborador, com quantos dias diferentes isso aconteceu. É a lista mais útil para conversar com a pessoa.</p></div>
+              <div class="card-body" id="tableDigEsquecimento"></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Justificativas mais usadas</div>
+              <div class="card-hint">O texto que foi escrito ao digitar a batida</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema, coluna Justificativa</span><p>O texto livre da justificativa, agrupado (sem diferenciar maiúscula, acento e ponto final). Textos repetidos por muita gente, como “relógio com horário incorreto”, apontam um problema de equipamento, não da pessoa.</p></div>
+              <div class="card-body" id="tableDigJust"></div>
+            </div>
+            <div class="card wide">
+              <div class="card-title">Todas as marcações digitadas</div>
+              <div class="card-hint" id="digListaHint">Lista completa do filtro atual</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema</span><p>Uma linha por batida digitada. “Ocorrência no dia” = a pessoa também tem uma ocorrência da Tratamento nesse mesmo dia. Origem é a coluna “Ori.” do relatório (D ou E).</p></div>
+              <div class="org-toolbar"><input type="text" id="digBusca" placeholder="Buscar por colaborador, gestor, motivo, justificativa..."><span id="digCount" style="font-size:12px;color:var(--c-muted);"></span></div>
+              <div class="card-body" id="tableDigLista"></div>
+            </div>
+          </section>
+        </div>
+
         <h3 class="section-title">Demora de tratativa no PontoNet</h3>
         <section class="grid">
           <div class="card wide">
@@ -1010,7 +1079,9 @@
     pausasMarcacoesImpares: ["pausas_marcacoes_impares","pausa_marcacoes_impares"],
     grupo: ["grupo","grupo_colaborador","interno_externo"],
     minHoraExtraCartao: ["minutos_hora_extra_cartao"],
-    minBancoHorasCartao: ["minutos_banco_horas_cartao"]
+    minBancoHorasCartao: ["minutos_banco_horas_cartao"],
+    justificativaMarcacao: ["justificativa_marcacao"],
+    origemMarcacao: ["origem_marcacao"]
   };
 
   // Situações que o painel ignora mesmo que venham no CSV (o GerarCSV
@@ -1035,6 +1106,12 @@
   // nome, matrícula, gestor, cargo; situacao = área do ORG. Alimenta a
   // "Lista de colaboradores (ORG)" e o aviso de quem não está no ORG.
   var TIPO_CADASTRO_ORG = "Cadastro ORG";
+  // Uma linha por batida do relatório de Marcações digitadas (GerarLinhasDigitadas
+  // do macro): data com a hora da batida, situacao = motivo, e as colunas
+  // justificativa_marcacao / origem_marcacao. Não é ocorrência da Tratamento:
+  // tem a seção própria "Marcações digitadas".
+  var TIPO_MARCACAO_DIGITADA = "Marcação Digitada";
+  function isTipoDigitada(tipo){ return tipo === TIPO_MARCACAO_DIGITADA; }
   // tipos que são "linhas-resumo" por colaborador (não ocorrências
   // datadas de verdade) — ficam de fora dos gráficos/KPIs/histórico
   // gerais e só alimentam suas próprias vistas dedicadas.
@@ -1060,7 +1137,7 @@
   // Combina os três: nada disso conta como "ocorrência" pros
   // gráficos/KPI de ocorrências/histórico/filtro de Tipo.
   function isTipoNaoOcorrencia(tipo){
-    return isTipoResumo(tipo) || isTipoCurta(tipo) || isTipoHoraExtra(tipo);
+    return isTipoResumo(tipo) || isTipoCurta(tipo) || isTipoHoraExtra(tipo) || isTipoDigitada(tipo);
   }
 
   // Estado global do painel inteiro — de propósito, um único objeto
@@ -1313,7 +1390,9 @@
         pausasMarcacoesImpares: idx.pausasMarcacoesImpares != null ? parseNumber(r[idx.pausasMarcacoesImpares]) : 0,
         grupo: idx.grupo != null ? textoCampo(r[idx.grupo]) : "",
         minHoraExtraCartao: idx.minHoraExtraCartao != null ? parseNumber(r[idx.minHoraExtraCartao]) : 0,
-        minBancoHorasCartao: idx.minBancoHorasCartao != null ? parseNumber(r[idx.minBancoHorasCartao]) : 0
+        minBancoHorasCartao: idx.minBancoHorasCartao != null ? parseNumber(r[idx.minBancoHorasCartao]) : 0,
+        justificativaMarcacao: idx.justificativaMarcacao != null ? textoCampo(r[idx.justificativaMarcacao]) : "",
+        origemMarcacao: idx.origemMarcacao != null ? textoCampo(r[idx.origemMarcacao]) : ""
       };
       out.push(rec);
     }
@@ -1420,7 +1499,7 @@
       svg.appendChild(label);
       var track = svgEl("rect", { x:leftW, y:y, width:plotW, height:rowH, class:"chart-track", rx:3 });
       svg.appendChild(track);
-      var bar = svgEl("rect", { x:leftW, y:y, width:w, height:rowH, fill: it.color || "var(--c-orange)", class:"chart-bar", rx:3, "data-tooltip": it.label + ": " + formatNum(it.value) + (opts.colab ? " · clique para ver o colaborador" : "") });
+      var bar = svgEl("rect", { x:leftW, y:y, width:w, height:rowH, fill: it.color || "var(--c-orange)", class:"chart-bar", rx:3, "data-tooltip": it.label + ": " + formatNum(it.value) + (it.extra ? " (" + it.extra + ")" : "") + (opts.colab ? " · clique para ver o colaborador" : "") });
       svg.appendChild(bar);
       // opts.colab: cada linha é um colaborador — nome, trilho e barra
       // abrem o card do colaborador (ver abrirCardColaborador, seção 9)
@@ -1960,7 +2039,7 @@
       // ocorrências curtas (<15min) não contam como ocorrência normal:
       // têm suas próprias vistas dedicadas, não entram nos
       // gráficos/KPIs/histórico gerais.
-      if (isTipoResumo(r.tipo) || isTipoCurta(r.tipo)) return false;
+      if (isTipoResumo(r.tipo) || isTipoCurta(r.tipo) || isTipoDigitada(r.tipo)) return false;
       if (gestor && r.gestor !== gestor) return false;
       if (grupo && r.grupo !== grupo) return false;
       if (cargo && r.cargo !== cargo) return false;
@@ -1988,6 +2067,24 @@
       if (grupo && r.grupo !== grupo) return false;
       if (cargo && r.cargo !== cargo) return false;
       if (colabQuery && stripAccents(r.colaborador.toLowerCase()).indexOf(colabQuery) === -1) return false;
+      return true;
+    });
+  }
+  // Marcações digitadas: gestor/grupo/cargo/colaborador + período (são
+  // eventos datados), sem os chips de tipo/status (que são da Tratamento).
+  function getDigitadasRecords(){
+    var gestor = $("fGestor").value, grupo = $("fGrupo").value, cargo = $("fCargo").value;
+    var colabQuery = stripAccents($("fColab").value.trim().toLowerCase());
+    var dIni = $("fDataIni").value ? new Date($("fDataIni").value+"T00:00:00") : null;
+    var dFim = $("fDataFim").value ? new Date($("fDataFim").value+"T23:59:59") : null;
+    return state.records.filter(function(r){
+      if (!isTipoDigitada(r.tipo)) return false;
+      if (gestor && r.gestor !== gestor) return false;
+      if (grupo && r.grupo !== grupo) return false;
+      if (cargo && r.cargo !== cargo) return false;
+      if (colabQuery && stripAccents(r.colaborador.toLowerCase()).indexOf(colabQuery) === -1) return false;
+      if (dIni && r.data < dIni) return false;
+      if (dFim && r.data > dFim) return false;
       return true;
     });
   }
@@ -2237,12 +2334,119 @@
        {label:"Maior demora", width:"110px", render:function(r){return formatDelay(r.maior);}}],
       demoraStats(records, function(r){ return r.colaborador; }));
 
+    renderDigitadas(ocorrenciasRecords);
     renderListaORG(ocorrenciasRecords);
     renderHistory(ocorrenciasRecords);
     atualizarPeriodoTopo();
     updateFiltersBadge();
     setTimeout(updateScrollHints, 0);
   }
+
+  /* ---------- Marcações digitadas ----------
+     Seção própria, com os registros "Marcação Digitada" filtrados por
+     getDigitadasRecords. Cruza com as ocorrências da Tratamento pela chave
+     matrícula + dia, para dizer quantas batidas digitadas caem num dia que
+     também virou ocorrência. */
+  var MOTIVO_ESQUECIMENTO = "inclusao por esquecimento";
+  function isEsquecimento(r){ return chaveNome(r.situacao).toLowerCase() === MOTIVO_ESQUECIMENTO; }
+  function horaMin(d){ return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+  function chaveTexto(t){ return chaveNome(t).replace(/[.\s]+$/,"").toLowerCase(); }
+
+  function renderDigitadas(ocorrenciasRecords){
+    var temDig = state.records.some(function(r){ return isTipoDigitada(r.tipo); });
+    $("digSemDados").hidden = temDig;
+    $("digCorpo").hidden = !temDig;
+    if (!temDig) return;
+    var dig = getDigitadasRecords();
+
+    var diasComOcorrencia = {};
+    ocorrenciasRecords.forEach(function(r){ diasComOcorrencia[chavePessoa(r) + "|" + r.dateKey] = true; });
+    dig.forEach(function(r){ r.temOcorrenciaNoDia = !!diasComOcorrencia[chavePessoa(r) + "|" + r.dateKey]; });
+
+    var pessoas = {};
+    dig.forEach(function(r){ pessoas[chavePessoa(r)] = true; });
+    var nPessoas = Object.keys(pessoas).length;
+    var noOrg = state.records.filter(function(r){ return r.tipo === TIPO_CADASTRO_ORG; }).length;
+    var nEsq = dig.filter(isEsquecimento).length;
+    var nComOc = dig.filter(function(r){ return r.temOcorrenciaNoDia; }).length;
+    var nRedondo = dig.filter(function(r){ var m = r.data.getMinutes(); return m === 0 || m === 30; }).length;
+    function pct(a, b){ return b ? Math.round(a*100/b) + "%" : "0%"; }
+    function tile(label, valor, sub){
+      return '<div class="colab-kpi"><div class="ck-label">'+label+'</div><div class="ck-value">'+valor+'</div><div class="ck-sub">'+sub+'</div></div>';
+    }
+    $("digKpis").innerHTML =
+      tile("Marcações digitadas", formatNum(dig.length), "batidas no filtro") +
+      tile("Colaboradores", formatNum(nPessoas), noOrg ? pct(nPessoas, noOrg) + " das pessoas do ORG" : "com batida digitada") +
+      tile("Por esquecimento", formatNum(nEsq), pct(nEsq, dig.length) + " das digitadas") +
+      tile("No dia de uma ocorrência", formatNum(nComOc), pct(nComOc, dig.length) + " com ocorrência da Tratamento no mesmo dia") +
+      tile("Horário redondo", formatNum(nRedondo), pct(nRedondo, dig.length) + " em hora cheia ou meia hora (:00/:30)");
+
+    var porMotivo = countBy(dig, function(r){ return r.situacao || "Sem motivo"; });
+    renderDonut($("chartDigMotivo"), Object.keys(porMotivo).sort(function(a,b){ return porMotivo[b]-porMotivo[a]; })
+      .map(function(k, i){ return { label:k, value:porMotivo[k], color: PALETTE[i % PALETTE.length] }; }));
+    renderBarV($("chartDigDiaSemana"), ocorrenciasPorDiaSemana(dig));
+    renderLine($("chartDigData"), ocorrenciasPorData(dig));
+
+    var porColab = {};
+    dig.forEach(function(r){
+      if (!porColab[r.colaborador]) porColab[r.colaborador] = { label:r.colaborador, value:0, esq:0 };
+      porColab[r.colaborador].value++; if (isEsquecimento(r)) porColab[r.colaborador].esq++;
+    });
+    var topDig = Object.values(porColab).sort(function(a,b){ return b.value-a.value || a.label.localeCompare(b.label,"pt-BR"); }).slice(0,10);
+    topDig.forEach(function(t){ t.color = "var(--c-orange)"; t.extra = t.esq + " por esquecimento"; });
+    renderBarH($("chartDigTop"), topDig, { colab:true });
+    renderBarH($("chartDigGestor"), ocorrenciasPorGestor(dig, 12));
+
+    var porHora = {};
+    dig.forEach(function(r){ var h = r.data.getHours(); porHora[h] = (porHora[h]||0) + 1; });
+    var horas = Object.keys(porHora).map(Number);
+    var hMin = horas.length ? Math.min.apply(null, horas) : 0, hMax = horas.length ? Math.max.apply(null, horas) : 0;
+    var itensHora = [];
+    for (var h = hMin; h <= hMax && horas.length; h++) itensHora.push({ label: h + "h", value: porHora[h] || 0, color:"var(--c-navy)" });
+    renderBarV($("chartDigHora"), itensHora);
+
+    var esq = {};
+    dig.filter(isEsquecimento).forEach(function(r){
+      if (!esq[r.colaborador]) esq[r.colaborador] = { colaborador:r.colaborador, gestor:r.gestor, qtd:0, dias:{} };
+      esq[r.colaborador].qtd++; esq[r.colaborador].dias[r.dateKey] = true;
+    });
+    renderTableSimple($("tableDigEsquecimento"),
+      [{label:"Colaborador", render:function(r){ return colabLink(r.colaborador); }},
+       {label:"Gestor", render:function(r){ return escapeHtml(r.gestor); }},
+       {label:"Batidas", width:"70px", render:function(r){ return "<strong>"+r.qtd+"</strong>"; }},
+       {label:"Dias", width:"56px", render:function(r){ return Object.keys(r.dias).length; }}],
+      Object.values(esq).sort(function(a,b){ return b.qtd-a.qtd || a.colaborador.localeCompare(b.colaborador,"pt-BR"); }).slice(0,15));
+
+    var just = {};
+    dig.forEach(function(r){
+      var t = r.justificativaMarcacao || "(sem texto)", k = chaveTexto(t);
+      if (!just[k]) just[k] = { texto:t, qtd:0, pessoas:{} };
+      just[k].qtd++; just[k].pessoas[chavePessoa(r)] = true;
+    });
+    renderTableSimple($("tableDigJust"),
+      [{label:"Justificativa", render:function(r){ return '<span title="'+escapeHtml(r.texto)+'">'+escapeHtml(r.texto)+'</span>'; }},
+       {label:"Batidas", width:"70px", render:function(r){ return "<strong>"+r.qtd+"</strong>"; }},
+       {label:"Pessoas", width:"70px", render:function(r){ return Object.keys(r.pessoas).length; }}],
+      Object.values(just).sort(function(a,b){ return b.qtd-a.qtd; }).slice(0,15));
+
+    var busca = stripAccents($("digBusca").value.trim().toLowerCase());
+    var lista = dig.filter(function(r){
+      if (!busca) return true;
+      return stripAccents((r.colaborador+" "+r.matricula+" "+r.gestor+" "+r.situacao+" "+r.justificativaMarcacao).toLowerCase()).indexOf(busca) > -1;
+    }).sort(function(a,b){ return b.data - a.data; });
+    $("digCount").textContent = formatNum(lista.length) + " batida(s)";
+    renderTableSimple($("tableDigLista"),
+      [{label:"Data", width:"90px", render:function(r){ return formatDateBR(r.data); }},
+       {label:"Hora", width:"60px", render:function(r){ return horaMin(r.data); }},
+       {label:"Colaborador", width:"18%", render:function(r){ return colabLink(r.colaborador); }},
+       {label:"Gestor", width:"14%", render:function(r){ return escapeHtml(r.gestor); }},
+       {label:"Motivo", width:"16%", render:function(r){ return escapeHtml(r.situacao); }},
+       {label:"Justificativa", render:function(r){ return '<span title="'+escapeHtml(r.justificativaMarcacao)+'">'+escapeHtml(r.justificativaMarcacao)+'</span>'; }},
+       {label:"Ocorrência no dia", width:"84px", render:function(r){ return r.temOcorrenciaNoDia ? "Sim" : "&ndash;"; }},
+       {label:"Origem", width:"62px", render:function(r){ return escapeHtml(r.origemMarcacao); }}],
+      lista);
+  }
+  $("digBusca").addEventListener("input", debounce(applyFilters, 200));
 
   /* ---------- Lista de colaboradores (ORG) ----------
      Base: as linhas "Cadastro ORG" (respeitam gestor/grupo/cargo/
@@ -2269,7 +2473,8 @@
       if (naOrg[k] || (!r.matricula && mesmoNomeNoOrg)) return;
       if (!fora[k]) fora[k] = { colaborador:r.colaborador, matricula:r.matricula, gestor:"", fontes:{}, mesmoNomeSemMat: mesmoNomeNoOrg };
       if (r.gestor && r.gestor !== "Sem gestor") fora[k].gestor = r.gestor;
-      var fonte = r.tipo === TIPO_AUDITORIA_EXTRA_FALTA ? "Cartão (3 meses)" :
+      var fonte = isTipoDigitada(r.tipo) ? "Marcações digitadas" :
+                  r.tipo === TIPO_AUDITORIA_EXTRA_FALTA ? "Cartão (3 meses)" :
                   r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS ? "Pausas térmicas" :
                   (r.tipo === TIPO_RESUMO_HORAS_CARTAO || isTipoCurta(r.tipo)) ? "Cartão atual" : "Tratamento";
       fora[k].fontes[fonte] = true;
@@ -2298,11 +2503,13 @@
     ocorrenciasRecords.forEach(function(r){ var k = chavePessoa(r); ocPorPessoa[k] = (ocPorPessoa[k]||0) + 1; });
     var horasPorPessoa = {};
     state.records.forEach(function(r){ if (r.tipo === TIPO_RESUMO_HORAS_CARTAO) horasPorPessoa[chavePessoa(r)] = r; });
+    var digPorPessoa = {};
+    getDigitadasRecords().forEach(function(r){ var k = chavePessoa(r); digPorPessoa[k] = (digPorPessoa[k]||0) + 1; });
 
     var linhas = org.map(function(r){
       var k = chavePessoa(r), h = horasPorPessoa[k];
       return { colaborador:r.colaborador, matricula:r.matricula, gestor:r.gestor === "Sem gestor" ? "" : r.gestor,
-               cargo:r.cargo === "Sem cargo" ? "" : r.cargo, area:r.situacao, ocorrencias: ocPorPessoa[k] || 0,
+               cargo:r.cargo === "Sem cargo" ? "" : r.cargo, area:r.situacao, ocorrencias: ocPorPessoa[k] || 0, digitadas: digPorPessoa[k] || 0,
                extra: h ? h.minHoraExtraCartao : null, banco: h ? h.minBancoHorasCartao : null };
     });
 
@@ -2345,12 +2552,13 @@
     $("orgCount").textContent = formatNum(vis.length) + " de " + formatNum(linhas.length);
 
     renderTableSimple($("tableOrg"),
-      [{label:"Colaborador", width:"24%", render:function(l){ return colabLink(l.colaborador) + (l.matricula ? "" : '<span class="tag-mini">sem matrícula</span>'); }},
+      [{label:"Colaborador", width:"20%", render:function(l){ return colabLink(l.colaborador) + (l.matricula ? "" : '<span class="tag-mini">sem matrícula</span>'); }},
        {label:"Matrícula", width:"9%", render:function(l){ return escapeHtml(l.matricula || "–"); }},
        {label:"Gestor", width:"20%", render:function(l){ return l.gestor ? escapeHtml(l.gestor) : '<span class="sem-gestor">Sem gestor</span>'; }},
        {label:"Cargo", width:"16%", render:function(l){ return escapeHtml(l.cargo); }},
-       {label:"Área (ORG)", width:"13%", render:function(l){ return escapeHtml(l.area); }},
+       {label:"Área (ORG)", width:"12%", render:function(l){ return escapeHtml(l.area); }},
        {label:"Ocorrências", width:"8%", render:function(l){ return l.ocorrencias ? "<strong>"+l.ocorrencias+"</strong>" : "0"; }},
+       {label:"Digitadas", width:"7%", render:function(l){ return l.digitadas ? "<strong>"+l.digitadas+"</strong>" : "0"; }},
        {label:"Saldo de horas", width:"10%", render:function(l){
           if (l.extra == null) return "&ndash;";
           var sd = l.extra - l.banco;
@@ -2586,7 +2794,7 @@
     $("fDataIni").value = total ? total.ini : "";
     $("fDataFim").value = total ? total.fim : "";
     $("historySearch").value = "";
-    $("orgBusca").value = ""; $("orgMostrar").value = "";
+    $("orgBusca").value = ""; $("orgMostrar").value = ""; $("digBusca").value = "";
     state.historySort = { key:"data", dir:"desc" };
     state.historyPage = 1;
     state.bancoMostrarTodos = false;
@@ -2701,6 +2909,8 @@
     var aud = todas.filter(function(r){ return r.tipo === TIPO_AUDITORIA_EXTRA_FALTA; })[0];
     var pausa = todas.filter(function(r){ return r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS; })[0];
 
+    var digitadas = todas.filter(function(r){ return isTipoDigitada(r.tipo) && noPeriodo(r); })
+      .sort(function(a,b){ return b.data - a.data; });
     var demoras = [];
     todas.forEach(function(r){
       if (r.tratativa && noPeriodo(r) && !isTipoNaoOcorrencia(r.tipo)){
@@ -2740,6 +2950,16 @@
            pausa ? "corretas &middot; " + pausa.pausaMenor20 + " curta(s) &middot; " + pausa.pausasMarcacoesImpares + " marcação(ões) ímpar(es)" : "fora do relatório",
            pausa && pausa.pausasMarcacoesImpares > 0 ? "alerta" : "") +
       '</div>';
+    if (digitadas.length){
+      var dEsq = digitadas.filter(isEsquecimento).length;
+      html += '<h3 class="colab-section">Marcações digitadas no período ('+digitadas.length+' &middot; '+dEsq+' por esquecimento)</h3>' +
+        '<div class="table-scroll" style="max-height:260px;"><table class="data-table"><colgroup><col style="width:92px"><col style="width:60px"><col style="width:30%"><col></colgroup>' +
+        '<thead><tr><th>Data</th><th>Hora</th><th>Motivo</th><th>Justificativa</th></tr></thead><tbody>' +
+        digitadas.map(function(r){
+          return '<tr><td data-label="Data">'+formatDateBR(r.data)+'</td><td data-label="Hora">'+horaMin(r.data)+'</td>'+
+                 '<td data-label="Motivo">'+escapeHtml(r.situacao)+'</td><td data-label="Justificativa" title="'+escapeHtml(r.justificativaMarcacao)+'">'+escapeHtml(r.justificativaMarcacao)+'</td></tr>';
+        }).join("") + '</tbody></table></div>';
+    }
 
     var porTipo = ocorrenciasPorTipo(ocorrencias);
     if (porTipo.length){
@@ -2780,11 +3000,13 @@
     ["kpiColaboradoresSub","kpiOcorrenciasSub"].forEach(function(id){ $(id).textContent = ""; });
     $("kpiDemoraSub").textContent = "Da ocorrência até a tratativa";
     ["chartTipo","chartDiaSemana","chartPorData","chartPorGestor","chartPorCargo","chartTopColaboradores",
-     "tableExtraFalta","tableCurtas","chartBancoHoras","tableDemoraGestor","tableDemoraColaborador","tableOrg"].forEach(function(id){
+     "tableExtraFalta","tableCurtas","chartBancoHoras","tableDemoraGestor","tableDemoraColaborador","tableOrg",
+     "chartDigMotivo","chartDigDiaSemana","chartDigData","chartDigTop","chartDigGestor","chartDigHora","tableDigEsquecimento","tableDigJust","tableDigLista"].forEach(function(id){
       $(id).innerHTML = ""; $(id).appendChild(emptyMsg("Carregue o CSV para ver os dados deste quadro."));
     });
     $("btnBancoTodos").hidden = true;
     $("orgResumo").innerHTML = ""; $("orgForaBox").hidden = true; $("orgCount").textContent = "";
+    $("digKpis").innerHTML = ""; $("digCount").textContent = ""; $("digSemDados").hidden = true; $("digCorpo").hidden = false;
     $("historyBody").innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--c-muted-2);padding:20px;">Carregue o CSV para ver o histórico.</td></tr>';
     $("historyPagination").innerHTML = ""; $("historyCount").textContent = "";
   }
