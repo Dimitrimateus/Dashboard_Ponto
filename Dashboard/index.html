@@ -88,6 +88,9 @@
     border-radius:var(--radius-pill); padding:7px 13px; font-size:12.5px; font-weight:700; cursor:pointer;
   }
   .btn-explica:hover{ border-color:var(--c-orange); color:var(--c-orange); }
+  body.sem-lateral .sidebar{ display:none; }
+  body.sem-lateral #btnLateral{ background:var(--c-orange); border-color:var(--c-orange); color:#fff; }
+  .btn-explica svg{ width:16px; height:16px; }
   .btn-explica .q{ display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:var(--c-orange); color:#fff; font-size:12px; font-weight:800; }
   body.modo-explicacao .btn-explica{ background:var(--c-orange); border-color:var(--c-orange); color:#fff; }
   body.modo-explicacao .btn-explica .q{ background:#fff; color:var(--c-orange); }
@@ -122,7 +125,16 @@
   .colab-link{ color:inherit; text-decoration:none; border-bottom:1px dotted var(--c-muted-2); }
   .colab-link:hover{ color:var(--c-orange); border-bottom-color:var(--c-orange); }
   .modal-panel.colab-panel{ width:min(900px, 96vw); }
-  .colab-modal-body{ overflow:auto; }
+  /* o card do colaborador rola como um bloco só: sem isso o .modal-body
+     (flex em coluna) espremia as tabelas internas até quase sumirem */
+  .modal-body.colab-modal-body{ display:block; overflow:auto; }
+  .modal-body.colab-modal-body .table-scroll{ flex:none; }
+  /* tabelas do card: altura limitada só no computador (no celular viram
+     cartões empilhados e o próprio card rola) */
+  @media (min-width: 769px){
+    .modal-body .table-scroll.colab-tab{ max-height:340px; }
+    .modal-body .table-scroll.colab-tab.colab-tab-livre{ max-height:none; }
+  }
   .colab-meta{ display:flex; flex-wrap:wrap; gap:6px 18px; font-size:12.5px; color:var(--c-muted); margin-top:4px; }
   .colab-meta b{ color:var(--c-ink); font-weight:700; }
   .colab-kpis{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:10px; margin-bottom:14px; }
@@ -172,14 +184,6 @@
   .org-resumo{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
   .org-pill{ font-size:12px; background:var(--c-paper-dim); border:1px solid var(--c-line); border-radius:var(--radius-pill); padding:4px 11px; }
   .org-pill b{ color:var(--c-navy-dark); }
-  .org-alerta{
-    background:#FDECEC; border:1px solid #F3B5B5; border-left:4px solid var(--c-terracotta);
-    border-radius:var(--radius-card); padding:10px 12px; margin-bottom:12px; font-size:12.5px; color:#5A1012;
-  }
-  .org-alerta strong{ color:#8A1418; }
-  .org-alerta ul{ margin:6px 0 0; padding-left:18px; }
-  .org-alerta li{ margin:3px 0; }
-  .org-alerta .dica{ color:#8A4B12; }
   .org-toolbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
   .org-toolbar input[type="text"]{ max-width:280px; }
   .org-toolbar select{ max-width:260px; }
@@ -606,6 +610,9 @@
     </div>
     <div class="topbar-right">
       <div class="topbar-status" id="fileStatus">Nenhum arquivo carregado</div>
+      <button type="button" class="btn-explica" id="btnLateral" aria-pressed="false" title="Esconde o painel da direita (Carregar dados e Filtros) para os gráficos ocuparem a tela toda">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg><span class="txt" id="btnLateralTxt">Esconder filtros</span>
+      </button>
       <button type="button" class="btn-explica" id="btnExplica" aria-pressed="false" title="Mostra, em cada gráfico, de onde vem a informação">
         <span class="q" aria-hidden="true">?</span><span class="txt" id="btnExplicaTxt">Entenda o painel</span>
       </button>
@@ -862,9 +869,8 @@
 
         <h3 class="section-title">Lista de colaboradores (ORG)</h3>
         <section class="card wide" id="orgSection">
-          <div class="card-fonte"><span class="fonte-origem">De onde vem: aba ORG (relação colaborador × gestor)</span><p>Todo mundo que está na aba ORG da planilha, com o gestor de cada um. Para cada pessoa, o painel junta as ocorrências do filtro atual e as horas do Cartão do mês. <strong>Em vermelho, no alto:</strong> quem tem dados no arquivo (ocorrência na Tratamento, horas ou curtas no Cartão, auditoria de 3 meses ou pausas) mas <strong>não está no ORG</strong> — normalmente gente admitida depois da última atualização do ORG, desligada, ou com o nome escrito diferente. Pessoas do ORG “sem matrícula” são linhas em que a fórmula do ORG deu #N/A. Clique no nome para abrir o card.</p></div>
+          <div class="card-fonte"><span class="fonte-origem">De onde vem: aba ORG (relação colaborador × gestor)</span><p>Todo mundo que está na aba ORG da planilha, com o gestor de cada um. Para cada pessoa, o painel junta as ocorrências do filtro atual, as batidas digitadas e as horas do Cartão do mês. Pessoas do ORG “sem matrícula” são linhas em que a fórmula do ORG deu #N/A. Quem tem dados no arquivo mas não está no ORG não aparece nesta lista; o card dessa pessoa mostra “Não está no ORG”. Clique no nome para abrir o card.</p></div>
           <div class="org-resumo" id="orgResumo"></div>
-          <div class="org-alerta" id="orgForaBox" hidden></div>
           <div class="org-toolbar">
             <input type="text" id="orgBusca" placeholder="Buscar por nome, matrícula, gestor, cargo...">
             <select id="orgMostrar">
@@ -2700,47 +2706,11 @@
      ORG); quem não tem matrícula no ORG (#N/A) é casado pelo nome. */
   function chaveNome(nome){ return stripAccents(String(nome||"")).toUpperCase().replace(/\s+/g," ").trim(); }
   function chavePessoa(r){ return r.matricula ? "M:" + r.matricula : "N:" + chaveNome(r.colaborador); }
-  // Quem tem dados no arquivo mas não está no ORG (ignora os filtros:
-  // é um aviso de cadastro para o RH). Também sugere a linha do ORG sem
-  // matrícula com o mesmo primeiro e último nome (ex.: nome com uma
-  // letra trocada no ORG).
-  function pessoasForaDoORG(){
-    var org = state.records.filter(function(r){ return r.tipo === TIPO_CADASTRO_ORG; });
-    if (!org.length) return null;
-    var naOrg = {};
-    org.forEach(function(r){ naOrg[chavePessoa(r)] = true; naOrg["N:" + chaveNome(r.colaborador)] = true; });
-    var semMat = org.filter(function(r){ return !r.matricula; });
-    var fora = {};
-    state.records.forEach(function(r){
-      if (r.tipo === TIPO_CADASTRO_ORG) return;
-      var k = chavePessoa(r);
-      var mesmoNomeNoOrg = !!naOrg["N:" + chaveNome(r.colaborador)];
-      if (naOrg[k] || (!r.matricula && mesmoNomeNoOrg)) return;
-      if (!fora[k]) fora[k] = { colaborador:r.colaborador, matricula:r.matricula, gestor:"", fontes:{}, mesmoNomeSemMat: mesmoNomeNoOrg };
-      if (r.gestor && r.gestor !== "Sem gestor") fora[k].gestor = r.gestor;
-      var fonte = isTipoDigitada(r.tipo) ? "Marcações digitadas" :
-                  (r.tipo === TIPO_AUDITORIA_EXTRA_FALTA || isTipoAbsenteismo(r.tipo)) ? "Cartão (3 meses)" :
-                  r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS ? "Pausas térmicas" :
-                  (r.tipo === TIPO_RESUMO_HORAS_CARTAO || isTipoCurta(r.tipo)) ? "Cartão atual" : "Tratamento";
-      fora[k].fontes[fonte] = true;
-    });
-    return Object.values(fora).map(function(p){
-      var partes = chaveNome(p.colaborador).split(" ");
-      var parecido = p.mesmoNomeSemMat ? null : semMat.filter(function(o){
-        var q = chaveNome(o.colaborador).split(" ");
-        return q[0] === partes[0] && q[q.length-1] === partes[partes.length-1];
-      })[0];
-      p.parecido = parecido ? parecido.colaborador : "";
-      p.listaFontes = Object.keys(p.fontes);
-      return p;
-    }).sort(function(a,b){ return a.colaborador.localeCompare(b.colaborador, "pt-BR"); });
-  }
-
   function renderListaORG(ocorrenciasRecords){
     var org = getResumoRecords(TIPO_CADASTRO_ORG);
     var temOrg = state.records.some(function(r){ return r.tipo === TIPO_CADASTRO_ORG; });
     if (!temOrg){
-      $("orgResumo").innerHTML = ""; $("orgForaBox").hidden = true; $("orgCount").textContent = "";
+      $("orgResumo").innerHTML = ""; $("orgCount").textContent = "";
       $("tableOrg").innerHTML = ""; $("tableOrg").appendChild(emptyMsg("Este CSV não traz a lista do ORG. Gere o CSV de novo com a macro atual (ela lê a aba ORG)."));
       return;
     }
@@ -2767,19 +2737,6 @@
       '<span class="org-pill"><b>' + formatNum(linhas.length - com) + '</b> sem ocorrência</span>' +
       '<span class="org-pill"><b>' + formatNum(semGestor) + '</b> sem gestor</span>' +
       '<span class="org-pill"><b>' + formatNum(semMat) + '</b> sem matrícula (#N/A)</span>';
-
-    var fora = pessoasForaDoORG() || [];
-    var box = $("orgForaBox");
-    if (fora.length){
-      box.innerHTML = '<strong>' + fora.length + ' pessoa(s) com dados no arquivo que não estão no ORG</strong> (sem gestor definido pela relação):<ul>' +
-        fora.map(function(p){
-          return '<li>' + colabLink(p.colaborador) + (p.matricula ? ' &middot; matrícula ' + escapeHtml(p.matricula) : '') +
-                 ' &middot; aparece em: ' + escapeHtml(p.listaFontes.join(", ")) +
-                 (p.mesmoNomeSemMat ? ' <span class="dica">&middot; está no ORG, mas com a matrícula em #N/A</span>' :
-                  p.parecido ? ' <span class="dica">&middot; no ORG existe “' + escapeHtml(p.parecido) + '” sem matrícula: nome escrito diferente?</span>' : '') + '</li>';
-        }).join("") + '</ul>';
-      box.hidden = false;
-    } else box.hidden = true;
 
     var busca = stripAccents($("orgBusca").value.trim().toLowerCase());
     var modo = $("orgMostrar").value;
@@ -3200,7 +3157,7 @@
     if (atestados.length){
       var diasAt = atestados.reduce(function(sm, r){ return sm + (r.diasAusencia || 0); }, 0);
       html += '<h3 class="colab-section">Atestados nos últimos 3 meses (' + atestados.length + ' &middot; ' + diasAt + ' dia(s))</h3>' +
-        '<div class="table-scroll" style="max-height:220px;"><table class="data-table"><colgroup><col style="width:100px"><col style="width:100px"><col style="width:60px"><col style="width:30%"><col></colgroup>' +
+        '<div class="table-scroll colab-tab"><table class="data-table"><colgroup><col style="width:100px"><col style="width:100px"><col style="width:60px"><col style="width:30%"><col></colgroup>' +
         '<thead><tr><th>Início</th><th>Fim</th><th>Dias</th><th>Descrição</th><th>Encostado em folga</th></tr></thead><tbody>' +
         atestados.map(function(r){
           var dias = diasDoAtestado(r), fim = dias[dias.length-1];
@@ -3212,7 +3169,7 @@
     if (digitadas.length){
       var dEsq = digitadas.filter(isEsquecimento).length;
       html += '<h3 class="colab-section">Marcações digitadas no período ('+digitadas.length+' &middot; '+dEsq+' por esquecimento)</h3>' +
-        '<div class="table-scroll" style="max-height:260px;"><table class="data-table"><colgroup><col style="width:92px"><col style="width:60px"><col style="width:30%"><col></colgroup>' +
+        '<div class="table-scroll colab-tab"><table class="data-table"><colgroup><col style="width:92px"><col style="width:60px"><col style="width:30%"><col></colgroup>' +
         '<thead><tr><th>Data</th><th>Hora</th><th>Motivo</th><th>Justificativa</th></tr></thead><tbody>' +
         digitadas.map(function(r){
           return '<tr><td data-label="Data">'+formatDateBR(r.data)+'</td><td data-label="Hora">'+horaMin(r.data)+'</td>'+
@@ -3227,7 +3184,7 @@
     }
     html += '<h3 class="colab-section">Ocorrências no período ('+periodoTxt+')</h3>';
     if (ocorrencias.length){
-      html += '<div class="table-scroll" style="max-height:none;"><table class="data-table"><colgroup><col style="width:92px"><col><col><col style="width:84px"><col style="width:112px"></colgroup>' +
+      html += '<div class="table-scroll colab-tab colab-tab-livre"><table class="data-table"><colgroup><col style="width:92px"><col><col><col style="width:84px"><col style="width:112px"></colgroup>' +
         '<thead><tr><th>Data</th><th>Tipo</th><th>Situação</th><th>Falta</th><th>Status</th></tr></thead><tbody>' +
         ocorrencias.map(function(r){
           return '<tr><td data-label="Data">'+formatDateBR(r.data)+'</td><td data-label="Tipo">'+escapeHtml(r.tipo)+'</td>'+
@@ -3265,7 +3222,7 @@
       $(id).innerHTML = ""; $(id).appendChild(emptyMsg("Carregue o CSV para ver os dados deste quadro."));
     });
     $("btnBancoTodos").hidden = true;
-    $("orgResumo").innerHTML = ""; $("orgForaBox").hidden = true; $("orgCount").textContent = "";
+    $("orgResumo").innerHTML = ""; $("orgCount").textContent = "";
     $("digKpis").innerHTML = ""; $("digCount").textContent = ""; $("digSemDados").hidden = true; $("digCorpo").hidden = false;
     $("absResumo").innerHTML = ""; $("absEmendaResumo").innerHTML = ""; $("absSemDados").hidden = true; $("absCorpo").hidden = false;
     $("historyBody").innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--c-muted-2);padding:20px;">Carregue o CSV para ver o histórico.</td></tr>';
@@ -3283,6 +3240,21 @@
     window.scrollTo({ top:0, behavior:"smooth" });
   }
   $("btnExplica").addEventListener("click", function(){ setModoExplicacao(!modoExplicacao); });
+
+  /* ---------- Esconder o painel da direita ----------
+     Tira a coluna "Carregar dados / Filtros" para os gráficos usarem a
+     largura toda. Os filtros continuam valendo. A escolha fica guardada no
+     navegador de quem usa (localStorage, se disponível). Os gráficos são
+     redesenhados porque a largura deles é calculada em pixels. */
+  function setLateralOculta(oculta){
+    document.body.classList.toggle("sem-lateral", oculta);
+    $("btnLateral").setAttribute("aria-pressed", oculta ? "true" : "false");
+    $("btnLateralTxt").textContent = oculta ? "Mostrar filtros" : "Esconder filtros";
+    try { localStorage.setItem("painelPonto.lateralOculta", oculta ? "1" : "0"); } catch(e){}
+    if (state.records.length) renderDashboard();
+  }
+  $("btnLateral").addEventListener("click", function(){ setLateralOculta(!document.body.classList.contains("sem-lateral")); });
+  try { if (localStorage.getItem("painelPonto.lateralOculta") === "1") setLateralOculta(true); } catch(e){}
   $("btnExplicaVoltar").addEventListener("click", function(){ setModoExplicacao(false); });
 
   window.addEventListener("resize", debounce(function(){
@@ -3297,6 +3269,7 @@
     if (!btn) return;
     var action = btn.dataset.action;
     if (action === "filters"){
+      if (document.body.classList.contains("sem-lateral")) setLateralOculta(false);
       $("filtersDetails").open = true;
       $("filtersBlock").scrollIntoView({ behavior:"smooth", block:"start" });
     } else if (action === "top"){

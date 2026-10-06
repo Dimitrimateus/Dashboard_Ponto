@@ -213,6 +213,14 @@ justificativa, ou o RH lançou no sistema.
 - Planilha de 28/08 a 27/09: 31 atestados, 107 dias, 23 pessoas (jul 33, ago 27, set 47 dias);
   19 encostam numa folga; 6 reincidentes. Conferência: 18/18.
 
+## Ajustes no painel (06/10)
+- Botão **"Esconder filtros"** no topo: tira o painel da direita (Carregar dados e Filtros) e
+  os gráficos ocupam a tela toda; os filtros continuam valendo. A escolha fica guardada no
+  navegador.
+- Card do colaborador: as tabelas (batidas digitadas, atestados, ocorrências) não ficam mais
+  espremidas; no computador cada uma rola sozinha, no celular o card inteiro rola.
+- Lista de colaboradores (ORG): saiu o aviso em vermelho de quem não está no ORG.
+
 ## Ordem de uso no mês
 
 1. Rodar `ConsolidarCartaoPonto` no HRCP102 e colar o resultado numa aba `Cartão <Mês>`.

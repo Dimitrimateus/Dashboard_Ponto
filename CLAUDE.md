@@ -219,8 +219,14 @@ dias_ausencia, emenda_folga
   banco de horas, `colabLink` nas tabelas) abre `abrirCardColaborador` por delegação. As
   ocorrências do card respeitam só o período do filtro; os resumos são do mês/3 meses.
 - **Lista de colaboradores (ORG)** (`renderListaORG`): linhas "Cadastro ORG" casadas por
-  matrícula (`chavePessoa`) com ocorrências do filtro e horas do Cartão; aviso de quem tem dados
-  mas não está no ORG (`pessoasForaDoORG`, ignora filtros).
+  matrícula (`chavePessoa`) com ocorrências do filtro, digitadas e horas do Cartão. O aviso em
+  vermelho de "fora do ORG" foi **retirado a pedido do Dimitri** (06/10); o card da pessoa ainda
+  mostra "Não está no ORG".
+- Botão **"Esconder filtros"** (`setLateralOculta`, `body.sem-lateral`, guardado em
+  localStorage `painelPonto.lateralOculta`); redesenha os gráficos.
+- Card do colaborador: `.modal-body.colab-modal-body` é `display:block` (rola inteiro); tabelas
+  internas usam `.colab-tab` (máx. 340px só no desktop). Não usar `max-height` inline nelas: no
+  celular a tabela vira cartões e o conteúdo vazava por cima.
 - **Marcações digitadas** (`renderDigitadas`, filtro `getDigitadasRecords`: gestor/grupo/cargo/
   colaborador/período, sem chips): KPIs, motivo, dia da semana, data, top 10, gestor, hora, esquecimento
   repetido, justificativas (agrupadas por `chaveTexto`), lista com busca. "No dia de uma ocorrência" =
@@ -338,4 +344,5 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   colaboradores (ORG)" com aviso de quem está fora do ORG; gestor das linhas-resumo pelo ORG.
   Depois: macro FormatarMarcacoesDigitadas, linhas "Marcação Digitada" no CSV (27 colunas) e seção
   "Marcações digitadas" no painel. Depois: Origem "E" ignorada; absenteísmo (atestados) no CSV
-  (29 colunas) e seção "Absenteísmo (atestados)" no painel.
+  (29 colunas) e seção "Absenteísmo (atestados)" no painel. Depois: botão "Esconder filtros",
+  card do colaborador sem tabelas espremidas, aviso "fora do ORG" retirado da lista.

@@ -32,7 +32,6 @@ const { chromium } = require('playwright');
       absEvol: table('tableAbsEvolucao'), absEmenda: txt('absEmendaResumo'), absRankN: document.querySelectorAll('#tableAbsRanking tbody tr').length,
       absReinc: [...document.querySelectorAll('#tableAbsRanking tr.row-alert')].map(tr=>tr.children[0].textContent.trim()),
       orgResumo: $('orgResumo') ? $('orgResumo').innerText : null,
-      orgFora: [...document.querySelectorAll('#orgForaBox li')].map(li=>li.querySelector('.colab-link').textContent),
       orgLinhas: document.querySelectorAll('#tableOrg tbody tr').length,
       grupoOpts: $('fGrupo') ? [...$('fGrupo').options].map(o=>o.value) : null,
     };
