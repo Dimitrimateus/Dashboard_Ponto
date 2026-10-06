@@ -169,7 +169,7 @@ justificativa, ou o RH lançou no sistema.
 
 ### GerarCSVPonto
 - Acha a aba pelo cabeçalho (Matrícula, Data, Hora, Motivo, Justificativa) e grava uma linha
-  **"Marcação Digitada"** por batida: data com a hora (arredondada ao minuto), motivo em
+  **"Marcação Digitada"** por batida de Origem "D" (as de Origem "E" são ignoradas): data com a hora (arredondada ao minuto), motivo em
   `situacao`, gestor (Tratamento ou ORG), setor e cargo.
 - O CSV ganhou 2 colunas no fim (agora são 27): `justificativa_marcacao` e `origem_marcacao`.
 

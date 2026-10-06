@@ -162,6 +162,7 @@ for nome_aba,rows_d in d.items():
         for r in rows_d[1:]:
             m=s(r[hd['Matrícula']]); dt=r[hd['Data']]
             if not m or not isinstance(dt,datetime.datetime): continue
+            if 'Origem' in hd and s(r[hd['Origem']]).upper()=='E': continue   # Origem "E" é ignorada
             hr=r[hd['Hora']]
             if isinstance(hr,datetime.time): dt=dt+datetime.timedelta(minutes=round(hr.hour*60+hr.minute+hr.second/60+hr.microsecond/6e7))
             se,caRE=setorcargo(m)

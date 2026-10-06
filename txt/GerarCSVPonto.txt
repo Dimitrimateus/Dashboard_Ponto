@@ -105,7 +105,8 @@ Option Explicit
 '   - tipo_ocorrencia = "Marcação Digitada" → uma por marcação da aba
 '     de Marcações digitadas (formatada pelo FormatarMarcacoesDigitadas):
 '     data = dia + hora da marcação, situacao = motivo, e as colunas
-'     justificativa_marcacao (texto livre) / origem_marcacao (D/E).
+'     justificativa_marcacao (texto livre) / origem_marcacao (D). As
+'     batidas com Origem "E" são ignoradas (pedido do RH, 06/10).
 '   - tipo_ocorrencia = "Cadastro ORG" → uma por pessoa da aba ORG
 '     (nome, matrícula, gestor, cargo; situacao = área do ORG); não
 '     usa as colunas extras. Alimenta a lista de colaboradores do painel.
@@ -677,13 +678,14 @@ ProximaAbaTratamento:
     ' com o dia e a hora, o motivo, a justificativa e a origem. Não depende
     ' da Tratamento nem do Check: é o relatório como veio do sistema.
     ' =====================================================================
-    Dim qtdDigitadas As Long
+    Dim qtdDigitadas As Long, qtdDigitadasOrigemE As Long
     qtdDigitadas = 0
+    qtdDigitadasOrigemE = 0
     Dim wsDigitadas As Worksheet
     Set wsDigitadas = EncontrarAbaDigitadas(wbTrat)
     If Not wsDigitadas Is Nothing Then
         GerarLinhasDigitadas wsDigitadas, dictRE, dictGestorPorMatricula, dictGrupoPorMatricula, _
-            wsCSV, linhaSaida, qtdDigitadas
+            wsCSV, linhaSaida, qtdDigitadas, qtdDigitadasOrigemE
     End If
 
     ' Uma linha "Cadastro ORG" por pessoa da lista do ORG (ver acima).
@@ -707,7 +709,8 @@ ProximaAbaTratamento:
     If wsDigitadas Is Nothing Then
         msgAuditoria = msgAuditoria & vbCrLf & "Aba de Marcações Digitadas não encontrada; essa parte do painel fica vazia."
     Else
-        msgAuditoria = msgAuditoria & vbCrLf & qtdDigitadas & " marcação(ões) digitada(s) (aba " & wsDigitadas.Name & ")."
+        msgAuditoria = msgAuditoria & vbCrLf & qtdDigitadas & " marcação(ões) digitada(s) (aba " & wsDigitadas.Name & _
+            "); " & qtdDigitadasOrigemE & " com Origem ""E"" ignorada(s)."
     End If
     ' If em vez de IIf: o IIf avalia os dois lados e wsORG.Name daria erro
     ' quando a aba não existe.
@@ -1149,12 +1152,14 @@ Private Function EncontrarAbaDigitadas(wb As Workbook) As Worksheet
     Set EncontrarAbaDigitadas = Nothing
 End Function
 
-' Uma linha "Marcação Digitada" por linha da aba. A data do CSV leva a hora
+' Uma linha "Marcação Digitada" por linha da aba, menos as de Origem "E"
+' (pedido do RH: só as digitadas de fato, Origem "D"). A data do CSV leva a hora
 ' da marcação (arredondada ao minuto: o sistema grava a hora com 7 casas e
 ' 07:00 pode vir como 06:59:59,99). Setor vem da RE; cargo, da RE ou da
 ' própria aba; gestor e grupo, dos dicionários (Tratamento, depois ORG).
 Private Sub GerarLinhasDigitadas(ws As Worksheet, dictRE As Object, dictGestorPorMatricula As Object, _
-    dictGrupoPorMatricula As Object, wsCSV As Worksheet, ByRef linhaSaida As Long, ByRef qtdGerada As Long)
+    dictGrupoPorMatricula As Object, wsCSV As Worksheet, ByRef linhaSaida As Long, ByRef qtdGerada As Long, _
+    ByRef qtdOrigemE As Long)
 
     Dim colMat As Long, colNome As Long, colCargo As Long, colOrigem As Long
     Dim colData As Long, colHora As Long, colMotivo As Long, colJust As Long
@@ -1176,6 +1181,10 @@ Private Sub GerarLinhasDigitadas(ws As Worksheet, dictRE As Object, dictGestorPo
         mat = TextoLimpo(ws.Cells(r, colMat).Value)
         vData = ws.Cells(r, colData).Value2
         If mat = "" Or Not IsNumeric(vData) Or IsEmpty(vData) Then GoTo ProximaDigitada
+        If UCase$(TextoDaCelula(ws, r, colOrigem)) = "E" Then
+            qtdOrigemE = qtdOrigemE + 1
+            GoTo ProximaDigitada
+        End If
 
         dataHora = CDate(Int(CDbl(vData)))
         If colHora > 0 Then

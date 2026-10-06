@@ -109,8 +109,10 @@ conteúdo num módulo.
 - Saída (linha 1): `Matrícula, Colaborador, Cód. Cargo, Cargo, Cód. Local, Local, Origem, Data,
   Hora, Dia da semana, Coletor, Função, Motivo, Justificativa`.
 - Relatório de 28/08 a 27/09: 434 batidas, 137 pessoas; motivos: atividade externa 167,
-  dispositivo 157, esquecimento 109, exclusão por erro 1; Origem D 422 / E 12 (**significado de
-  "E" não confirmado com o Dimitri**).
+  dispositivo 157, esquecimento 109, exclusão por erro 1; Origem D 422 / E 12. A macro mantém
+  todas na aba; **o GerarCSV ignora Origem "E"** (decisão do Dimitri, 06/10) e o painel também
+  descarta "E" ao ler um CSV antigo. O relatório **não diz quem digitou** (colaborador × RH) — não
+  há como separar.
 
 ### 5.4 GerarCSVPonto
 **Entradas (achadas por nome/cabeçalho, nunca por posição):**
@@ -153,7 +155,8 @@ conteúdo num módulo.
      hora extra (50% + 100%) e de banco de horas (BH). Sem Tratamento, sem Check, sem período.
      No Cartão, BH é sempre positivo e é **débito** (dias de "Falta (Banco Horas)" e minutos de
      atraso em dias "Trabalhando").
-   - "Marcação Digitada": uma por batida da aba Marcações Digitadas; data = dia + hora (minuto);
+   - "Marcação Digitada": uma por batida da aba Marcações Digitadas **com Origem "D"** (as "E"
+     são ignoradas); data = dia + hora (minuto);
      situacao = motivo; colunas 26/27 = justificativa / origem. Sem Tratamento nem Check.
    - "Cadastro ORG": uma por pessoa do ORG (matrícula repetida = 1ª linha; matrícula `#N/A` entra
      sem matrícula, salvo se o nome já existe com matrícula válida); situacao = área do ORG.
@@ -283,8 +286,6 @@ Marcações digitadas (06/10): aba inserida na planilha _2 com `ferramentas/adic
 - A planilha de 28/08 a 27/09 ainda está no formato antigo (aba única "Tratamento"). Separar em
   Internos/Externos depende de um **critério** que o Dimitri ainda não deu.
 - Regra de `destino_horas_extra` (banco × pagamento) não confirmada.
-- Marcações digitadas: o que é Origem "E"? Dá para separar o que o colaborador incluiu no PontoNet
-  do que o RH lançou? (o relatório não traz quem digitou).
 - **Absenteísmo** (pedido de 06/10): juntar as ausências dos 3 Cartões (coluna "Descrição
   Marcação": Atestado, Auxílio Doença, Acidente Trabalho, Doação Sangue, Licença Falecimento,
   Maternidade, Paternidade, Acomp. Médico Gestante). Sugestões de visões apresentadas ao

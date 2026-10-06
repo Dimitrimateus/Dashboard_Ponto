@@ -160,7 +160,8 @@ if 'ORG' in d and ui.get('orgResumo'):
 abaDig=next((n for n,rw in d.items() if rw and all(k in hdrmap(rw[0]) for k in ('Matrícula','Data','Hora','Motivo','Justificativa'))), None)
 if abaDig and ui.get('digKpis'):
     rw=d[abaDig]; hd=hdrmap(rw[0])
-    linhasD=[r for r in rw[1:] if s(r[hd['Matrícula']]) and isinstance(r[hd['Data']],datetime.datetime)]
+    linhasD=[r for r in rw[1:] if s(r[hd['Matrícula']]) and isinstance(r[hd['Data']],datetime.datetime)
+             and not ('Origem' in hd and s(r[hd['Origem']]).upper()=='E')]
     mot=C(s(r[hd['Motivo']]) for r in linhasD); pes=C(s(r[hd['Colaborador']]) for r in linhasD)
     k=ui['digKpis'].split('\n')
     okk=k[1]==str(len(linhasD)) and k[4]==str(len({s(r[hd['Matrícula']]) for r in linhasD})) and ui['digLinhas']==len(linhasD)

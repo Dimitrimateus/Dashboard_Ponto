@@ -709,7 +709,7 @@
         <h3 class="section-title">Marcações digitadas</h3>
         <div id="digSemDados" class="card wide" hidden><div class="chart-empty">Este CSV não traz as marcações digitadas. Formate o relatório com a macro FormatarMarcacoesDigitadas, traga a aba para a planilha de Tratamento e gere o CSV de novo.</div></div>
         <div id="digCorpo">
-          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema</span><p>Marcação digitada é a batida que <strong>não veio do relógio</strong>: o colaborador incluiu no PontoNet com uma justificativa, ou o RH lançou no sistema. Cada linha do relatório é uma marcação (uma batida), com o dia, a hora, o <strong>motivo</strong> (Inclusão por esquecimento, por atividade externa, problema no dispositivo...) e o texto da justificativa. Respeita os filtros de gestor, grupo, cargo, colaborador e período; não usa os filtros de tipo e status, que são das ocorrências da Tratamento.</p></div>
+          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema</span><p>Marcação digitada é a batida que <strong>não veio do relógio</strong>: o colaborador incluiu no PontoNet com uma justificativa, ou o RH lançou no sistema. Cada linha do relatório é uma marcação (uma batida), com o dia, a hora, o <strong>motivo</strong> (Inclusão por esquecimento, por atividade externa, problema no dispositivo...) e o texto da justificativa. As linhas com Origem “E” no relatório ficam de fora. O relatório não diz quem digitou (o colaborador ou o RH). Respeita os filtros de gestor, grupo, cargo, colaborador e período; não usa os filtros de tipo e status, que são das ocorrências da Tratamento.</p></div>
           <section class="dig-kpis" id="digKpis"></section>
           <section class="grid">
             <div class="card">
@@ -763,7 +763,7 @@
             <div class="card wide">
               <div class="card-title">Todas as marcações digitadas</div>
               <div class="card-hint" id="digListaHint">Lista completa do filtro atual</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema</span><p>Uma linha por batida digitada. “Ocorrência no dia” = a pessoa também tem uma ocorrência da Tratamento nesse mesmo dia. Origem é a coluna “Ori.” do relatório (D ou E).</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema</span><p>Uma linha por batida digitada. “Ocorrência no dia” = a pessoa também tem uma ocorrência da Tratamento nesse mesmo dia.</p></div>
               <div class="org-toolbar"><input type="text" id="digBusca" placeholder="Buscar por colaborador, gestor, motivo, justificativa..."><span id="digCount" style="font-size:12px;color:var(--c-muted);"></span></div>
               <div class="card-body" id="tableDigLista"></div>
             </div>
@@ -1364,6 +1364,10 @@
       var tratativaRaw = idx.tratativa != null ? r[idx.tratativa] : "";
       var tipoRaw = idx.tipo != null ? (r[idx.tipo]||"").trim() : "";
       if (isTipoIgnorado(tipoRaw)) continue;
+      // marcação digitada com Origem "E" não entra (pedido do RH; o GerarCSV
+      // atual já não grava essas linhas — isto protege contra um CSV antigo)
+      if (tipoRaw === TIPO_MARCACAO_DIGITADA && idx.origemMarcacao != null &&
+          textoCampo(r[idx.origemMarcacao]).toUpperCase() === "E") continue;
       var rec = {
         data: dt,
         dateKey: dateKey(dt),
@@ -2442,8 +2446,7 @@
        {label:"Gestor", width:"14%", render:function(r){ return escapeHtml(r.gestor); }},
        {label:"Motivo", width:"16%", render:function(r){ return escapeHtml(r.situacao); }},
        {label:"Justificativa", render:function(r){ return '<span title="'+escapeHtml(r.justificativaMarcacao)+'">'+escapeHtml(r.justificativaMarcacao)+'</span>'; }},
-       {label:"Ocorrência no dia", width:"84px", render:function(r){ return r.temOcorrenciaNoDia ? "Sim" : "&ndash;"; }},
-       {label:"Origem", width:"62px", render:function(r){ return escapeHtml(r.origemMarcacao); }}],
+       {label:"Ocorrência no dia", width:"84px", render:function(r){ return r.temOcorrenciaNoDia ? "Sim" : "&ndash;"; }}],
       lista);
   }
   $("digBusca").addEventListener("input", debounce(applyFilters, 200));
