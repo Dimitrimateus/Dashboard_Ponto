@@ -154,6 +154,29 @@ for r in Pz[1:]:
     se,ca=setorcargo(m)
     W(dmax,s(r[pz['Colaborador']]),m,gestorPor.get(m,''),se,s(r[pz['Cargo']]) or ca,'Resumo Pausas Térmicas','','Pendente',0,
       pc=nz(r[pz['Pausa corretas']]),pm=nz(r[pz['Pausa menor 0:20']]),pM=nz(r[pz['Pausa maior 0:20']]),tc=nz(r[pz['Trabalho correto 1:40']]),tM=nz(r[pz['Trabalho maior 1:40']]),tm=nz(r[pz['Trabalho menor 1:40']]),imp=nz(r[pz['Marcações Ímpares']]))
+# absenteísmo (GerarAbsenteismo): só atestados; dias seguidos = 1 atestado; emenda = dia antes/depois é folga
+ABS=('atest',); FOLGA=('dsr','compensado','folga','feriado')
+def contem(t,lista): t=semac(t).lower(); return any(x in t for x in lista)
+diasP=collections.defaultdict(dict); infoP={}
+for _,nc in cards:
+    rw,hc=cart(nc)
+    for r in rw[2:]:
+        m=s(r[hc['Matrícula']]); dt=r[hc['DT']]
+        if not m or not isinstance(dt,datetime.datetime): continue
+        if m not in infoP: infoP[m]=(s(r[hc['Nome']]), s(r[hc['Setor']]) if 'Setor' in hc else '', s(r[hc['Cargo']]))
+        diasP[m].setdefault(dt.date(), s(r[hc['Descrição Marcação']]))
+for m,dias in diasP.items():
+    ds=sorted(d0 for d0,t in dias.items() if contem(t,ABS)); i=0
+    while i<len(ds):
+        ini=ds[i]; fim=ini
+        while i+1<len(ds) and ds[i+1]==fim+datetime.timedelta(days=1): i+=1; fim=ds[i]
+        um=datetime.timedelta(days=1); antes=dias.get(ini-um,''); depois=dias.get(fim+um,'')
+        antes=antes if contem(antes,FOLGA) else ''; depois=depois if contem(depois,FOLGA) else ''
+        em=(f"antes ({antes})" if antes else '')+(' e ' if antes and depois else '')+(f"depois ({depois})" if depois else '')
+        se_re,ca_re=setorcargo(m); nm,se_c,ca_c=infoP[m]
+        W(datetime.datetime.combine(ini,datetime.time()),nm or 'Matrícula '+m,m,gestorPor.get(m,''),se_c or se_re,ca_re or ca_c,
+          'Absenteísmo',dias[ini],'Pendente',0,diasAus=(fim-ini).days+1,emenda=em)
+        i+=1
 # marcações digitadas (GerarLinhasDigitadas): aba achada pelo cabeçalho; data = dia + hora (minuto)
 for nome_aba,rows_d in d.items():
     if not rows_d: continue
@@ -178,7 +201,7 @@ print('cartoes',cards); print(len(out), collections.Counter(o['tipo'] for o in o
 
 def exportar_csv(linhas, caminho='dados_TODOS.csv'):
     """Mesmo formato do ExportarLinhasParaCSV: vírgula, UTF-8 com BOM, datas dd/mm/aaaa."""
-    cab=["data","colaborador","matricula","gestor","setor","cargo","tipo_ocorrencia","situacao","status","duracao_minutos","destino_horas_extra","data_tratativa_pontonet","horas_excedentes","ocorrencias_extra_falta_mes_atual","ocorrencias_extra_falta_3_meses","pausas_corretas","pausas_menor_20min","pausas_maior_20min","trabalho_correto_140","trabalho_maior_140","trabalho_menor_140","pausas_marcacoes_impares","grupo","minutos_hora_extra_cartao","minutos_banco_horas_cartao","justificativa_marcacao","origem_marcacao"]
+    cab=["data","colaborador","matricula","gestor","setor","cargo","tipo_ocorrencia","situacao","status","duracao_minutos","destino_horas_extra","data_tratativa_pontonet","horas_excedentes","ocorrencias_extra_falta_mes_atual","ocorrencias_extra_falta_3_meses","pausas_corretas","pausas_menor_20min","pausas_maior_20min","trabalho_correto_140","trabalho_maior_140","trabalho_menor_140","pausas_marcacoes_impares","grupo","minutos_hora_extra_cartao","minutos_banco_horas_cartao","justificativa_marcacao","origem_marcacao","dias_ausencia","emenda_folga"]
     def t(v):
         if v is None: return ''
         if isinstance(v,datetime.datetime): return v.strftime('%d/%m/%Y') if v.hour==0 and v.minute==0 else v.strftime('%d/%m/%Y %H:%M')
@@ -187,7 +210,7 @@ def exportar_csv(linhas, caminho='dados_TODOS.csv'):
     q=lambda x: '"'+x.replace('"','""')+'"' if (',' in x or '"' in x or '\n' in x) else x
     out=[','.join(cab)]
     for o in linhas:
-        v=[o['data'],o['colaborador'],o['matricula'],o['gestor'],o['setor'],o['cargo'],o['tipo'],o['situacao'],o['status'],o['duracao'],'',o['tratativa'],'',o.get('mesAtual'),o.get('total3'),o.get('pc'),o.get('pm'),o.get('pM'),o.get('tc'),o.get('tM'),o.get('tm'),o.get('imp'),o.get('grupo',''),o.get('hx'),o.get('hb'),o.get('just'),o.get('orig')]
+        v=[o['data'],o['colaborador'],o['matricula'],o['gestor'],o['setor'],o['cargo'],o['tipo'],o['situacao'],o['status'],o['duracao'],'',o['tratativa'],'',o.get('mesAtual'),o.get('total3'),o.get('pc'),o.get('pm'),o.get('pM'),o.get('tc'),o.get('tM'),o.get('tm'),o.get('imp'),o.get('grupo',''),o.get('hx'),o.get('hb'),o.get('just'),o.get('orig'),o.get('diasAus'),o.get('emenda')]
         out.append(','.join(q(t(x)) for x in v))
     open(caminho,'w',encoding='utf-8-sig').write('\n'.join(out)+'\n')
 

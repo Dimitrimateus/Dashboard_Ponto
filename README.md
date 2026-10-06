@@ -188,6 +188,31 @@ justificativa, ou o RH lançou no sistema.
   resto do arquivo (só mexe nos índices do pacote e acrescenta estilos no fim).
 - Conferência: 17/17.
 
+## Absenteísmo — atestados (06/10)
+
+### GerarCSVPonto
+- Lê a coluna "Descrição Marcação" dos até 3 Cartões. Por enquanto só **atestados** (texto que
+  contém "atest": "Atestado ate 15 dias", o noturno e, quando aparecer, o odontológico). Para
+  incluir acidente de trabalho, suspensão e faltas justificadas/injustificadas, acrescente os
+  textos na constante `ABSENTEISMO_CONTEM`.
+- Dias seguidos de atestado = 1 atestado. Grava uma linha **"Absenteísmo"** por atestado: data do
+  1º dia, descrição, setor (coluna Setor do Cartão), **dias** (corridos: o Cartão marca sábado e
+  domingo do atestado) e se ele **encosta numa folga** (o dia antes do início ou depois do fim é
+  DSR, folga, compensado ou feriado na escala da própria pessoa).
+- O CSV ganhou 2 colunas no fim (agora são 29): `dias_ausencia` e `emenda_folga`.
+
+### Painel: seção "Absenteísmo (atestados)"
+- Seletor de **ciclo** (28 a 27) ou "Últimos 3 meses".
+- **Evolução mês a mês** (dias, atestados e pessoas por ciclo).
+- **Por gestor / setor / cargo** (dias no ciclo).
+- **Encostados em folga**: quantos, em que dia da semana os atestados começam e a lista.
+- **Ranking dos 3 meses** com reincidência em vermelho (atestado em 2+ meses ou 3+ atestados).
+- **Mapa colaborador × dia** do ciclo.
+- **Card do colaborador**: atestados dos 3 meses (início, fim, dias, encostado em folga).
+- Respeita gestor, grupo, cargo e colaborador; o filtro de período não se aplica.
+- Planilha de 28/08 a 27/09: 31 atestados, 107 dias, 23 pessoas (jul 33, ago 27, set 47 dias);
+  19 encostam numa folga; 6 reincidentes. Conferência: 18/18.
+
 ## Ordem de uso no mês
 
 1. Rodar `ConsolidarCartaoPonto` no HRCP102 e colar o resultado numa aba `Cartão <Mês>`.

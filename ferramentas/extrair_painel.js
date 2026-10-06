@@ -29,6 +29,8 @@ const { chromium } = require('playwright');
       digKpis: $('digKpis') ? $('digKpis').innerText : null,
       digMotivo: [...document.querySelectorAll('#chartDigMotivo .legend-row')].map(r=>[r.querySelector('.legend-label').textContent, r.querySelector('.legend-value').textContent]),
       digTop: tips('chartDigTop'), digLinhas: document.querySelectorAll('#tableDigLista tbody tr').length,
+      absEvol: table('tableAbsEvolucao'), absEmenda: txt('absEmendaResumo'), absRankN: document.querySelectorAll('#tableAbsRanking tbody tr').length,
+      absReinc: [...document.querySelectorAll('#tableAbsRanking tr.row-alert')].map(tr=>tr.children[0].textContent.trim()),
       orgResumo: $('orgResumo') ? $('orgResumo').innerText : null,
       orgFora: [...document.querySelectorAll('#orgForaBox li')].map(li=>li.querySelector('.colab-link').textContent),
       orgLinhas: document.querySelectorAll('#tableOrg tbody tr').length,

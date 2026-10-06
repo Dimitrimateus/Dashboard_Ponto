@@ -170,3 +170,38 @@ if abaDig and ui.get('digKpis'):
     okt=all(pes[n]==v for n,v in gt.items()) and len(gt)==min(10,len(pes)) and all(v<=corte for n,v in pes.items() if n not in gt)
     chk('Marcações digitadas (total, pessoas, motivo, top 10)', okk and okm and okt,
         f"{len(linhasD)} batidas de {len({s(r[hd['Matrícula']]) for r in linhasD})} pessoas; {dict(mot)}" if okk and okm and okt else f"painel {k} {ui['digMotivo']} {gt} / fonte {len(linhasD)} {dict(mot)} {pes.most_common(10)}")
+# absenteísmo (atestados): dias por ciclo, pessoas por ciclo, encostados em folga e reincidentes,
+# recalculados direto dos 3 Cartões (dia a dia), sem passar pelo CSV
+if ui.get('absEvol'):
+    def _sa2(t): return unicodedata.normalize('NFD',t).encode('ascii','ignore').decode().lower()
+    dias=collections.defaultdict(dict); nomesA={}
+    for n in ['Cartão Julho','Cartão Agosto','Cartão atual']:
+        rw=d[n]; h=hdrmap(rw[1])
+        for r in rw[2:]:
+            m=s(r[h['Matrícula']]); dt=r[h['DT']]
+            if m and isinstance(dt,datetime.datetime):
+                dias[m].setdefault(dt.date(), s(r[h['Descrição Marcação']])); nomesA.setdefault(m, s(r[h['Nome']]))
+    def ciclo(x): return (x.year+(1 if x.month==12 and x.day>=28 else 0), (x.month % 12)+1 if x.day>=28 else x.month)
+    porC=collections.defaultdict(lambda:[0,set()]); eps=[]
+    for m,dd in dias.items():
+        at=sorted(k for k,v in dd.items() if 'atest' in _sa2(v))
+        for k in at: porC[ciclo(k)][0]+=1; porC[ciclo(k)][1].add(m)
+        i=0
+        while i<len(at):
+            ini=fim=at[i]
+            while i+1<len(at) and (at[i+1]-fim).days==1: i+=1; fim=at[i]
+            um=datetime.timedelta(days=1)
+            fol=lambda t: any(w in _sa2(t) for w in ('dsr','compensado','folga','feriado'))
+            eps.append((m,ini,fim,fol(dd.get(ini-um,'')) or fol(dd.get(fim+um,'')))); i+=1
+    esp=[[str(v[0]),str(len(v[1]))] for k,v in sorted(porC.items())]
+    got=[[r[1],r[3]] for r in ui['absEvol']]
+    emend=sum(1 for e in eps if e[3])
+    rk=collections.defaultdict(lambda:[0,set()])
+    for m,ini,fim,_ in eps:
+        rk[m][0]+=1
+        x=ini
+        while x<=fim: rk[m][1].add(ciclo(x)); x+=datetime.timedelta(days=1)
+    reinc=sorted(nomesA[m] for m,v in rk.items() if v[0]>=3 or len(v[1])>=2)
+    ok=got==esp and ui['absEmenda'].startswith(f"{emend} de {len(eps)} ") and ui['absRankN']==len(rk) and sorted(ui['absReinc'])==reinc
+    chk('Absenteísmo (atestados: dias/pessoas por ciclo, encostados em folga, reincidentes)', ok,
+        f"ciclos {esp}; {emend} de {len(eps)} atestados encostam em folga; {len(reinc)} reincidentes" if ok else f"painel {got} {ui['absEmenda']} {ui['absRankN']} {ui['absReinc']} / fonte {esp} {emend}/{len(eps)} {len(rk)} {reinc}")

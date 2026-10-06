@@ -158,6 +158,13 @@ conteúdo num módulo.
    - "Marcação Digitada": uma por batida da aba Marcações Digitadas **com Origem "D"** (as "E"
      são ignoradas); data = dia + hora (minuto);
      situacao = motivo; colunas 26/27 = justificativa / origem. Sem Tratamento nem Check.
+   - "Absenteísmo" (06/10): um por ATESTADO nos até 3 Cartões (dias seguidos com descrição que
+     contém `ABSENTEISMO_CONTEM` = "atest" = 1 atestado; dias corridos, o Cartão marca sábado e
+     domingo). data = 1º dia; situacao = descrição; setor = coluna Setor do Cartão; colunas 28/29 =
+     dias_ausencia / emenda_folga ("antes (DSR)", "depois (Feriado)"... se o dia antes/depois é
+     `FOLGA_CONTEM`). Só atestados por decisão do Dimitri; a lista completa de absenteísmo dele
+     (print da Jussara): suspensão, acidente trab. 15, acidente trabalho, atest. odontológico,
+     atest. médico até 15, faltas justificadas, faltas injustificadas.
    - "Cadastro ORG": uma por pessoa do ORG (matrícula repetida = 1ª linha; matrícula `#N/A` entra
      sem matrícula, salvo se o nome já existe com matrícula válida); situacao = área do ORG.
    Gestor e grupo dessas linhas vêm do primeiro gestor/grupo visto para a matrícula na Tratamento;
@@ -166,16 +173,17 @@ conteúdo num módulo.
    `UltimaLinhaPreenchida` (não usa `End(xlUp)`).
 10. `TextoLimpo`: erro do Excel (`#N/A`) vira "", quebras de linha viram espaço.
 
-**Saída: contrato do CSV (27 colunas, nesta ordem):**
+**Saída: contrato do CSV (29 colunas, nesta ordem):**
 ```
 data, colaborador, matricula, gestor, setor, cargo, tipo_ocorrencia, situacao, status,
 duracao_minutos, destino_horas_extra, data_tratativa_pontonet, horas_excedentes,
 ocorrencias_extra_falta_mes_atual, ocorrencias_extra_falta_3_meses, pausas_corretas,
 pausas_menor_20min, pausas_maior_20min, trabalho_correto_140, trabalho_maior_140,
 trabalho_menor_140, pausas_marcacoes_impares, grupo,
-minutos_hora_extra_cartao, minutos_banco_horas_cartao, justificativa_marcacao, origem_marcacao
+minutos_hora_extra_cartao, minutos_banco_horas_cartao, justificativa_marcacao, origem_marcacao,
+dias_ausencia, emenda_folga
 ```
-(24/25 só na linha "Resumo Horas Cartão"; 26/27 só na "Marcação Digitada")
+(24/25 só na "Resumo Horas Cartão"; 26/27 só na "Marcação Digitada"; 28/29 só na "Absenteísmo")
 - Separador **vírgula**; campo com vírgula/aspas/quebra vai entre aspas (RFC 4180); UTF-8 com BOM
   (`ADODB.Stream`); datas `dd/mm/aaaa` (`dd/mm/aaaa hh:mm` quando tem hora); duração em minutos
   inteiros (negativo = falta); `grupo` = Interno/Externo pelo nome da aba (vazio na planilha antiga).
@@ -218,6 +226,12 @@ minutos_hora_extra_cartao, minutos_banco_horas_cartao, justificativa_marcacao, o
   repetido, justificativas (agrupadas por `chaveTexto`), lista com busca. "No dia de uma ocorrência" =
   mesma matrícula + dia de uma ocorrência da Tratamento. `isTipoDigitada` entra em
   `isTipoNaoOcorrencia` e é excluído de `getFilteredRecords`.
+- **Absenteísmo** (`renderAbsenteismo`, base `getResumoRecords("Absenteísmo")`, sem período):
+  seletor de ciclo 28→27 (`cicloDe`); cada atestado expandido em dias (`diasDoAtestado`). Vistas
+  escolhidas pelo Dimitri (2, 4, 5, 6, 7, 8): evolução por ciclo, por gestor/setor/cargo,
+  encostados em folga + dia da semana do início, ranking 3 meses (reincidente = 2+ ciclos ou 3+
+  atestados), mapa colaborador × dia, atestados no card. Sem cards de KPI (visão 1 recusada) e
+  sem a separação longo × curto (visão 3 recusada). Fica fora de `periodoCompleto`.
 - Cards (KPI): Colaboradores envolvidos · Ocorrências no período · Demora média no PontoNet.
   (**Os cards de total de horas extra e de horas falta foram retirados a pedido do Dimitri.**)
 - Gráficos/tabelas: por tipo (rosca), por dia da semana, por data (linha), por gestor (top 12),
@@ -253,6 +267,9 @@ diferente da RE); 10 pessoas da RE fora do ORG. Lista nominal só na conversa co
 Marcações digitadas (06/10): aba inserida na planilha _2 com `ferramentas/adicionar_aba_xlsx.py`
 (sem openpyxl; só índices do pacote + estilos no fim mudam). Conferência: 17/17.
 
+Absenteísmo (06/10): 31 atestados, 107 dias, 23 pessoas; 19 encostam em folga; 6 reincidentes.
+Conferência: 18/18.
+
 ## 8. Armadilhas técnicas — não repetir
 
 1. **VBA não diferencia maiúsculas/minúsculas nos nomes**: uma função `UltimaLinha` colide com
@@ -286,11 +303,9 @@ Marcações digitadas (06/10): aba inserida na planilha _2 com `ferramentas/adic
 - A planilha de 28/08 a 27/09 ainda está no formato antigo (aba única "Tratamento"). Separar em
   Internos/Externos depende de um **critério** que o Dimitri ainda não deu.
 - Regra de `destino_horas_extra` (banco × pagamento) não confirmada.
-- **Absenteísmo** (pedido de 06/10): juntar as ausências dos 3 Cartões (coluna "Descrição
-  Marcação": Atestado, Auxílio Doença, Acidente Trabalho, Doação Sangue, Licença Falecimento,
-  Maternidade, Paternidade, Acomp. Médico Gestante). Sugestões de visões apresentadas ao
-  Dimitri; **aguardando ele escolher** e decidir se "Falta (Banco Horas)", "Horas Faltas",
-  "Faltas Injustificadas" e "Sem Marcação" entram, e se conta dia corrido ou só dia útil.
+- Absenteísmo: hoje só atestados. Quando o Dimitri liberar, incluir os outros eventos da lista
+  (suspensão, acidente, faltas justificadas/injustificadas) em `ABSENTEISMO_CONTEM`. Atestado
+  de poucas horas (dia "Trabalhando" com horas em "Just.") não entra: o Cartão não diz o motivo.
 - Sugestões para o painel ainda não aprovadas: comparativo com o mês anterior; pendências mais
   antigas ("há X dias"); % tratado por gestor; reincidentes (3+ do mesmo tipo); ocorrências por
   colaborador da equipe; mapa de calor colaborador × dia (a sexta concentrou 51 de 141); exportar
@@ -322,4 +337,5 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   "Entenda o painel". Depois: lista do ORG no CSV ("Cadastro ORG") e seção "Lista de
   colaboradores (ORG)" com aviso de quem está fora do ORG; gestor das linhas-resumo pelo ORG.
   Depois: macro FormatarMarcacoesDigitadas, linhas "Marcação Digitada" no CSV (27 colunas) e seção
-  "Marcações digitadas" no painel.
+  "Marcações digitadas" no painel. Depois: Origem "E" ignorada; absenteísmo (atestados) no CSV
+  (29 colunas) e seção "Absenteísmo (atestados)" no painel.

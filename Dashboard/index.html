@@ -146,6 +146,28 @@
   @media (max-width: 980px){ .dig-kpis{ grid-template-columns:repeat(3, minmax(0,1fr)); } }
   @media (max-width: 620px){ .dig-kpis{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
 
+  /* ---------- Absenteísmo ---------- */
+  .abs-toolbar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:12px; }
+  .abs-toolbar select{ max-width:280px; }
+  .abs-resumo{ font-size:12.5px; color:var(--c-muted); margin-bottom:10px; }
+  .abs-resumo b{ color:var(--c-navy-dark); }
+  .heat-wrap{ overflow-x:auto; border:1px solid var(--c-line); border-radius:var(--radius-card); }
+  table.heat{ border-collapse:collapse; font-size:11px; }
+  table.heat th, table.heat td{ border:1px solid var(--c-line); padding:0; text-align:center; }
+  table.heat th{ background:var(--c-card); color:var(--c-muted); font-weight:700; min-width:22px; height:30px; line-height:1.1; }
+  table.heat th.fds, table.heat td.fds{ background:#F1F1F2; }
+  table.heat td{ width:22px; height:22px; }
+  table.heat td.aus{ background:var(--c-terracotta); }
+  table.heat th.nome, table.heat td.nome{
+    position:sticky; left:0; z-index:1; background:var(--c-card); text-align:left; padding:0 8px;
+    min-width:190px; max-width:190px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  table.heat td.tot{ padding:0 6px; font-weight:700; color:var(--c-navy-dark); }
+  .heat-leg{ display:flex; gap:14px; font-size:11.5px; color:var(--c-muted); margin-top:8px; flex-wrap:wrap; }
+  .heat-leg span::before{ content:""; display:inline-block; width:11px; height:11px; margin-right:5px; vertical-align:-1px; border:1px solid var(--c-line); }
+  .heat-leg .l-aus::before{ background:var(--c-terracotta); }
+  .heat-leg .l-fds::before{ background:#F1F1F2; }
+
   /* ---------- Lista de colaboradores (ORG) ---------- */
   .org-resumo{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
   .org-pill{ font-size:12px; background:var(--c-paper-dim); border:1px solid var(--c-line); border-radius:var(--radius-pill); padding:4px 11px; }
@@ -770,6 +792,58 @@
           </section>
         </div>
 
+        <h3 class="section-title">Absenteísmo (atestados)</h3>
+        <div id="absSemDados" class="card wide" hidden><div class="chart-empty">Este CSV não traz o absenteísmo. Gere o CSV de novo com a macro atual (ela lê os atestados dos Cartões).</div></div>
+        <div id="absCorpo">
+          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: Cartão Ponto (mês atual e os 2 anteriores), coluna Descrição Marcação</span><p>Por enquanto conta <strong>só atestados</strong> (“Atestado até 15 dias”, inclusive o noturno; atestado odontológico entra quando aparecer no Cartão). Acidente de trabalho, suspensão e faltas justificadas/injustificadas, que também são absenteísmo, ficam para depois. O Cartão marca <strong>todos os dias</strong> do atestado, inclusive sábado e domingo, então a conta é em <strong>dias corridos</strong>; dias seguidos de atestado = <strong>1 atestado</strong>. Usa os 3 meses de Cartão do arquivo e respeita os filtros de gestor, grupo, cargo e colaborador (o filtro de período não se aplica: use o seletor de ciclo abaixo).</p></div>
+          <div class="abs-toolbar">
+            <label for="absCiclo" style="font-size:11.5px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:.04em;">Ciclo</label>
+            <select id="absCiclo"></select>
+            <span class="abs-resumo" id="absResumo" style="margin:0"></span>
+          </div>
+          <section class="grid">
+            <div class="card wide">
+              <div class="card-title">Evolução mês a mês</div>
+              <div class="card-hint">Dias de atestado em cada ciclo (28 a 27) dos 3 Cartões</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: Cartão Ponto (mês atual e os 2 anteriores), coluna Descrição Marcação</span><p>Cada dia de atestado conta no ciclo em que caiu (um atestado que atravessa o dia 27/28 é dividido entre os dois ciclos). A tabela mostra também quantos atestados começaram no ciclo e quantas pessoas tiveram atestado.</p></div>
+              <div class="card-body" id="chartAbsEvolucao"></div>
+              <div class="card-body" id="tableAbsEvolucao" style="margin-top:10px"></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Por <select id="absAgrupar" style="width:auto;display:inline-block;padding:3px 8px;font-size:13px;"><option value="gestor">gestor</option><option value="setor">setor</option><option value="cargo">cargo</option></select></div>
+              <div class="card-hint">Dias de atestado no ciclo escolhido &middot; 12 maiores</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: Cartão Ponto (mês atual e os 2 anteriores), coluna Descrição Marcação + relação colaborador × gestor</span><p>Gestor: da Tratamento ou, se a pessoa não aparece lá, do ORG. Setor: a coluna Setor do Cartão (a área, ex.: Ativ. Trade Marketing A). Cargo: do cadastro RE.</p></div>
+              <div class="card-body" id="chartAbsGrupo"></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Atestados encostados em folga</div>
+              <div class="card-hint">O dia antes do início ou o dia depois do fim é DSR, folga, compensado ou feriado</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: Cartão Ponto (mês atual e os 2 anteriores), coluna Descrição Marcação</span><p>Para cada atestado, olha o Cartão da própria pessoa no dia anterior ao primeiro dia e no dia seguinte ao último. Se um deles é DSR, folga, compensado ou feriado, o atestado “encosta” na folga — e emenda o descanso. O gráfico mostra em que dia da semana os atestados começam.</p></div>
+              <div class="abs-resumo" id="absEmendaResumo"></div>
+              <div class="card-body" id="chartAbsDiaSemana"></div>
+            </div>
+            <div class="card wide">
+              <div class="card-title">Ranking dos últimos 3 meses</div>
+              <div class="card-hint">Linhas em vermelho: reincidência (atestado em 2 ou mais meses, ou 3 ou mais atestados)</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: Cartão Ponto (mês atual e os 2 anteriores), coluna Descrição Marcação</span><p>Soma os 3 Cartões do arquivo, sem olhar o seletor de ciclo. “Meses” = em quantos ciclos a pessoa teve atestado; “Encostados em folga” = quantos dos atestados dela emendaram uma folga.</p></div>
+              <div class="card-body" id="tableAbsRanking"></div>
+            </div>
+            <div class="card wide">
+              <div class="card-title">Atestados encostados em folga — lista</div>
+              <div class="card-hint">No ciclo escolhido</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: Cartão Ponto (mês atual e os 2 anteriores), coluna Descrição Marcação</span><p>Cada atestado que encosta numa folga, com o que havia no dia antes ou depois.</p></div>
+              <div class="card-body" id="tableAbsEmendas"></div>
+            </div>
+            <div class="card wide">
+              <div class="card-title">Mapa colaborador × dia</div>
+              <div class="card-hint" id="absHeatHint">Dias de atestado no ciclo</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: Cartão Ponto (mês atual e os 2 anteriores), coluna Descrição Marcação</span><p>Uma linha por pessoa com atestado no ciclo, uma coluna por dia (28 a 27). Quadrado vermelho = dia de atestado; colunas cinza = sábado e domingo. Com “Últimos 3 meses” no seletor, o mapa mostra o ciclo mais recente.</p></div>
+              <div class="heat-wrap" id="absHeat"></div>
+              <div class="heat-leg"><span class="l-aus">Atestado</span><span class="l-fds">Sábado e domingo</span></div>
+            </div>
+          </section>
+        </div>
+
         <h3 class="section-title">Demora de tratativa no PontoNet</h3>
         <section class="grid">
           <div class="card wide">
@@ -1081,7 +1155,9 @@
     minHoraExtraCartao: ["minutos_hora_extra_cartao"],
     minBancoHorasCartao: ["minutos_banco_horas_cartao"],
     justificativaMarcacao: ["justificativa_marcacao"],
-    origemMarcacao: ["origem_marcacao"]
+    origemMarcacao: ["origem_marcacao"],
+    diasAusencia: ["dias_ausencia"],
+    emendaFolga: ["emenda_folga"]
   };
 
   // Situações que o painel ignora mesmo que venham no CSV (o GerarCSV
@@ -1112,6 +1188,11 @@
   // tem a seção própria "Marcações digitadas".
   var TIPO_MARCACAO_DIGITADA = "Marcação Digitada";
   function isTipoDigitada(tipo){ return tipo === TIPO_MARCACAO_DIGITADA; }
+  // Um registro por ATESTADO (dias seguidos de atestado no Cartão), gerado
+  // pelo GerarAbsenteismo do macro: data = 1º dia, situacao = descrição do
+  // Cartão, colunas dias_ausencia e emenda_folga. Seção própria.
+  var TIPO_ABSENTEISMO = "Absenteísmo";
+  function isTipoAbsenteismo(tipo){ return tipo === TIPO_ABSENTEISMO; }
   // tipos que são "linhas-resumo" por colaborador (não ocorrências
   // datadas de verdade) — ficam de fora dos gráficos/KPIs/histórico
   // gerais e só alimentam suas próprias vistas dedicadas.
@@ -1137,7 +1218,7 @@
   // Combina os três: nada disso conta como "ocorrência" pros
   // gráficos/KPI de ocorrências/histórico/filtro de Tipo.
   function isTipoNaoOcorrencia(tipo){
-    return isTipoResumo(tipo) || isTipoCurta(tipo) || isTipoHoraExtra(tipo) || isTipoDigitada(tipo);
+    return isTipoResumo(tipo) || isTipoCurta(tipo) || isTipoHoraExtra(tipo) || isTipoDigitada(tipo) || isTipoAbsenteismo(tipo);
   }
 
   // Estado global do painel inteiro — de propósito, um único objeto
@@ -1396,7 +1477,9 @@
         minHoraExtraCartao: idx.minHoraExtraCartao != null ? parseNumber(r[idx.minHoraExtraCartao]) : 0,
         minBancoHorasCartao: idx.minBancoHorasCartao != null ? parseNumber(r[idx.minBancoHorasCartao]) : 0,
         justificativaMarcacao: idx.justificativaMarcacao != null ? textoCampo(r[idx.justificativaMarcacao]) : "",
-        origemMarcacao: idx.origemMarcacao != null ? textoCampo(r[idx.origemMarcacao]) : ""
+        origemMarcacao: idx.origemMarcacao != null ? textoCampo(r[idx.origemMarcacao]) : "",
+        diasAusencia: idx.diasAusencia != null ? parseNumber(r[idx.diasAusencia]) : 0,
+        emendaFolga: idx.emendaFolga != null ? textoCampo(r[idx.emendaFolga]) : ""
       };
       out.push(rec);
     }
@@ -2043,7 +2126,7 @@
       // ocorrências curtas (<15min) não contam como ocorrência normal:
       // têm suas próprias vistas dedicadas, não entram nos
       // gráficos/KPIs/histórico gerais.
-      if (isTipoResumo(r.tipo) || isTipoCurta(r.tipo) || isTipoDigitada(r.tipo)) return false;
+      if (isTipoResumo(r.tipo) || isTipoCurta(r.tipo) || isTipoDigitada(r.tipo) || isTipoAbsenteismo(r.tipo)) return false;
       if (gestor && r.gestor !== gestor) return false;
       if (grupo && r.grupo !== grupo) return false;
       if (cargo && r.cargo !== cargo) return false;
@@ -2216,7 +2299,8 @@
   // dia do Cartão atual, o fim do ciclo, ex.: 27/09). Fica de fora só o
   // resumo de pausas, cuja data cai em "hoje" quando não há Cartão.
   function periodoCompleto(){
-    var recs = state.records.filter(function(r){ return r.tipo !== TIPO_RESUMO_PAUSAS_TERMICAS; });
+    // o absenteísmo cobre 3 meses de Cartão: fica fora do período padrão
+    var recs = state.records.filter(function(r){ return r.tipo !== TIPO_RESUMO_PAUSAS_TERMICAS && !isTipoAbsenteismo(r.tipo); });
     if (!recs.length) return null;
     var dates = recs.map(function(r){ return r.data.getTime(); });
     return { ini: toISODate(new Date(Math.min.apply(null, dates))), fim: toISODate(new Date(Math.max.apply(null, dates))) };
@@ -2339,6 +2423,7 @@
       demoraStats(records, function(r){ return r.colaborador; }));
 
     renderDigitadas(ocorrenciasRecords);
+    renderAbsenteismo();
     renderListaORG(ocorrenciasRecords);
     renderHistory(ocorrenciasRecords);
     atualizarPeriodoTopo();
@@ -2451,6 +2536,163 @@
   }
   $("digBusca").addEventListener("input", debounce(applyFilters, 200));
 
+  /* ---------- Absenteísmo (atestados) ----------
+     Registros "Absenteísmo" (um por atestado) filtrados por
+     getResumoRecords: gestor/grupo/cargo/colaborador, sem o período (são
+     3 meses de Cartão). O seletor "Ciclo" (28 a 27) escolhe o recorte das
+     vistas por grupo, folga, lista e mapa; a evolução e o ranking usam
+     sempre os 3 meses. Cada atestado é expandido em dias (diasDoAtestado)
+     para contar dia a dia no ciclo certo. */
+  var MESES_CURTOS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  function cicloDe(d){
+    var y = d.getFullYear(), m = d.getMonth();
+    if (d.getDate() >= 28){ m++; if (m > 11){ m = 0; y++; } }
+    return y + "-" + String(m+1).padStart(2,"0");
+  }
+  function cicloLabel(k){ var p = k.split("-"); return MESES_CURTOS[+p[1]-1] + "/" + p[0].slice(2); }
+  function cicloInicioFim(k){
+    var p = k.split("-"), y = +p[0], m = +p[1]-1;
+    return { ini: new Date(y, m-1, 28), fim: new Date(y, m, 27) };
+  }
+  function diasDoAtestado(r){
+    var out = [], n = Math.max(1, Math.round(r.diasAusencia || 1));
+    for (var i = 0; i < n; i++) out.push(new Date(r.data.getFullYear(), r.data.getMonth(), r.data.getDate() + i));
+    return out;
+  }
+
+  function renderAbsenteismo(){
+    var todos = state.records.filter(function(r){ return isTipoAbsenteismo(r.tipo); });
+    $("absSemDados").hidden = todos.length > 0;
+    $("absCorpo").hidden = todos.length === 0;
+    if (!todos.length) return;
+
+    // ciclos existentes no arquivo (para o seletor), do mais recente ao mais antigo
+    var ciclosSet = {};
+    todos.forEach(function(r){ diasDoAtestado(r).forEach(function(d){ ciclosSet[cicloDe(d)] = true; }); });
+    var ciclos = Object.keys(ciclosSet).sort().reverse();
+    var sel = $("absCiclo"), atual = sel.value;
+    var opts = '<option value="">Últimos 3 meses</option>' + ciclos.map(function(k){
+      var f = cicloInicioFim(k);
+      return '<option value="'+k+'">'+cicloLabel(k)+' ('+formatDateBR(f.ini).slice(0,5)+' a '+formatDateBR(f.fim).slice(0,5)+')</option>';
+    }).join("");
+    if (sel.innerHTML !== opts){ sel.innerHTML = opts; sel.value = ciclos.indexOf(atual) > -1 ? atual : ""; }
+    var cicloSel = sel.value;
+
+    var abs = getResumoRecords(TIPO_ABSENTEISMO);
+    function noCiclo(d){ return !cicloSel || cicloDe(d) === cicloSel; }
+    // atestados (registros) que têm pelo menos um dia no ciclo escolhido
+    var absCiclo = abs.filter(function(r){ return diasDoAtestado(r).some(noCiclo); });
+    var diasCiclo = 0, pessoasCiclo = {};
+    absCiclo.forEach(function(r){
+      diasDoAtestado(r).forEach(function(d){ if (noCiclo(d)) diasCiclo++; });
+      pessoasCiclo[chavePessoa(r)] = true;
+    });
+    $("absResumo").innerHTML = '<b>' + formatNum(absCiclo.length) + '</b> atestado(s) &middot; <b>' + formatNum(diasCiclo) +
+      '</b> dia(s) &middot; <b>' + formatNum(Object.keys(pessoasCiclo).length) + '</b> pessoa(s)';
+
+    // 2. evolução (sempre os 3 meses)
+    var porCiclo = {};
+    ciclos.slice().reverse().forEach(function(k){ porCiclo[k] = { dias:0, atestados:0, pessoas:{} }; });
+    abs.forEach(function(r){
+      var kIni = cicloDe(r.data);
+      if (porCiclo[kIni]) porCiclo[kIni].atestados++;
+      diasDoAtestado(r).forEach(function(d){
+        var k = cicloDe(d);
+        if (porCiclo[k]){ porCiclo[k].dias++; porCiclo[k].pessoas[chavePessoa(r)] = true; }
+      });
+    });
+    var ordem = Object.keys(porCiclo).sort();
+    renderBarV($("chartAbsEvolucao"), ordem.map(function(k){ return { label: cicloLabel(k), value: porCiclo[k].dias, color:"var(--c-terracotta)" }; }));
+    renderTableSimple($("tableAbsEvolucao"),
+      [{label:"Ciclo", render:function(k){ var f = cicloInicioFim(k); return cicloLabel(k) + ' <span style="color:var(--c-muted-2)">(' + formatDateBR(f.ini) + ' a ' + formatDateBR(f.fim) + ')</span>'; }},
+       {label:"Dias", width:"80px", render:function(k){ return "<strong>" + porCiclo[k].dias + "</strong>"; }},
+       {label:"Atestados", width:"90px", render:function(k){ return porCiclo[k].atestados; }},
+       {label:"Pessoas", width:"80px", render:function(k){ return Object.keys(porCiclo[k].pessoas).length; }}],
+      ordem);
+
+    // 4. por gestor / setor / cargo (ciclo escolhido, em dias)
+    var campo = $("absAgrupar").value || "gestor";
+    var porGrupo = {};
+    absCiclo.forEach(function(r){
+      var k = r[campo] || "Não informado";
+      diasDoAtestado(r).forEach(function(d){ if (noCiclo(d)) porGrupo[k] = (porGrupo[k]||0) + 1; });
+    });
+    renderBarH($("chartAbsGrupo"), Object.keys(porGrupo).sort(function(a,b){ return porGrupo[b]-porGrupo[a]; }).slice(0,12)
+      .map(function(k){ return { label:k, value:porGrupo[k], color: colorFor(campo === "cargo" ? "cargo" : (campo === "setor" ? "setor" : "gestor"), k) }; }));
+
+    // 6. encostados em folga + dia da semana do início (ciclo escolhido, pelo início)
+    var iniciados = abs.filter(function(r){ return noCiclo(r.data); });
+    var emendas = iniciados.filter(function(r){ return r.emendaFolga; });
+    $("absEmendaResumo").innerHTML = iniciados.length
+      ? '<b>' + emendas.length + '</b> de <b>' + iniciados.length + '</b> atestados (' + Math.round(emendas.length*100/iniciados.length) + '%) encostam numa folga'
+      : 'Nenhum atestado começou neste recorte.';
+    renderBarV($("chartAbsDiaSemana"), ocorrenciasPorDiaSemana(iniciados).map(function(it){ it.color = "var(--c-terracotta)"; return it; }));
+    renderTableSimple($("tableAbsEmendas"),
+      [{label:"Colaborador", width:"26%", render:function(r){ return colabLink(r.colaborador); }},
+       {label:"Gestor", width:"22%", render:function(r){ return escapeHtml(r.gestor); }},
+       {label:"Início", width:"124px", render:function(r){ return formatDateBR(r.data) + " " + DIAS_LABELS[DIAS_ORDER.indexOf(r.data.getDay())]; }},
+       {label:"Dias", width:"60px", render:function(r){ return r.diasAusencia; }},
+       {label:"Encostado em", render:function(r){ return escapeHtml(r.emendaFolga); }}],
+      emendas.slice().sort(function(a,b){ return a.data - b.data; }));
+
+    // 5. ranking 3 meses com reincidência
+    var rank = {};
+    abs.forEach(function(r){
+      var k = chavePessoa(r);
+      if (!rank[k]) rank[k] = { colaborador:r.colaborador, gestor:r.gestor, atestados:0, dias:0, meses:{}, emendas:0 };
+      rank[k].atestados++; rank[k].dias += r.diasAusencia || 0; if (r.emendaFolga) rank[k].emendas++;
+      diasDoAtestado(r).forEach(function(d){ rank[k].meses[cicloDe(d)] = true; });
+    });
+    var linhasRank = Object.values(rank).map(function(x){
+      x.nMeses = Object.keys(x.meses).length; x.reincidente = x.nMeses >= 2 || x.atestados >= 3; return x;
+    }).sort(function(a,b){ return b.reincidente - a.reincidente || b.atestados - a.atestados || b.dias - a.dias || a.colaborador.localeCompare(b.colaborador,"pt-BR"); });
+    renderTableSimple($("tableAbsRanking"),
+      [{label:"Colaborador", width:"28%", render:function(r){ return colabLink(r.colaborador); }},
+       {label:"Gestor", width:"26%", render:function(r){ return escapeHtml(r.gestor); }},
+       {label:"Atestados", width:"90px", render:function(r){ return "<strong>" + r.atestados + "</strong>"; }},
+       {label:"Dias", width:"70px", render:function(r){ return r.dias; }},
+       {label:"Meses", width:"70px", render:function(r){ return r.nMeses; }},
+       {label:"Encostados em folga", width:"140px", render:function(r){ return r.emendas; }}],
+      linhasRank, {rowClass:function(r){ return r.reincidente ? "row-alert" : ""; }});
+
+    // 7. mapa colaborador x dia (ciclo escolhido; "3 meses" = o mais recente)
+    var cicloMapa = cicloSel || ciclos[0];
+    var f = cicloInicioFim(cicloMapa), diasMapa = [];
+    for (var d = new Date(f.ini); d <= f.fim; d = new Date(d.getFullYear(), d.getMonth(), d.getDate()+1)) diasMapa.push(d);
+    var porPessoa = {};
+    abs.forEach(function(r){
+      diasDoAtestado(r).forEach(function(dd){
+        if (cicloDe(dd) !== cicloMapa) return;
+        var k = chavePessoa(r);
+        if (!porPessoa[k]) porPessoa[k] = { colaborador:r.colaborador, dias:{}, desc:{} };
+        porPessoa[k].dias[dateKey(dd)] = true; porPessoa[k].desc[dateKey(dd)] = r.situacao;
+      });
+    });
+    var pessoasMapa = Object.values(porPessoa).sort(function(a,b){
+      return Object.keys(b.dias).length - Object.keys(a.dias).length || a.colaborador.localeCompare(b.colaborador,"pt-BR");
+    });
+    $("absHeatHint").textContent = "Dias de atestado no ciclo " + cicloLabel(cicloMapa) + " (" + formatDateBR(f.ini) + " a " + formatDateBR(f.fim) + ")";
+    if (!pessoasMapa.length){
+      $("absHeat").innerHTML = ""; $("absHeat").appendChild(emptyMsg("Nenhum atestado neste ciclo para o filtro atual."));
+    } else {
+      var letras = ["D","S","T","Q","Q","S","S"];
+      var html = '<table class="heat"><thead><tr><th class="nome">Colaborador</th>' + diasMapa.map(function(dd){
+        var fds = dd.getDay() === 0 || dd.getDay() === 6;
+        return '<th' + (fds ? ' class="fds"' : '') + '>' + dd.getDate() + '<br>' + letras[dd.getDay()] + '</th>';
+      }).join("") + '<th>Dias</th></tr></thead><tbody>';
+      pessoasMapa.forEach(function(p){
+        html += '<tr><td class="nome">' + colabLink(p.colaborador) + '</td>' + diasMapa.map(function(dd){
+          var k = dateKey(dd), fds = dd.getDay() === 0 || dd.getDay() === 6;
+          if (p.dias[k]) return '<td class="aus" title="' + escapeHtml(formatDateBR(dd) + " · " + p.desc[k]) + '"></td>';
+          return '<td' + (fds ? ' class="fds"' : '') + '></td>';
+        }).join("") + '<td class="tot">' + Object.keys(p.dias).length + '</td></tr>';
+      });
+      $("absHeat").innerHTML = html + '</tbody></table>';
+    }
+  }
+  $("absCiclo").addEventListener("change", applyFilters);
+  $("absAgrupar").addEventListener("change", applyFilters);
+
   /* ---------- Lista de colaboradores (ORG) ----------
      Base: as linhas "Cadastro ORG" (respeitam gestor/grupo/cargo/
      colaborador, como os outros resumos). Cada pessoa é casada com os
@@ -2477,7 +2719,7 @@
       if (!fora[k]) fora[k] = { colaborador:r.colaborador, matricula:r.matricula, gestor:"", fontes:{}, mesmoNomeSemMat: mesmoNomeNoOrg };
       if (r.gestor && r.gestor !== "Sem gestor") fora[k].gestor = r.gestor;
       var fonte = isTipoDigitada(r.tipo) ? "Marcações digitadas" :
-                  r.tipo === TIPO_AUDITORIA_EXTRA_FALTA ? "Cartão (3 meses)" :
+                  (r.tipo === TIPO_AUDITORIA_EXTRA_FALTA || isTipoAbsenteismo(r.tipo)) ? "Cartão (3 meses)" :
                   r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS ? "Pausas térmicas" :
                   (r.tipo === TIPO_RESUMO_HORAS_CARTAO || isTipoCurta(r.tipo)) ? "Cartão atual" : "Tratamento";
       fora[k].fontes[fonte] = true;
@@ -2798,6 +3040,7 @@
     $("fDataFim").value = total ? total.fim : "";
     $("historySearch").value = "";
     $("orgBusca").value = ""; $("orgMostrar").value = ""; $("digBusca").value = "";
+    $("absCiclo").value = ""; $("absAgrupar").value = "gestor";
     state.historySort = { key:"data", dir:"desc" };
     state.historyPage = 1;
     state.bancoMostrarTodos = false;
@@ -2914,6 +3157,7 @@
 
     var digitadas = todas.filter(function(r){ return isTipoDigitada(r.tipo) && noPeriodo(r); })
       .sort(function(a,b){ return b.data - a.data; });
+    var atestados = todas.filter(function(r){ return isTipoAbsenteismo(r.tipo); }).sort(function(a,b){ return b.data - a.data; });
     var demoras = [];
     todas.forEach(function(r){
       if (r.tratativa && noPeriodo(r) && !isTipoNaoOcorrencia(r.tipo)){
@@ -2953,6 +3197,18 @@
            pausa ? "corretas &middot; " + pausa.pausaMenor20 + " curta(s) &middot; " + pausa.pausasMarcacoesImpares + " marcação(ões) ímpar(es)" : "fora do relatório",
            pausa && pausa.pausasMarcacoesImpares > 0 ? "alerta" : "") +
       '</div>';
+    if (atestados.length){
+      var diasAt = atestados.reduce(function(sm, r){ return sm + (r.diasAusencia || 0); }, 0);
+      html += '<h3 class="colab-section">Atestados nos últimos 3 meses (' + atestados.length + ' &middot; ' + diasAt + ' dia(s))</h3>' +
+        '<div class="table-scroll" style="max-height:220px;"><table class="data-table"><colgroup><col style="width:100px"><col style="width:100px"><col style="width:60px"><col style="width:30%"><col></colgroup>' +
+        '<thead><tr><th>Início</th><th>Fim</th><th>Dias</th><th>Descrição</th><th>Encostado em folga</th></tr></thead><tbody>' +
+        atestados.map(function(r){
+          var dias = diasDoAtestado(r), fim = dias[dias.length-1];
+          return '<tr><td data-label="Início">'+formatDateBR(r.data)+'</td><td data-label="Fim">'+formatDateBR(fim)+'</td>'+
+                 '<td data-label="Dias">'+r.diasAusencia+'</td><td data-label="Descrição">'+escapeHtml(r.situacao)+'</td>'+
+                 '<td data-label="Encostado em folga">'+(r.emendaFolga ? escapeHtml(r.emendaFolga) : "&ndash;")+'</td></tr>';
+        }).join("") + '</tbody></table></div>';
+    }
     if (digitadas.length){
       var dEsq = digitadas.filter(isEsquecimento).length;
       html += '<h3 class="colab-section">Marcações digitadas no período ('+digitadas.length+' &middot; '+dEsq+' por esquecimento)</h3>' +
@@ -3004,12 +3260,14 @@
     $("kpiDemoraSub").textContent = "Da ocorrência até a tratativa";
     ["chartTipo","chartDiaSemana","chartPorData","chartPorGestor","chartPorCargo","chartTopColaboradores",
      "tableExtraFalta","tableCurtas","chartBancoHoras","tableDemoraGestor","tableDemoraColaborador","tableOrg",
-     "chartDigMotivo","chartDigDiaSemana","chartDigData","chartDigTop","chartDigGestor","chartDigHora","tableDigEsquecimento","tableDigJust","tableDigLista"].forEach(function(id){
+     "chartDigMotivo","chartDigDiaSemana","chartDigData","chartDigTop","chartDigGestor","chartDigHora","tableDigEsquecimento","tableDigJust","tableDigLista",
+     "chartAbsEvolucao","tableAbsEvolucao","chartAbsGrupo","chartAbsDiaSemana","tableAbsRanking","tableAbsEmendas","absHeat"].forEach(function(id){
       $(id).innerHTML = ""; $(id).appendChild(emptyMsg("Carregue o CSV para ver os dados deste quadro."));
     });
     $("btnBancoTodos").hidden = true;
     $("orgResumo").innerHTML = ""; $("orgForaBox").hidden = true; $("orgCount").textContent = "";
     $("digKpis").innerHTML = ""; $("digCount").textContent = ""; $("digSemDados").hidden = true; $("digCorpo").hidden = false;
+    $("absResumo").innerHTML = ""; $("absEmendaResumo").innerHTML = ""; $("absSemDados").hidden = true; $("absCorpo").hidden = false;
     $("historyBody").innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--c-muted-2);padding:20px;">Carregue o CSV para ver o histórico.</td></tr>';
     $("historyPagination").innerHTML = ""; $("historyCount").textContent = "";
   }
