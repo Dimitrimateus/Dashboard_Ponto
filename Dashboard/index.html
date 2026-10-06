@@ -141,6 +141,24 @@
   .saldo-neg{ color:#C62828; font-weight:800; }
   .card-toolbar{ display:flex; justify-content:flex-end; margin-top:8px; }
 
+  /* ---------- Lista de colaboradores (ORG) ---------- */
+  .org-resumo{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  .org-pill{ font-size:12px; background:var(--c-paper-dim); border:1px solid var(--c-line); border-radius:var(--radius-pill); padding:4px 11px; }
+  .org-pill b{ color:var(--c-navy-dark); }
+  .org-alerta{
+    background:#FDECEC; border:1px solid #F3B5B5; border-left:4px solid var(--c-terracotta);
+    border-radius:var(--radius-card); padding:10px 12px; margin-bottom:12px; font-size:12.5px; color:#5A1012;
+  }
+  .org-alerta strong{ color:#8A1418; }
+  .org-alerta ul{ margin:6px 0 0; padding-left:18px; }
+  .org-alerta li{ margin:3px 0; }
+  .org-alerta .dica{ color:#8A4B12; }
+  .org-toolbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+  .org-toolbar input[type="text"]{ max-width:280px; }
+  .org-toolbar select{ max-width:260px; }
+  .sem-gestor{ color:#C62828; font-weight:700; }
+  .tag-mini{ display:inline-block; font-size:10.5px; font-weight:700; border-radius:var(--radius-pill); padding:1px 7px; background:#FFF1C2; color:#7A5A00; margin-left:4px; }
+
   /* ---------- Layout ---------- */
   .layout{ display:flex; align-items:flex-start; }
   .content{ flex:1 1 auto; min-width:0; padding:22px 24px 60px; }
@@ -699,6 +717,25 @@
           </div>
         </section>
 
+        <h3 class="section-title">Lista de colaboradores (ORG)</h3>
+        <section class="card wide" id="orgSection">
+          <div class="card-fonte"><span class="fonte-origem">De onde vem: aba ORG (relação colaborador × gestor)</span><p>Todo mundo que está na aba ORG da planilha, com o gestor de cada um. Para cada pessoa, o painel junta as ocorrências do filtro atual e as horas do Cartão do mês. <strong>Em vermelho, no alto:</strong> quem tem dados no arquivo (ocorrência na Tratamento, horas ou curtas no Cartão, auditoria de 3 meses ou pausas) mas <strong>não está no ORG</strong> — normalmente gente admitida depois da última atualização do ORG, desligada, ou com o nome escrito diferente. Pessoas do ORG “sem matrícula” são linhas em que a fórmula do ORG deu #N/A. Clique no nome para abrir o card.</p></div>
+          <div class="org-resumo" id="orgResumo"></div>
+          <div class="org-alerta" id="orgForaBox" hidden></div>
+          <div class="org-toolbar">
+            <input type="text" id="orgBusca" placeholder="Buscar por nome, matrícula, gestor, cargo...">
+            <select id="orgMostrar">
+              <option value="">Todos do ORG</option>
+              <option value="com">Com ocorrência no filtro</option>
+              <option value="sem">Sem ocorrência no filtro</option>
+              <option value="semgestor">Sem gestor</option>
+              <option value="semmat">Sem matrícula (#N/A no ORG)</option>
+            </select>
+            <span id="orgCount" style="font-size:12px;color:var(--c-muted);"></span>
+          </div>
+          <div class="card-body" id="tableOrg"></div>
+        </section>
+
         <h3 class="section-title">Histórico de ocorrências</h3>
         <section class="card wide" id="historySection">
           <div class="card-fonte"><span class="fonte-origem">De onde vem: planilha de Tratamento + PontoNet</span><p>Todas as ocorrências do filtro, linha a linha — as mesmas contadas no card “Ocorrências no período”. A situação mostrada é a justificativa do PontoNet quando existe; senão, a situação da Tratamento. Status “Regularizado” = Tratado na planilha; o resto aparece como “Pendente”.</p></div>
@@ -994,10 +1031,14 @@
   // GerarResumoHorasCartao do macro). Alimenta o gráfico "Banco de horas e
   // hora extra por colaborador" e o card do colaborador.
   var TIPO_RESUMO_HORAS_CARTAO = "Resumo Horas Cartão";
+  // Uma linha por pessoa da aba ORG (gerada pelo GerarLinhasORG do macro):
+  // nome, matrícula, gestor, cargo; situacao = área do ORG. Alimenta a
+  // "Lista de colaboradores (ORG)" e o aviso de quem não está no ORG.
+  var TIPO_CADASTRO_ORG = "Cadastro ORG";
   // tipos que são "linhas-resumo" por colaborador (não ocorrências
   // datadas de verdade) — ficam de fora dos gráficos/KPIs/histórico
   // gerais e só alimentam suas próprias vistas dedicadas.
-  var TIPOS_RESUMO = [TIPO_AUDITORIA_EXTRA_FALTA, TIPO_RESUMO_PAUSAS_TERMICAS, TIPO_RESUMO_HORAS_CARTAO];
+  var TIPOS_RESUMO = [TIPO_AUDITORIA_EXTRA_FALTA, TIPO_RESUMO_PAUSAS_TERMICAS, TIPO_RESUMO_HORAS_CARTAO, TIPO_CADASTRO_ORG];
   function isTipoResumo(tipo){ return TIPOS_RESUMO.indexOf(tipo) !== -1; }
 
   // "Falta < 15min" / "Extra < 15min": não contam como ocorrência normal
@@ -2196,11 +2237,129 @@
        {label:"Maior demora", width:"110px", render:function(r){return formatDelay(r.maior);}}],
       demoraStats(records, function(r){ return r.colaborador; }));
 
+    renderListaORG(ocorrenciasRecords);
     renderHistory(ocorrenciasRecords);
     atualizarPeriodoTopo();
     updateFiltersBadge();
     setTimeout(updateScrollHints, 0);
   }
+
+  /* ---------- Lista de colaboradores (ORG) ----------
+     Base: as linhas "Cadastro ORG" (respeitam gestor/grupo/cargo/
+     colaborador, como os outros resumos). Cada pessoa é casada com os
+     outros dados pela MATRÍCULA (o nome pode estar escrito diferente no
+     ORG); quem não tem matrícula no ORG (#N/A) é casado pelo nome. */
+  function chaveNome(nome){ return stripAccents(String(nome||"")).toUpperCase().replace(/\s+/g," ").trim(); }
+  function chavePessoa(r){ return r.matricula ? "M:" + r.matricula : "N:" + chaveNome(r.colaborador); }
+  // Quem tem dados no arquivo mas não está no ORG (ignora os filtros:
+  // é um aviso de cadastro para o RH). Também sugere a linha do ORG sem
+  // matrícula com o mesmo primeiro e último nome (ex.: nome com uma
+  // letra trocada no ORG).
+  function pessoasForaDoORG(){
+    var org = state.records.filter(function(r){ return r.tipo === TIPO_CADASTRO_ORG; });
+    if (!org.length) return null;
+    var naOrg = {};
+    org.forEach(function(r){ naOrg[chavePessoa(r)] = true; naOrg["N:" + chaveNome(r.colaborador)] = true; });
+    var semMat = org.filter(function(r){ return !r.matricula; });
+    var fora = {};
+    state.records.forEach(function(r){
+      if (r.tipo === TIPO_CADASTRO_ORG) return;
+      var k = chavePessoa(r);
+      var mesmoNomeNoOrg = !!naOrg["N:" + chaveNome(r.colaborador)];
+      if (naOrg[k] || (!r.matricula && mesmoNomeNoOrg)) return;
+      if (!fora[k]) fora[k] = { colaborador:r.colaborador, matricula:r.matricula, gestor:"", fontes:{}, mesmoNomeSemMat: mesmoNomeNoOrg };
+      if (r.gestor && r.gestor !== "Sem gestor") fora[k].gestor = r.gestor;
+      var fonte = r.tipo === TIPO_AUDITORIA_EXTRA_FALTA ? "Cartão (3 meses)" :
+                  r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS ? "Pausas térmicas" :
+                  (r.tipo === TIPO_RESUMO_HORAS_CARTAO || isTipoCurta(r.tipo)) ? "Cartão atual" : "Tratamento";
+      fora[k].fontes[fonte] = true;
+    });
+    return Object.values(fora).map(function(p){
+      var partes = chaveNome(p.colaborador).split(" ");
+      var parecido = p.mesmoNomeSemMat ? null : semMat.filter(function(o){
+        var q = chaveNome(o.colaborador).split(" ");
+        return q[0] === partes[0] && q[q.length-1] === partes[partes.length-1];
+      })[0];
+      p.parecido = parecido ? parecido.colaborador : "";
+      p.listaFontes = Object.keys(p.fontes);
+      return p;
+    }).sort(function(a,b){ return a.colaborador.localeCompare(b.colaborador, "pt-BR"); });
+  }
+
+  function renderListaORG(ocorrenciasRecords){
+    var org = getResumoRecords(TIPO_CADASTRO_ORG);
+    var temOrg = state.records.some(function(r){ return r.tipo === TIPO_CADASTRO_ORG; });
+    if (!temOrg){
+      $("orgResumo").innerHTML = ""; $("orgForaBox").hidden = true; $("orgCount").textContent = "";
+      $("tableOrg").innerHTML = ""; $("tableOrg").appendChild(emptyMsg("Este CSV não traz a lista do ORG. Gere o CSV de novo com a macro atual (ela lê a aba ORG)."));
+      return;
+    }
+    var ocPorPessoa = {};
+    ocorrenciasRecords.forEach(function(r){ var k = chavePessoa(r); ocPorPessoa[k] = (ocPorPessoa[k]||0) + 1; });
+    var horasPorPessoa = {};
+    state.records.forEach(function(r){ if (r.tipo === TIPO_RESUMO_HORAS_CARTAO) horasPorPessoa[chavePessoa(r)] = r; });
+
+    var linhas = org.map(function(r){
+      var k = chavePessoa(r), h = horasPorPessoa[k];
+      return { colaborador:r.colaborador, matricula:r.matricula, gestor:r.gestor === "Sem gestor" ? "" : r.gestor,
+               cargo:r.cargo === "Sem cargo" ? "" : r.cargo, area:r.situacao, ocorrencias: ocPorPessoa[k] || 0,
+               extra: h ? h.minHoraExtraCartao : null, banco: h ? h.minBancoHorasCartao : null };
+    });
+
+    var com = linhas.filter(function(l){ return l.ocorrencias > 0; }).length;
+    var semGestor = linhas.filter(function(l){ return !l.gestor; }).length;
+    var semMat = linhas.filter(function(l){ return !l.matricula; }).length;
+    $("orgResumo").innerHTML =
+      '<span class="org-pill"><b>' + formatNum(linhas.length) + '</b> no ORG</span>' +
+      '<span class="org-pill"><b>' + formatNum(com) + '</b> com ocorrência no filtro</span>' +
+      '<span class="org-pill"><b>' + formatNum(linhas.length - com) + '</b> sem ocorrência</span>' +
+      '<span class="org-pill"><b>' + formatNum(semGestor) + '</b> sem gestor</span>' +
+      '<span class="org-pill"><b>' + formatNum(semMat) + '</b> sem matrícula (#N/A)</span>';
+
+    var fora = pessoasForaDoORG() || [];
+    var box = $("orgForaBox");
+    if (fora.length){
+      box.innerHTML = '<strong>' + fora.length + ' pessoa(s) com dados no arquivo que não estão no ORG</strong> (sem gestor definido pela relação):<ul>' +
+        fora.map(function(p){
+          return '<li>' + colabLink(p.colaborador) + (p.matricula ? ' &middot; matrícula ' + escapeHtml(p.matricula) : '') +
+                 ' &middot; aparece em: ' + escapeHtml(p.listaFontes.join(", ")) +
+                 (p.mesmoNomeSemMat ? ' <span class="dica">&middot; está no ORG, mas com a matrícula em #N/A</span>' :
+                  p.parecido ? ' <span class="dica">&middot; no ORG existe “' + escapeHtml(p.parecido) + '” sem matrícula: nome escrito diferente?</span>' : '') + '</li>';
+        }).join("") + '</ul>';
+      box.hidden = false;
+    } else box.hidden = true;
+
+    var busca = stripAccents($("orgBusca").value.trim().toLowerCase());
+    var modo = $("orgMostrar").value;
+    var vis = linhas.filter(function(l){
+      if (modo === "com" && !l.ocorrencias) return false;
+      if (modo === "sem" && l.ocorrencias) return false;
+      if (modo === "semgestor" && l.gestor) return false;
+      if (modo === "semmat" && l.matricula) return false;
+      if (busca){
+        var hay = stripAccents((l.colaborador+" "+l.matricula+" "+l.gestor+" "+l.cargo+" "+l.area).toLowerCase());
+        if (hay.indexOf(busca) === -1) return false;
+      }
+      return true;
+    }).sort(function(a,b){ return b.ocorrencias - a.ocorrencias || a.colaborador.localeCompare(b.colaborador, "pt-BR"); });
+    $("orgCount").textContent = formatNum(vis.length) + " de " + formatNum(linhas.length);
+
+    renderTableSimple($("tableOrg"),
+      [{label:"Colaborador", width:"24%", render:function(l){ return colabLink(l.colaborador) + (l.matricula ? "" : '<span class="tag-mini">sem matrícula</span>'); }},
+       {label:"Matrícula", width:"9%", render:function(l){ return escapeHtml(l.matricula || "–"); }},
+       {label:"Gestor", width:"20%", render:function(l){ return l.gestor ? escapeHtml(l.gestor) : '<span class="sem-gestor">Sem gestor</span>'; }},
+       {label:"Cargo", width:"16%", render:function(l){ return escapeHtml(l.cargo); }},
+       {label:"Área (ORG)", width:"13%", render:function(l){ return escapeHtml(l.area); }},
+       {label:"Ocorrências", width:"8%", render:function(l){ return l.ocorrencias ? "<strong>"+l.ocorrencias+"</strong>" : "0"; }},
+       {label:"Saldo de horas", width:"10%", render:function(l){
+          if (l.extra == null) return "&ndash;";
+          var sd = l.extra - l.banco;
+          return '<span class="'+(sd > 0 ? "saldo-pos" : (sd < 0 ? "saldo-neg" : ""))+'" title="Extra '+formatHoras(l.extra)+' · Banco '+formatHoras(l.banco)+'">'+formatSaldo(sd)+'</span>';
+        }}],
+      vis);
+  }
+  $("orgBusca").addEventListener("input", debounce(applyFilters, 200));
+  $("orgMostrar").addEventListener("change", applyFilters);
 
   /* =========================================================
      7. HISTÓRICO (tabela com busca, ordenação e paginação)
@@ -2427,6 +2586,7 @@
     $("fDataIni").value = total ? total.ini : "";
     $("fDataFim").value = total ? total.fim : "";
     $("historySearch").value = "";
+    $("orgBusca").value = ""; $("orgMostrar").value = "";
     state.historySort = { key:"data", dir:"desc" };
     state.historyPage = 1;
     state.bancoMostrarTodos = false;
@@ -2552,9 +2712,12 @@
     var meta = [["Matrícula", primeiro("matricula")], ["Gestor", primeiro("gestor","Sem gestor") || "Sem gestor"],
                 ["Cargo", primeiro("cargo","Sem cargo") || "Sem cargo"], ["Setor", primeiro("setor","Sem setor") || "Sem setor"],
                 ["Grupo", primeiro("grupo")]];
+    var linhaOrg = todas.filter(function(r){ return r.tipo === TIPO_CADASTRO_ORG; })[0];
+    if (linhaOrg && linhaOrg.situacao) meta.push(["Área (ORG)", linhaOrg.situacao]);
+    var foraOrg = !linhaOrg && state.records.some(function(r){ return r.tipo === TIPO_CADASTRO_ORG; });
     $("colabModalMeta").innerHTML = meta.filter(function(m){ return m[1]; }).map(function(m){
       return "<span>"+m[0]+": <b>"+escapeHtml(m[1])+"</b></span>";
-    }).join("");
+    }).join("") + (foraOrg ? '<span class="sem-gestor">Não está no ORG</span>' : "");
 
     function tile(label, valor, sub, cls){
       return '<div class="colab-kpi'+(cls?' '+cls:'')+'"><div class="ck-label">'+label+'</div><div class="ck-value">'+valor+'</div>'+
@@ -2617,10 +2780,11 @@
     ["kpiColaboradoresSub","kpiOcorrenciasSub"].forEach(function(id){ $(id).textContent = ""; });
     $("kpiDemoraSub").textContent = "Da ocorrência até a tratativa";
     ["chartTipo","chartDiaSemana","chartPorData","chartPorGestor","chartPorCargo","chartTopColaboradores",
-     "tableExtraFalta","tableCurtas","chartBancoHoras","tableDemoraGestor","tableDemoraColaborador"].forEach(function(id){
+     "tableExtraFalta","tableCurtas","chartBancoHoras","tableDemoraGestor","tableDemoraColaborador","tableOrg"].forEach(function(id){
       $(id).innerHTML = ""; $(id).appendChild(emptyMsg("Carregue o CSV para ver os dados deste quadro."));
     });
     $("btnBancoTodos").hidden = true;
+    $("orgResumo").innerHTML = ""; $("orgForaBox").hidden = true; $("orgCount").textContent = "";
     $("historyBody").innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--c-muted-2);padding:20px;">Carregue o CSV para ver o histórico.</td></tr>';
     $("historyPagination").innerHTML = ""; $("historyCount").textContent = "";
   }

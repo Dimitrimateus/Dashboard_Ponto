@@ -26,6 +26,9 @@ const { chromium } = require('playwright');
       demoraG: table('tableDemoraGestor'), demoraC: table('tableDemoraColaborador'),
       histCount: txt('historyCount'), fileStatus: txt('fileStatus'),
       chipsTipo: [...document.querySelectorAll('#fTipo .chip')].map(c=>c.textContent),
+      orgResumo: $('orgResumo') ? $('orgResumo').innerText : null,
+      orgFora: [...document.querySelectorAll('#orgForaBox li')].map(li=>li.querySelector('.colab-link').textContent),
+      orgLinhas: document.querySelectorAll('#tableOrg tbody tr').length,
       grupoOpts: $('fGrupo') ? [...$('fGrupo').options].map(o=>o.value) : null,
     };
   });

@@ -87,6 +87,27 @@ for r in T[1:]:
     if te: W(dt,nome,mat,gestor,setor,cargo,'Hora Extra',sitF,status,vround(mE))
     if tf: W(dt,nome,mat,gestor,setor,cargo,sit,sitF,status,-vround(mF),av if temTrat else None)
     if not tf: W(dt,nome,mat,gestor,setor,cargo,sit,sitF,status,0,av if temTrat else None)
+# ORG (LerListaORG): matrícula repetida = 1ª linha; matrícula em erro entra sem matrícula,
+# a não ser que o nome já exista com matrícula válida. Completa o gestor de quem não está na Tratamento.
+def semac(t): return unicodedata.normalize('NFD',t).encode('ascii','ignore').decode().upper()
+listaORG=[]
+if 'ORG' in d:
+    Og=d['ORG']; oh={semac(s(x)):i for i,x in enumerate(Og[0]) if s(x)}
+    def oc(r,k): 
+        v=s(r[oh[k]]) if k in oh else ''
+        return '' if v.startswith('#') else v
+    vm=set(); vn=set()
+    for passo in (1,2):
+        for r in Og[1:]:
+            nm=s(r[oh['COLABORADOR']])
+            if not nm or nm.startswith('#'): continue
+            m=oc(r,'MATRICULA')
+            if passo==1 and m and m not in vm:
+                vm.add(m); vn.add(semac(nm)); listaORG.append((m,nm,oc(r,'DESCRICAO'),oc(r,'CARGO'),oc(r,'GESTOR')))
+            elif passo==2 and not m and semac(nm) not in vn:
+                vn.add(semac(nm)); listaORG.append(('',nm,oc(r,'DESCRICAO'),oc(r,'CARGO'),oc(r,'GESTOR')))
+for m,nm,ar,ca,g in listaORG:
+    if m and g and m not in gestorPor: gestorPor[m]=g
 # auditoria
 nomes={}; cont=collections.defaultdict(dict)
 for _,n in cards:
@@ -133,6 +154,10 @@ for r in Pz[1:]:
     se,ca=setorcargo(m)
     W(dmax,s(r[pz['Colaborador']]),m,gestorPor.get(m,''),se,s(r[pz['Cargo']]) or ca,'Resumo Pausas Térmicas','','Pendente',0,
       pc=nz(r[pz['Pausa corretas']]),pm=nz(r[pz['Pausa menor 0:20']]),pM=nz(r[pz['Pausa maior 0:20']]),tc=nz(r[pz['Trabalho correto 1:40']]),tM=nz(r[pz['Trabalho maior 1:40']]),tm=nz(r[pz['Trabalho menor 1:40']]),imp=nz(r[pz['Marcações Ímpares']]))
+for m,nm,ar,ca,g in listaORG:
+    se,caRE=setorcargo(m) if m else ('Sem setor','')
+    if se=='Sem setor' and ar: se=ar
+    W(dmax,nm,m,g,se,ca or caRE,'Cadastro ORG',ar,'Pendente',0)
 pickle.dump(out,open('simulacao.pkl','wb'))
 print('cartoes',cards); print(len(out), collections.Counter(o['tipo'] for o in out))
 

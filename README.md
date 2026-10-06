@@ -131,6 +131,26 @@ térmicas, demora no PontoNet e histórico).
 A conferência das ferramentas (`ferramentas/`) foi atualizada: 15/15 itens batem com a
 planilha de 28/08 a 27/09 (versão _2), incluindo extra, banco e saldo de cada colaborador.
 
+## Lista de colaboradores do ORG (06/10)
+
+### GerarCSVPonto
+- Lê a aba **ORG** (relação colaborador × gestor; achada pelo nome "ORG..." e pelas colunas
+  Matricula / COLABORADOR / GESTOR) e grava uma linha **"Cadastro ORG"** por pessoa: nome,
+  matrícula, gestor, cargo e a área do ORG (no campo `situacao`). Não muda as colunas do CSV.
+- Matrícula repetida no ORG conta uma vez. Linha com a matrícula em `#N/A` entra sem matrícula,
+  a não ser que o mesmo nome já esteja no ORG com matrícula válida.
+- O gestor das linhas-resumo (horas do Cartão, curtas, auditoria, pausas) de quem não aparece
+  na Tratamento passa a vir do ORG. Antes essas pessoas saíam "Sem gestor".
+
+### Painel
+- Nova seção **Lista de colaboradores (ORG)**: todo mundo do ORG, com gestor, cargo, área,
+  ocorrências no filtro e saldo de horas do Cartão. Tem busca e um seletor (com/sem ocorrência,
+  sem gestor, sem matrícula). O nome abre o card do colaborador.
+- Aviso em vermelho com **quem tem dados no arquivo mas não está no ORG**, onde a pessoa aparece
+  e, quando há, a linha parecida do ORG (mesmo nome com matrícula em `#N/A`, ou nome escrito
+  com uma letra diferente).
+- O card do colaborador mostra a área do ORG e avisa "Não está no ORG".
+
 ## Ordem de uso no mês
 
 1. Rodar `ConsolidarCartaoPonto` no HRCP102 e colar o resultado numa aba `Cartão <Mês>`.

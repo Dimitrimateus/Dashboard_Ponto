@@ -139,3 +139,20 @@ n=sum(len(v) for v in g.values())
 chk('Demora no PontoNet por gestor', ok and len(ui['demoraG'])==len(g), f"{n} ocorrências tratadas; KPI diz {kp['Demora média no PontoNet'][2]}" + (f"; {bad[:3]}" if bad else ''))
 allh=[h for v in g.values() for h in v]
 chk('KPI Demora média', kp['Demora média no PontoNet'][1]==fd(sum(allh)/len(allh)), f"painel {kp['Demora média no PontoNet'][1]} / fonte {fd(sum(allh)/len(allh))}")
+# lista do ORG: pessoas únicas do ORG e quem tem dados no CSV mas não está no ORG
+if 'ORG' in d and ui.get('orgResumo'):
+    import csv as _csv
+    def _sa(t): return unicodedata.normalize('NFD',t).encode('ascii','ignore').decode().upper()
+    O=d['ORG']; oh={_sa(s(x)):i for i,x in enumerate(O[0]) if s(x)}
+    mats=set(); nomesO=set()
+    for r in O[1:]:
+        nm=s(r[oh['COLABORADOR']]); m=s(r[oh['MATRICULA']])
+        if not nm: continue
+        if m and not m.startswith('#'): mats.add(m); nomesO.add(_sa(nm))
+    semmat={_sa(s(r[oh['COLABORADOR']])) for r in O[1:] if s(r[oh['COLABORADOR']]) and (not s(r[oh['MATRICULA']]) or s(r[oh['MATRICULA']]).startswith('#'))} - nomesO
+    total=len(mats)+len(semmat)
+    rows=[x for x in _csv.DictReader(open(os.environ.get('DADOS_CSV','dados_TODOS.csv'),encoding='utf-8-sig')) if x['tipo_ocorrencia']!='Cadastro ORG']
+    fora=sorted({x['colaborador'] for x in rows if x['matricula'] and x['matricula'] not in mats})
+    okn=ui['orgResumo'].split()[0]==str(total) and ui['orgLinhas']==total
+    chk('Lista de colaboradores (ORG) e fora do ORG', okn and sorted(ui['orgFora'])==fora,
+        f"{total} no ORG; fora do ORG: {len(fora)}" if okn and sorted(ui['orgFora'])==fora else f"painel {ui['orgResumo']!r} {ui['orgFora']} / fonte {total} {fora}")

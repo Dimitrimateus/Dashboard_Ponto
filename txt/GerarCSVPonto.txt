@@ -102,6 +102,9 @@ Option Explicit
 '     ocorrencias_extra_falta_mes_atual / _3_meses.
 '   - tipo_ocorrencia = "Resumo Pausas Térmicas" → preenche as 7
 '     colunas pausas_.../trabalho_....
+'   - tipo_ocorrencia = "Cadastro ORG" → uma por pessoa da aba ORG
+'     (nome, matrícula, gestor, cargo; situacao = área do ORG); não
+'     usa as colunas extras. Alimenta a lista de colaboradores do painel.
 '   - tipo_ocorrencia = "Resumo Horas Cartão" → preenche
 '     minutos_hora_extra_cartao / minutos_banco_horas_cartao (total do
 '     mês atual, direto do Cartão Ponto, ver GerarResumoHorasCartao).
@@ -496,6 +499,30 @@ ProximaAbaTratamento:
     Next abaTratIter
 
     ' =====================================================================
+    ' Lista do ORG (relação colaborador x gestor)
+    ' ---------------------------------------------------------------------
+    ' Lida aqui, antes das linhas-resumo, por dois motivos:
+    '   1. completar o gestor de quem não apareceu em nenhuma aba de
+    '      Tratamento (ex.: só tem horas no Cartão) — antes essas linhas
+    '      saíam "Sem gestor" e sumiam quando o gestor filtrava a equipe;
+    '   2. gerar, no fim, uma linha "Cadastro ORG" por pessoa, que é o que
+    '      o painel usa na seção "Colaboradores (ORG)" e para avisar quem
+    '      tem dados no arquivo mas não está no ORG.
+    ' O gestor da Tratamento (quando existe) continua valendo: ele é o
+    ' mesmo PROCX no ORG, só que congelado no dia da Tratamento.
+    ' =====================================================================
+    Dim wsORG As Worksheet
+    Set wsORG = EncontrarAbaORG(wbTrat)
+    Dim listaORG As Collection
+    Set listaORG = LerListaORG(wsORG)
+    Dim itemORG As Variant
+    For Each itemORG In listaORG
+        If itemORG(0) <> "" And itemORG(4) <> "" Then
+            If Not dictGestorPorMatricula.Exists(CStr(itemORG(0))) Then dictGestorPorMatricula.Add CStr(itemORG(0)), CStr(itemORG(4))
+        End If
+    Next itemORG
+
+    ' =====================================================================
     ' Auditoria de "extra e falta no mesmo dia" nos últimos meses
     ' ---------------------------------------------------------------------
     ' Uma linha por colaborador (além das linhas de ocorrência normais
@@ -640,6 +667,12 @@ ProximaAbaTratamento:
             IIf(Not wsCartao Is Nothing, dataAtualCartao, Date), qtdResumoPausas
     End If
 
+    ' Uma linha "Cadastro ORG" por pessoa da lista do ORG (ver acima).
+    Dim qtdORG As Long
+    qtdORG = 0
+    GerarLinhasORG listaORG, dictRE, dictGrupoPorMatricula, wsCSV, linhaSaida, _
+        IIf(Not wsCartao Is Nothing, dataAtualCartao, Date), qtdORG
+
     If Not wbAus Is Nothing Then wbAus.Close SaveChanges:=False
 
     Dim msgAuditoria As String
@@ -652,6 +685,13 @@ ProximaAbaTratamento:
     End If
     msgAuditoria = msgAuditoria & vbCrLf & qtdCurtas & " ocorrência(s) curta(s) (<15min) direto do Cartão Ponto."
     msgAuditoria = msgAuditoria & vbCrLf & qtdResumoHoras & " colaborador(es) com hora extra ou banco de horas no Cartão Ponto do mês atual."
+    ' If em vez de IIf: o IIf avalia os dois lados e wsORG.Name daria erro
+    ' quando a aba não existe.
+    If wsORG Is Nothing Then
+        msgAuditoria = msgAuditoria & vbCrLf & "Aba ORG não encontrada; a lista de colaboradores do painel não foi gerada."
+    Else
+        msgAuditoria = msgAuditoria & vbCrLf & qtdORG & " colaborador(es) na lista do ORG (aba " & wsORG.Name & ")."
+    End If
     msgAuditoria = msgAuditoria & vbCrLf & IIf(wsPausas Is Nothing, _
         "Nenhuma aba de Pausas Térmicas (já formatada) encontrada; resumo de pausas térmicas não gerado.", _
         qtdResumoPausas & " colaborador(es) no resumo de Pausas Térmicas.")
@@ -1068,6 +1108,139 @@ Private Sub GerarResumoHorasCartao(ws As Worksheet, dictRE As Object, dictGestor
             qtdGerada = qtdGerada + 1
         End If
     Next matK
+End Sub
+
+' Aba ORG (relação colaborador x gestor): a que começa com "ORG" e tem as
+' colunas Matricula, COLABORADOR e GESTOR na linha 1; se nenhuma começar
+' com "ORG", vale a primeira aba que tiver essas três colunas.
+Private Function EncontrarAbaORG(wb As Workbook) As Worksheet
+    Dim ws As Worksheet
+    For Each ws In wb.Worksheets
+        If UCase$(Left$(Trim$(ws.Name), 3)) = "ORG" And TemColunasORG(ws) Then
+            Set EncontrarAbaORG = ws
+            Exit Function
+        End If
+    Next ws
+    For Each ws In wb.Worksheets
+        If TemColunasORG(ws) Then
+            Set EncontrarAbaORG = ws
+            Exit Function
+        End If
+    Next ws
+    Set EncontrarAbaORG = Nothing
+End Function
+
+Private Function TemColunasORG(ws As Worksheet) As Boolean
+    TemColunasORG = ColunaSemAcento(ws, "Matricula") > 0 And ColunaSemAcento(ws, "Colaborador") > 0 _
+        And ColunaSemAcento(ws, "Gestor") > 0
+End Function
+
+' Igual ColunaPorCabecalho, mas sem diferenciar acento nem maiúscula
+' (o ORG escreve "COLABORADOR"/"GESTOR"/"Matricula").
+Private Function ColunaSemAcento(ws As Worksheet, cabecalho As String, Optional linhaHeader As Long = 1) As Long
+    Dim ultimaColuna As Long, c As Long, alvo As String
+    alvo = UCase$(SemAcento(cabecalho))
+    ultimaColuna = ws.Cells(linhaHeader, ws.Columns.Count).End(xlToLeft).Column
+    For c = 1 To ultimaColuna
+        If UCase$(SemAcento(TextoLimpo(ws.Cells(linhaHeader, c).Value))) = alvo Then
+            ColunaSemAcento = c
+            Exit Function
+        End If
+    Next c
+    ColunaSemAcento = 0
+End Function
+
+' Lê a lista do ORG. Cada item é Array(matrícula, nome, setor, cargo,
+' gestor). Regras:
+'   - matrícula repetida: vale a primeira linha (o ORG de 28/08 a 27/09
+'     tem 22 matrículas repetidas, com os mesmos dados);
+'   - linha com a matrícula em erro (#N/A — o PROCX do ORG não achou a
+'     pessoa): entra com a matrícula vazia, a não ser que o mesmo nome já
+'     exista com matrícula válida (aí é só uma duplicata quebrada). Essas
+'     pessoas costumam ser desligadas ou ter o nome escrito diferente do
+'     cadastro, e o painel mostra isso.
+Private Function LerListaORG(ws As Worksheet) As Collection
+    Dim lista As New Collection
+    Set LerListaORG = lista
+    If ws Is Nothing Then Exit Function
+
+    Dim colMat As Long, colNome As Long, colSetor As Long, colCargo As Long, colGestor As Long
+    colMat = ColunaSemAcento(ws, "Matricula")
+    colNome = ColunaSemAcento(ws, "Colaborador")
+    colSetor = ColunaSemAcento(ws, "Descrição")
+    colCargo = ColunaSemAcento(ws, "Cargo")
+    colGestor = ColunaSemAcento(ws, "Gestor")
+    If colMat = 0 Or colNome = 0 Then Exit Function
+
+    Dim dictMatVista As Object, dictNomeVisto As Object
+    Set dictMatVista = CreateObject("Scripting.Dictionary")
+    Set dictNomeVisto = CreateObject("Scripting.Dictionary")
+
+    Dim ultimaLinha As Long, r As Long, passo As Long
+    Dim mat As String, nomeORG As String, chaveNome As String
+    ultimaLinha = UltimaLinhaPreenchida(ws, colNome)
+
+    ' passo 1: linhas com matrícula válida; passo 2: as sem matrícula
+    For passo = 1 To 2
+        For r = 2 To ultimaLinha
+            nomeORG = TextoLimpo(ws.Cells(r, colNome).Value)
+            If nomeORG = "" Or Left$(nomeORG, 1) = "#" Then GoTo ProximaLinhaORG
+            mat = TextoLimpo(ws.Cells(r, colMat).Value)
+            If Left$(mat, 1) = "#" Then mat = ""
+            chaveNome = UCase$(SemAcento(nomeORG))
+
+            If passo = 1 And mat <> "" Then
+                If Not dictMatVista.Exists(mat) Then
+                    dictMatVista.Add mat, True
+                    If Not dictNomeVisto.Exists(chaveNome) Then dictNomeVisto.Add chaveNome, True
+                    lista.Add Array(mat, nomeORG, TextoDaCelulaORG(ws, r, colSetor), _
+                        TextoDaCelulaORG(ws, r, colCargo), TextoDaCelulaORG(ws, r, colGestor))
+                End If
+            ElseIf passo = 2 And mat = "" Then
+                If Not dictNomeVisto.Exists(chaveNome) Then
+                    dictNomeVisto.Add chaveNome, True
+                    lista.Add Array("", nomeORG, TextoDaCelulaORG(ws, r, colSetor), _
+                        TextoDaCelulaORG(ws, r, colCargo), TextoDaCelulaORG(ws, r, colGestor))
+                End If
+            End If
+ProximaLinhaORG:
+        Next r
+    Next passo
+End Function
+
+' Texto da célula do ORG; erro (#N/A) ou coluna inexistente = "".
+Private Function TextoDaCelulaORG(ws As Worksheet, r As Long, col As Long) As String
+    Dim t As String
+    t = ""
+    If col > 0 Then t = TextoLimpo(ws.Cells(r, col).Value)
+    If Left$(t, 1) = "#" Then t = ""
+    TextoDaCelulaORG = t
+End Function
+
+' Uma linha "Cadastro ORG" por pessoa da lista. Setor = unidade do
+' cadastro RE (igual às outras linhas do CSV, para os filtros e o
+' histórico usarem os mesmos nomes); a área do ORG ("Descrição", ex.:
+' "Ativ. Operacional 1ºT") vai no campo situacao. Quem não está na RE
+' fica com a área do ORG também como setor. Cargo: o do ORG; se vazio,
+' o da RE.
+Private Sub GerarLinhasORG(listaORG As Collection, dictRE As Object, dictGrupoPorMatricula As Object, _
+    wsCSV As Worksheet, ByRef linhaSaida As Long, dataRef As Variant, ByRef qtdGerada As Long)
+
+    Dim itemLista As Variant, setorNome As String, cargoNome As String, areaORG As String
+    Dim setorRE As String, cargoRE As String
+    For Each itemLista In listaORG
+        areaORG = CStr(itemLista(2))
+        cargoNome = CStr(itemLista(3))
+        ObterSetorCargo dictRE, CStr(itemLista(0)), setorRE, cargoRE
+        setorNome = setorRE
+        If setorNome = "Sem setor" And areaORG <> "" Then setorNome = areaORG
+        If cargoNome = "" Then cargoNome = cargoRE
+        EscreverLinhaCSV wsCSV, linhaSaida, dataRef, CStr(itemLista(1)), CStr(itemLista(0)), CStr(itemLista(4)), _
+            setorNome, cargoNome, "Cadastro ORG", areaORG, "Pendente", 0, "", Empty, _
+            grupo:=TextoDoDicionario(dictGrupoPorMatricula, CStr(itemLista(0)))
+        linhaSaida = linhaSaida + 1
+        qtdGerada = qtdGerada + 1
+    Next itemLista
 End Sub
 
 ' Procura, em todas as abas, a tabela de colaboradores que o macro

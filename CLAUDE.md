@@ -110,6 +110,9 @@ conteúdo num módulo.
 - `PontoNet` (opcional; se faltar, abre um seletor de arquivo): `Data falta, Matrícula, Situação
   atual, Justificativa, Avaliado em:`.
 - A tabela de pausas, achada em qualquer aba pela linha que tem `Matrícula` + `Pausa corretas`.
+- **ORG** (relação colaborador × gestor): aba que começa com "ORG" com `Matricula`, `COLABORADOR`,
+  `Descrição`, `Cargo`, `Unidade`, `GESTOR` na linha 1 (busca de cabeçalho sem acento/maiúscula,
+  `ColunaSemAcento`). A coluna Matricula do ORG é fórmula e às vezes dá `#N/A`.
 
 **Regras de negócio (decididas com o Dimitri):**
 1. **Check = "S" → a linha da Tratamento é ignorada por inteiro**, inclusive a hora extra 100%.
@@ -134,7 +137,10 @@ conteúdo num módulo.
      hora extra (50% + 100%) e de banco de horas (BH). Sem Tratamento, sem Check, sem período.
      No Cartão, BH é sempre positivo e é **débito** (dias de "Falta (Banco Horas)" e minutos de
      atraso em dias "Trabalhando").
-   Gestor e grupo dessas linhas vêm do primeiro gestor/grupo visto para a matrícula na Tratamento.
+   - "Cadastro ORG": uma por pessoa do ORG (matrícula repetida = 1ª linha; matrícula `#N/A` entra
+     sem matrícula, salvo se o nome já existe com matrícula válida); situacao = área do ORG.
+   Gestor e grupo dessas linhas vêm do primeiro gestor/grupo visto para a matrícula na Tratamento;
+   quem não aparece na Tratamento pega o gestor do ORG.
 9. **Antes de ler, tira os filtros de todas as abas** (`LimparFiltros`) e acha a última linha com
    `UltimaLinhaPreenchida` (não usa `End(xlUp)`).
 10. `TextoLimpo`: erro do Excel (`#N/A`) vira "", quebras de linha viram espaço.
@@ -183,6 +189,9 @@ minutos_hora_extra_cartao, minutos_banco_horas_cartao
 - **Card do colaborador**: qualquer elemento com `data-colab` (nomes nos gráficos de top e de
   banco de horas, `colabLink` nas tabelas) abre `abrirCardColaborador` por delegação. As
   ocorrências do card respeitam só o período do filtro; os resumos são do mês/3 meses.
+- **Lista de colaboradores (ORG)** (`renderListaORG`): linhas "Cadastro ORG" casadas por
+  matrícula (`chavePessoa`) com ocorrências do filtro e horas do Cartão; aviso de quem tem dados
+  mas não está no ORG (`pessoasForaDoORG`, ignora filtros).
 - Cards (KPI): Colaboradores envolvidos · Ocorrências no período · Demora média no PontoNet.
   (**Os cards de total de horas extra e de horas falta foram retirados a pedido do Dimitri.**)
 - Gráficos/tabelas: por tipo (rosca), por dia da semana, por data (linha), por gestor (top 12),
@@ -209,6 +218,11 @@ Bugs achados e corrigidos nessa revisão:
 
 Conferência de 06/10 (planilha versão _2, 138 ocorrências): 15/15 de novo, com o item de banco
 de horas agora comparando extra, banco e saldo de cada colaborador com o Cartão atual somado.
+
+Achados no ORG da versão _2 (06/10): nenhum gestor em branco; 22 matrículas repetidas; 9 linhas
+com matrícula `#N/A` (2 duplicatas de quem já está com matrícula; o resto é desligado ou nome
+diferente da RE); 10 pessoas da RE fora do ORG. Lista nominal só na conversa com o Dimitri
+(dados pessoais), nunca no repositório. Conferência: 16/16.
 
 ## 8. Armadilhas técnicas — não repetir
 
@@ -276,4 +290,5 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   cards de horas retirados; filtro de grupo; conferência 15/15.
 - 06/10: resumo de horas do Cartão (CSV com 25 colunas) e gráfico verde/vermelho com saldo;
   período no topo; filtros limpos ao tirar/carregar arquivo; card do colaborador; modo
-  "Entenda o painel".
+  "Entenda o painel". Depois: lista do ORG no CSV ("Cadastro ORG") e seção "Lista de
+  colaboradores (ORG)" com aviso de quem está fora do ORG; gestor das linhas-resumo pelo ORG.
