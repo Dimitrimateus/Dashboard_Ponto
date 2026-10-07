@@ -178,7 +178,19 @@ if ui.get('absEvol'):
                 dias[m].setdefault(dt.date(), s(r[h['Descrição Marcação']])); nomesA.setdefault(m, s(r[h['Nome']]))
     def ciclo(x): return (x.year+(1 if x.month==12 and x.day>=28 else 0), (x.month % 12)+1 if x.day>=28 else x.month)
     porC=collections.defaultdict(lambda:[0,set()]); eps=[]
-    for m,dd in dias.items():
+    fol=lambda t: any(w in _sa2(t) for w in ('dsr','compensado','folga','feriado'))
+    abaAf=next((n for n,rw in d.items() if rw and all(k in hdrmap(rw[0]) for k in ('Matrícula','Situação','Início','Término'))), None)
+    if abaAf:   # fonte = relatório de afastamentos do sistema (1 registro = 1 atestado)
+        rw=d[abaAf]; ha=hdrmap(rw[0]); um=datetime.timedelta(days=1)
+        for r in rw[1:]:
+            m=s(r[ha['Matrícula']]); ini=r[ha['Início']]
+            if not m or not isinstance(ini,datetime.datetime) or 'atest' not in _sa2(s(r[ha['Situação']])): continue
+            fim=r[ha['Término']] if isinstance(r[ha['Término']],datetime.datetime) else ini
+            x=ini.date()
+            while x<=fim.date(): porC[ciclo(x)][0]+=1; porC[ciclo(x)][1].add(m); x+=um
+            dd=dias.get(m,{}); eps.append((m,ini.date(),fim.date(),fol(dd.get(ini.date()-um,'')) or fol(dd.get(fim.date()+um,''))))
+            nomesA[m]=s(r[ha['Colaborador']])
+    for m,dd in (dias.items() if not abaAf else []):
         at=sorted(k for k,v in dd.items() if 'atest' in _sa2(v))
         for k in at: porC[ciclo(k)][0]+=1; porC[ciclo(k)][1].add(m)
         i=0
@@ -186,7 +198,6 @@ if ui.get('absEvol'):
             ini=fim=at[i]
             while i+1<len(at) and (at[i+1]-fim).days==1: i+=1; fim=at[i]
             um=datetime.timedelta(days=1)
-            fol=lambda t: any(w in _sa2(t) for w in ('dsr','compensado','folga','feriado'))
             eps.append((m,ini,fim,fol(dd.get(ini-um,'')) or fol(dd.get(fim+um,'')))); i+=1
     esp=[[str(v[0]),str(len(v[1]))] for k,v in sorted(porC.items())]
     got=[[r[1],r[3]] for r in ui['absEvol']]

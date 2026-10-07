@@ -165,7 +165,27 @@ for _,nc in cards:
         if not m or not isinstance(dt,datetime.datetime): continue
         if m not in infoP: infoP[m]=(s(r[hc['Nome']]), s(r[hc['Setor']]) if 'Setor' in hc else '', s(r[hc['Cargo']]))
         diasP[m].setdefault(dt.date(), s(r[hc['Descrição Marcação']]))
-for m,dias in diasP.items():
+def emenda_folga(dias,ini,fim):
+    um=datetime.timedelta(days=1); antes=dias.get(ini-um,''); depois=dias.get(fim+um,'')
+    antes=antes if contem(antes,FOLGA) else ''; depois=depois if contem(depois,FOLGA) else ''
+    return (f"antes ({antes})" if antes else '')+(' e ' if antes and depois else '')+(f"depois ({depois})" if depois else '')
+abaAf=next((n for n,rw in d.items() if rw and all(k in hdrmap(rw[0]) for k in ('Matrícula','Situação','Início','Término'))), None)
+if abaAf:   # GerarAfastamentos: uma linha "Afastamento" por registro do relatório do sistema
+    rw=d[abaAf]; ha=hdrmap(rw[0])
+    for r in rw[1:]:
+        m=s(r[ha['Matrícula']]); ini=r[ha['Início']]
+        if not m or not isinstance(ini,datetime.datetime): continue
+        fim=r[ha['Término']] if isinstance(r[ha['Término']],datetime.datetime) else ini
+        dias_af=r[ha['Dias']] if isinstance(r[ha['Dias']],(int,float)) else (fim-ini).days+1
+        hi=r[ha['Hora início']]; dt=ini
+        if isinstance(hi,datetime.time): dt=ini+datetime.timedelta(minutes=round(hi.hour*60+hi.minute+hi.second/60+hi.microsecond/6e7))
+        hr=r[ha['Horas']]; mins=0
+        if isinstance(hr,datetime.time): mins=round(hr.hour*60+hr.minute+hr.second/60+hr.microsecond/6e7)
+        elif isinstance(hr,datetime.timedelta): mins=round(hr.total_seconds()/60)
+        se_re,ca_re=setorcargo(m); nm,se_c,ca_c=infoP.get(m,('', '', ''))
+        W(dt,s(r[ha['Colaborador']]) or 'Matrícula '+m,m,gestorPor.get(m,''),se_c or se_re,ca_re or ca_c,'Afastamento',
+          s(r[ha['Situação']]),'Pendente',mins,diasAus=int(dias_af),emenda=emenda_folga(diasP.get(m,{}),ini.date(),fim.date()))
+for m,dias in (diasP.items() if not abaAf else []):
     ds=sorted(d0 for d0,t in dias.items() if contem(t,ABS)); i=0
     while i<len(ds):
         ini=ds[i]; fim=ini

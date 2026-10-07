@@ -107,7 +107,12 @@ Option Explicit
 '     data = dia + hora da marcação, situacao = motivo, e as colunas
 '     justificativa_marcacao (texto livre) / origem_marcacao (D). As
 '     batidas com Origem "E" são ignoradas (pedido do RH, 06/10).
-'   - tipo_ocorrencia = "Absenteísmo" → um por ATESTADO (dias seguidos
+'   - tipo_ocorrencia = "Afastamento" → um por registro da aba
+'     Afastamentos (relatório do sistema, todos os tipos): data = início,
+'     situacao = situação, duracao_minutos = horas (afastamento de poucas
+'     horas), dias_ausencia, emenda_folga. Ver GerarAfastamentos.
+'   - tipo_ocorrencia = "Absenteísmo" → SÓ quando não há aba Afastamentos:
+'     um por ATESTADO (dias seguidos
 '     com atestado no Cartão = 1 atestado), nos 3 Cartões: data = início,
 '     situacao = descrição do Cartão, setor = setor do Cartão, colunas
 '     dias_ausencia e emenda_folga. Ver GerarAbsenteismo.
@@ -688,14 +693,23 @@ ProximaAbaTratamento:
     End If
 
     ' =====================================================================
-    ' Absenteísmo (por enquanto só atestados), nos até 3 Cartões: um
-    ' registro por atestado, com o número de dias e se ele encosta numa
-    ' folga. Não depende da Tratamento nem do Check.
+    ' Afastamentos. Fonte principal: a aba "Afastamentos" (relatório
+    ' Histórico de Afastamentos do sistema, formatado pelo FormatarAfastamentos)
+    ' — uma linha "Afastamento" por registro, de todos os tipos. Sem essa aba,
+    ' cai para os atestados tirados dos Cartões (linhas "Absenteísmo", como
+    ' antes). O Cartão continua sendo usado para ver se o afastamento encosta
+    ' numa folga.
     ' =====================================================================
-    Dim qtdAbsAtestados As Long, qtdAbsDias As Long
+    Dim qtdAbsAtestados As Long, qtdAbsDias As Long, qtdAfastamentos As Long
     qtdAbsAtestados = 0
     qtdAbsDias = 0
-    If abasCartao.Count > 0 Then
+    qtdAfastamentos = 0
+    Dim wsAfast As Worksheet
+    Set wsAfast = EncontrarAbaAfastamentos(wbTrat)
+    If Not wsAfast Is Nothing Then
+        GerarAfastamentos wsAfast, abasCartao, dictRE, dictGestorPorMatricula, dictGrupoPorMatricula, _
+            wsCSV, linhaSaida, qtdAfastamentos, qtdAbsAtestados, qtdAbsDias
+    ElseIf abasCartao.Count > 0 Then
         GerarAbsenteismo abasCartao, dictRE, dictGestorPorMatricula, dictGrupoPorMatricula, _
             wsCSV, linhaSaida, qtdAbsAtestados, qtdAbsDias
     End If
@@ -734,8 +748,13 @@ ProximaAbaTratamento:
     End If
     msgAuditoria = msgAuditoria & vbCrLf & qtdCurtas & " ocorrência(s) curta(s) (<15min) direto do Cartão Ponto."
     msgAuditoria = msgAuditoria & vbCrLf & qtdResumoHoras & " colaborador(es) com hora extra ou banco de horas no Cartão Ponto do mês atual."
-    msgAuditoria = msgAuditoria & vbCrLf & qtdAbsAtestados & " atestado(s), somando " & qtdAbsDias & _
-        " dia(s), nos Cartões (absenteísmo)."
+    If Not wsAfast Is Nothing Then
+        msgAuditoria = msgAuditoria & vbCrLf & qtdAfastamentos & " afastamento(s) da aba " & wsAfast.Name & _
+            ", dos quais " & qtdAbsAtestados & " atestado(s) somando " & qtdAbsDias & " dia(s)."
+    Else
+        msgAuditoria = msgAuditoria & vbCrLf & "Aba de Afastamentos não encontrada: " & qtdAbsAtestados & _
+            " atestado(s), somando " & qtdAbsDias & " dia(s), tirados dos Cartões."
+    End If
     If wsDigitadas Is Nothing Then
         msgAuditoria = msgAuditoria & vbCrLf & "Aba de Marcações Digitadas não encontrada; essa parte do painel fica vazia."
     Else
@@ -1182,10 +1201,59 @@ Private Sub GerarAbsenteismo(abasCartao As Collection, dictRE As Object, dictGes
     dictGrupoPorMatricula As Object, wsCSV As Worksheet, ByRef linhaSaida As Long, _
     ByRef qtdAtestados As Long, ByRef qtdDiasAus As Long)
 
-    Dim dictDias As Object, dictInfo As Object
+    Dim dictDias As Object, dictInfo As Object, dataMin As Long, dataMax As Long
+    MontarDiasCartao abasCartao, dictDias, dictInfo, dataMin, dataMax
+
+    Dim matK As Variant, diasPessoa As Object, d As Long, inicioAus As Long, fimAus As Long
+    Dim emendaTxt As String, descInicio As String
+    Dim infoPessoa As Variant, nomeAus As String, setorAus As String, cargoAus As String
+    Dim setorRE As String, cargoRE As String
+    For Each matK In dictDias.Keys
+        Set diasPessoa = dictDias(matK)
+        d = dataMin
+        Do While d <= dataMax
+            If EhAusencia(diasPessoa, d) Then
+                inicioAus = d
+                descInicio = CStr(diasPessoa(d))
+                Do While EhAusencia(diasPessoa, d + 1)
+                    d = d + 1
+                Loop
+                fimAus = d
+
+                emendaTxt = CalcularEmendaFolga(diasPessoa, inicioAus, fimAus)
+
+                infoPessoa = dictInfo(matK)
+                nomeAus = CStr(infoPessoa(0))
+                If nomeAus = "" Then nomeAus = "Matrícula " & matK
+                ObterSetorCargo dictRE, CStr(matK), setorRE, cargoRE
+                setorAus = CStr(infoPessoa(1))
+                If setorAus = "" Then setorAus = setorRE
+                cargoAus = cargoRE
+                If cargoAus = "" Then cargoAus = CStr(infoPessoa(2))
+
+                EscreverLinhaCSV wsCSV, linhaSaida, CDate(inicioAus), nomeAus, CStr(matK), _
+                    TextoDoDicionario(dictGestorPorMatricula, CStr(matK)), setorAus, cargoAus, "Absenteísmo", _
+                    descInicio, "Pendente", 0, "", Empty, _
+                    grupo:=TextoDoDicionario(dictGrupoPorMatricula, CStr(matK)), _
+                    diasAusencia:=fimAus - inicioAus + 1, emendaFolga:=emendaTxt
+                linhaSaida = linhaSaida + 1
+                qtdAtestados = qtdAtestados + 1
+                qtdDiasAus = qtdDiasAus + (fimAus - inicioAus + 1)
+            End If
+            d = d + 1
+        Loop
+    Next matK
+End Sub
+
+' Lê a "Descrição Marcação" de cada dia de todas as abas de Cartão:
+'   dictDias: matrícula -> Dictionary(data como Long -> descrição)
+'   dictInfo: matrícula -> Array(nome, setor, cargo) (da aba mais recente)
+'   dataMin/dataMax: primeiro e último dia vistos.
+Private Sub MontarDiasCartao(abasCartao As Collection, ByRef dictDias As Object, ByRef dictInfo As Object, _
+    ByRef dataMin As Long, ByRef dataMax As Long)
+
     Set dictDias = CreateObject("Scripting.Dictionary")   ' matrícula -> Dictionary(data -> descrição)
     Set dictInfo = CreateObject("Scripting.Dictionary")   ' matrícula -> Array(nome, setor, cargo)
-    Dim dataMin As Long, dataMax As Long
     dataMin = 0
     dataMax = 0
 
@@ -1220,58 +1288,136 @@ Private Sub GerarAbsenteismo(abasCartao As Collection, dictRE As Object, dictGes
         End If
     Next abaIter
 
-    Dim matK As Variant, diasPessoa As Object, d As Long, inicioAus As Long, fimAus As Long
-    Dim antesFolga As String, depoisFolga As String, emendaTxt As String, descInicio As String
-    Dim infoPessoa As Variant, nomeAus As String, setorAus As String, cargoAus As String
+End Sub
+
+' "antes (DSR)", "depois (Feriado)", "antes (...) e depois (...)" ou "": o
+' dia anterior ao início ou o seguinte ao fim é folga (FOLGA_CONTEM) pela
+' escala da própria pessoa no Cartão. diasPessoa = Nothing -> "".
+Private Function CalcularEmendaFolga(diasPessoa As Object, ByVal inicioAus As Long, ByVal fimAus As Long) As String
+    Dim antesFolga As String, depoisFolga As String, txt As String
+    If Not diasPessoa Is Nothing Then
+        If diasPessoa.Exists(inicioAus - 1) Then
+            If ContemAlgum(CStr(diasPessoa(inicioAus - 1)), FOLGA_CONTEM) Then antesFolga = CStr(diasPessoa(inicioAus - 1))
+        End If
+        If diasPessoa.Exists(fimAus + 1) Then
+            If ContemAlgum(CStr(diasPessoa(fimAus + 1)), FOLGA_CONTEM) Then depoisFolga = CStr(diasPessoa(fimAus + 1))
+        End If
+    End If
+    If antesFolga <> "" Then txt = "antes (" & antesFolga & ")"
+    If depoisFolga <> "" Then
+        If txt <> "" Then txt = txt & " e "
+        txt = txt & "depois (" & depoisFolga & ")"
+    End If
+    CalcularEmendaFolga = txt
+End Function
+
+' Aba de Afastamentos já formatada (FormatarAfastamentos): a primeira com
+' Matrícula, Situação, Início e Término na linha 1.
+Private Function EncontrarAbaAfastamentos(wb As Workbook) As Worksheet
+    Dim ws As Worksheet
+    For Each ws In wb.Worksheets
+        If ColunaPorCabecalho(ws, "Matrícula") > 0 And ColunaPorCabecalho(ws, "Situação") > 0 And _
+           ColunaPorCabecalho(ws, "Início") > 0 And ColunaPorCabecalho(ws, "Término") > 0 Then
+            Set EncontrarAbaAfastamentos = ws
+            Exit Function
+        End If
+    Next ws
+    Set EncontrarAbaAfastamentos = Nothing
+End Function
+
+' Uma linha "Afastamento" por linha da aba de Afastamentos (relatório do
+' sistema, TODOS os tipos: atestado, férias, curso, saída médico...). O
+' painel decide o que é absenteísmo pela situação. Campos:
+'   data = início (com a hora de início, se houver); situacao = Situação;
+'   duracao_minutos = horas do afastamento de poucas horas (coluna Horas);
+'   dias_ausencia = Dias; emenda_folga = CalcularEmendaFolga com o Cartão (se a
+'   pessoa e os dias vizinhos estiverem nos Cartões do arquivo).
+' Setor = coluna Setor do Cartão (área); cargo = RE ou Cartão.
+Private Sub GerarAfastamentos(ws As Worksheet, abasCartao As Collection, dictRE As Object, _
+    dictGestorPorMatricula As Object, dictGrupoPorMatricula As Object, wsCSV As Worksheet, _
+    ByRef linhaSaida As Long, ByRef qtdGerada As Long, ByRef qtdAtestadosAf As Long, ByRef qtdDiasAtestadoAf As Long)
+
+    Dim dictDias As Object, dictInfo As Object, dataMin As Long, dataMax As Long
+    MontarDiasCartao abasCartao, dictDias, dictInfo, dataMin, dataMax
+
+    Dim colMat As Long, colNome As Long, colSit As Long, colIni As Long, colHoraIni As Long
+    Dim colFim As Long, colDias As Long, colHoras As Long
+    colMat = ColunaPorCabecalho(ws, "Matrícula")
+    colNome = ColunaPorCabecalho(ws, "Colaborador")
+    colSit = ColunaPorCabecalho(ws, "Situação")
+    colIni = ColunaPorCabecalho(ws, "Início")
+    colHoraIni = ColunaPorCabecalho(ws, "Hora início")
+    colFim = ColunaPorCabecalho(ws, "Término")
+    colDias = ColunaPorCabecalho(ws, "Dias")
+    colHoras = ColunaPorCabecalho(ws, "Horas")
+    If colMat = 0 Or colIni = 0 Then Exit Sub
+
+    Dim ultimaLinha As Long, r As Long, mat As String, nomeAf As String, situacaoAf As String
+    Dim vIni As Variant, vFim As Variant, vHora As Variant, vHoras As Variant
+    Dim iniLong As Long, fimLong As Long, diasAf As Variant, minutosAf As Double, dataIni As Date
+    Dim diasPessoa As Object, infoPessoa As Variant, setorAf As String, cargoAf As String
     Dim setorRE As String, cargoRE As String
-    For Each matK In dictDias.Keys
-        Set diasPessoa = dictDias(matK)
-        d = dataMin
-        Do While d <= dataMax
-            If EhAusencia(diasPessoa, d) Then
-                inicioAus = d
-                descInicio = CStr(diasPessoa(d))
-                Do While EhAusencia(diasPessoa, d + 1)
-                    d = d + 1
-                Loop
-                fimAus = d
+    ultimaLinha = UltimaLinhaPreenchida(ws, colMat)
+    For r = 2 To ultimaLinha
+        mat = TextoLimpo(ws.Cells(r, colMat).Value)
+        vIni = ws.Cells(r, colIni).Value2
+        If mat = "" Or Not IsNumeric(vIni) Or IsEmpty(vIni) Then GoTo ProximoAfastamento
 
-                antesFolga = ""
-                depoisFolga = ""
-                If diasPessoa.Exists(inicioAus - 1) Then
-                    If ContemAlgum(CStr(diasPessoa(inicioAus - 1)), FOLGA_CONTEM) Then antesFolga = CStr(diasPessoa(inicioAus - 1))
-                End If
-                If diasPessoa.Exists(fimAus + 1) Then
-                    If ContemAlgum(CStr(diasPessoa(fimAus + 1)), FOLGA_CONTEM) Then depoisFolga = CStr(diasPessoa(fimAus + 1))
-                End If
-                emendaTxt = ""
-                If antesFolga <> "" Then emendaTxt = "antes (" & antesFolga & ")"
-                If depoisFolga <> "" Then
-                    If emendaTxt <> "" Then emendaTxt = emendaTxt & " e "
-                    emendaTxt = emendaTxt & "depois (" & depoisFolga & ")"
-                End If
-
-                infoPessoa = dictInfo(matK)
-                nomeAus = CStr(infoPessoa(0))
-                If nomeAus = "" Then nomeAus = "Matrícula " & matK
-                ObterSetorCargo dictRE, CStr(matK), setorRE, cargoRE
-                setorAus = CStr(infoPessoa(1))
-                If setorAus = "" Then setorAus = setorRE
-                cargoAus = cargoRE
-                If cargoAus = "" Then cargoAus = CStr(infoPessoa(2))
-
-                EscreverLinhaCSV wsCSV, linhaSaida, CDate(inicioAus), nomeAus, CStr(matK), _
-                    TextoDoDicionario(dictGestorPorMatricula, CStr(matK)), setorAus, cargoAus, "Absenteísmo", _
-                    descInicio, "Pendente", 0, "", Empty, _
-                    grupo:=TextoDoDicionario(dictGrupoPorMatricula, CStr(matK)), _
-                    diasAusencia:=fimAus - inicioAus + 1, emendaFolga:=emendaTxt
-                linhaSaida = linhaSaida + 1
-                qtdAtestados = qtdAtestados + 1
-                qtdDiasAus = qtdDiasAus + (fimAus - inicioAus + 1)
+        iniLong = CLng(Int(CDbl(vIni)))
+        fimLong = iniLong
+        If colFim > 0 Then
+            vFim = ws.Cells(r, colFim).Value2
+            If IsNumeric(vFim) And Not IsEmpty(vFim) Then
+                If CDbl(vFim) > 1000 Then fimLong = CLng(Int(CDbl(vFim)))
             End If
-            d = d + 1
-        Loop
-    Next matK
+        End If
+        diasAf = fimLong - iniLong + 1
+        If colDias > 0 Then
+            If IsNumeric(ws.Cells(r, colDias).Value2) And Not IsEmpty(ws.Cells(r, colDias).Value2) Then diasAf = ws.Cells(r, colDias).Value2
+        End If
+
+        dataIni = CDate(iniLong)
+        If colHoraIni > 0 Then
+            vHora = ws.Cells(r, colHoraIni).Value2
+            If IsNumeric(vHora) And Not IsEmpty(vHora) Then
+                dataIni = dataIni + CDate(Round((CDbl(vHora) - Int(CDbl(vHora))) * 1440, 0) / 1440)
+            End If
+        End If
+        minutosAf = 0
+        If colHoras > 0 Then
+            vHoras = ws.Cells(r, colHoras).Value2
+            If IsNumeric(vHoras) And Not IsEmpty(vHoras) Then minutosAf = Round(CDbl(vHoras) * 1440, 0)
+        End If
+
+        situacaoAf = TextoDaCelula(ws, r, colSit)
+        nomeAf = TextoDaCelula(ws, r, colNome)
+        If nomeAf = "" Then nomeAf = "Matrícula " & mat
+
+        Set diasPessoa = Nothing
+        setorAf = ""
+        cargoAf = ""
+        If dictDias.Exists(mat) Then
+            Set diasPessoa = dictDias(mat)
+            infoPessoa = dictInfo(mat)
+            setorAf = CStr(infoPessoa(1))
+            cargoAf = CStr(infoPessoa(2))
+        End If
+        ObterSetorCargo dictRE, mat, setorRE, cargoRE
+        If setorAf = "" Then setorAf = setorRE
+        If cargoRE <> "" Then cargoAf = cargoRE
+
+        EscreverLinhaCSV wsCSV, linhaSaida, dataIni, nomeAf, mat, TextoDoDicionario(dictGestorPorMatricula, mat), _
+            setorAf, cargoAf, "Afastamento", situacaoAf, "Pendente", minutosAf, "", Empty, _
+            grupo:=TextoDoDicionario(dictGrupoPorMatricula, mat), _
+            diasAusencia:=diasAf, emendaFolga:=CalcularEmendaFolga(diasPessoa, iniLong, fimLong)
+        linhaSaida = linhaSaida + 1
+        qtdGerada = qtdGerada + 1
+        If ContemAlgum(situacaoAf, ABSENTEISMO_CONTEM) Then
+            qtdAtestadosAf = qtdAtestadosAf + 1
+            qtdDiasAtestadoAf = qtdDiasAtestadoAf + CLng(diasAf)
+        End If
+ProximoAfastamento:
+    Next r
 End Sub
 
 ' O dia d da pessoa existe no Cartão e a descrição conta como absenteísmo.

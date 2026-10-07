@@ -9,6 +9,7 @@ no fim, no CSV que alimenta o painel dos gestores.
 | `PausasTermicas/` | `FormatarPausasTermicas` | Relatório HRES114 (aba ativa) → a mesma aba, só com as duas tabelas (colaboradores e total) |
 | `PuroParaEditado/` | `PURO_Para_EDITADO` | Aba `PURO` → nova aba `EDITADO_MESAA` |
 | `MarcacoesDigitadas/` | `FormatarMarcacoesDigitadas` | Relatório "Marcações digitadas" (aba ativa) → a mesma aba, como tabela (`Marcações Digitadas`) |
+| `Afastamentos/` | `FormatarAfastamentos` | Relatório "Histórico de Afastamentos" HRCL006 (aba ativa) → a mesma aba, como tabela (`Afastamentos`) |
 | `GerarCSVPonto/` | `GerarAbaCSV` / `ExportarCSVPorGestor` | Abas de Tratamento, RE, Cartão e Pausas → aba `CSV` → arquivos `.csv` |
 | `Dashboard/` | `index.html` | CSV → painel no navegador (gestores e supervisor) |
 
@@ -221,12 +222,40 @@ justificativa, ou o RH lançou no sistema.
   espremidas; no computador cada uma rola sozinha, no celular o card inteiro rola.
 - Lista de colaboradores (ORG): saiu o aviso em vermelho de quem não está no ORG.
 
+## Afastamentos pelo relatório do sistema, seções e Pausas (07/10)
+
+### FormatarAfastamentos (nova macro)
+- Rode com o relatório "Histórico de Afastamentos" (HRCL006) aberto (aba ativa, numa cópia). A aba
+  vira uma tabela e é renomeada para `Afastamentos`: `Matrícula · Colaborador · Admissão · Cód.
+  Situação · Situação · Início · Hora início · Término · Hora término · Dias · Horas · Prev.
+  Término · Exame`. "Horas" só nos afastamentos de poucas horas (ex.: Saída Médico/Empresa).
+- Depois, traga a aba para a planilha de Tratamento.
+
+### GerarCSVPonto
+- Com a aba `Afastamentos`, grava uma linha **"Afastamento"** por registro (todos os tipos), com
+  dias, horas e se encosta numa folga (o Cartão continua servindo para isso). Sem a aba, os
+  atestados continuam vindo do Cartão, como antes.
+
+### Painel
+- **Menu de seções** (botão ☰ no topo): o painel mostra uma seção por vez (Visão geral,
+  Colaboradores em destaque, Pausas térmicas, Marcações digitadas, Afastamentos, Demora no
+  PontoNet, Lista de colaboradores, Histórico) ou "Todas as seções numa página só".
+- **Afastamentos — atestados**: agora a partir do relatório do sistema (33 atestados, 105 dias,
+  21 pessoas no período de teste). Cada registro do sistema é 1 atestado.
+- **Evolução mês a mês**: com um ciclo escolhido no seletor, mostra as semanas desse ciclo e
+  destaca o ciclo na tabela (antes não mudava nada).
+- Card do colaborador: todos os afastamentos dos 3 meses (atestado, férias, curso, saída médico...).
+- **Pausas Térmicas**: a tabela fica na própria seção (não é mais uma janela), com colunas
+  estreitas e o cabeçalho em duas linhas, cabendo na tela sem rolar para o lado.
+- Conferência: 18/18.
+
 ## Ordem de uso no mês
 
 1. Rodar `ConsolidarCartaoPonto` no HRCP102 e colar o resultado numa aba `Cartão <Mês>`.
 2. Rodar `FormatarPausasTermicas` no HRES114 (numa cópia) e trazer a aba para a pasta de Tratamento.
 3. Rodar `PURO_Para_EDITADO` e tratar as ocorrências em `Tratamento - Internos` / `Tratamento - Externos`.
-4. Rodar `FormatarMarcacoesDigitadas` no relatório de Marcações digitadas e trazer a aba.
+4. Rodar `FormatarMarcacoesDigitadas` no relatório de Marcações digitadas e
+   `FormatarAfastamentos` no Histórico de Afastamentos, e trazer as duas abas.
 5. Rodar `GerarAbaCSV` e depois `ExportarCSVPorGestor`.
 
 > Estes macros foram escritos e revisados fora do Excel: a lógica foi conferida simulando-a em

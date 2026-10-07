@@ -6,13 +6,21 @@ from xml.sax.saxutils import escape
 # as partes do zip são copiadas byte a byte; só mudam workbook.xml, workbook.xml.rels,
 # [Content_Types].xml, docProps/app.xml e styles.xml (estilos novos no fim), e entra
 # xl/worksheets/sheetN.xml. Textos vão como inlineStr (não mexe no sharedStrings).
-# Uso: python3 adicionar_aba_xlsx.py entrada.xlsx saida.xlsx marcacoes.pkl ["Marcações Digitadas"]
-# (marcacoes.pkl = saída do formatar_marcacoes.py)
+# Uso: python3 adicionar_aba_xlsx.py entrada.xlsx saida.xlsx linhas.pkl marcacoes|afastamentos ["Nome da aba"]
+# (linhas.pkl = saída do formatar_marcacoes.py ou do formatar_afastamentos.py)
 
-CAB = ["Matrícula", "Colaborador", "Cód. Cargo", "Cargo", "Cód. Local", "Local", "Origem",
-       "Data", "Hora", "Dia da semana", "Coletor", "Função", "Motivo", "Justificativa"]
-LARG = [11, 34, 9, 26, 18, 28, 8, 11, 8, 9, 8, 8, 36, 60]
-TEXTO_COLS = {3, 5, 11, 12}          # códigos com zero à esquerda: texto
+# Layout de cada aba: cabeçalho, larguras, colunas de texto (códigos com zero à esquerda),
+# colunas de hora (h:mm) e de duração ([h]:mm:ss). Datas são reconhecidas pelo tipo do valor.
+LAYOUTS = {
+    'marcacoes': dict(nome='Marcações Digitadas',
+        cab=["Matrícula", "Colaborador", "Cód. Cargo", "Cargo", "Cód. Local", "Local", "Origem",
+             "Data", "Hora", "Dia da semana", "Coletor", "Função", "Motivo", "Justificativa"],
+        larg=[11, 34, 9, 26, 18, 28, 8, 11, 8, 9, 8, 8, 36, 60], texto={3, 5, 11, 12}, hora={9}, dur=set()),
+    'afastamentos': dict(nome='Afastamentos',
+        cab=["Matrícula", "Colaborador", "Admissão", "Cód. Situação", "Situação", "Início", "Hora início",
+             "Término", "Hora término", "Dias", "Horas", "Prev. Término", "Exame"],
+        larg=[11, 36, 11, 9, 30, 11, 11, 11, 11, 8, 8, 12, 7], texto={4}, hora={7, 9}, dur={11}),
+}
 
 def letra(n):
     s = ''
@@ -38,11 +46,13 @@ def acrescentar_estilos(styles):
                                 '<alignment horizontal="center" vertical="center" wrapText="1"/></xf>' % (fonte, fill, borda))
     ids['data'] = add('cellXfs', '<xf numFmtId="14" fontId="0" fillId="0" borderId="%d" xfId="0" applyNumberFormat="1" applyBorder="1"/>' % borda)
     ids['hora'] = add('cellXfs', '<xf numFmtId="20" fontId="0" fillId="0" borderId="%d" xfId="0" applyNumberFormat="1" applyBorder="1"/>' % borda)
+    ids['dur'] = add('cellXfs', '<xf numFmtId="46" fontId="0" fillId="0" borderId="%d" xfId="0" applyNumberFormat="1" applyBorder="1"/>' % borda)
     ids['num'] = add('cellXfs', '<xf numFmtId="0" fontId="0" fillId="0" borderId="%d" xfId="0" applyBorder="1"/>' % borda)
     ids['txt'] = add('cellXfs', '<xf numFmtId="49" fontId="0" fillId="0" borderId="%d" xfId="0" applyNumberFormat="1" applyBorder="1"/>' % borda)
     return styles, ids
 
-def montar_sheet(linhas, ids):
+def montar_sheet(linhas, ids, lay):
+    CAB, LARG, TEXTO_COLS = lay['cab'], lay['larg'], lay['texto']
     base = datetime.datetime(1899, 12, 30)
     ult = len(linhas) + 1
     rows = []
@@ -56,8 +66,8 @@ def montar_sheet(linhas, ids):
                 cel.append('<c r="%s" s="%d"/>' % (ref, ids['txt']))
             elif isinstance(v, datetime.datetime):
                 cel.append('<c r="%s" s="%d"><v>%d</v></c>' % (ref, ids['data'], (v - base).days))
-            elif i == 9:
-                cel.append('<c r="%s" s="%d"><v>%r</v></c>' % (ref, ids['hora'], float(v)))
+            elif i in lay['hora'] or i in lay['dur']:
+                cel.append('<c r="%s" s="%d"><v>%r</v></c>' % (ref, ids['hora' if i in lay['hora'] else 'dur'], float(v)))
             elif isinstance(v, (int, float)) and i not in TEXTO_COLS:
                 cel.append('<c r="%s" s="%d"><v>%s</v></c>' % (ref, ids['num'], v))
             else:
@@ -74,7 +84,7 @@ def montar_sheet(linhas, ids):
             '<sheetFormatPr defaultRowHeight="15"/><cols>%s</cols><sheetData>%s</sheetData>'
             '<autoFilter ref="%s"/></worksheet>') % (ref, cols, ''.join(rows), ref)
 
-def adicionar_aba(entrada, saida, linhas, nome_aba):
+def adicionar_aba(entrada, saida, linhas, nome_aba, lay):
     zin = zipfile.ZipFile(entrada)
     nomes = zin.namelist()
     wb = zin.read('xl/workbook.xml').decode('utf-8')
@@ -105,10 +115,11 @@ def adicionar_aba(entrada, saida, linhas, nome_aba):
         for info in zin.infolist():
             dados = novos[info.filename].encode('utf-8') if info.filename in novos else zin.read(info.filename)
             zout.writestr(info, dados)
-        zout.writestr(parte, montar_sheet(linhas, ids).encode('utf-8'))
+        zout.writestr(parte, montar_sheet(linhas, ids, lay).encode('utf-8'))
     return parte
 
 if __name__ == '__main__':
     linhas = pickle.load(open(sys.argv[3], 'rb'))
-    nome = sys.argv[4] if len(sys.argv) > 4 else 'Marcações Digitadas'
-    print('aba gravada em', adicionar_aba(sys.argv[1], sys.argv[2], linhas, nome))
+    lay = LAYOUTS[sys.argv[4]]
+    nome = sys.argv[5] if len(sys.argv) > 5 else lay['nome']
+    print('aba gravada em', adicionar_aba(sys.argv[1], sys.argv[2], linhas, nome, lay))

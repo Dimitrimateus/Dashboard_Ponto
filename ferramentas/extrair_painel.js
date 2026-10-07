@@ -10,6 +10,9 @@ const { chromium } = require('playwright');
   await p.goto('file://' + html);
   await p.setInputFiles('#fileInput', csv);
   await p.waitForTimeout(800);
+  // o painel mostra uma seção por vez: abre "Todas as seções" para ler tudo
+  await p.evaluate(() => { const b = document.querySelector('#menuSecoes button[data-pagina="todas"]'); if (b) b.click(); });
+  await p.waitForTimeout(500);
   const data = await p.evaluate(() => {
     const $ = id => document.getElementById(id);
     const txt = id => $(id) ? $(id).textContent.trim() : null;
