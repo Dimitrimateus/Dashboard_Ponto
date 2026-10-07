@@ -19,6 +19,7 @@ Fluxo mensal:
 HRCP102 (cartão ponto, sistema Senior) ──► ConsolidarCartaoPonto ──► aba "Cartão <mês>"
 HRES114 (pausas térmicas, Senior)      ──► FormatarPausasTermicas ──► aba "Pausas Térmicas"
 Marcações digitadas (Senior)           ──► FormatarMarcacoesDigitadas ──► aba "Marcações Digitadas"
+HRCL006 Histórico de Afastamentos      ──► FormatarAfastamentos   ──► aba "Afastamentos"
 aba PURO (exportação de ocorrências)   ──► PURO_Para_EDITADO      ──► aba EDITADO_MESAA ─► (Dimitri trata) ─► "Tratamento - Internos" / "Tratamento - Externos"
                                                          todas as abas ──► GerarAbaCSV ──► aba "CSV" ──► ExportarCSVPorGestor ──► dados_<gestor>.csv + dados_TODOS.csv
                                                                                                                                   └──► index.html (abre no navegador)
@@ -49,6 +50,7 @@ aba PURO (exportação de ocorrências)   ──► PURO_Para_EDITADO      ─�
 | `PausasTermicas/FormatarPausasTermicas.bas` | HRES114 → a mesma aba, só com a tabela de colaboradores e a de total |
 | `PuroParaEditado/PURO_Para_EDITADO.bas` | aba `PURO` → `EDITADO_MESAA` (reordena, X→SIM, tira espaços) |
 | `MarcacoesDigitadas/FormatarMarcacoesDigitadas.bas` | relatório "Marcações digitadas" → a mesma aba como tabela (renomeada "Marcações Digitadas") |
+| `Afastamentos/FormatarAfastamentos.bas` | relatório HRCL006 "Histórico de Afastamentos" → a mesma aba como tabela (renomeada "Afastamentos") |
 | `GerarCSVPonto/GerarCSVPonto.bas` | `GerarAbaCSV` (monta a aba CSV) e `ExportarCSVPorGestor` (grava os .csv) |
 | `Dashboard/index.html` | O painel. Contém o logo em base64 (linha enorme, ~60 KB); não leia o arquivo inteiro de uma vez |
 | `txt/*.txt` | As mesmas macros em `.txt`, CRLF, prontas para colar |
@@ -114,6 +116,23 @@ conteúdo num módulo.
   descarta "E" ao ler um CSV antigo. O relatório **não diz quem digitou** (colaborador × RH) — não
   há como separar.
 
+### 5.3c FormatarAfastamentos (aba ativa = HRCL006 bruto)
+- Dump de impressão: por colaborador, cabeçalho "Tipo | Colaborador | Admissão" e a linha da pessoa
+  (tipo **como texto** "1", matrícula na col. de "Colaborador", nome +1, admissão); depois o
+  cabeçalho "Afastamento | Situação | Dem. | Dias | Faltas | Dt.Término | Prev Término | Exame" e
+  uma linha por afastamento com valores **deslocados**: início = col. "Afastamento", hora início
+  +1; código = "Situação"+1, descrição +2; término = "Dt.Término", hora término +1; prev. término
+  = "Prev Término"+1; exame = "Exame"+1. "Dem./Dias/Faltas" vêm sempre 00 (não usados).
+- Saída: `Matrícula, Colaborador, Admissão, Cód. Situação, Situação, Início, Hora início, Término,
+  Hora término, Dias (corridos), Horas (só afastamento de poucas horas no mesmo dia), Prev.
+  Término, Exame`.
+- Relatório de 07/10 (inícios de 30/06 a 26/09): 283 afastamentos, 117 pessoas, 16 tipos (Viagem
+  a Serviço 80, Férias 55, Atestado 33, Reunião 26, Saída Médico/Empresa 26 por horas, Curso 25,
+  Horas Faltas 10, Treinamento 9, Dispensa Remunerada 8, Lic. Falecimento 4, Acidente 2, outros 1).
+  Atestados: 33 registros, 105 dias, 21 pessoas (o Cartão dava 31 "episódios": o sistema registra
+  atestados emendados separados; alguns do Cartão são de desligados ou começam antes de 30/06).
+  **O relatório do sistema é a fonte oficial** (decisão do Dimitri, 07/10).
+
 ### 5.4 GerarCSVPonto
 **Entradas (achadas por nome/cabeçalho, nunca por posição):**
 - Abas cujo nome começa com **"Tratamento"** e que têm a coluna `Matricula` na linha 1:
@@ -128,6 +147,7 @@ conteúdo num módulo.
   atual, Justificativa, Avaliado em:`.
 - A tabela de pausas, achada em qualquer aba pela linha que tem `Matrícula` + `Pausa corretas`.
 - **Marcações Digitadas**: aba com `Matrícula, Data, Hora, Motivo, Justificativa` na linha 1.
+- **Afastamentos**: aba com `Matrícula, Situação, Início, Término` na linha 1.
 - **ORG** (relação colaborador × gestor): aba que começa com "ORG" com `Matricula`, `COLABORADOR`,
   `Descrição`, `Cargo`, `Unidade`, `GESTOR` na linha 1 (busca de cabeçalho sem acento/maiúscula,
   `ColunaSemAcento`). A coluna Matricula do ORG é fórmula e às vezes dá `#N/A`.
@@ -158,7 +178,11 @@ conteúdo num módulo.
    - "Marcação Digitada": uma por batida da aba Marcações Digitadas **com Origem "D"** (as "E"
      são ignoradas); data = dia + hora (minuto);
      situacao = motivo; colunas 26/27 = justificativa / origem. Sem Tratamento nem Check.
-   - "Absenteísmo" (06/10): um por ATESTADO nos até 3 Cartões (dias seguidos com descrição que
+   - "Afastamento" (07/10): um por registro da aba Afastamentos (todos os tipos); data = início
+     (+ hora início); situacao = Situação; duracao_minutos = Horas (afastamento de poucas horas);
+     dias_ausencia = Dias; emenda_folga = `CalcularEmendaFolga` com os dias do Cartão
+     (`MontarDiasCartao`). Com a aba, **substitui** as linhas "Absenteísmo".
+   - "Absenteísmo" (06/10, agora só sem a aba Afastamentos): um por ATESTADO nos até 3 Cartões (dias seguidos com descrição que
      contém `ABSENTEISMO_CONTEM` = "atest" = 1 atestado; dias corridos, o Cartão marca sábado e
      domingo). data = 1º dia; situacao = descrição; setor = coluna Setor do Cartão; colunas 28/29 =
      dias_ausencia / emenda_folga ("antes (DSR)", "depois (Feriado)"... se o dia antes/depois é
@@ -183,7 +207,7 @@ trabalho_menor_140, pausas_marcacoes_impares, grupo,
 minutos_hora_extra_cartao, minutos_banco_horas_cartao, justificativa_marcacao, origem_marcacao,
 dias_ausencia, emenda_folga
 ```
-(24/25 só na "Resumo Horas Cartão"; 26/27 só na "Marcação Digitada"; 28/29 só na "Absenteísmo")
+(24/25 só na "Resumo Horas Cartão"; 26/27 só na "Marcação Digitada"; 28/29 na "Absenteísmo" e na "Afastamento")
 - Separador **vírgula**; campo com vírgula/aspas/quebra vai entre aspas (RFC 4180); UTF-8 com BOM
   (`ADODB.Stream`); datas `dd/mm/aaaa` (`dd/mm/aaaa hh:mm` quando tem hora); duração em minutos
   inteiros (negativo = falta); `grupo` = Interno/Externo pelo nome da aba (vazio na planilha antiga).
@@ -232,12 +256,21 @@ dias_ausencia, emenda_folga
   repetido, justificativas (agrupadas por `chaveTexto`), lista com busca. "No dia de uma ocorrência" =
   mesma matrícula + dia de uma ocorrência da Tratamento. `isTipoDigitada` entra em
   `isTipoNaoOcorrencia` e é excluído de `getFilteredRecords`.
-- **Absenteísmo** (`renderAbsenteismo`, base `getResumoRecords("Absenteísmo")`, sem período):
+- **Seções**: `.pagina[data-pagina]` (geral, destaque, pausas, digitadas, afastamentos, demora, org,
+  historico); menu ☰ (`#menuSecoes`, `irParaPagina`, localStorage `painelPonto.pagina`, "todas"
+  mostra tudo); KPIs só em "geral". Trocar de seção redesenha (largura dos SVG). O extrator de
+  conferência clica em "todas" antes de ler.
+- **Pausas Térmicas**: tabela na própria seção (o modal saiu), `tabela-compacta` com cabeçalho em
+  2 linhas (`c.html` em `renderTableSimple`), cabe sem rolagem lateral.
+- **Absenteísmo** (`renderAbsenteismo`, base `getAtestados()` = linhas "Afastamento" cuja situação
+  contém `ATESTADO_CONTEM` ou, sem elas, as "Absenteísmo" do Cartão; sem período):
   seletor de ciclo 28→27 (`cicloDe`); cada atestado expandido em dias (`diasDoAtestado`). Vistas
   escolhidas pelo Dimitri (2, 4, 5, 6, 7, 8): evolução por ciclo, por gestor/setor/cargo,
   encostados em folga + dia da semana do início, ranking 3 meses (reincidente = 2+ ciclos ou 3+
   atestados), mapa colaborador × dia, atestados no card. Sem cards de KPI (visão 1 recusada) e
-  sem a separação longo × curto (visão 3 recusada). Fica fora de `periodoCompleto`.
+  sem a separação longo × curto (visão 3 recusada). Fica fora de `periodoCompleto`. Com ciclo
+  escolhido, a evolução mostra as semanas do ciclo e destaca a linha (`row-sel`). O card do
+  colaborador lista todos os afastamentos (atestados em vermelho).
 - Cards (KPI): Colaboradores envolvidos · Ocorrências no período · Demora média no PontoNet.
   (**Os cards de total de horas extra e de horas falta foram retirados a pedido do Dimitri.**)
 - Gráficos/tabelas: por tipo (rosca), por dia da semana, por data (linha), por gestor (top 12),
@@ -275,6 +308,8 @@ Marcações digitadas (06/10): aba inserida na planilha _2 com `ferramentas/adic
 
 Absenteísmo (06/10): 31 atestados, 107 dias, 23 pessoas; 19 encostam em folga; 6 reincidentes.
 Conferência: 18/18.
+Afastamentos (07/10, relatório HRCL006): 33 atestados, 105 dias, 21 pessoas; ciclos jul 28 / ago 30
+/ set 47 dias; 17 encostam em folga; 7 reincidentes. Conferência: 18/18.
 
 ## 8. Armadilhas técnicas — não repetir
 
@@ -346,3 +381,6 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   "Marcações digitadas" no painel. Depois: Origem "E" ignorada; absenteísmo (atestados) no CSV
   (29 colunas) e seção "Absenteísmo (atestados)" no painel. Depois: botão "Esconder filtros",
   card do colaborador sem tabelas espremidas, aviso "fora do ORG" retirado da lista.
+- 07/10: macro FormatarAfastamentos e linhas "Afastamento" no CSV (relatório HRCL006 substitui o
+  Cartão como fonte dos atestados); menu de seções; Pausas na própria seção com colunas estreitas;
+  evolução de atestados reage ao ciclo.
