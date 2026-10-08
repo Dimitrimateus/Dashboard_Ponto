@@ -181,7 +181,7 @@
   .card-toolbar{ display:flex; justify-content:flex-end; margin-top:8px; }
 
   /* ---------- Marcações digitadas ---------- */
-  .dig-kpis{ display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:10px; margin-bottom:14px; }
+  .dig-kpis{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; margin-bottom:14px; }
   @media (max-width: 980px){ .dig-kpis{ grid-template-columns:repeat(3, minmax(0,1fr)); } }
   @media (max-width: 620px){ .dig-kpis{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
 
@@ -202,6 +202,7 @@
     min-width:190px; max-width:190px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   table.heat td.tot{ padding:0 6px; font-weight:700; color:var(--c-navy-dark); }
+  table.heat th.tot-h{ padding:0 6px; white-space:nowrap; }
   .heat-leg{ display:flex; gap:14px; font-size:11.5px; color:var(--c-muted); margin-top:8px; flex-wrap:wrap; }
   .heat-leg span::before{ content:""; display:inline-block; width:11px; height:11px; margin-right:5px; vertical-align:-1px; border:1px solid var(--c-line); }
   .heat-leg .l-aus::before{ background:var(--c-terracotta); }
@@ -346,6 +347,12 @@
   .empty-state svg{ width:64px; height:64px; opacity:.55; }
   .empty-state h2{ font-size:20px; color:var(--c-navy-dark); }
   .empty-state p{ max-width:440px; margin:0; font-size:13.5px; }
+  .como-usar{ max-width:640px; width:100%; text-align:left; margin-top:6px; padding:16px 18px; border-radius:12px; background:#FFF7EE; border:1px solid #F9D3A6; color:#3F3F41; }
+  .como-usar h3{ margin:0 0 8px; font-size:15px; color:var(--c-navy-dark); }
+  .como-usar ol{ margin:0; padding-left:20px; font-size:13px; line-height:1.5; }
+  .como-usar li{ margin:0 0 6px; }
+  .como-usar code{ background:#fff; border:1px solid var(--c-line); border-radius:4px; padding:0 4px; font-size:12px; }
+  @media (max-width: 620px){ .empty-state{ padding:28px 14px; } .como-usar{ padding:12px 12px; } }
 
   [hidden]{ display:none !important; }
 
@@ -424,6 +431,8 @@
   table.data-table tr.row-alert:hover{ background:#FBDADA; }
   table.data-table tr.row-alert td{ color:#8A1418; font-weight:700; }
   table.data-table tr.row-sel{ background:#FFF3E6; }
+  table.data-table tr.row-ferias{ background:#FFF8E1; }
+  .aviso-ferias{ margin-top:3px; font-size:11.5px; font-weight:700; color:#7A5A00; white-space:normal; line-height:1.3; }
   /* tabela compacta: cabeçalho quebra em linhas, números centralizados, e a
      tabela cabe na largura do card (sem rolar para o lado) */
   table.data-table.tabela-compacta th{ white-space:normal; line-height:1.25; vertical-align:bottom; }
@@ -651,7 +660,7 @@
       <button type="button" class="btn-explica" id="btnLateral" aria-pressed="false" title="Esconde o painel da direita (Carregar dados e Filtros) para os gráficos ocuparem a tela toda">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg><span class="txt" id="btnLateralTxt">Esconder filtros</span>
       </button>
-      <button type="button" class="btn-explica" id="btnExplica" aria-pressed="false" title="Mostra, em cada gráfico, de onde vem a informação">
+      <button type="button" class="btn-explica" id="btnExplica" aria-pressed="false" hidden title="Mostra, em cada gráfico, de onde vem a informação">
         <span class="q" aria-hidden="true">?</span><span class="txt" id="btnExplicaTxt">Entenda o painel</span>
       </button>
     </div>
@@ -680,7 +689,18 @@
       <section class="empty-state" id="emptyState">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <h2>Nenhum dado carregado</h2>
-        <p>Use o bloco <strong>“Carregar dados”</strong>, no painel à direita, para abrir o arquivo CSV com as ocorrências de ponto. Sem o arquivo, este painel permanece vazio: ele nunca contém dados por padrão.</p>
+        <p>Use o bloco <strong>“Carregar dados”</strong> (à direita; no celular, no alto da tela) para abrir o arquivo CSV com as ocorrências de ponto. Sem o arquivo, este painel permanece vazio: ele nunca contém dados por padrão.</p>
+        <div class="como-usar">
+          <h3>Como usar o painel</h3>
+          <ol>
+            <li><strong>Pegue o arquivo do mês.</strong> O RH envia um arquivo <code>dados_&lt;seu nome&gt;.csv</code> (só a sua equipe) ou <code>dados_TODOS.csv</code> (todas as equipes). Salve no computador ou no celular; não precisa abrir no Excel.</li>
+            <li><strong>Abra o arquivo aqui.</strong> No bloco “Carregar dados” (à direita; no celular, no alto da tela), clique para escolher o arquivo ou arraste-o para cima do bloco. O arquivo é lido só no seu navegador: nada é enviado para a internet.</li>
+            <li><strong>Escolha a seção.</strong> O botão <strong>&#9776;</strong> no canto superior esquerdo troca de seção: Visão geral, Colaboradores em destaque, Pausas térmicas, Marcações digitadas, Afastamentos, Demora no PontoNet, Lista de colaboradores e Histórico. A última opção mostra tudo numa página só.</li>
+            <li><strong>Filtre.</strong> Em “Filtros” escolha gestor, cargo, colaborador, tipo de ocorrência ou período. Tudo no painel muda junto. “Limpar filtros” volta ao arquivo inteiro; “Esconder filtros”, no topo, dá mais espaço aos gráficos.</li>
+            <li><strong>Veja uma pessoa.</strong> Clique no nome de qualquer colaborador (gráficos e tabelas) para abrir o card dele, com ocorrências, horas, pausas, batidas digitadas e afastamentos.</li>
+            <li><strong>Dúvida sobre um número?</strong> Depois de abrir o arquivo, o botão <strong>“Entenda o painel”</strong>, no topo, mostra embaixo de cada gráfico de onde vem a informação e como ela é calculada.</li>
+          </ol>
+        </div>
       </section>
 
       <section class="kpis" id="kpiRow" hidden>
@@ -759,9 +779,10 @@
           </div>
           <div class="card">
             <div class="card-title">Ocorrências curtas (&lt; 15 minutos)</div>
-            <div class="card-hint">Colaboradores com mais faltas/atrasos ou horas extra registrados com menos de 15 minutos</div>
+            <div class="card-hint">Colaboradores com mais faltas/atrasos ou horas extra registrados com menos de 15 minutos &middot; os 20 primeiros (&ldquo;Mostrar todos&rdquo; lista todo mundo)</div>
             <div class="card-fonte"><span class="fonte-origem">De onde vem: Cartão Ponto do mês atual + fórmula</span><p>Puxamos o cartão ponto e uma fórmula preenche a coluna <strong>Tolerância &lt; 15min</strong> quando o dia teve falta/atraso ou hora extra de menos de 15 minutos. Cada dia marcado conta 1 (“Extra e Falta” conta 1 em cada coluna). Não depende do Check da Tratamento.</p></div>
             <div class="card-body" id="tableCurtas"></div>
+            <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="curtas" id="btnCurtasTodos" hidden>Mostrar todos</button></div>
           </div>
           <div class="card">
             <div class="card-title">Banco de horas e hora extra por colaborador</div>
@@ -812,9 +833,10 @@
             </div>
             <div class="card">
               <div class="card-title">Colaboradores com mais marcações digitadas</div>
-              <div class="card-hint">Top 10 &middot; clique no nome para ver o colaborador</div>
+              <div class="card-hint">Os 20 primeiros (&ldquo;Mostrar todos&rdquo; lista todo mundo) &middot; clique no nome para ver o colaborador</div>
               <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema</span><p>Conta as batidas digitadas de cada pessoa. Passe o mouse para ver quantas foram por esquecimento.</p></div>
               <div class="card-body" id="chartDigTop"></div>
+              <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="digTop" id="btnDigTopTodos" hidden>Mostrar todos</button></div>
             </div>
             <div class="card">
               <div class="card-title">Marcações digitadas por gestor</div>
@@ -877,7 +899,7 @@
             </div>
             <div class="card">
               <div class="card-title">Atestados encostados em folga</div>
-              <div class="card-hint">O dia antes do início ou o dia depois do fim é DSR, folga, compensado ou feriado</div>
+              <div class="card-hint">O dia logo antes do início ou logo depois do fim do atestado é folga da pessoa (DSR, folga, compensado ou feriado) &middot; a lista abaixo mostra qual dia e qual folga</div>
               <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Afastamentos do sistema</span><p>Para cada atestado do relatório, olha o Cartão Ponto da própria pessoa no dia anterior ao início e no dia seguinte ao término. Se um deles é DSR, folga, compensado ou feriado, o atestado “encosta” na folga — e emenda o descanso. O gráfico mostra em que dia da semana os atestados começam.</p></div>
               <div class="abs-resumo" id="absEmendaResumo"></div>
               <div class="card-body" id="chartAbsDiaSemana"></div>
@@ -890,14 +912,14 @@
             </div>
             <div class="card wide">
               <div class="card-title">Atestados encostados em folga — lista</div>
-              <div class="card-hint">No ciclo escolhido</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Afastamentos do sistema</span><p>Cada atestado que encosta numa folga, com o que havia no dia antes ou depois.</p></div>
+              <div class="card-hint">No ciclo escolhido &middot; “Folga encostada” = o dia de folga que fica colado no atestado (ex.: atestado na segunda com o domingo de DSR antes)</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Afastamentos do sistema + Cartão Ponto</span><p>Cada atestado que encosta numa folga. A coluna “Folga encostada” mostra o dia (data e dia da semana), o que o Cartão Ponto da própria pessoa diz naquele dia (DSR, Compensado, Feriado…) e se ele fica <strong>antes do início</strong> ou <strong>depois do fim</strong> do atestado. Quando as duas pontas encostam em folga, aparecem as duas.</p></div>
               <div class="card-body" id="tableAbsEmendas"></div>
             </div>
             <div class="card wide">
               <div class="card-title">Mapa colaborador × dia</div>
               <div class="card-hint" id="absHeatHint">Dias de atestado no ciclo</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Afastamentos do sistema</span><p>Uma linha por pessoa com atestado no ciclo, uma coluna por dia (28 a 27). Quadrado vermelho = dia de atestado; colunas cinza = sábado e domingo. Com “Últimos 3 meses” no seletor, o mapa mostra o ciclo mais recente.</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Afastamentos do sistema</span><p>Uma linha para <strong>cada pessoa que teve atestado em algum momento dos últimos 3 meses</strong> (quem não teve atestado no ciclo mostrado fica com a linha vazia), uma coluna por dia (28 a 27). À direita, os dias de atestado no ciclo e nos 3 meses. Quadrado vermelho = dia de atestado; colunas cinza = sábado e domingo. Com “Últimos 3 meses” no seletor, o mapa mostra o ciclo mais recente.</p></div>
               <div class="heat-wrap" id="absHeat"></div>
               <div class="heat-leg"><span class="l-aus">Atestado</span><span class="l-fds">Sábado e domingo</span></div>
             </div>
@@ -910,14 +932,15 @@
         <section class="grid">
           <div class="card wide">
             <div class="card-title">Média e maior demora por gestor</div>
-            <div class="card-hint">Tempo entre a ocorrência e a tratativa/aprovação no sistema, por gestor</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório baixado direto do PontoNet</span><p>Mesmo cálculo do card “Demora média no PontoNet” (da data da ocorrência até o “Avaliado em”, só casos INTEGRADOS), agrupado pelo gestor: quantas foram tratadas, a demora média e a maior.</p></div>
+            <div class="card-hint">Tempo entre a ocorrência e a tratativa/aprovação no sistema, por gestor &middot; linhas em amarelo: o gestor esteve de férias enquanto as ocorrências esperavam tratativa</div>
+            <div class="card-hint" id="hintDemoraFerias" hidden style="color:#7A5A00">Este CSV não traz o relatório de Afastamentos: o aviso de férias do gestor não aparece. Traga a aba Afastamentos para a planilha e gere o CSV de novo.</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório baixado direto do PontoNet</span><p>Mesmo cálculo do card “Demora média no PontoNet” (da data da ocorrência até o “Avaliado em”, só casos INTEGRADOS), agrupado pelo gestor: quantas foram tratadas, a demora média e a maior. <strong>Aviso de férias:</strong> o painel procura o gestor no relatório de Afastamentos do sistema (pelo nome); se ele teve férias entre a primeira ocorrência e a última tratativa da equipe, a linha fica amarela com as datas — nesse tempo ele não tinha como tratar no PontoNet. A demora continua contada do mesmo jeito; o aviso é para não ler esse número como descuido.</p></div>
             <div class="card-body" id="tableDemoraGestor"></div>
           </div>
           <div class="card wide">
             <div class="card-title">Média e maior demora por colaborador</div>
-            <div class="card-hint">Tempo entre a ocorrência e a tratativa/aprovação no sistema, por colaborador</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório baixado direto do PontoNet</span><p>Mesmo cálculo, agrupado pelo colaborador. Ajuda a ver quem tem justificativas que ficam muito tempo paradas. Clique no nome para abrir o card do colaborador.</p></div>
+            <div class="card-hint">Tempo entre a ocorrência e a tratativa/aprovação no sistema, por colaborador &middot; linhas em amarelo: o gestor (ou o próprio colaborador) esteve de férias nesse meio-tempo</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório baixado direto do PontoNet</span><p>Mesmo cálculo, agrupado pelo colaborador. Ajuda a ver quem tem justificativas que ficam muito tempo paradas. Linha amarela = o gestor da pessoa (ou ela mesma) esteve de férias no meio do caminho, pelo relatório de Afastamentos. Clique no nome para abrir o card do colaborador.</p></div>
             <div class="card-body" id="tableDemoraColaborador"></div>
           </div>
         </section>
@@ -926,16 +949,16 @@
       <div class="pagina" data-pagina="org">
         <h3 class="section-title">Lista de colaboradores (ORG)</h3>
         <section class="card wide" id="orgSection">
-          <div class="card-fonte"><span class="fonte-origem">De onde vem: aba ORG (relação colaborador × gestor)</span><p>Todo mundo que está na aba ORG da planilha, com o gestor de cada um. Para cada pessoa, o painel junta as ocorrências do filtro atual, as batidas digitadas e as horas do Cartão do mês. Pessoas do ORG “sem matrícula” são linhas em que a fórmula do ORG deu #N/A. Quem tem dados no arquivo mas não está no ORG não aparece nesta lista; o card dessa pessoa mostra “Não está no ORG”. Clique no nome para abrir o card.</p></div>
+          <div class="card-fonte"><span class="fonte-origem">De onde vem: aba ORG (relação colaborador × gestor)</span><p>Todo mundo que está na aba ORG da planilha, com o gestor de cada um. Para cada pessoa, o painel junta as ocorrências do filtro atual, as batidas digitadas e as horas do Cartão do mês. Pessoas do ORG “sem matrícula” são linhas em que a fórmula do ORG deu #N/A. O seletor ao lado da busca serve para achar cadastro a corrigir: sem matrícula, sem gestor, sem cargo ou sem área. Quem tem dados no arquivo mas não está no ORG não aparece nesta lista; o card dessa pessoa mostra “Não está no ORG”. Clique no nome para abrir o card.</p></div>
           <div class="org-resumo" id="orgResumo"></div>
           <div class="org-toolbar">
             <input type="text" id="orgBusca" placeholder="Buscar por nome, matrícula, gestor, cargo...">
             <select id="orgMostrar">
               <option value="">Todos do ORG</option>
-              <option value="com">Com ocorrência no filtro</option>
-              <option value="sem">Sem ocorrência no filtro</option>
-              <option value="semgestor">Sem gestor</option>
               <option value="semmat">Sem matrícula (#N/A no ORG)</option>
+              <option value="semgestor">Sem gestor</option>
+              <option value="semcargo">Sem cargo</option>
+              <option value="semarea">Sem área</option>
             </select>
             <span id="orgCount" style="font-size:12px;color:var(--c-muted);"></span>
           </div>
@@ -1028,7 +1051,7 @@
                 <label>Tipo de ocorrência</label>
                 <div class="chip-group" id="fTipo"></div>
               </div>
-              <div class="filter-group">
+              <div class="filter-group" id="fStatusGroup">
                 <label>Status</label>
                 <div class="chip-group" id="fStatus"></div>
               </div>
@@ -1312,7 +1335,8 @@
     historySort: { key:"data", dir:"desc" },
     historyPage: 1,
     historyPageSize: 25,
-    bancoMostrarTodos: false
+    bancoMostrarTodos: false,
+    mostrarTodos: {}   // chave da lista -> true quando o "Mostrar todos" dela está ligado
   };
 
   /* =========================================================
@@ -2038,7 +2062,16 @@
     });
     return Object.values(perColab).sort(function(a,b){
       return b.qtd-a.qtd || b.faltas-a.faltas || a.colaborador.localeCompare(b.colaborador,"pt-BR");
-    }).slice(0,n);
+    }).slice(0, n || undefined);
+  }
+  // Listas de "top" com o botão "Mostrar todos": mostra os LIMITE_LISTA
+  // primeiros e, com o botão ligado (state.mostrarTodos[chave]), a lista toda.
+  var LIMITE_LISTA = 20;
+  function limitarLista(lista, chave, limite, btnId){
+    var todos = !!state.mostrarTodos[chave], b = $(btnId);
+    b.hidden = lista.length <= limite;
+    b.textContent = todos ? "Mostrar só os " + limite + " primeiros" : "Mostrar todos (" + lista.length + ")";
+    return todos ? lista : lista.slice(0, limite);
   }
   // Hora extra e banco de horas do mês por colaborador. Fonte principal:
   // as linhas "Resumo Horas Cartão" (o Cartão Ponto do mês atual inteiro,
@@ -2080,13 +2113,56 @@
       var horas = (r.tratativa.getTime() - r.data.getTime()) / 3600000;
       if (horas < 0) return;
       var key = keyFn(r);
-      if (!groups[key]) groups[key] = { key:key, list:[] };
-      groups[key].list.push(horas);
+      if (!groups[key]) groups[key] = { key:key, list:[], ini:r.data, fim:r.tratativa, gestor:r.gestor, ref:r };
+      var g = groups[key];
+      g.list.push(horas);
+      if (r.data < g.ini) g.ini = r.data;
+      if (r.tratativa > g.fim) g.fim = r.tratativa;
     });
     return Object.values(groups).map(function(g){
       var soma = g.list.reduce(function(s,v){ return s+v; }, 0);
-      return { label:g.key, qtd:g.list.length, media: soma/g.list.length, maior: Math.max.apply(null, g.list) };
+      return { label:g.key, qtd:g.list.length, media: soma/g.list.length, maior: Math.max.apply(null, g.list),
+               ini:g.ini, fim:g.fim, gestor:g.gestor, ref:g.ref };
     }).sort(function(a,b){ return b.media-a.media; });
+  }
+
+  // Férias do relatório de Afastamentos (linhas "Afastamento" com situação
+  // que contém "férias"), para avisar na demora do PontoNet que o gestor
+  // (ou o próprio colaborador) estava de férias enquanto a ocorrência
+  // esperava tratativa. Usa o arquivo inteiro (state.records), sem filtro:
+  // com o filtro de gestor, as férias do próprio gestor (que é colaborador
+  // de outro gestor) sumiriam.
+  function feriasPorPessoa(){
+    var porMat = {}, porNome = {};
+    state.records.forEach(function(r){
+      if (r.tipo !== TIPO_AFASTAMENTO || stripAccents(r.situacao).toLowerCase().indexOf("ferias") < 0) return;
+      var dias = diasDoAtestado(r), p = { ini:dias[0], fim:dias[dias.length-1] };
+      if (r.matricula) (porMat[r.matricula] = porMat[r.matricula] || []).push(p);
+      var kn = chaveNome(r.colaborador);
+      (porNome[kn] = porNome[kn] || []).push(p);
+    });
+    return { porMat:porMat, porNome:porNome };
+  }
+  // O gestor só vem como nome: casa com o nome do colaborador no relatório
+  // (igual, sem acento/maiúscula) ou, se não houver, com o único nome que
+  // começa pelo nome do gestor ("MARIA SILVA" -> "MARIA SILVA SANTOS").
+  function feriasDoNome(fer, nome){
+    var k = chaveNome(nome);
+    if (!k) return [];
+    if (fer.porNome[k]) return fer.porNome[k];
+    var cands = Object.keys(fer.porNome).filter(function(n){ return n.indexOf(k + " ") === 0 || k.indexOf(n + " ") === 0; });
+    return cands.length === 1 ? fer.porNome[cands[0]] : [];
+  }
+  // Períodos de férias que cruzam a janela [ini, fim] (da 1ª ocorrência à
+  // última tratativa do grupo), já como texto "de 01/09 a 20/09".
+  function feriasNaJanela(lista, ini, fim){
+    var dIni = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate()), dFim = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
+    return lista.filter(function(p){ return p.ini <= dFim && p.fim >= dIni; })
+      .sort(function(a,b){ return a.ini - b.ini; })
+      .map(function(p){ return "de " + formatDateBR(p.ini) + " a " + formatDateBR(p.fim); });
+  }
+  function avisoFeriasHtml(avisos){
+    return avisos.map(function(t){ return '<div class="aviso-ferias">&#9888; ' + escapeHtml(t) + '</div>'; }).join("");
   }
 
   /* =========================================================
@@ -2115,7 +2191,11 @@
     var gestores = uniqueSorted(state.records, function(r){ return r.gestor; });
     var cargos = uniqueSorted(state.records, function(r){ return r.cargo; });
     var tipos = uniqueSorted(state.records.filter(function(r){ return !isTipoNaoOcorrencia(r.tipo); }), function(r){ return r.tipo; });
-    var statuses = uniqueSorted(state.records, function(r){ return r.status; });
+    // status só das ocorrências de verdade: as linhas-resumo (ORG, horas do
+    // Cartão, digitadas, afastamentos...) saem do macro como "Pendente" e
+    // faziam aparecer um "Pendente" que não existe na Tratamento. No fim do
+    // ciclo tudo está regularizado; com um só status o filtro some.
+    var statuses = uniqueSorted(state.records.filter(function(r){ return !isTipoNaoOcorrencia(r.tipo); }), function(r){ return r.status; });
     var colaboradores = uniqueSorted(state.records, function(r){ return r.colaborador; });
 
     var selGestor = $("fGestor");
@@ -2157,6 +2237,7 @@
       chip.addEventListener("click", function(){ chip.classList.toggle("active"); applyFilters(); });
       statusGroup.appendChild(chip);
     });
+    $("fStatusGroup").hidden = statuses.length < 2;
 
     // pré-preenche o período com o intervalo total do arquivo (ver
     // periodoCompleto: do primeiro dia com ocorrência ao fim do Cartão)
@@ -2460,7 +2541,7 @@
        {label:"Faltas", width:"64px", render:function(r){return r.faltas;}},
        {label:"Extras", width:"64px", render:function(r){return r.extras;}},
        {label:"Total", width:"64px", render:function(r){return '<strong>'+r.qtd+'</strong>';}}],
-      curtasPorColaborador(getCurtasRecords(), 10));
+      limitarLista(curtasPorColaborador(getCurtasRecords()), "curtas", LIMITE_LISTA, "btnCurtasTodos"));
 
     var horas = horasCartaoPorColaborador(records);
     var limiteBanco = 10;
@@ -2486,19 +2567,36 @@
       pausasTermicasResumo(),
       {rowClass:function(r){ return r.pausasMarcacoesImpares > 0 ? "row-alert" : ""; }, tableClass:"tabela-compacta"});
 
+    var fer = feriasPorPessoa();
+    var linhasDemoraGestor = demoraStats(records, function(r){ return r.gestor; });
+    linhasDemoraGestor.forEach(function(l){
+      var f = feriasNaJanela(feriasDoNome(fer, l.label), l.ini, l.fim);
+      l.avisos = f.length ? ["Esteve de férias " + f.join(" e ") + " — a demora da equipe pode ter vindo daí"] : [];
+    });
+    var linhasDemoraColab = demoraStats(records, function(r){ return r.colaborador; });
+    linhasDemoraColab.forEach(function(l){
+      var avisos = [];
+      var fg = feriasNaJanela(feriasDoNome(fer, l.gestor), l.ini, l.fim);
+      if (fg.length && l.gestor !== "Sem gestor") avisos.push("Gestor (" + l.gestor + ") de férias " + fg.join(" e "));
+      var fp = feriasNaJanela((l.ref.matricula && fer.porMat[l.ref.matricula]) || feriasDoNome(fer, l.label), l.ini, l.fim);
+      if (fp.length) avisos.push("O próprio colaborador esteve de férias " + fp.join(" e "));
+      l.avisos = avisos;
+    });
+    $("hintDemoraFerias").hidden = state.records.some(function(r){ return r.tipo === TIPO_AFASTAMENTO; });
+
     renderTableSimple($("tableDemoraGestor"),
-      [{label:"Gestor", render:function(r){return escapeHtml(r.label);}},
+      [{label:"Gestor", render:function(r){return escapeHtml(r.label) + avisoFeriasHtml(r.avisos);}},
        {label:"Ocorrências tratadas", width:"140px", render:function(r){return formatNum(r.qtd);}},
        {label:"Demora média", width:"110px", render:function(r){return formatDelay(r.media);}},
        {label:"Maior demora", width:"110px", render:function(r){return formatDelay(r.maior);}}],
-      demoraStats(records, function(r){ return r.gestor; }));
+      linhasDemoraGestor, {rowClass:function(r){ return r.avisos.length ? "row-ferias" : ""; }});
 
     renderTableSimple($("tableDemoraColaborador"),
-      [{label:"Colaborador", render:function(r){return colabLink(r.label);}},
+      [{label:"Colaborador", render:function(r){return colabLink(r.label) + avisoFeriasHtml(r.avisos);}},
        {label:"Ocorrências tratadas", width:"140px", render:function(r){return formatNum(r.qtd);}},
        {label:"Demora média", width:"110px", render:function(r){return formatDelay(r.media);}},
        {label:"Maior demora", width:"110px", render:function(r){return formatDelay(r.maior);}}],
-      demoraStats(records, function(r){ return r.colaborador; }));
+      linhasDemoraColab, {rowClass:function(r){ return r.avisos.length ? "row-ferias" : ""; }});
 
     renderDigitadas(ocorrenciasRecords);
     renderAbsenteismo();
@@ -2535,8 +2633,6 @@
     var nPessoas = Object.keys(pessoas).length;
     var noOrg = state.records.filter(function(r){ return r.tipo === TIPO_CADASTRO_ORG; }).length;
     var nEsq = dig.filter(isEsquecimento).length;
-    var nComOc = dig.filter(function(r){ return r.temOcorrenciaNoDia; }).length;
-    var nRedondo = dig.filter(function(r){ var m = r.data.getMinutes(); return m === 0 || m === 30; }).length;
     function pct(a, b){ return b ? Math.round(a*100/b) + "%" : "0%"; }
     function tile(label, valor, sub){
       return '<div class="colab-kpi"><div class="ck-label">'+label+'</div><div class="ck-value">'+valor+'</div><div class="ck-sub">'+sub+'</div></div>';
@@ -2544,9 +2640,7 @@
     $("digKpis").innerHTML =
       tile("Marcações digitadas", formatNum(dig.length), "batidas no filtro") +
       tile("Colaboradores", formatNum(nPessoas), noOrg ? pct(nPessoas, noOrg) + " das pessoas do ORG" : "com batida digitada") +
-      tile("Por esquecimento", formatNum(nEsq), pct(nEsq, dig.length) + " das digitadas") +
-      tile("No dia de uma ocorrência", formatNum(nComOc), pct(nComOc, dig.length) + " com ocorrência da Tratamento no mesmo dia") +
-      tile("Horário redondo", formatNum(nRedondo), pct(nRedondo, dig.length) + " em hora cheia ou meia hora (:00/:30)");
+      tile("Por esquecimento", formatNum(nEsq), pct(nEsq, dig.length) + " das digitadas");
 
     var porMotivo = countBy(dig, function(r){ return r.situacao || "Sem motivo"; });
     renderDonut($("chartDigMotivo"), Object.keys(porMotivo).sort(function(a,b){ return porMotivo[b]-porMotivo[a]; })
@@ -2559,7 +2653,8 @@
       if (!porColab[r.colaborador]) porColab[r.colaborador] = { label:r.colaborador, value:0, esq:0 };
       porColab[r.colaborador].value++; if (isEsquecimento(r)) porColab[r.colaborador].esq++;
     });
-    var topDig = Object.values(porColab).sort(function(a,b){ return b.value-a.value || a.label.localeCompare(b.label,"pt-BR"); }).slice(0,10);
+    var topDig = limitarLista(Object.values(porColab).sort(function(a,b){ return b.value-a.value || a.label.localeCompare(b.label,"pt-BR"); }),
+      "digTop", LIMITE_LISTA, "btnDigTopTodos");
     topDig.forEach(function(t){ t.color = "var(--c-orange)"; t.extra = t.esq + " por esquecimento"; });
     renderBarH($("chartDigTop"), topDig, { colab:true });
     renderBarH($("chartDigGestor"), ocorrenciasPorGestor(dig, 12));
@@ -2636,6 +2731,29 @@
     var out = [], n = Math.max(1, Math.round(r.diasAusencia || 1));
     for (var i = 0; i < n; i++) out.push(new Date(r.data.getFullYear(), r.data.getMonth(), r.data.getDate() + i));
     return out;
+  }
+
+  // Folga(s) encostada(s) num atestado, a partir do texto emenda_folga do
+  // CSV ("antes (DSR)", "depois (Feriado)", "antes (DSR) e depois (Compensado)"):
+  // "antes" = o dia logo antes do início; "depois" = o dia logo depois do
+  // último dia do atestado. Devolve [{quando, data, desc}].
+  function folgasEncostadas(r){
+    var t = r.emendaFolga || "", out = [];
+    var mA = /^antes \((.*?)\)(?= e depois \(|$)/.exec(t), mD = /(?:^| e )depois \((.*)\)$/.exec(t);
+    var dias = diasDoAtestado(r), ini = dias[0], fim = dias[dias.length-1];
+    if (mA) out.push({ quando:"antes", data:new Date(ini.getFullYear(), ini.getMonth(), ini.getDate()-1), desc:mA[1] });
+    if (mD) out.push({ quando:"depois", data:new Date(fim.getFullYear(), fim.getMonth(), fim.getDate()+1), desc:mD[1] });
+    if (!out.length && t) out.push({ quando:"", data:null, desc:t });
+    return out;
+  }
+  function diaSemanaCurto(d){ return DIAS_LABELS[DIAS_ORDER.indexOf(d.getDay())]; }
+  // "Dom 14/09 · DSR — dia antes do início" (uma linha por folga)
+  function folgaHtml(r){
+    return folgasEncostadas(r).map(function(f){
+      if (!f.data) return escapeHtml(f.desc);
+      return '<b>' + diaSemanaCurto(f.data) + ' ' + formatDateBR(f.data).slice(0,5) + ' &middot; ' + escapeHtml(f.desc) + '</b>' +
+        ' <span style="color:var(--c-muted-2)">&mdash; ' + (f.quando === "antes" ? "dia antes do início" : "dia depois do fim") + '</span>';
+    }).join("<br>");
   }
 
   function renderAbsenteismo(){
@@ -2723,11 +2841,14 @@
       : 'Nenhum atestado começou neste recorte.';
     renderBarV($("chartAbsDiaSemana"), ocorrenciasPorDiaSemana(iniciados).map(function(it){ it.color = "var(--c-terracotta)"; return it; }));
     renderTableSimple($("tableAbsEmendas"),
-      [{label:"Colaborador", width:"26%", render:function(r){ return colabLink(r.colaborador); }},
-       {label:"Gestor", width:"22%", render:function(r){ return escapeHtml(r.gestor); }},
-       {label:"Início", width:"124px", render:function(r){ return formatDateBR(r.data) + " " + DIAS_LABELS[DIAS_ORDER.indexOf(r.data.getDay())]; }},
-       {label:"Dias", width:"60px", render:function(r){ return r.diasAusencia; }},
-       {label:"Encostado em", render:function(r){ return escapeHtml(r.emendaFolga); }}],
+      [{label:"Colaborador", width:"22%", render:function(r){ return colabLink(r.colaborador); }},
+       {label:"Gestor", width:"18%", render:function(r){ return escapeHtml(r.gestor); }},
+       {label:"Atestado", width:"260px", render:function(r){
+          var dias = diasDoAtestado(r), fim = dias[dias.length-1];
+          return diaSemanaCurto(r.data) + ' ' + formatDateBR(r.data).slice(0,5) +
+            (dias.length > 1 ? ' a ' + diaSemanaCurto(fim) + ' ' + formatDateBR(fim).slice(0,5) : '') +
+            ' <span style="color:var(--c-muted-2)">(' + dias.length + (dias.length > 1 ? ' dias' : ' dia') + ')</span>'; }},
+       {label:"Folga encostada", render:folgaHtml}],
       emendas.slice().sort(function(a,b){ return a.data - b.data; }));
 
     // 5. ranking 3 meses com reincidência
@@ -2754,33 +2875,37 @@
     var cicloMapa = cicloSel || ciclos[0];
     var f = cicloInicioFim(cicloMapa), diasMapa = [];
     for (var d = new Date(f.ini); d <= f.fim; d = new Date(d.getFullYear(), d.getMonth(), d.getDate()+1)) diasMapa.push(d);
+    // todo mundo que teve atestado em algum momento dos 3 meses aparece no
+    // mapa (pedido do RH), mesmo sem atestado no ciclo mostrado
     var porPessoa = {};
     abs.forEach(function(r){
+      var k = chavePessoa(r);
+      if (!porPessoa[k]) porPessoa[k] = { colaborador:r.colaborador, dias:{}, desc:{}, total3m:0 };
+      porPessoa[k].total3m += diasDoAtestado(r).length;
       diasDoAtestado(r).forEach(function(dd){
         if (cicloDe(dd) !== cicloMapa) return;
-        var k = chavePessoa(r);
-        if (!porPessoa[k]) porPessoa[k] = { colaborador:r.colaborador, dias:{}, desc:{} };
         porPessoa[k].dias[dateKey(dd)] = true; porPessoa[k].desc[dateKey(dd)] = r.situacao;
       });
     });
     var pessoasMapa = Object.values(porPessoa).sort(function(a,b){
-      return Object.keys(b.dias).length - Object.keys(a.dias).length || a.colaborador.localeCompare(b.colaborador,"pt-BR");
+      return Object.keys(b.dias).length - Object.keys(a.dias).length || b.total3m - a.total3m || a.colaborador.localeCompare(b.colaborador,"pt-BR");
     });
-    $("absHeatHint").textContent = "Dias de atestado no ciclo " + cicloLabel(cicloMapa) + " (" + formatDateBR(f.ini) + " a " + formatDateBR(f.fim) + ")";
+    $("absHeatHint").textContent = "Dias de atestado no ciclo " + cicloLabel(cicloMapa) + " (" + formatDateBR(f.ini) + " a " + formatDateBR(f.fim) + ")" +
+      " · todas as " + pessoasMapa.length + " pessoas com atestado nos últimos 3 meses (linha sem quadrado vermelho = sem atestado neste ciclo)";
     if (!pessoasMapa.length){
-      $("absHeat").innerHTML = ""; $("absHeat").appendChild(emptyMsg("Nenhum atestado neste ciclo para o filtro atual."));
+      $("absHeat").innerHTML = ""; $("absHeat").appendChild(emptyMsg("Nenhum atestado nos últimos 3 meses para o filtro atual."));
     } else {
       var letras = ["D","S","T","Q","Q","S","S"];
       var html = '<table class="heat"><thead><tr><th class="nome">Colaborador</th>' + diasMapa.map(function(dd){
         var fds = dd.getDay() === 0 || dd.getDay() === 6;
         return '<th' + (fds ? ' class="fds"' : '') + '>' + dd.getDate() + '<br>' + letras[dd.getDay()] + '</th>';
-      }).join("") + '<th>Dias</th></tr></thead><tbody>';
+      }).join("") + '<th class="tot-h">Dias no<br>ciclo</th><th class="tot-h">Dias em<br>3 meses</th></tr></thead><tbody>';
       pessoasMapa.forEach(function(p){
         html += '<tr><td class="nome">' + colabLink(p.colaborador) + '</td>' + diasMapa.map(function(dd){
           var k = dateKey(dd), fds = dd.getDay() === 0 || dd.getDay() === 6;
           if (p.dias[k]) return '<td class="aus" title="' + escapeHtml(formatDateBR(dd) + " · " + p.desc[k]) + '"></td>';
           return '<td' + (fds ? ' class="fds"' : '') + '></td>';
-        }).join("") + '<td class="tot">' + Object.keys(p.dias).length + '</td></tr>';
+        }).join("") + '<td class="tot">' + (Object.keys(p.dias).length || "&ndash;") + '</td><td class="tot">' + p.total3m + '</td></tr>';
       });
       $("absHeat").innerHTML = html + '</tbody></table>';
     }
@@ -2817,23 +2942,24 @@
                extra: h ? h.minHoraExtraCartao : null, banco: h ? h.minBancoHorasCartao : null };
     });
 
-    var com = linhas.filter(function(l){ return l.ocorrencias > 0; }).length;
     var semGestor = linhas.filter(function(l){ return !l.gestor; }).length;
     var semMat = linhas.filter(function(l){ return !l.matricula; }).length;
+    var semCargo = linhas.filter(function(l){ return !l.cargo; }).length;
+    var semArea = linhas.filter(function(l){ return !l.area; }).length;
     $("orgResumo").innerHTML =
       '<span class="org-pill"><b>' + formatNum(linhas.length) + '</b> no ORG</span>' +
-      '<span class="org-pill"><b>' + formatNum(com) + '</b> com ocorrência no filtro</span>' +
-      '<span class="org-pill"><b>' + formatNum(linhas.length - com) + '</b> sem ocorrência</span>' +
+      '<span class="org-pill"><b>' + formatNum(semMat) + '</b> sem matrícula (#N/A)</span>' +
       '<span class="org-pill"><b>' + formatNum(semGestor) + '</b> sem gestor</span>' +
-      '<span class="org-pill"><b>' + formatNum(semMat) + '</b> sem matrícula (#N/A)</span>';
+      '<span class="org-pill"><b>' + formatNum(semCargo) + '</b> sem cargo</span>' +
+      '<span class="org-pill"><b>' + formatNum(semArea) + '</b> sem área</span>';
 
     var busca = stripAccents($("orgBusca").value.trim().toLowerCase());
     var modo = $("orgMostrar").value;
     var vis = linhas.filter(function(l){
-      if (modo === "com" && !l.ocorrencias) return false;
-      if (modo === "sem" && l.ocorrencias) return false;
       if (modo === "semgestor" && l.gestor) return false;
       if (modo === "semmat" && l.matricula) return false;
+      if (modo === "semcargo" && l.cargo) return false;
+      if (modo === "semarea" && l.area) return false;
       if (busca){
         var hay = stripAccents((l.colaborador+" "+l.matricula+" "+l.gestor+" "+l.cargo+" "+l.area).toLowerCase());
         if (hay.indexOf(busca) === -1) return false;
@@ -3011,6 +3137,7 @@
       $("emptyState").hidden = true;
       $("kpiRow").hidden = false;
       $("dashboardBody").hidden = false;
+      $("btnExplica").hidden = false;
 
       populateFilterOptions();
       renderDashboard();
@@ -3064,7 +3191,9 @@
     orientationDismissed = false;
     $("orientationBanner").hidden = true;
     $("orientationBanner").classList.remove("dismissed");
-    if (modoExplicacao) mostrarEsqueletoExplicacao();
+    // sem arquivo não há o que explicar: o modo explicação desliga e o botão some
+    if (modoExplicacao) setModoExplicacao(false);
+    $("btnExplica").hidden = true;
   });
 
   ["fGestor","fGrupo","fCargo"].forEach(function(id){ $(id).addEventListener("change", applyFilters); });
@@ -3090,10 +3219,17 @@
     state.historySort = { key:"data", dir:"desc" };
     state.historyPage = 1;
     state.bancoMostrarTodos = false;
+    state.mostrarTodos = {};
   }
   $("clearFilters").addEventListener("click", function(){
     limparControlesFiltro();
     applyFilters();
+  });
+  document.querySelectorAll(".btn-todos").forEach(function(b){
+    b.addEventListener("click", function(){
+      state.mostrarTodos[b.dataset.todos] = !state.mostrarTodos[b.dataset.todos];
+      applyFilters();
+    });
   });
   $("btnBancoTodos").addEventListener("click", function(){
     state.bancoMostrarTodos = !state.bancoMostrarTodos;
@@ -3239,7 +3375,7 @@
           return '<tr' + (isAtestado(r) ? ' class="row-alert"' : '') + '><td data-label="Situação">'+escapeHtml(r.situacao)+'</td>'+
                  '<td data-label="Início">'+formatDateBR(r.data)+'</td><td data-label="Fim">'+formatDateBR(fim)+'</td>'+
                  '<td data-label="Duração">'+dur+'</td>'+
-                 '<td data-label="Encostado em folga">'+(isAtestado(r) && r.emendaFolga ? escapeHtml(r.emendaFolga) : "&ndash;")+'</td></tr>';
+                 '<td data-label="Encostado em folga">'+(isAtestado(r) && r.emendaFolga ? folgaHtml(r) : "&ndash;")+'</td></tr>';
         }).join("") + '</tbody></table></div>';
     }
     if (digitadas.length){
@@ -3280,39 +3416,15 @@
   /* ---------- Modo explicação ("Entenda o painel") ----------
      É o próprio painel com as caixas .card-fonte visíveis (CSS:
      body.modo-explicacao) — assim a explicação fica ao lado do gráfico
-     de verdade, com os dados e filtros atuais. Sem arquivo carregado,
-     mostra o "esqueleto" dos cards com as explicações, para quem quer
-     entender o painel antes de abrir um CSV. */
+     de verdade, com os dados e filtros atuais. Só existe com arquivo
+     carregado (sem dados não há o que explicar: o botão fica escondido e a
+     tela inicial traz o "Como usar o painel"). */
   var modoExplicacao = false;
-  function mostrarEsqueletoExplicacao(){
-    $("emptyState").hidden = true;
-    $("kpiRow").hidden = false;
-    $("dashboardBody").hidden = false;
-    ["kpiColaboradores","kpiOcorrencias","kpiDemora"].forEach(function(id){ $(id).innerHTML = "&ndash;"; });
-    ["kpiColaboradoresSub","kpiOcorrenciasSub"].forEach(function(id){ $(id).textContent = ""; });
-    $("kpiDemoraSub").textContent = "Da ocorrência até a tratativa";
-    ["chartTipo","chartDiaSemana","chartPorData","chartPorGestor","chartPorCargo","chartTopColaboradores",
-     "tableExtraFalta","tableCurtas","chartBancoHoras","tableDemoraGestor","tableDemoraColaborador","tableOrg",
-     "chartDigMotivo","chartDigDiaSemana","chartDigData","chartDigTop","chartDigGestor","chartDigHora","tableDigEsquecimento","tableDigJust","tableDigLista",
-     "chartAbsEvolucao","tableAbsEvolucao","chartAbsGrupo","chartAbsDiaSemana","tableAbsRanking","tableAbsEmendas","absHeat"].forEach(function(id){
-      $(id).innerHTML = ""; $(id).appendChild(emptyMsg("Carregue o CSV para ver os dados deste quadro."));
-    });
-    $("btnBancoTodos").hidden = true;
-    $("orgResumo").innerHTML = ""; $("orgCount").textContent = "";
-    $("digKpis").innerHTML = ""; $("digCount").textContent = ""; $("digSemDados").hidden = true; $("digCorpo").hidden = false;
-    $("absResumo").innerHTML = ""; $("absEmendaResumo").innerHTML = ""; $("absSemDados").hidden = true; $("absCorpo").hidden = false;
-    $("historyBody").innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--c-muted-2);padding:20px;">Carregue o CSV para ver o histórico.</td></tr>';
-    $("historyPagination").innerHTML = ""; $("historyCount").textContent = "";
-  }
   function setModoExplicacao(on){
     modoExplicacao = on;
     document.body.classList.toggle("modo-explicacao", on);
     $("btnExplica").setAttribute("aria-pressed", on ? "true" : "false");
     $("btnExplicaTxt").textContent = on ? "Voltar ao painel" : "Entenda o painel";
-    if (!state.records.length){
-      if (on) mostrarEsqueletoExplicacao();
-      else { $("emptyState").hidden = false; $("kpiRow").hidden = true; $("dashboardBody").hidden = true; }
-    }
     window.scrollTo({ top:0, behavior:"smooth" });
   }
   $("btnExplica").addEventListener("click", function(){ setModoExplicacao(!modoExplicacao); });

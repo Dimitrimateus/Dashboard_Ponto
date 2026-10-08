@@ -151,7 +151,7 @@ if 'ORG' in d and ui.get('orgResumo'):
     total=len(mats)+len(semmat)
     okn=ui['orgResumo'].split()[0]==str(total) and ui['orgLinhas']==total
     chk('Lista de colaboradores (ORG)', okn, f"{total} no ORG" if okn else f"painel {ui['orgResumo']!r} {ui['orgLinhas']} / fonte {total}")
-# marcações digitadas: total, pessoas, por motivo e top 10, direto da aba formatada
+# marcações digitadas: total, pessoas, por motivo e top 20, direto da aba formatada
 abaDig=next((n for n,rw in d.items() if rw and all(k in hdrmap(rw[0]) for k in ('Matrícula','Data','Hora','Motivo','Justificativa'))), None)
 if abaDig and ui.get('digKpis'):
     rw=d[abaDig]; hd=hdrmap(rw[0])
@@ -162,8 +162,8 @@ if abaDig and ui.get('digKpis'):
     okk=k[1]==str(len(linhasD)) and k[4]==str(len({s(r[hd['Matrícula']]) for r in linhasD})) and ui['digLinhas']==len(linhasD)
     okm={a:int(b) for a,b in ui['digMotivo']}==dict(mot)
     gt=tips(ui['digTop']); corte=min(gt.values()) if gt else 0
-    okt=all(pes[n]==v for n,v in gt.items()) and len(gt)==min(10,len(pes)) and all(v<=corte for n,v in pes.items() if n not in gt)
-    chk('Marcações digitadas (total, pessoas, motivo, top 10)', okk and okm and okt,
+    okt=all(pes[n]==v for n,v in gt.items()) and len(gt)==min(20,len(pes)) and all(v<=corte for n,v in pes.items() if n not in gt)
+    chk('Marcações digitadas (total, pessoas, motivo, top 20)', okk and okm and okt,
         f"{len(linhasD)} batidas de {len({s(r[hd['Matrícula']]) for r in linhasD})} pessoas; {dict(mot)}" if okk and okm and okt else f"painel {k} {ui['digMotivo']} {gt} / fonte {len(linhasD)} {dict(mot)} {pes.most_common(10)}")
 # absenteísmo (atestados): dias por ciclo, pessoas por ciclo, encostados em folga e reincidentes,
 # recalculados direto dos 3 Cartões (dia a dia), sem passar pelo CSV

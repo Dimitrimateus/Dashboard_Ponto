@@ -127,8 +127,8 @@ térmicas, demora no PontoNet e histórico).
   matrícula, gestor, cargo, setor, ocorrências no período (por tipo e linha a linha), horas do
   Cartão e saldo, extra e falta no mesmo dia, curtas, demora no PontoNet e pausas.
 - **Entenda o painel** (botão no topo): liga o modo explicação. É o mesmo painel, com uma
-  caixa laranja em cada número, gráfico e tabela dizendo de onde vem a informação. Funciona
-  também sem arquivo carregado.
+  caixa laranja em cada número, gráfico e tabela dizendo de onde vem a informação. Só aparece
+  depois de carregar o arquivo (sem arquivo, a tela inicial traz o "Como usar o painel").
 
 A conferência das ferramentas (`ferramentas/`) foi atualizada: 15/15 itens batem com a
 planilha de 28/08 a 27/09 (versão _2), incluindo extra, banco e saldo de cada colaborador.
@@ -248,6 +248,21 @@ justificativa, ou o RH lançou no sistema.
 - **Pausas Térmicas**: a tabela fica na própria seção (não é mais uma janela), com colunas
   estreitas e o cabeçalho em duas linhas, cabendo na tela sem rolar para o lado.
 - Conferência: 18/18.
+
+## Revisão do painel com o Dimitri (08/10)
+- Tela inicial (sem arquivo) com o passo a passo "Como usar o painel"; o botão "Entenda o
+  painel" só aparece com arquivo carregado.
+- Colaboradores em destaque: ocorrências curtas mostram 20 pessoas e "Mostrar todos".
+- Marcações digitadas: saíram os cards "No dia de uma ocorrência" e "Horário redondo"; o top de
+  colaboradores mostra 20 e "Mostrar todos".
+- Afastamentos: a lista de atestados encostados em folga mostra o dia da folga (data, dia da
+  semana, o que o Cartão diz) e se ela fica antes do início ou depois do fim; o mapa colaborador
+  × dia lista todos que tiveram atestado nos 3 meses, com dias no ciclo e em 3 meses.
+- Demora no PontoNet: aviso em amarelo quando o gestor (ou o próprio colaborador) esteve de
+  férias entre a ocorrência e a tratativa, pelas linhas "Afastamento" com situação "Férias".
+- Lista do ORG: o seletor agora é só de cadastro (sem matrícula, sem gestor, sem cargo, sem área).
+- Filtro de status: o "Pendente" vinha das linhas-resumo; agora só conta ocorrências, e o
+  filtro some quando há um só status.
 
 ## Ordem de uso no mês
 

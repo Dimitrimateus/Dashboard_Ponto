@@ -240,7 +240,18 @@ dias_ausencia, emenda_folga
   (`periodoCompleto`) vai da 1ª data das ocorrências/curtas até a data das linhas-resumo do
   Cartão (fim do ciclo). Botão **"Entenda o painel"** liga `body.modo-explicacao`, que mostra
   as caixas `.card-fonte` (texto de "de onde vem" de cada card, escrito a partir do guia do
-  Dimitri); sem arquivo, mostra o esqueleto dos cards.
+  Dimitri). **Só aparece com arquivo carregado** (pedido do Dimitri, 08/10); sem arquivo, a
+  tela inicial (`#emptyState`) traz o passo a passo "Como usar o painel".
+- Listas com "Mostrar todos" (`limitarLista`, `state.mostrarTodos`, botões `.btn-todos`): curtas
+  e top de digitadas mostram 20 (`LIMITE_LISTA`).
+- Filtro de status: opções só das ocorrências (as linhas-resumo saem do macro como "Pendente");
+  com um só status o grupo (`#fStatusGroup`) some.
+- Demora no PontoNet: `feriasPorPessoa` (linhas "Afastamento" com "férias") + `feriasDoNome`
+  (gestor casado pelo nome, ou nome único que começa por ele) → aviso amarelo (`row-ferias`)
+  se as férias cruzam a janela 1ª ocorrência → última tratativa. Sem aba Afastamentos no CSV,
+  avisa no card. A demora em si não muda.
+- Lista do ORG: seletor só de cadastro (sem matrícula/gestor/cargo/área). Não dá para listar
+  "fora do Cartão": o "Resumo Horas Cartão" só traz quem teve hora > 0 (163 de 202).
 - `limparControlesFiltro()` zera filtros, busca e ordenação: usada em "Limpar filtros", ao tirar
   o arquivo e ao carregar um novo.
 - **Card do colaborador**: qualquer elemento com `data-colab` (nomes nos gráficos de top e de
@@ -395,6 +406,12 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
 - 07/10: macro FormatarAfastamentos e linhas "Afastamento" no CSV (relatório HRCL006 substitui o
   Cartão como fonte dos atestados); menu de seções; Pausas na própria seção com colunas estreitas;
   evolução de atestados reage ao ciclo.
+- 08/10: revisão do painel com o Dimitri (README, "Revisão do painel com o Dimitri"): guia na tela
+  inicial, "Entenda o painel" só com arquivo, curtas/top digitadas com 20 + "Mostrar todos", 2
+  cards de digitadas retirados, folga encostada com data, mapa com todos os atestados de 3 meses,
+  aviso de férias na demora, seletor do ORG de cadastro, filtro de status sem o falso "Pendente".
+  Planilha nova dele (ORG corrigido, 210 pessoas) **sem a aba Afastamentos**: conferência 18/18
+  com o Absenteísmo do Cartão; o aviso de férias foi testado com linhas de férias simuladas.
 
 ## 12. Estado atual e como continuar (08/10/2026)
 
@@ -421,6 +438,8 @@ mensagem e da linha amarela).
 - Visões de absenteísmo escolhidas: 2, 4, 5, 6, 7, 8 (sem cards de KPI e sem longo × curto).
 - O relatório de digitadas não diz quem digitou (colaborador × RH): não há como separar.
 - Painel em seções com menu ☰; Pausas Térmicas na própria seção, sem rolagem lateral.
+- (08/10) Sem os cards "No dia de uma ocorrência" e "Horário redondo" nas digitadas; sem
+  "com/sem ocorrência no filtro" na lista do ORG; "Entenda o painel" só com arquivo carregado.
 
 **Aguardando o Dimitri escolher** (sugestões feitas em 07/10, com base no HRCL006):
 1. Absenteísmo completo: somar acidente de trabalho e faltas injustificadas (e justificadas e
