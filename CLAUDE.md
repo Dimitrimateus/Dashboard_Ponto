@@ -412,6 +412,11 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   aviso de férias na demora, seletor do ORG de cadastro, filtro de status sem o falso "Pendente".
   Planilha nova dele (ORG corrigido, 210 pessoas) **sem a aba Afastamentos**: conferência 18/18
   com o Absenteísmo do Cartão; o aviso de férias foi testado com linhas de férias simuladas.
+  Depois ele mandou a versão "com Marcações e Afastamentos" (a de 07/10, ORG antigo, 215): a aba
+  Afastamentos dela foi inserida na planilha de ORG corrigido (`adicionar_aba_xlsx.py`).
+  Resultado: 210 no ORG, 283 afastamentos, 33 atestados; conferência 18/18. Aviso de férias: só
+  1 gestor. **O Tyrone não está no HRCL006 nem no Cartão** (só na RE): o relatório de
+  afastamentos precisa ser exportado incluindo os gestores para o aviso dele aparecer.
 
 ## 12. Estado atual e como continuar (08/10/2026)
 

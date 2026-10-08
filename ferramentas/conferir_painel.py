@@ -133,7 +133,7 @@ for e in E:
 def fd(h): return (f"{h:.1f}h" if h<24 else f"{h/24:.1f} dias").replace('.',',')
 ok=True; bad=[]
 for row in ui['demoraG']:
-    l=g.get(row[0],[]); exp=[str(len(l)), fd(sum(l)/len(l)) if l else '-', fd(max(l)) if l else '-']
+    l=g.get(row[0].split('⚠')[0].strip(),[]); exp=[str(len(l)), fd(sum(l)/len(l)) if l else '-', fd(max(l)) if l else '-']
     if row[1:]!=exp: ok=False; bad.append((row,exp))
 n=sum(len(v) for v in g.values())
 chk('Demora no PontoNet por gestor', ok and len(ui['demoraG'])==len(g), f"{n} ocorrências tratadas; KPI diz {kp['Demora média no PontoNet'][2]}" + (f"; {bad[:3]}" if bad else ''))
