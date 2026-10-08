@@ -47,8 +47,26 @@ Option Explicit
 '      (ou copie/cole o conteúdo em um Módulo novo).
 '   3) Volte à planilha, pressione Alt+F8, selecione "PURO_Para_EDITADO"
 '      e clique em Executar.
+'   ATENÇÃO: prefira COPIAR/COLAR. "Importar Arquivo" lê o .bas como ANSI e
+'   estraga os acentos (o .bas está em UTF-8), e aí a busca de cabeçalhos com
+'   acento ("Situação", "Dt.Apuraç.", "Marcações") deixa de achar a coluna.
+' --------------------------------------------------------------------------------
+' COMO SE LIGA AO RESTO DO PROJETO
+'   aba PURO (exportação de ocorrências do sistema) -> esta macro -> aba
+'   EDITADO_<MES><AA> -> o RH trata as ocorrências nessa aba (preenche Gestor,
+'   Situação, Tratamento, Pontonet) e ela vira a aba "Tratamento" (ou
+'   "Tratamento - Internos"/"Tratamento - Externos") -> o GerarAbaCSV
+'   (GerarCSVPonto) lê essa aba pelos NOMES de cabeçalho e gera as ocorrências do
+'   CSV -> painel (index.html). Por isso os nomes em targetHeaders (passo 3)
+'   não devem mudar sem conferir o GerarCSVPonto.
+'   Não depende de nenhum outro módulo (LimparTexto está no fim deste arquivo).
 ' ================================================================================
 
+' Macro principal. Fluxo: 0) prepara o Excel; 1) acha a aba PURO; 2) mapeia os
+' cabeçalhos; 3) define o layout de saída; 4) avisa cabeçalhos faltando;
+' 5) descobre o mês para o nome da aba; 6) cria a aba; 7) cabeçalho;
+' 8) copia linha a linha; 9) aparência. Os rótulos Finalizar/TratarErro, no fim,
+' garantem que o Excel volte ao normal mesmo se der erro.
 Sub PURO_Para_EDITADO()
 
     Dim wbAtual As Workbook
@@ -74,6 +92,8 @@ Sub PURO_Para_EDITADO()
     Dim sufixo As Long
     Dim monthAbbrev As Variant
 
+    ' Qualquer erro não previsto pula para TratarErro (fim da rotina), que mostra a
+    ' mensagem e restaura o Excel.
     On Error GoTo TratarErro
 
     ' ----------------------------------------------------------------------
@@ -279,6 +299,8 @@ Sub PURO_Para_EDITADO()
         wsEditado.Name = nomeAbaFinal
     End If
 
+    ' Se chegou aqui, a aba já está pronta: pula o bloco CriarComSufixo, que só é
+    ' usado quando o usuário escolheu "Não" (criar cópia numerada).
     GoTo PularCriacaoComSufixo
 
 CriarComSufixo:
@@ -387,6 +409,8 @@ Finalizar:
     Application.StatusBar = False
     Exit Sub
 
+' Rótulo de erro: só é alcançado via "On Error GoTo TratarErro". Mostra o erro e
+' a linha da PURO em que estava, e volta para Finalizar.
 TratarErro:
     MsgBox "Ocorreu um erro inesperado durante o processamento." & vbCrLf & _
            "Erro " & Err.Number & ": " & Err.Description & vbCrLf & _

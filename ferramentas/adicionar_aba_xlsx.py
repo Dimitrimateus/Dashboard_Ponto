@@ -22,11 +22,17 @@ LAYOUTS = {
         larg=[11, 36, 11, 9, 30, 11, 11, 11, 11, 8, 8, 12, 7], texto={4}, hora={7, 9}, dur={11}),
 }
 
+# Número da coluna -> letras do Excel (1 = "A", 28 = "AB").
 def letra(n):
     s = ''
     while n: n, r = divmod(n - 1, 26); s = chr(65 + r) + s
     return s
 
+# Para a aba nova ter cabeçalho cinza em negrito e bordas, acrescenta no FIM do styles.xml
+# uma fonte, um preenchimento, uma borda e 6 formatos de célula (os índices dos estilos que já
+# existem não mudam, então as outras abas continuam iguais). add() insere um item numa lista
+# do XML e corrige o atributo count dela. numFmtId: 14 = data, 20 = h:mm, 46 = [h]:mm:ss,
+# 49 = texto (mantém zeros à esquerda).
 def acrescentar_estilos(styles):
     """Devolve (styles novo, ids) com 5 xfs novos: cabeçalho, data, hora, número, texto."""
     def add(tag, item):
@@ -51,6 +57,10 @@ def acrescentar_estilos(styles):
     ids['txt'] = add('cellXfs', '<xf numFmtId="49" fontId="0" fillId="0" borderId="%d" xfId="0" applyNumberFormat="1" applyBorder="1"/>' % borda)
     return styles, ids
 
+# Gera o XML da aba nova: linha 1 = cabeçalho; depois uma linha por item de "linhas".
+# O tipo de cada valor decide a célula: datetime -> número de série com formato de data;
+# colunas de hora/duração -> fração do dia; número -> número; o resto -> texto (inlineStr,
+# que não precisa mexer no sharedStrings.xml). Também congela a linha 1 e liga o filtro.
 def montar_sheet(linhas, ids, lay):
     CAB, LARG, TEXTO_COLS = lay['cab'], lay['larg'], lay['texto']
     base = datetime.datetime(1899, 12, 30)
@@ -84,6 +94,11 @@ def montar_sheet(linhas, ids, lay):
             '<sheetFormatPr defaultRowHeight="15"/><cols>%s</cols><sheetData>%s</sheetData>'
             '<autoFilter ref="%s"/></worksheet>') % (ref, cols, ''.join(rows), ref)
 
+# Copia o .xlsx de entrada para o de saída parte por parte, trocando só:
+#   workbook.xml (registra a aba), workbook.xml.rels (aponta para o arquivo da aba),
+#   [Content_Types].xml (declara o tipo), styles.xml (estilos novos no fim) e
+#   docProps/app.xml (lista de nomes de abas), e acrescenta xl/worksheets/sheetN.xml.
+# Recusa se já existir uma aba com o mesmo nome. Nunca altera a planilha de entrada.
 def adicionar_aba(entrada, saida, linhas, nome_aba, lay):
     zin = zipfile.ZipFile(entrada)
     nomes = zin.namelist()
@@ -118,6 +133,7 @@ def adicionar_aba(entrada, saida, linhas, nome_aba, lay):
         zout.writestr(parte, montar_sheet(linhas, ids, lay).encode('utf-8'))
     return parte
 
+# Argumentos: entrada.xlsx saida.xlsx linhas.pkl marcacoes|afastamentos ["Nome da aba"].
 if __name__ == '__main__':
     linhas = pickle.load(open(sys.argv[3], 'rb'))
     lay = LAYOUTS[sys.argv[4]]

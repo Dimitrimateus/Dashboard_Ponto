@@ -3,15 +3,24 @@ import zipfile, re, html, sys, datetime, pickle, unicodedata
 # exportado pelo sistema (o .xlsx do Senior tem caminhos com "\" dentro do zip, por isso o
 # XML é lido na mão) e devolve a mesma tabela que a macro deixa na aba.
 # Uso: python3 formatar_marcacoes.py "Marcações digitadas.xlsx" [saida.pkl]
+# Onde se encaixa: é uma das "ferramentas de conferência sem Excel" (CLAUDE.md, seção 10).
+# A tabela gerada (lista de listas, na ordem de CAB) vai para um .pkl, que o
+# adicionar_aba_xlsx.py insere como aba na planilha de Tratamento. formatar_afastamentos.py
+# reaproveita ler_planilha, simples e texto deste arquivo.
+# CAB = cabeçalho de saída (igual ao da macro); DIAS = sigla do dia (segunda = índice 0).
 CAB = ["Matrícula", "Colaborador", "Cód. Cargo", "Cargo", "Cód. Local", "Local", "Origem",
        "Data", "Hora", "Dia da semana", "Coletor", "Função", "Motivo", "Justificativa"]
 DIAS = ["SEG", "TER", "QUA", "QUI", "SEX", "SAB", "DOM"]
 
+# Letras da coluna do Excel -> número ("A" = 1, "AB" = 28).
 def col_num(letras):
     n = 0
     for ch in letras: n = n * 26 + ord(ch) - 64
     return n
 
+# Lê a 1ª planilha do .xlsx direto do XML (sem openpyxl): devolve {linha: {coluna: valor}}.
+# Texto vem de <t> (string embutida) e número de <v>; datas e horas chegam como
+# número de série do Excel (dias desde 30/12/1899), como na macro com .Value2.
 def ler_planilha(caminho):
     z = zipfile.ZipFile(caminho)
     nome = next(n for n in z.namelist() if n.replace('\\', '/').endswith('sheet1.xml'))
@@ -31,15 +40,21 @@ def ler_planilha(caminho):
         linhas[int(m.group(1))] = cel
     return linhas
 
+# Maiúsculo e sem acento ("Crachá" -> "CRACHA"): para achar os títulos.
 def simples(v):
     t = str(v or '').strip().upper()
     return unicodedata.normalize('NFD', t).encode('ascii', 'ignore').decode()
 
+# Valor -> texto limpo (número inteiro sem ".0", sem quebras de linha nem espaços nas pontas).
 def texto(v):
     if v is None: return ''
     if isinstance(v, float) and v.is_integer(): v = int(v)
     return str(v).replace('\r', ' ').replace('\n', ' ').strip()
 
+# Mesma lógica da macro: 1) acha as colunas pelo cabeçalho "Crachá..." (reserva = posições
+# do relatório de 28/08 a 27/09); 2) cada linha com crachá e data numéricos vira uma
+# marcação; linha com crachá vazio é continuação do motivo/justificativa da anterior.
+# Devolve (tabela, quantos motivos foram juntados).
 def formatar(linhas):
     pos = dict(cracha=1, nome=3, cargocod=6, cargo=7, local=9, origem=10, data=11, hora=12,
                coletor=13, funcao=14, motivo=15, texto=17)
@@ -78,6 +93,7 @@ def formatar(linhas):
             if t: out[-1][13] = (out[-1][13] + ' ' + t).strip()
     return out, continuacoes
 
+# Linha de comando: lê o .xlsx do 1º argumento e grava o .pkl (2º argumento ou marcacoes.pkl).
 if __name__ == '__main__':
     tab, cont = formatar(ler_planilha(sys.argv[1]))
     pickle.dump(tab, open(sys.argv[2] if len(sys.argv) > 2 else 'marcacoes.pkl', 'wb'))

@@ -3,6 +3,9 @@ import re, sys
 # O VBA não diferencia maiúsculas: uma função "EmendaFolga" e um parâmetro "emendaFolga" no mesmo
 # módulo dão erro de compilação (CLAUDE.md, armadilha 1). Rode antes de entregar qualquer .bas.
 # Uso: python3 ferramentas/checar_colisoes_vba.py GerarCSVPonto/GerarCSVPonto.bas [outros.bas ...]
+# procs/consts = nomes de Sub/Function e de constantes; nomes = variáveis (Dim) e parâmetros.
+# Tudo em minúsculas, porque é assim que o VBA compara. Qualquer nome nos dois grupos é colisão.
+# Sai com código 1 se houver colisão (dá para usar em script).
 ok = True
 for caminho in sys.argv[1:]:
     s = open(caminho, encoding='utf-8').read()

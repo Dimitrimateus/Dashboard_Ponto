@@ -5,6 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Painel de Ponto | Aurora Coop</title>
 <style>
+  /* =====================================================================
+     APARÊNCIA (CSS). Tudo o que muda cor, tamanho e disposição na tela.
+     - As cores ficam em variáveis (:root, logo abaixo). Para trocar uma cor do
+       painel inteiro, troque só a variável. Os nomes "navy", "green", "slate"
+       vêm de uma versão antiga com outra paleta: hoje apontam para as cores da
+       marca Aurora (preto, laranja, vermelho, amarelo).
+     - O JS liga e desliga classes no <body> que mudam a tela inteira:
+         .modo-explicacao  mostra as caixas "De onde vem" (.card-fonte)
+         .sem-lateral      esconde a coluna da direita (filtros)
+       e o atributo [hidden] esconde qualquer elemento (regra com !important).
+     - Celular e tablet: blocos @media no fim ("Responsive"). Abaixo de 768px as
+       tabelas viram cartões empilhados (cada célula mostra o rótulo do
+       data-label que o JS escreve em cada <td>).
+     ===================================================================== */
   :root{
     color-scheme: light;
     --c-paper:#F7F7F7;
@@ -24,12 +38,15 @@
     --c-slate:#F7931E;
     --c-mustard:#B3701A;
     --c-taupe:#58595B;
+    /* arredondamento dos cantos (cards, painéis, "pílulas") */
     --radius-tile:10px;
     --radius-card:8px;
     --radius-panel:14px;
     --radius-pill:999px;
+    /* fontes do sistema (sem baixar nada da internet): títulos com serifa */
     --font-serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', serif;
     --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    /* largura da coluna de filtros e altura da faixa do topo */
     --sidebar-w: 320px;
     --header-h: 64px;
   }
@@ -638,8 +655,24 @@
   }
 </style>
 </head>
+<!-- =====================================================================
+     ESTRUTURA DA TELA (HTML). Nada aqui tem dados: tudo que é número,
+     gráfico ou tabela é preenchido pelo JavaScript (no fim do arquivo) nos
+     elementos com id. Regra para quem for mexer: o JS procura os elementos
+     pelo id ($("id")), então renomear um id exige renomear lá também.
+       topo (header.topbar) .... marca, período, nome do arquivo, botões
+       menu de seções (nav) .... lista as .pagina abaixo
+       conteúdo (main) ......... guia inicial, KPIs e as seções (.pagina)
+       lateral (aside) ......... Carregar dados, Filtros, Privacidade
+       barra do celular, balão dos gráficos e o card do colaborador (modal)
+     ===================================================================== -->
 <body>
 
+  <!-- Faixa preta do topo: menu ☰, logo (imagem em base64 dentro do próprio
+       arquivo, para funcionar sem internet), período em destaque
+       (atualizarPeriodoTopo), nome do arquivo e os botões "Esconder filtros"
+       (setLateralOculta) e "Entenda o painel" (setModoExplicacao; só aparece
+       com arquivo carregado). -->
   <header class="topbar">
     <div class="brand">
       <button type="button" class="btn-menu" id="btnMenu" aria-expanded="false" aria-controls="menuSecoes" title="Escolher a seção do painel">
@@ -666,12 +699,16 @@
     </div>
   </header>
 
+  <!-- Menu de seções: cada botão tem data-pagina igual ao data-pagina de uma
+       .pagina mais abaixo (irParaPagina). Para criar uma seção nova: um botão
+       aqui + uma <div class="pagina" data-pagina="..."> no conteúdo. -->
   <nav class="menu-secoes" id="menuSecoes" hidden aria-label="Seções do painel">
     <div class="menu-titulo">Seções do painel</div>
     <button type="button" data-pagina="geral">Visão geral</button><button type="button" data-pagina="destaque">Colaboradores em destaque</button><button type="button" data-pagina="pausas">Pausas térmicas</button><button type="button" data-pagina="digitadas">Marcações digitadas</button><button type="button" data-pagina="afastamentos">Afastamentos</button><button type="button" data-pagina="demora">Demora no PontoNet</button><button type="button" data-pagina="org">Lista de colaboradores</button><button type="button" data-pagina="historico">Histórico</button>
     <button type="button" data-pagina="todas" class="menu-todas">Todas as seções numa página só</button>
   </nav>
 
+  <!-- Aviso "gire o celular" (só em celular na vertical; fechável). -->
   <div class="orientation-banner" id="orientationBanner" hidden>
     <span class="phone-icon" aria-hidden="true"></span>
     <p>Para uma melhor visualização dos gráficos e relatórios, gire o celular para a horizontal.</p>
@@ -681,11 +718,15 @@
   <div class="layout">
     <main class="content" id="content">
 
+      <!-- Faixa laranja do modo "Entenda o painel" (só visível com
+           body.modo-explicacao). -->
       <section class="explica-banner" id="explicaBanner">
         <p><strong>Modo explicação.</strong> É o mesmo painel, com uma caixa laranja em cada número, gráfico e tabela dizendo de onde vem a informação e como ela é calculada. Os filtros continuam funcionando. Clique em <strong>Voltar ao painel</strong> para esconder as explicações.</p>
         <button type="button" class="btn" id="btnExplicaVoltar">Voltar ao painel</button>
       </section>
 
+      <!-- Tela inicial, sem arquivo: guia "Como usar o painel". Escondida em
+           handleFile e mostrada de novo pelo botão "Carregar outro arquivo". -->
       <section class="empty-state" id="emptyState">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <h2>Nenhum dado carregado</h2>
@@ -703,6 +744,9 @@
         </div>
       </section>
 
+      <!-- Cards de número (KPIs), preenchidos por renderKPIs. Só aparecem na seção
+           "Visão geral". Cada .card-fonte dentro de um card é o texto "De onde vem"
+           do modo explicação. -->
       <section class="kpis" id="kpiRow" hidden>
         <div class="kpi-tile k-navy">
           <div class="kpi-label">Colaboradores envolvidos</div>
@@ -726,8 +770,12 @@
 
       <div id="dashboardBody" hidden>
 
+      <!-- Corpo do painel: uma .pagina por seção do menu. Cada card tem título,
+           dica, o texto "De onde vem" (.card-fonte) e um contêiner vazio com id
+           que o JS preenche (chart* = gráfico SVG, table* = tabela). -->
       <div class="pagina" data-pagina="geral">
         <h3 class="section-title">Visão geral das ocorrências</h3>
+        <!-- Seção "Visão geral": gráficos de ocorrências da Tratamento. -->
         <section class="grid">
           <div class="card">
             <div class="card-title">Ocorrências por tipo</div>
@@ -762,6 +810,7 @@
         </section>
 
       </div>
+      <!-- Seção "Colaboradores em destaque": top, extra e falta, curtas, horas. -->
       <div class="pagina" data-pagina="destaque">
         <h3 class="section-title">Colaboradores em destaque</h3>
         <section class="grid">
@@ -794,6 +843,7 @@
         </section>
 
       </div>
+      <!-- Seção "Pausas térmicas": tabela de renderDashboard (pausasTermicasResumo). -->
       <div class="pagina" data-pagina="pausas">
         <h3 class="section-title">Pausas Térmicas</h3>
         <section class="grid">
@@ -806,6 +856,8 @@
         </section>
 
       </div>
+      <!-- Seção "Marcações digitadas" (renderDigitadas). digSemDados aparece quando
+           o CSV não tem linhas "Marcação Digitada". -->
       <div class="pagina" data-pagina="digitadas">
         <h3 class="section-title">Marcações digitadas</h3>
         <div id="digSemDados" class="card wide" hidden><div class="chart-empty">Este CSV não traz as marcações digitadas. Formate o relatório com a macro FormatarMarcacoesDigitadas, traga a aba para a planilha de Tratamento e gere o CSV de novo.</div></div>
@@ -873,6 +925,8 @@
         </div>
 
       </div>
+      <!-- Seção "Afastamentos — atestados" (renderAbsenteismo), com o seletor de
+           ciclo (#absCiclo) e de agrupamento (#absAgrupar). -->
       <div class="pagina" data-pagina="afastamentos">
         <h3 class="section-title">Afastamentos — atestados</h3>
         <div id="absSemDados" class="card wide" hidden><div class="chart-empty">Este CSV não traz os afastamentos. Formate o relatório Histórico de Afastamentos com a macro FormatarAfastamentos, traga a aba para a planilha de Tratamento e gere o CSV de novo.</div></div>
@@ -927,6 +981,8 @@
         </div>
 
       </div>
+      <!-- Seção "Demora no PontoNet": tabelas por gestor e por colaborador, com o
+           aviso de férias. -->
       <div class="pagina" data-pagina="demora">
         <h3 class="section-title">Demora de tratativa no PontoNet</h3>
         <section class="grid">
@@ -946,6 +1002,7 @@
         </section>
 
       </div>
+      <!-- Seção "Lista de colaboradores (ORG)" (renderListaORG). -->
       <div class="pagina" data-pagina="org">
         <h3 class="section-title">Lista de colaboradores (ORG)</h3>
         <section class="card wide" id="orgSection">
@@ -966,6 +1023,7 @@
         </section>
 
       </div>
+      <!-- Seção "Histórico": tabela com busca, ordenação e páginas (seção 7 do JS). -->
       <div class="pagina" data-pagina="historico">
         <h3 class="section-title">Histórico de ocorrências</h3>
         <section class="card wide" id="historySection">
@@ -999,8 +1057,13 @@
       </div>
     </main>
 
+    <!-- Coluna da direita (no celular, fica em cima). Pode ser escondida pelo
+         botão "Esconder filtros" (body.sem-lateral). -->
     <aside class="sidebar">
       <div class="sidebar-inner">
+        <!-- Bloco "Carregar dados": #fileInput (escolher arquivo) e #dropZone
+             (arrastar). Depois de carregar, mostra o nome do arquivo e o botão
+             "Carregar outro arquivo" (#resetBtn). -->
         <div class="side-block">
           <h3>1. Carregar dados</h3>
           <label class="upload-drop" id="dropZone" for="fileInput">
@@ -1022,6 +1085,9 @@
           <button class="btn-ghost btn-block" id="resetBtn" hidden>Carregar outro arquivo</button>
         </div>
 
+        <!-- Filtros: as opções são preenchidas por populateFilterOptions a partir do
+             arquivo. Gestor, grupo (só se o CSV tiver), cargo, colaborador, tipo e
+             status (chips) e período. Mudar qualquer um chama applyFilters. -->
         <div class="side-block" id="filtersBlock" hidden>
           <details class="filters-details" id="filtersDetails" open>
             <summary class="filters-summary">
@@ -1076,6 +1142,7 @@
     </aside>
   </div>
 
+  <!-- Barra fixa de atalhos no celular (Filtros, Topo, Seções). -->
   <nav class="mobile-bar" id="mobileBar" hidden>
     <button type="button" data-action="filters">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M7 12h10M10 18h4" stroke-linecap="round"/></svg>
@@ -1091,8 +1158,11 @@
     </button>
   </nav>
 
+  <!-- Balão que aparece ao passar o mouse nos gráficos (showTooltip). -->
   <div id="chartTooltip" hidden></div>
 
+  <!-- Card do colaborador (janela por cima da tela), aberto ao clicar em qualquer
+       nome; o conteúdo é montado por abrirCardColaborador. -->
   <div class="modal-overlay" id="colabModalOverlay" hidden>
     <div class="modal-panel colab-panel" role="dialog" aria-modal="true" aria-labelledby="colabModalTitle">
       <div class="modal-header">
@@ -1114,8 +1184,8 @@
      =========================================================
      O QUE É: um dashboard de RH que lê, 100% no navegador (sem
      backend, sem build step, sem npm — um único index.html que roda
-     abrindo o arquivo direto), o CSV gerado pelo macro GerarCSV.bas
-     (pasta Dashboard-Ponto/GerarCSV.bas) a partir da planilha de
+     abrindo o arquivo direto), o CSV gerado pelo macro GerarCSVPonto
+     (GerarCSVPonto/GerarCSVPonto.bas) a partir da planilha de
      ocorrências de ponto da Aurora Coop, e mostra KPIs, gráficos e
      tabelas de auditoria pra RH e gestores.
 
@@ -1173,6 +1243,34 @@
        precisar decidir "isso conta como ocorrência aqui?" deve
        reusá-las em vez de comparar string de tipo na mão.
 
+     ATUALIZAÇÃO (out/2026): além das três categorias acima, o CSV traz hoje
+       outras linhas que também NÃO são ocorrência e têm seção própria:
+       "Cadastro ORG" (lista de colaboradores), "Marcação Digitada" (batidas
+       digitadas), "Afastamento"/"Absenteísmo" (afastamentos e atestados) e
+       "Resumo Horas Cartão" (horas do mês). Todas entram em
+       isTipoNaoOcorrencia e ficam fora dos gráficos gerais.
+     
+     O QUE APARECE NA TELA -> QUEM DESENHA -> DE ONDE VÊM OS DADOS
+       (cada .pagina[data-pagina] do HTML é uma seção do menu ☰)
+       Cards do topo (#kpiRow) ......... renderKPIs ............. getFilteredRecords
+       "geral": por tipo/dia/data/gestor/cargo  renderDonut/BarV/Line/BarH + ocorrenciasPor*
+                                                 ................. getFilteredRecords sem Hora Extra
+       "destaque": top colaboradores ... topColaboradores ....... idem
+                   extra e falta ........ extraFaltaAuditoria ..... linhas "Auditoria Extra e Falta"
+                   ocorrências curtas ... curtasPorColaborador .... getCurtasRecords
+                   banco de horas ....... horasCartaoPorColaborador "Resumo Horas Cartão"
+       "pausas" ........................ pausasTermicasResumo .... "Resumo Pausas Térmicas"
+       "digitadas" ..................... renderDigitadas ......... getDigitadasRecords
+       "afastamentos" .................. renderAbsenteismo ....... getAtestados
+       "demora" ........................ demoraStats + feriasPorPessoa  getFilteredRecords + "Afastamento"
+       "org" ........................... renderListaORG .......... "Cadastro ORG" + ocorrências/digitadas/horas
+       "historico" ..................... renderHistory/drawHistory  getFilteredRecords sem Hora Extra
+       Card do colaborador (modal) ..... abrirCardColaborador .... todas as linhas da pessoa
+       O texto "De onde vem" de cada card está no próprio HTML (.card-fonte) e
+       só aparece no modo "Entenda o painel" (setModoExplicacao).
+       Quem gera o CSV: GerarCSVPonto/GerarCSVPonto.bas (macro do Excel). Os
+       nomes de coluna e os textos de tipo_ocorrencia combinados entre os dois
+       estão em HEADER_ALIASES e nas constantes TIPO_* logo abaixo.
      MAPA DAS SEÇÕES (busque pelo número/título pra navegar):
        0. Constantes e paleta — cores, aliases de cabeçalho do CSV,
           classificação de tipo de linha (resumo/curta/hora-extra),
@@ -1194,6 +1292,10 @@
   /* =========================================================
      0. CONSTANTES E PALETA
   ========================================================= */
+  // Paleta da marca (laranja, vermelho, amarelo, preto e cinzas): colorFor
+  // distribui estas cores, na ordem, entre gestores/cargos/tipos.
+  // DIAS_LABELS/DIAS_ORDER: os gráficos por dia da semana começam na segunda;
+  // DIAS_ORDER traduz a posição do rótulo para o getDay() do JavaScript.
   var PALETTE = ["#F7931E","#E31E24","#FFC72C","#1A1A1A","#58595B","#A7A9AC","#B3701A","#8C1518"];
   var DIAS_LABELS = ["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"];
   var DIAS_ORDER  = [1,2,3,4,5,6,0]; // getDay(): 0=Dom..6=Sáb
@@ -1201,7 +1303,7 @@
   // Nome interno do campo -> lista de nomes de coluna aceitos no CSV
   // (normalizados: sem acento, minúsculo, espaço vira "_" — ver
   // normalizeHeader/buildColumnIndex, seção 2). O primeiro nome de cada
-  // lista é o que o GerarCSV.bas realmente escreve hoje (ver o array
+  // lista é o que o GerarCSVPonto realmente escreve hoje (ver o array
   // `cabecalhos` em PrepararAbaCSV); os demais são sinônimos aceitos
   // pra tolerar CSVs de versões antigas do macro ou montados à mão.
   var HEADER_ALIASES = {
@@ -1246,6 +1348,10 @@
   function isErroExcel(v){ return /^(erro|error) \d+$|^#(n\/d|n\/a|ref!|valor!|value!|nome\?|name\?)$/i.test(String(v||"").trim()); }
   function textoCampo(v){ v = String(v||"").trim(); return isErroExcel(v) ? "" : v; }
 
+  // Textos de tipo_ocorrencia que o macro grava nas linhas especiais. Precisam
+  // ser IGUAIS aos do GerarCSVPonto (comparação exata, com acento).
+  // LIMITE_AUDITORIA_EXTRA_FALTA: a partir de quantos dias "extra e falta no
+  // mesmo dia" (soma de 3 meses) a linha fica vermelha (pedido do RH: 10).
   var TIPO_AUDITORIA_EXTRA_FALTA = "Auditoria Extra e Falta (3 Meses)";
   var LIMITE_AUDITORIA_EXTRA_FALTA = 10;
   var TIPO_RESUMO_PAUSAS_TERMICAS = "Resumo Pausas Térmicas";
@@ -1354,17 +1460,23 @@
       return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];
     });
   }
+  // Cabeçalho do CSV -> chave comparável: sem acento, minúsculo, espaços
+  // viram "_" ("Data Ocorrência" -> "data_ocorrencia"). Usado com HEADER_ALIASES.
   function normalizeHeader(h){
     return String(h||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"")
       .trim().toLowerCase().replace(/\s+/g,"_");
   }
+  // Tira acentos (para buscas e comparações sem acento: "José" = "jose").
   function stripAccents(s){
     return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"");
   }
+  // Número inteiro com separador de milhar brasileiro (1.234).
   function formatNum(n){
     if (n == null || isNaN(n)) return "0";
     return Math.round(n).toLocaleString("pt-BR");
   }
+  // Minutos -> "2h 05min" (sempre positivo; o sinal, quando importa, é posto
+  // por quem chama, ex.: formatSaldo).
   function formatHoras(minutes){
     minutes = Math.round(Math.abs(minutes||0));
     var h = Math.floor(minutes/60), m = minutes%60;
@@ -1372,12 +1484,14 @@
     if (m === 0) return h + "h";
     return h + "h " + (m<10?"0":"") + m + "min";
   }
+  // Demora em horas -> "5,3h" (menos de um dia) ou "5,7 dias".
   function formatDelay(hours){
     if (hours == null || isNaN(hours)) return "&ndash;";
     if (hours < 24) return hours.toFixed(1).replace(".",",") + "h";
     var d = hours/24;
     return d.toFixed(1).replace(".",",") + " dias";
   }
+  // Corta textos longos com "…" (nomes nos eixos dos gráficos: 15 caracteres).
   function truncate(str, n){
     str = String(str||"");
     return str.length > n ? str.slice(0,n-1)+"…" : str;
@@ -1398,9 +1512,12 @@
     }
     return map[key];
   }
+  // Data -> "aaaa-mm-dd": chave para agrupar por dia (record.dateKey) e para
+  // comparar datas sem a hora.
   function dateKey(d){
     return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
   }
+  // Data -> "dd/mm/aaaa" para exibir.
   function formatDateBR(d){
     if (!d) return "";
     return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear();
@@ -1408,8 +1525,8 @@
 
   /* =========================================================
      2. PARSER DE CSV (sem dependências externas)
-     O arquivo que entra aqui vem do macro GerarCSV.bas (ver
-     Dashboard-Ponto/GerarCSV.bas), mas o parser não assume isso: aceita
+     O arquivo que entra aqui vem do macro GerarCSVPonto (ver
+     GerarCSVPonto/GerarCSVPonto.bas), mas o parser não assume isso: aceita
      vírgula ou ponto-e-vírgula como delimitador, datas em dd/mm/aaaa ou
      aaaa-mm-dd, números em pt-BR (1.234,56) ou en-US (1234.56), e
      cabeçalhos com nomes alternativos (ver HEADER_ALIASES acima) —
@@ -1480,7 +1597,7 @@
 
   // Aceita aaaa-mm-dd (o que o TextoCelula do macro geraria se alguém
   // mudasse o formato) e dd/mm/aaaa (o formato real que o macro escreve
-  // — ver TextoCelula em GerarCSV.bas), ambos com hora opcional. Cai
+  // — ver TextoCelula em GerarCSVPonto.bas), ambos com hora opcional. Cai
   // pro construtor nativo Date() como último recurso (aceita ISO com
   // "T", por exemplo) pra não recusar um CSV editado à mão. null = data
   // não reconhecida; recordsFromCSV descarta a linha inteira nesse caso.
@@ -1548,6 +1665,16 @@
       // atual já não grava essas linhas — isto protege contra um CSV antigo)
       if (tipoRaw === TIPO_MARCACAO_DIGITADA && idx.origemMarcacao != null &&
           textoCampo(r[idx.origemMarcacao]).toUpperCase() === "E") continue;
+      // Um "record" = uma linha do CSV já convertida. Campos (todo o painel usa
+      // estes nomes, não os do CSV):
+      //   data/dateKey, colaborador, matricula, gestor, setor, cargo, grupo,
+      //   tipo (tipo_ocorrencia), situacao, status, duracao (minutos; negativo =
+      //   falta), destinoExtra, tratativa (Date ou null), horasExcedentes,
+      //   extraFalta* (auditoria), pausa*/trabalho* (pausas térmicas),
+      //   minHoraExtraCartao/minBancoHorasCartao (resumo de horas),
+      //   justificativaMarcacao/origemMarcacao (digitadas),
+      //   diasAusencia/emendaFolga (afastamentos).
+      // textoCampo() troca erros do Excel ("#N/A", "Erro 2042") por vazio.
       var rec = {
         data: dt,
         dateKey: dateKey(dt),
@@ -1659,6 +1786,7 @@
     tip.style.top = y + "px";
     tip.hidden = false;
   }
+  // Esconde o balão (mouse saiu do elemento).
   function hideTooltip(){ $("chartTooltip").hidden = true; }
 
   // Barras horizontais (usado nos rankings tipo "Ocorrências por
@@ -1704,6 +1832,7 @@
   // (extra - banco), verde com "+" ou vermelho com "−". Nome, barra e
   // saldo abrem o card do colaborador.
   var COR_EXTRA = "#2E8B45", COR_BANCO = "#E31E24";
+  // Saldo em minutos -> "+3h 10min" / "−45min" / "0h" (sinal de menos tipográfico).
   function formatSaldo(min){
     min = Math.round(min||0);
     if (min === 0) return "0h";
@@ -1938,16 +2067,21 @@
     return map;
   }
 
+  // Cada função abaixo alimenta UM gráfico da "Visão geral" (e algumas também
+  // as seções de digitadas e afastamentos). Devolvem [{label, value, color}],
+  // ordenado do maior para o menor; "limit"/"n" cortam no top N.
   function ocorrenciasPorTipo(records){
     var map = countBy(records, function(r){ return r.tipo; });
     return Object.keys(map).sort(function(a,b){ return map[b]-map[a]; })
       .map(function(k){ return { label:k, value:map[k], color: colorFor("tipo", k) }; });
   }
+  // Sempre devolve os 7 dias (seg..dom), mesmo com zero, para o eixo ficar fixo.
   function ocorrenciasPorDiaSemana(records){
     var map = {}; DIAS_ORDER.forEach(function(d){ map[d]=0; });
     records.forEach(function(r){ map[r.data.getDay()] = (map[r.data.getDay()]||0)+1; });
     return DIAS_ORDER.map(function(d,i){ return { label:DIAS_LABELS[i], value:map[d]||0, color:"var(--c-navy)" }; });
   }
+  // Um ponto por dia que TEM ocorrência (dias sem nenhuma não aparecem no eixo).
   function ocorrenciasPorData(records){
     var map = {};
     records.forEach(function(r){ map[r.dateKey] = (map[r.dateKey]||0)+1; });
@@ -2524,6 +2658,8 @@
     renderBarH($("chartPorGestor"), ocorrenciasPorGestor(ocorrenciasRecords, 12));
     renderBarH($("chartPorCargo"), ocorrenciasPorCargo(ocorrenciasRecords, 12));
 
+    // Seção "Colaboradores em destaque": top 10 por ocorrências, extra e
+    // falta no mesmo dia (auditoria de 3 meses), curtas e banco de horas.
     renderBarH($("chartTopColaboradores"), topColaboradores(ocorrenciasRecords, 10), { colab:true });
 
     renderTableSimple($("tableExtraFalta"),
@@ -2543,6 +2679,8 @@
        {label:"Total", width:"64px", render:function(r){return '<strong>'+r.qtd+'</strong>';}}],
       limitarLista(curtasPorColaborador(getCurtasRecords()), "curtas", LIMITE_LISTA, "btnCurtasTodos"));
 
+    // Banco de horas: mostra os 10 primeiros ou todos (botão btnBancoTodos,
+    // estado em state.bancoMostrarTodos).
     var horas = horasCartaoPorColaborador(records);
     var limiteBanco = 10;
     renderSaldoH($("chartBancoHoras"), state.bancoMostrarTodos ? horas.lista : horas.lista.slice(0, limiteBanco));
@@ -2567,6 +2705,11 @@
       pausasTermicasResumo(),
       {rowClass:function(r){ return r.pausasMarcacoesImpares > 0 ? "row-alert" : ""; }, tableClass:"tabela-compacta"});
 
+    // Seção "Demora no PontoNet": demoraStats agrupa por gestor e por
+    // colaborador; feriasPorPessoa/feriasNaJanela acrescentam o aviso amarelo
+    // quando o gestor (ou a pessoa) esteve de férias entre a ocorrência e a
+    // tratativa. Os avisos ficam em l.avisos (lista de textos) e viram HTML em
+    // avisoFeriasHtml.
     var fer = feriasPorPessoa();
     var linhasDemoraGestor = demoraStats(records, function(r){ return r.gestor; });
     linhasDemoraGestor.forEach(function(l){
@@ -2598,6 +2741,8 @@
        {label:"Maior demora", width:"110px", render:function(r){return formatDelay(r.maior);}}],
       linhasDemoraColab, {rowClass:function(r){ return r.avisos.length ? "row-ferias" : ""; }});
 
+    // Seções com função própria (cada uma lê os seus dados e desenha tudo dela),
+    // depois o topo (período), o contador de filtros e a dica de rolagem lateral.
     renderDigitadas(ocorrenciasRecords);
     renderAbsenteismo();
     renderListaORG(ocorrenciasRecords);
@@ -2622,12 +2767,17 @@
     $("digSemDados").hidden = temDig;
     $("digCorpo").hidden = !temDig;
     if (!temDig) return;
+    // dig = batidas digitadas que passam nos filtros (gestor, grupo, cargo,
+    // colaborador e período). Tudo abaixo é calculado sobre esta lista.
     var dig = getDigitadasRecords();
 
     var diasComOcorrencia = {};
     ocorrenciasRecords.forEach(function(r){ diasComOcorrencia[chavePessoa(r) + "|" + r.dateKey] = true; });
     dig.forEach(function(r){ r.temOcorrenciaNoDia = !!diasComOcorrencia[chavePessoa(r) + "|" + r.dateKey]; });
 
+    // KPIs da seção: total de batidas, pessoas diferentes (e % do ORG) e quantas
+    // foram por esquecimento (os cards "No dia de uma ocorrência" e "Horário
+    // redondo" foram retirados a pedido do RH, 08/10).
     var pessoas = {};
     dig.forEach(function(r){ pessoas[chavePessoa(r)] = true; });
     var nPessoas = Object.keys(pessoas).length;
@@ -2642,12 +2792,15 @@
       tile("Colaboradores", formatNum(nPessoas), noOrg ? pct(nPessoas, noOrg) + " das pessoas do ORG" : "com batida digitada") +
       tile("Por esquecimento", formatNum(nEsq), pct(nEsq, dig.length) + " das digitadas");
 
+    // Rosca por motivo, barras por dia da semana e linha por data.
     var porMotivo = countBy(dig, function(r){ return r.situacao || "Sem motivo"; });
     renderDonut($("chartDigMotivo"), Object.keys(porMotivo).sort(function(a,b){ return porMotivo[b]-porMotivo[a]; })
       .map(function(k, i){ return { label:k, value:porMotivo[k], color: PALETTE[i % PALETTE.length] }; }));
     renderBarV($("chartDigDiaSemana"), ocorrenciasPorDiaSemana(dig));
     renderLine($("chartDigData"), ocorrenciasPorData(dig));
 
+    // Top de colaboradores (20 + "Mostrar todos"), com quantas foram por
+    // esquecimento no balão; e o gráfico por gestor.
     var porColab = {};
     dig.forEach(function(r){
       if (!porColab[r.colaborador]) porColab[r.colaborador] = { label:r.colaborador, value:0, esq:0 };
@@ -2659,6 +2812,8 @@
     renderBarH($("chartDigTop"), topDig, { colab:true });
     renderBarH($("chartDigGestor"), ocorrenciasPorGestor(dig, 12));
 
+    // Barras por hora cheia, da menor à maior hora que aparece (horas sem batida
+    // entram com zero para o eixo ficar contínuo).
     var porHora = {};
     dig.forEach(function(r){ var h = r.data.getHours(); porHora[h] = (porHora[h]||0) + 1; });
     var horas = Object.keys(porHora).map(Number);
@@ -2667,6 +2822,8 @@
     for (var h = hMin; h <= hMax && horas.length; h++) itensHora.push({ label: h + "h", value: porHora[h] || 0, color:"var(--c-navy)" });
     renderBarV($("chartDigHora"), itensHora);
 
+    // Esquecimento repetido: por pessoa, quantas batidas e em quantos dias
+    // diferentes foram "Inclusão por esquecimento" (top 15).
     var esq = {};
     dig.filter(isEsquecimento).forEach(function(r){
       if (!esq[r.colaborador]) esq[r.colaborador] = { colaborador:r.colaborador, gestor:r.gestor, qtd:0, dias:{} };
@@ -2679,6 +2836,8 @@
        {label:"Dias", width:"56px", render:function(r){ return Object.keys(r.dias).length; }}],
       Object.values(esq).sort(function(a,b){ return b.qtd-a.qtd || a.colaborador.localeCompare(b.colaborador,"pt-BR"); }).slice(0,15));
 
+    // Justificativas mais usadas: agrupa textos iguais ignorando acento,
+    // maiúscula e ponto final (chaveTexto); conta batidas e pessoas.
     var just = {};
     dig.forEach(function(r){
       var t = r.justificativaMarcacao || "(sem texto)", k = chaveTexto(t);
@@ -2691,6 +2850,7 @@
        {label:"Pessoas", width:"70px", render:function(r){ return Object.keys(r.pessoas).length; }}],
       Object.values(just).sort(function(a,b){ return b.qtd-a.qtd; }).slice(0,15));
 
+    // Lista completa com a busca da própria seção (campo #digBusca).
     var busca = stripAccents($("digBusca").value.trim().toLowerCase());
     var lista = dig.filter(function(r){
       if (!busca) return true;
@@ -2717,16 +2877,23 @@
      sempre os 3 meses. Cada atestado é expandido em dias (diasDoAtestado)
      para contar dia a dia no ciclo certo. */
   var MESES_CURTOS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  // Ciclo de apuração do ponto = dia 28 de um mês ao dia 27 do seguinte. O
+  // ciclo leva o nome do mês em que TERMINA: 28/08 a 27/09 = "2026-09".
   function cicloDe(d){
     var y = d.getFullYear(), m = d.getMonth();
     if (d.getDate() >= 28){ m++; if (m > 11){ m = 0; y++; } }
     return y + "-" + String(m+1).padStart(2,"0");
   }
+  // "2026-09" -> "Set/26" (rótulo curto do ciclo).
   function cicloLabel(k){ var p = k.split("-"); return MESES_CURTOS[+p[1]-1] + "/" + p[0].slice(2); }
+  // "2026-09" -> { ini: 28/08/2026, fim: 27/09/2026 }.
   function cicloInicioFim(k){
     var p = k.split("-"), y = +p[0], m = +p[1]-1;
     return { ini: new Date(y, m-1, 28), fim: new Date(y, m, 27) };
   }
+  // Um afastamento vira a lista dos dias corridos que ele cobre (data inicial +
+  // diasAusencia). É assim que um atestado de 3 dias conta 3 dias no ciclo
+  // certo, mesmo atravessando a virada de ciclo. Também usado para férias.
   function diasDoAtestado(r){
     var out = [], n = Math.max(1, Math.round(r.diasAusencia || 1));
     for (var i = 0; i < n; i++) out.push(new Date(r.data.getFullYear(), r.data.getMonth(), r.data.getDate() + i));
@@ -2763,6 +2930,8 @@
     if (!todos.length) return;
 
     // ciclos existentes no arquivo (para o seletor), do mais recente ao mais antigo
+    // Monta o seletor "Ciclo" com todos os ciclos que têm algum dia de atestado.
+    // A opção escolhida (sel.value) é guardada antes e reaplicada se ainda existir.
     var ciclosSet = {};
     todos.forEach(function(r){ diasDoAtestado(r).forEach(function(d){ ciclosSet[cicloDe(d)] = true; }); });
     var ciclos = Object.keys(ciclosSet).sort().reverse();
@@ -2774,6 +2943,9 @@
     if (sel.innerHTML !== opts){ sel.innerHTML = opts; sel.value = ciclos.indexOf(atual) > -1 ? atual : ""; }
     var cicloSel = sel.value;
 
+    // abs = atestados que passam no filtro de gestor/grupo/cargo/colaborador
+    // (o período do filtro NÃO se aplica aqui: a seção cobre 3 meses).
+    // noCiclo(d) = o dia d está no ciclo escolhido (ou qualquer um, sem escolha).
     var abs = getAtestados(true);
     function noCiclo(d){ return !cicloSel || cicloDe(d) === cicloSel; }
     // atestados (registros) que têm pelo menos um dia no ciclo escolhido
@@ -2928,6 +3100,8 @@
       $("tableOrg").innerHTML = ""; $("tableOrg").appendChild(emptyMsg("Este CSV não traz a lista do ORG. Gere o CSV de novo com a macro atual (ela lê a aba ORG)."));
       return;
     }
+    // Para cada pessoa (chavePessoa = matrícula, ou o nome se não houver),
+    // conta ocorrências do filtro, batidas digitadas e pega as horas do Cartão.
     var ocPorPessoa = {};
     ocorrenciasRecords.forEach(function(r){ var k = chavePessoa(r); ocPorPessoa[k] = (ocPorPessoa[k]||0) + 1; });
     var horasPorPessoa = {};
@@ -2935,6 +3109,8 @@
     var digPorPessoa = {};
     getDigitadasRecords().forEach(function(r){ var k = chavePessoa(r); digPorPessoa[k] = (digPorPessoa[k]||0) + 1; });
 
+    // Uma linha da tabela por pessoa do ORG. "Sem gestor"/"Sem cargo" (valores
+    // padrão do leitor de CSV) viram vazio para os filtros de cadastro.
     var linhas = org.map(function(r){
       var k = chavePessoa(r), h = horasPorPessoa[k];
       return { colaborador:r.colaborador, matricula:r.matricula, gestor:r.gestor === "Sem gestor" ? "" : r.gestor,
@@ -2953,6 +3129,8 @@
       '<span class="org-pill"><b>' + formatNum(semCargo) + '</b> sem cargo</span>' +
       '<span class="org-pill"><b>' + formatNum(semArea) + '</b> sem área</span>';
 
+    // Busca livre (#orgBusca) + seletor de cadastro (#orgMostrar: sem matrícula,
+    // sem gestor, sem cargo, sem área). Ordena por quem tem mais ocorrências.
     var busca = stripAccents($("orgBusca").value.trim().toLowerCase());
     var modo = $("orgMostrar").value;
     var vis = linhas.filter(function(l){
@@ -3150,6 +3328,8 @@
     reader.readAsText(file, "UTF-8");
   }
 
+  // Duas formas de abrir o arquivo: clicar e escolher (fileInput) ou arrastar
+  // para o bloco "Carregar dados" (dropZone). As duas chamam handleFile.
   $("fileInput").addEventListener("change", function(e){
     if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
   });
@@ -3166,6 +3346,8 @@
     if (f) handleFile(f);
   });
 
+  // "Carregar outro arquivo": esquece os dados e volta a tela ao estado
+  // inicial (sem arquivo, com o guia "Como usar o painel").
   $("resetBtn").addEventListener("click", function(){
     state.records = [];
     limparControlesFiltro();
@@ -3196,6 +3378,8 @@
     $("btnExplica").hidden = true;
   });
 
+  // Cada mudança num filtro redesenha o painel (a busca de colaborador espera
+  // 200 ms sem digitar, via debounce, para não redesenhar a cada tecla).
   ["fGestor","fGrupo","fCargo"].forEach(function(id){ $(id).addEventListener("change", applyFilters); });
   $("fColab").addEventListener("input", debounce(applyFilters, 200));
   $("fDataIni").addEventListener("change", applyFilters);
@@ -3302,6 +3486,8 @@
   function abrirCardColaborador(nome){
     if (!nome || !state.records.length) return;
     hideTooltip();
+    // todas = TODAS as linhas do arquivo com esse nome (sem filtro nenhum).
+    // primeiro(campo) = o primeiro valor preenchido daquele campo entre elas.
     var todas = state.records.filter(function(r){ return r.colaborador === nome; });
     if (!todas.length) return;
     function primeiro(campo, vazio){
@@ -3332,6 +3518,8 @@
       }
     });
 
+    // Cabeçalho do card: matrícula, gestor, cargo, setor, grupo, área do ORG e,
+    // se o arquivo tem ORG mas a pessoa não está nele, o aviso "Não está no ORG".
     $("colabModalTitle").textContent = nome;
     var meta = [["Matrícula", primeiro("matricula")], ["Gestor", primeiro("gestor","Sem gestor") || "Sem gestor"],
                 ["Cargo", primeiro("cargo","Sem cargo") || "Sem cargo"], ["Setor", primeiro("setor","Sem setor") || "Sem setor"],
@@ -3350,6 +3538,9 @@
     var periodoTxt = (dIni ? formatDateBR(dIni) : "início") + " a " + (dFim ? formatDateBR(dFim) : "fim");
     var saldo = horas ? (horas.minHoraExtraCartao - horas.minBancoHorasCartao) : 0;
     var cFaltas = curtas.filter(function(r){ return r.tipo === "Falta < 15min"; }).length;
+    // Corpo do card: mini-cards de números (ocorrências, horas do Cartão, saldo,
+    // extra e falta, curtas, demora, pausas) e, abaixo, as tabelas de
+    // afastamentos, digitadas e ocorrências da pessoa.
     var html = '<div class="colab-kpis">' +
       tile("Ocorrências", formatNum(ocorrencias.length), periodoTxt) +
       tile("Hora extra", horas ? formatHoras(horas.minHoraExtraCartao) : "&ndash;", "Cartão do mês atual") +
@@ -3440,6 +3631,8 @@
     var b = document.querySelector('#menuSecoes button[data-pagina="' + id + '"]');
     return id === "todas" ? "Todas as seções" : (b ? b.textContent : "");
   }
+  // Mostra só a seção escolhida (classe .fora esconde as outras) e marca o
+  // botão ativo no menu; os cards de KPI só aparecem em "Visão geral".
   function aplicarPagina(){
     document.querySelectorAll(".pagina").forEach(function(p){
       p.classList.toggle("fora", paginaAtual !== "todas" && p.getAttribute("data-pagina") !== paginaAtual);
@@ -3448,6 +3641,8 @@
     document.querySelectorAll("#menuSecoes button").forEach(function(b){ b.classList.toggle("ativo", b.getAttribute("data-pagina") === paginaAtual); });
     $("btnMenuTxt").textContent = nomePagina(paginaAtual);
   }
+  // Troca de seção: guarda a escolha no navegador (localStorage) e redesenha,
+  // porque os gráficos da seção que estava escondida não tinham largura.
   function irParaPagina(id){
     if (!document.querySelector('.pagina[data-pagina="' + id + '"]') && id !== "todas") id = "geral";
     paginaAtual = id;
@@ -3470,6 +3665,7 @@
   document.addEventListener("click", function(e){
     if (!$("menuSecoes").hidden && !e.target.closest("#menuSecoes") && !e.target.closest("#btnMenu")) fecharMenuSecoes();
   });
+  // Ao abrir o painel, volta para a última seção usada neste navegador.
   try { var pg = localStorage.getItem("painelPonto.pagina"); if (pg) paginaAtual = pg; } catch(e){}
   if (!document.querySelector('.pagina[data-pagina="' + paginaAtual + '"]') && paginaAtual !== "todas") paginaAtual = "geral";
   aplicarPagina();
@@ -3490,6 +3686,8 @@
   try { if (localStorage.getItem("painelPonto.lateralOculta") === "1") setLateralOculta(true); } catch(e){}
   $("btnExplicaVoltar").addEventListener("click", function(){ setModoExplicacao(false); });
 
+  // Mudou o tamanho da janela ou girou o celular: redesenha (os SVG são
+  // calculados em pixels).
   window.addEventListener("resize", debounce(function(){
     if (state.records.length) renderDashboard();
   }, 200));
@@ -3497,6 +3695,7 @@
     if (state.records.length) renderDashboard();
   });
 
+  // Barra fixa de baixo no celular (#mobileBar): Filtros, Topo e Seções.
   $("mobileBar").addEventListener("click", function(e){
     var btn = e.target.closest("button[data-action]");
     if (!btn) return;

@@ -3,14 +3,22 @@ from formatar_marcacoes import ler_planilha, simples, texto
 # Reproduz em Python o FormatarAfastamentos.bas: lê o relatório "Histórico de Afastamentos"
 # (HRCL006) exportado pelo sistema e devolve a mesma tabela que a macro deixa na aba.
 # Uso: PYTHONPATH=ferramentas python3 formatar_afastamentos.py "Afastamentos.xlsx" [saida.pkl]
+# CAB = cabeçalho de saída, igual ao da macro (e ao que o GerarCSVPonto procura).
+# O .pkl gerado vai para o adicionar_aba_xlsx.py (layout "afastamentos").
 CAB = ["Matrícula", "Colaborador", "Admissão", "Cód. Situação", "Situação", "Início", "Hora início",
        "Término", "Hora término", "Dias", "Horas", "Prev. Término", "Exame"]
 
+# True para número ou texto numérico ("1", "55277"): o relatório grava o tipo como texto.
 def parece_numero(v):
     t = texto(v)
     try: float(t); return t != ''
     except ValueError: return False
 
+# Mesma lógica da macro FormatarAfastamentos: 1) acha as colunas pelos cabeçalhos
+# "Tipo..." (pessoa) e "Afastamento..." (afastamento), com valores deslocados em relação
+# ao título; 2) linha de pessoa guarda matrícula/nome/admissão; linha de afastamento
+# (início > 1000 = data) vira uma linha da tabela, com dias corridos e, no mesmo dia,
+# as horas (fim - início).
 def formatar(linhas):
     p = dict(tipo=1, mat=2, nome=3, adm=8, ini=1, hini=2, cod=3, desc=4, fim=9, hfim=10, prev=11, exame=12)
     achou_p = achou_a = False

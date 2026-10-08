@@ -5,7 +5,16 @@ import pickle, datetime, collections, unicodedata, sys, os
 # "Pontonet", "Pausas Térmicas", "Cartão atual/Agosto/Julho"): na planilha com
 # "Tratamento - Internos/Externos" ou outra RE, ajuste os nomes de aba abaixo.
 # Saída: simulacao.pkl (lista de linhas) - use exportar_csv() para gerar o .csv.
+# ATENÇÃO: o script inteiro roda ao ser importado (conferir_painel.py faz "from
+# simular_gerarcsv import nz,s,hdrmap" e, com isso, refaz a simulação). Só a gravação do
+# .csv fica protegida pelo "if __name__ == '__main__'" do fim.
+# d = {nome da aba: [linhas]} vindo do carregar_planilha.py.
 d=pickle.load(open(os.environ.get('PLANILHA_PKL','planilha.pkl'),'rb'))
+# Funções de apoio, equivalentes às da macro:
+#   nz     = NzNum (valor -> número; hora/duração -> fração do dia; texto -> 0)
+#   s      = TextoLimpo (valor -> texto sem espaços nas pontas e sem quebras)
+#   hdrmap = MapearColunas (cabeçalho -> {nome: índice}, a 1ª ocorrência vale)
+#   vround = Round (arredondamento para inteiro)
 def nz(v):
     if isinstance(v,datetime.timedelta): return v.total_seconds()/86400
     if isinstance(v,datetime.time): return (v.hour*3600+v.minute*60+v.second)/86400
@@ -24,10 +33,12 @@ def hdrmap(row):
     return m
 def vround(x):  # VBA Round = banker's
     return round(x)
+# Opções de linha de comando antigas (usadas para comparar regras durante a conversa).
 EXCL_PROB = '--exclui-problema' in sys.argv
 CHECK_S_TOTAL = '--check-s-total' in sys.argv
 def norm(t): return unicodedata.normalize('NFD',t).encode('ascii','ignore').decode().lower().strip()
 
+# Cadastro RE: matrícula -> (setor, cargo), como MontarDicionarioRE/ObterSetorCargo.
 RE=d['RE 08.09']; rh=hdrmap(RE[0])
 dictRE={}
 for r in RE[1:]:
@@ -39,6 +50,9 @@ def setorcargo(m):
 # cartao sheets
 def cart(name):
     rows=d[name]; h=hdrmap(rows[1]); return rows,h
+# Abas de Cartão (EncontrarAbasCartao + AbasMaisRecentes): até 3, pela maior data na coluna
+# DT; cards[0] é o mês atual. dictCart = minutos de BH/50%/100% por matrícula+dia
+# (MontarDicionarioCartao).
 cards=[]
 for n in d:
     if n.lower().startswith(('cartão','cartao')):
@@ -56,11 +70,16 @@ for r in rows[2:]:
         if k in dictCart: o=dictCart[k]; dictCart[k]=(o[0]+v[0],o[1]+v[1],o[2]+v[2])
         else: dictCart[k]=v
 # pontonet
+# PontoNet: matrícula+data da falta -> (justificativa, "Avaliado em:", integrado?).
 P=d['Pontonet']; ph=hdrmap(P[0]); dictAus={}
 for r in P[1:]:
     m=s(r[ph['Matrícula']]); dt=r[ph['Data falta']]
     if m and isinstance(dt,datetime.datetime):
         dictAus[(m,dt.date())]=(s(r[ph['Justificativa']]), r[ph['Avaliado em:']], s(r[ph['Situação atual']]).upper()=='INTEGRADO')
+# Fase 1 da macro: cada linha da Tratamento. W() acrescenta uma linha de saída (um dict com
+# os mesmos campos do CSV). Regras: Check "S", situação vazia/"Sem alteração" e "Problema
+# horário" não entram; hora extra 100% em linha própria; extra/falta só se a Tratamento
+# apontar, com a quantidade do Cartão; sem falta, a ocorrência entra com duração 0.
 T=d['Tratamento']; th=hdrmap(T[0])
 out=[]; gestorPor={}
 def W(dt,nome,mat,gestor,setor,cargo,tipo,sit,status,dur,trat=None,**kw):
@@ -108,6 +127,7 @@ if 'ORG' in d:
                 vn.add(semac(nm)); listaORG.append(('',nm,oc(r,'DESCRICAO'),oc(r,'CARGO'),oc(r,'GESTOR')))
 for m,nm,ar,ca,g in listaORG:
     if m and g and m not in gestorPor: gestorPor[m]=g
+# Linhas-resumo, na mesma ordem da macro (ver o "MAPA DO MÓDULO" no GerarCSVPonto.bas).
 # auditoria
 nomes={}; cont=collections.defaultdict(dict)
 for _,n in cards:
@@ -216,6 +236,7 @@ for m,nm,ar,ca,g in listaORG:
     se,caRE=setorcargo(m) if m else ('Sem setor','')
     if se=='Sem setor' and ar: se=ar
     W(dmax,nm,m,g,se,ca or caRE,'Cadastro ORG',ar,'Pendente',0)
+# Grava a lista de linhas (simulacao.pkl) e mostra quantas linhas de cada tipo saíram.
 pickle.dump(out,open('simulacao.pkl','wb'))
 print('cartoes',cards); print(len(out), collections.Counter(o['tipo'] for o in out))
 

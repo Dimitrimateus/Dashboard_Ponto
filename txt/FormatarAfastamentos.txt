@@ -1,5 +1,20 @@
 Attribute VB_Name = "modFormatarAfastamentos"
 Option Explicit
+' ============================================================================
+' COMO ESTE MÓDULO SE LIGA AO RESTO DO PROJETO
+'   Ordem no mês: 1) exportar o HRCL006 do Senior; 2) abrir o arquivo e rodar
+'   esta macro (FormatarAfastamentos) com a aba do relatório ativa; 3) copiar a
+'   aba "Afastamentos" resultante para a planilha de Tratamento; 4) rodar o
+'   GerarAbaCSV (módulo GerarCSVPonto), que lê esta aba e gera uma linha
+'   "Afastamento" no CSV para cada registro; 5) o painel (Dashboard/index.html)
+'   usa essas linhas na seção "Afastamentos" (atestados) e no aviso de férias
+'   da seção "Demora no PontoNet".
+'   Se mudar o NOME de alguma coluna de saída abaixo, o GerarCSVPonto
+'   (GerarAfastamentos) e o simulador em Python (ferramentas/) precisam mudar junto.
+'   Este módulo não depende de nenhum outro: todas as funções que usa estão
+'   no fim deste arquivo (Celula, EhNumero, PareceNumero, TextoCel,
+'   TextoSimples, CodigoTexto).
+' ============================================================================
 
 ' ============================================================================
 ' FormatarAfastamentos
@@ -36,13 +51,21 @@ Option Explicit
 ' Rode numa CÓPIA do arquivo exportado: a aba ativa é reescrita por completo.
 ' ============================================================================
 
+' Nome que a aba recebe no fim. O GerarCSVPonto NÃO depende deste nome (acha a
+' aba pelo cabeçalho), então renomear depois não quebra nada.
 Private Const NOME_ABA_SAIDA As String = "Afastamentos"
 
+' Macro principal (é a que aparece em Desenvolvedor > Macros). Três etapas:
+'   1) descobre em que coluna está cada informação do relatório;
+'   2) percorre o relatório linha a linha montando a tabela na memória;
+'   3) apaga a aba e escreve a tabela formatada.
 Sub FormatarAfastamentos()
 
+    ' ws = a aba que vai ser lida E reescrita (a que está aberta na tela).
     Dim ws As Worksheet
     Set ws = ActiveSheet
 
+    ' usado = o retângulo de células com conteúdo. Menos de 2 linhas = aba vazia.
     Dim usado As Range
     Set usado = ws.UsedRange
     If usado.Rows.Count < 2 Then
@@ -54,6 +77,10 @@ Sub FormatarAfastamentos()
     ' IsNumeric dá False).
     Dim dados As Variant
     dados = usado.Value2
+    ' deslCol: o UsedRange pode não começar na coluna A. As posições de coluna
+    ' abaixo (cIni, cMat...) são da planilha (A = 1); para ler o array "dados",
+    ' que começa em 1 na primeira coluna USADA, subtraímos esse deslocamento.
+    ' nLin/nCol = tamanho do array lido.
     Dim deslCol As Long, nLin As Long, nCol As Long
     deslCol = usado.Column - 1
     nLin = UBound(dados, 1)
@@ -63,6 +90,14 @@ Sub FormatarAfastamentos()
     ' 1) Colunas, achadas nos cabeçalhos do relatório. Sem cabeçalho, usa as
     '    posições do relatório de 07/10/2026.
     ' ------------------------------------------------------------
+    ' Variáveis com o número da coluna de cada informação:
+    '   cTipo/cMat/cNome/cAdm  -> linha da PESSOA (tipo, matrícula, nome, admissão)
+    '   cIni/cHoraIni          -> data e hora de início do afastamento
+    '   cCod/cDesc             -> código e descrição da situação (ex.: 002 Férias)
+    '   cFim/cHoraFim          -> data e hora de término
+    '   cPrev/cExame           -> previsão de término e exame de retorno
+    ' Os números atribuídos aqui são só a reserva (posições do relatório de
+    ' 07/10/2026); o laço a seguir troca pelos valores achados nos títulos.
     Dim cTipo As Long, cMat As Long, cNome As Long, cAdm As Long
     Dim cIni As Long, cHoraIni As Long, cCod As Long, cDesc As Long
     Dim cFim As Long, cHoraFim As Long, cPrev As Long, cExame As Long
@@ -71,6 +106,9 @@ Sub FormatarAfastamentos()
 
     Dim r As Long, c As Long, t As String
     Dim achouPessoa As Boolean, achouAfast As Boolean
+    ' Procura a PRIMEIRA linha de cada tipo de cabeçalho ("Tipo..." e
+    ' "Afastamento...") e anota as colunas pelos títulos. Basta a primeira, porque
+    ' o cabeçalho se repete igual em todas as páginas.
     For r = 1 To nLin
         If Not achouPessoa And TextoSimples(dados(r, 1)) = "TIPO" Then
             For c = 1 To nCol
@@ -103,6 +141,10 @@ Sub FormatarAfastamentos()
     '      linha de afastamento = data de início (número > 1000) + descrição.
     ' ------------------------------------------------------------
     Const N_COLS As Long = 13
+    ' saida = tabela de resultado na memória (no máximo uma linha de saída por
+    ' linha do relatório). nSaida = quantas linhas de saída já foram preenchidas.
+    ' matAtual/nomeAtual/admAtual = a pessoa do último bloco lido: cada linha de
+    ' afastamento pertence à pessoa que apareceu acima dela.
     Dim saida() As Variant
     ReDim saida(1 To nLin, 1 To N_COLS)
     Dim nSaida As Long
@@ -110,6 +152,9 @@ Sub FormatarAfastamentos()
     Dim vIni As Variant, vFim As Variant, vHi As Variant, vHf As Variant, vPrev As Variant
     matAtual = Empty
 
+    ' Cada linha do relatório é de um destes tipos: linha de PESSOA (guarda a
+    ' pessoa e pula para a próxima), linha de AFASTAMENTO (vira uma linha da saída)
+    ' ou qualquer outra coisa (cabeçalho, rodapé, linha vazia: ignorada).
     For r = 1 To nLin
         vIni = Celula(dados, r, cIni - deslCol)
         ' o tipo vem como texto ("1") no relatório: aceita número ou texto numérico
@@ -124,6 +169,12 @@ Sub FormatarAfastamentos()
             End If
         End If
 
+        ' Linha de afastamento: a coluna de início tem uma data (número de série do
+        ' Excel, sempre > 1000) e já sabemos de quem é (matAtual preenchida).
+        ' Colunas da saída: 1 Matrícula, 2 Colaborador, 3 Admissão, 4 Cód. Situação,
+        ' 5 Situação, 6 Início, 7 Hora início, 8 Término, 9 Hora término, 10 Dias,
+        ' 11 Horas, 12 Prev. Término, 13 Exame. Int() tira a parte da hora de uma
+        ' data; "valor - Int(valor)" fica só com a hora (fração do dia).
         If EhNumero(vIni) And Not IsEmpty(matAtual) Then
             If CDbl(vIni) > 1000 And TextoCel(Celula(dados, r, cDesc - deslCol)) <> "" Then
                 nSaida = nSaida + 1
@@ -157,9 +208,13 @@ Sub FormatarAfastamentos()
                 saida(nSaida, 13) = TextoCel(Celula(dados, r, cExame - deslCol))
             End If
         End If
+' Rótulo usado pelo GoTo acima: depois de ler uma linha de pessoa, pula direto
+' para a próxima linha do relatório.
 ProximaLinha:
     Next r
 
+    ' Nada reconhecido = provavelmente a aba ativa não é o HRCL006: avisa e sai
+    ' sem apagar nada.
     If nSaida = 0 Then
         MsgBox "Não encontrei nenhum afastamento na aba ativa." & vbCrLf & _
                "Confira se a aba ativa é o relatório Histórico de Afastamentos.", vbExclamation, "Formatar Afastamentos"
@@ -169,6 +224,9 @@ ProximaLinha:
     ' ------------------------------------------------------------
     ' 3) Reescreve a aba
     ' ------------------------------------------------------------
+    ' A partir daqui a aba é APAGADA e reescrita. ScreenUpdating = False deixa a
+    ' macro mais rápida (a tela não redesenha a cada célula). Os "On Error Resume
+    ' Next" protegem contra aba sem filtro ou sem células mescladas.
     Application.ScreenUpdating = False
     On Error Resume Next
     If ws.AutoFilterMode Then ws.AutoFilterMode = False
@@ -176,6 +234,8 @@ ProximaLinha:
     On Error GoTo 0
     ws.Cells.Clear
 
+    ' Cabeçalho da tabela (linha 1). Estes nomes são o que o GerarCSVPonto procura;
+    ' não mude sem mudar lá também.
     Dim cab As Variant
     cab = Array("Matrícula", "Colaborador", "Admissão", "Cód. Situação", "Situação", "Início", "Hora início", _
                 "Término", "Hora término", "Dias", "Horas", "Prev. Término", "Exame")
@@ -183,6 +243,9 @@ ProximaLinha:
         ws.Cells(1, c + 1).Value = cab(c)
     Next c
 
+    ' Formatos ANTES de escrever os valores: a coluna 4 (código) como texto para
+    ' manter os zeros à esquerda ("002"); datas como dd/mm/yyyy; horas como hh:mm;
+    ' "[h]:mm" na coluna Horas para somar mais de 24h sem voltar a zero.
     ws.Range(ws.Cells(2, 4), ws.Cells(nSaida + 1, 4)).NumberFormat = "@"
     ws.Range(ws.Cells(2, 3), ws.Cells(nSaida + 1, 3)).NumberFormat = "dd/mm/yyyy"
     ws.Range(ws.Cells(2, 6), ws.Cells(nSaida + 1, 6)).NumberFormat = "dd/mm/yyyy"
@@ -192,6 +255,8 @@ ProximaLinha:
     ws.Range(ws.Cells(2, 9), ws.Cells(nSaida + 1, 9)).NumberFormat = "hh:mm"
     ws.Range(ws.Cells(2, 11), ws.Cells(nSaida + 1, 11)).NumberFormat = "[h]:mm"
 
+    ' Copia só as linhas preenchidas para um array do tamanho exato e escreve
+    ' tudo de uma vez (muito mais rápido do que célula por célula).
     Dim bloco() As Variant
     ReDim bloco(1 To nSaida, 1 To N_COLS)
     For r = 1 To nSaida
@@ -201,6 +266,8 @@ ProximaLinha:
     Next r
     ws.Range(ws.Cells(2, 1), ws.Cells(nSaida + 1, N_COLS)).Value = bloco
 
+    ' Aparência: cabeçalho em negrito com fundo cinza, bordas finas, filtro
+    ' automático, fonte Calibri 10, larguras de coluna fixas.
     With ws.Range(ws.Cells(1, 1), ws.Cells(1, N_COLS))
         .Font.Bold = True
         .Interior.Color = RGB(217, 217, 217)
@@ -225,6 +292,8 @@ ProximaLinha:
     ws.Columns("M").ColumnWidth = 7
     ws.Range("C:M").HorizontalAlignment = xlCenter
 
+    ' Tenta renomear a aba. Se já existir outra "Afastamentos", o Excel dá erro;
+    ' o erro é engolido e a mensagem final avisa que o nome não mudou.
     Dim renomeada As Boolean
     On Error Resume Next
     ws.Name = NOME_ABA_SAIDA
@@ -232,6 +301,7 @@ ProximaLinha:
     Err.Clear
     On Error GoTo 0
 
+    ' Congela a linha 1 (cabeçalho sempre visível ao rolar) e mostra o resumo.
     ws.Activate
     ActiveWindow.FreezePanes = False
     ws.Rows(2).Select
@@ -246,6 +316,10 @@ ProximaLinha:
            vbInformation, "Formatar Afastamentos"
 End Sub
 
+' ----------------------------------------------------------------------------
+' FUNÇÕES DE APOIO (usadas só dentro deste módulo; "Private" = não aparecem na
+' lista de macros). Cada uma recebe o valor de uma célula e devolve algo limpo.
+' ----------------------------------------------------------------------------
 ' Valor do array lido do UsedRange; Empty se a coluna estiver fora dele.
 Private Function Celula(dados As Variant, ByVal r As Long, ByVal c As Long) As Variant
     If c < 1 Or c > UBound(dados, 2) Then

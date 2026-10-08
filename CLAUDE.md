@@ -480,4 +480,10 @@ corrigir direto no Excel resolve: sim, o GerarCSV lê o ORG a cada execução.
 - Ele manda pacotes de teste em zip quando pede "todos os arquivos": macros, painel, planilha e CSV de
   referência, em pastas.
 - Dados pessoais (nomes, matrículas, salários): nunca no repositório nem em commits; só na conversa.
+- Código comentado para leigos (08/10, pedido do Dimitri): cada arquivo tem no topo "de onde vem /
+  para onde vai / quem depende dele"; o GerarCSVPonto tem um "MAPA DO MÓDULO" (quem chama quem e
+  que rotina gera cada tipo de linha) e o index.html tem "O QUE APARECE NA TELA -> QUEM DESENHA ->
+  DE ONDE VÊM OS DADOS" no comentário do topo do script e comentários no HTML de cada seção.
+  Ao mudar código, atualize esses mapas. Para conferir que uma mudança só mexeu em comentários,
+  compare o arquivo sem comentários com o do HEAD (o código restante tem que ser idêntico).
 

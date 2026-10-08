@@ -34,11 +34,29 @@ Option Explicit
 '
 ' Rode numa CÓPIA do arquivo exportado: a aba ativa é reescrita por completo.
 ' ============================================================================
+' COMO ESTE MÓDULO SE LIGA AO RESTO DO PROJETO
+'   1) Exportar o relatório "Marcações digitadas" do Senior; 2) rodar esta macro
+'   com a aba do relatório ativa; 3) copiar a aba "Marcações Digitadas" para a
+'   planilha de Tratamento; 4) o GerarAbaCSV (módulo GerarCSVPonto, rotina
+'   GerarLinhasDigitadas) lê a aba e gera uma linha "Marcação Digitada" no CSV por
+'   batida, IGNORANDO as de Origem "E" (decisão do RH, 06/10); 5) o painel
+'   (index.html) mostra essas linhas na seção "Marcações digitadas" e no card do
+'   colaborador.
+'   A coluna "Origem" (D = digitada, E = outra origem) é mantida na aba: quem
+'   filtra é o GerarCSVPonto. O relatório NÃO diz quem digitou a batida
+'   (colaborador ou RH).
+'   Não depende de outros módulos: as funções de apoio estão no fim do arquivo.
+' ============================================================================
 
+' Nome final da aba (o GerarCSVPonto não depende dele: acha a aba pelo cabeçalho).
 Private Const NOME_ABA_SAIDA As String = "Marcações Digitadas"
 
+' Macro principal. Três etapas: 1) acha as colunas pelo cabeçalho do relatório;
+' 2) monta a tabela na memória juntando motivos quebrados em duas linhas;
+' 3) apaga a aba e escreve a tabela formatada.
 Sub FormatarMarcacoesDigitadas()
 
+    ' ws = a aba que está aberta na tela: é lida e depois reescrita.
     Dim ws As Worksheet
     Set ws = ActiveSheet
 
@@ -69,12 +87,21 @@ Sub FormatarMarcacoesDigitadas()
     '    posições do relatório de 28/08 a 27/09 (A, C, F, G, I, J, K, L, M, N,
     '    O, Q).
     ' ------------------------------------------------------------
+    ' Número da coluna (na planilha, A = 1) de cada informação do relatório:
+    '   cCracha = matrícula; cNome = nome; cCargoCod/cCargo = código e descrição do
+    '   cargo; cLocal = "código - descrição" do local; cOrigem = D/E; cData/cHora =
+    '   dia e hora da batida; cColetor/cFuncao = relógio e função da batida;
+    '   cMotivo = motivo escolhido no sistema; cTexto = justificativa livre.
+    ' Os valores abaixo são a reserva (relatório de 28/08 a 27/09); o bloco
+    ' seguinte troca pelos achados no cabeçalho.
     Dim cCracha As Long, cNome As Long, cCargoCod As Long, cCargo As Long, cLocal As Long
     Dim cOrigem As Long, cData As Long, cHora As Long, cColetor As Long, cFuncao As Long
     Dim cMotivo As Long, cTexto As Long
     cCracha = 1: cNome = 3: cCargoCod = 6: cCargo = 7: cLocal = 9: cOrigem = 10
     cData = 11: cHora = 12: cColetor = 13: cFuncao = 14: cMotivo = 15: cTexto = 17
 
+    ' Procura "Crachá" nas 30 primeiras linhas: é a linha de cabeçalho de página.
+    ' Ao sair do laço, r aponta para essa linha.
     Dim r As Long, c As Long, achouCabecalho As Boolean
     For r = 1 To IIf(nLin < 30, nLin, 30)
         For c = 1 To nCol
@@ -109,6 +136,9 @@ Sub FormatarMarcacoesDigitadas()
     '    válida. Linha só com texto na coluna do motivo = continuação do
     '    motivo da marcação anterior.
     ' ------------------------------------------------------------
+    ' saida = tabela de resultado na memória (14 colunas, na ordem do cabeçalho
+    ' escrito na etapa 3). nSaida = linhas preenchidas; nContinuacoes = quantos
+    ' motivos foram colados (só para a mensagem final).
     Const N_COLS As Long = 14
     Dim saida() As Variant
     ReDim saida(1 To nLin, 1 To N_COLS)
@@ -116,6 +146,14 @@ Sub FormatarMarcacoesDigitadas()
     nSaida = 0
 
     Dim vCracha As Variant, vData As Variant, vHora As Variant, localTxt As String, p As Long
+    ' Para cada linha do relatório:
+    '   - crachá numérico + data numérica  -> é uma batida: vira uma linha da saída;
+    '   - crachá vazio (depois da 1ª batida) -> pode ser a continuação de um texto
+    '     quebrado: cola no motivo/justificativa da batida anterior;
+    '   - o resto (cabeçalhos, rodapés) é ignorado.
+    ' Colunas da saída: 1 Matrícula, 2 Colaborador, 3 Cód. Cargo, 4 Cargo,
+    ' 5 Cód. Local, 6 Local, 7 Origem, 8 Data, 9 Hora, 10 Dia da semana,
+    ' 11 Coletor, 12 Função, 13 Motivo, 14 Justificativa.
     For r = 1 To nLin
         vCracha = Celula(dados, r, cCracha - deslCol)
         vData = Celula(dados, r, cData - deslCol)
@@ -138,6 +176,7 @@ Sub FormatarMarcacoesDigitadas()
                     saida(nSaida, 6) = localTxt
                 End If
                 saida(nSaida, 7) = TextoCel(Celula(dados, r, cOrigem - deslCol))
+                ' Data sem hora (Int) e hora como fração do dia (valor - Int(valor)).
                 saida(nSaida, 8) = CDate(Int(CDbl(vData)))
                 vHora = Celula(dados, r, cHora - deslCol)
                 If IsNumeric(vHora) And Not IsEmpty(vHora) Then
@@ -164,6 +203,8 @@ Sub FormatarMarcacoesDigitadas()
         End If
     Next r
 
+    ' Nenhuma batida reconhecida: provavelmente a aba ativa não é o relatório certo.
+    ' Sai sem apagar nada.
     If nSaida = 0 Then
         MsgBox "Não encontrei nenhuma marcação (linha com crachá numérico e data) na aba ativa." & vbCrLf & _
                "Confira se a aba ativa é o relatório de Marcações digitadas.", vbExclamation, "Formatar Marcações Digitadas"
@@ -173,6 +214,8 @@ Sub FormatarMarcacoesDigitadas()
     ' ------------------------------------------------------------
     ' 3) Reescreve a aba
     ' ------------------------------------------------------------
+    ' Daqui para baixo a aba é apagada e reescrita. Tira filtro e mesclagem antes
+    ' de limpar (os On Error evitam erro se não houver).
     Application.ScreenUpdating = False
 
     On Error Resume Next
@@ -181,6 +224,8 @@ Sub FormatarMarcacoesDigitadas()
     On Error GoTo 0
     ws.Cells.Clear
 
+    ' Cabeçalho (linha 1). O GerarCSVPonto procura Matrícula, Data, Hora, Motivo,
+    ' Justificativa e Origem por estes nomes: mudar aqui exige mudar lá.
     Dim cab As Variant
     cab = Array("Matrícula", "Colaborador", "Cód. Cargo", "Cargo", "Cód. Local", "Local", "Origem", _
                 "Data", "Hora", "Dia da semana", "Coletor", "Função", "Motivo", "Justificativa")
@@ -195,6 +240,8 @@ Sub FormatarMarcacoesDigitadas()
     ws.Range(ws.Cells(2, 8), ws.Cells(nSaida + 1, 8)).NumberFormat = "dd/mm/yyyy"
     ws.Range(ws.Cells(2, 9), ws.Cells(nSaida + 1, 9)).NumberFormat = "hh:mm"
 
+    ' Copia as linhas preenchidas para um array do tamanho exato e escreve tudo de
+    ' uma vez (rápido).
     Dim bloco() As Variant
     ReDim bloco(1 To nSaida, 1 To N_COLS)
     For r = 1 To nSaida
@@ -204,6 +251,8 @@ Sub FormatarMarcacoesDigitadas()
     Next r
     ws.Range(ws.Cells(2, 1), ws.Cells(nSaida + 1, N_COLS)).Value = bloco
 
+    ' Aparência da tabela: cabeçalho em negrito/cinza, bordas, filtro automático,
+    ' fonte e larguras.
     With ws.Range(ws.Cells(1, 1), ws.Cells(1, N_COLS))
         .Font.Bold = True
         .Interior.Color = RGB(217, 217, 217)
@@ -243,6 +292,7 @@ Sub FormatarMarcacoesDigitadas()
     Err.Clear
     On Error GoTo 0
 
+    ' Congela a linha 1 e mostra o resumo do que foi feito.
     ws.Activate
     ActiveWindow.FreezePanes = False
     ws.Rows(2).Select
@@ -258,6 +308,9 @@ Sub FormatarMarcacoesDigitadas()
            vbInformation, "Formatar Marcações Digitadas"
 End Sub
 
+' ----------------------------------------------------------------------------
+' FUNÇÕES DE APOIO (Private: usadas só neste módulo, não aparecem como macro).
+' ----------------------------------------------------------------------------
 ' Valor do array lido do UsedRange; Empty se a coluna estiver fora dele.
 Private Function Celula(dados As Variant, ByVal r As Long, ByVal c As Long) As Variant
     If c < 1 Or c > UBound(dados, 2) Then
@@ -299,6 +352,8 @@ Private Function CodigoTexto(v As Variant, ByVal digitos As Long) As String
     End If
 End Function
 
+' Dia da semana em 3 letras (DOM..SAB), na coluna "Dia da semana" da saída.
+' É só informativo: o painel calcula o dia da semana sozinho a partir da data.
 Private Function DiaDaSemana(d As Date) As String
     DiaDaSemana = Choose(Weekday(d, vbSunday), "DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB")
 End Function

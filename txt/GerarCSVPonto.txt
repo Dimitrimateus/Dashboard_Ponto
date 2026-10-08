@@ -7,7 +7,7 @@ Option Explicit
 ' O QUE ESTE MÓDULO FAZ, EM UMA FRASE:
 ' Lê várias abas de uma planilha de RH ("Tratamento Ponto") e escreve
 ' uma aba "CSV" (uma linha por ocorrência/registro) no formato que o
-' Painel de Ponto (Dashboard-Ponto/index.html, um site estático que
+' Painel de Ponto (Dashboard/index.html, um site estático que
 ' roda só no navegador) sabe importar e exibir em gráficos/tabelas.
 '
 ' Este módulo é o único elo entre a planilha do RH e o painel web: o
@@ -79,7 +79,7 @@ Option Explicit
 '     "Auditoria de 3 meses" abaixo).
 '
 '   Pausas térmicas (opcional) — aba já formatada pelo macro irmão
-'     FormatarPausasTermicas (pasta Ponto/PausasTermicas/ do repo). Não
+'     FormatarPausasTermicas (pasta PausasTermicas/ do repositório). Não
 '     importa o nome da aba: o macro procura, em todas as abas, a linha
 '     de cabeçalho da tabela de colaboradores ("Matrícula" + "Pausa
 '     corretas", ver EncontrarTabelaPausas) e lê as colunas pelo NOME do
@@ -96,8 +96,8 @@ Option Explicit
 ' (ocorrência normal — extra, falta, hora extra 100%, curta etc.) e a
 ' 23ª ("grupo" = Interno/Externo, preenchida em toda linha cujo
 ' colaborador aparece numa das abas de Tratamento); as colunas 14 a
-' 22, 24 e 25 só existem em 3 tipos de linha "resumo por colaborador"
-' que não representam um dia específico (ver EscreverLinhaCSV):
+' 22 e 24 a 29 só são preenchidas nos tipos de linha "resumo" abaixo,
+' cada um com as suas colunas (ver EscreverLinhaCSV):
 '   - tipo_ocorrencia = "Auditoria Extra e Falta (3 Meses)" → preenche
 '     ocorrencias_extra_falta_mes_atual / _3_meses.
 '   - tipo_ocorrencia = "Resumo Pausas Térmicas" → preenche as 7
@@ -124,9 +124,10 @@ Option Explicit
 '     mês atual, direto do Cartão Ponto, ver GerarResumoHorasCartao).
 '   - qualquer outro tipo (Hora Extra, Falta, Atraso, Falta < 15min,
 '     Extra < 15min, ...) → só usa as 13 primeiras colunas.
-' O painel (index.html) sabe diferenciar esses 3 casos pelo próprio
+' O painel (index.html) sabe diferenciar esses casos pelo próprio
 ' texto de tipo_ocorrencia (ver TIPOS_RESUMO/TIPOS_CURTAS/
-' TIPOS_HORA_EXTRA lá no JS) e trata cada um numa vista própria, sem
+' TIPOS_HORA_EXTRA/isTipoDigitada/isTipoAbsenteismo lá no JS) e trata
+' cada um numa vista própria, sem
 ' misturar com os gráficos/KPIs de ocorrência "normal".
 '
 ' -----------------------------------------------------------------
@@ -202,6 +203,49 @@ Option Explicit
 ' escrito num ambiente sem Excel instalado, só validado simulando a
 ' mesma lógica em Python contra arquivos reais). Rode sempre numa
 ' CÓPIA da planilha antes de usar com dados de produção.
+' =====================================================================
+' =====================================================================
+' MAPA DO MÓDULO (quem chama quem). Tudo parte das duas macros públicas.
+'
+' GerarAbaCSV
+'   |- LimparFiltros ........................ tira filtros de todas as abas
+'   |- EncontrarAbasTratamento / GrupoDaAba .. abas "Tratamento..." e Interno/Externo
+'   |- EncontrarAbaRE ........................ aba "RE ..." (cadastro)
+'   |- EncontrarAbasCartao + AbasMaisRecentes (DataMaximaAba) .. até 3 Cartões
+'   |- aba "PontoNet" ou AbrirArquivoAusencia
+'   |- MontarDicionarioRE / MontarDicionarioAusencia / MontarDicionarioCartao
+'   |     (lidos uma vez; consultados depois por ObterSetorCargo,
+'   |      ObterDadosAusencia e ObterValoresCartao)
+'   |- PrepararAbaCSV ........................ cria/limpa a aba "CSV" + cabeçalho
+'   |- [Fase 1] para cada linha da Tratamento: MapearColunas, ColunasFaltando,
+'   |     TextoLimpo, SituacaoIgnorada, MapearStatus, NzNum, EscreverLinhaCSV
+'   |     -> linhas de ocorrência, "Hora Extra" e "Hora Extra 100%"
+'   |- EncontrarAbaORG / LerListaORG ......... completa o gestor de quem não está
+'   |                                          na Tratamento
+'   |- ContarExtraFaltaMesmoDia .............. -> "Auditoria Extra e Falta (3 Meses)"
+'   |- GerarOcorrenciasCurtasDoCartao ........ -> "Falta < 15min" / "Extra < 15min"
+'   |- GerarResumoHorasCartao ................ -> "Resumo Horas Cartão"
+'   |- EncontrarTabelaPausas + GerarResumoPausasTermicas -> "Resumo Pausas Térmicas"
+'   |- EncontrarAbaAfastamentos + GerarAfastamentos -> "Afastamento"
+'   |     (ou, sem a aba, GerarAbsenteismo -> "Absenteísmo")
+'   |     ambos usam MontarDiasCartao + CalcularEmendaFolga (folga encostada)
+'   |- EncontrarAbaDigitadas + GerarLinhasDigitadas -> "Marcação Digitada"
+'   |- GerarLinhasORG ........................ -> "Cadastro ORG"
+' ExportarCSVPorGestor
+'   |- EscolherPasta, NomeArquivoSeguro
+'   |- ExportarLinhasParaCSV (TextoCelula, CampoCSV) -> dados_<gestor>.csv e
+'        dados_TODOS.csv, em UTF-8 com BOM, separador vírgula.
+'
+' QUEM DEPENDE DESTE MÓDULO: o painel Dashboard/index.html lê os .csv (nunca
+' o Excel). A ORDEM e os NOMES das 29 colunas (PrepararAbaCSV) e os textos de
+' tipo_ocorrencia são o "contrato" com o painel: mudar aqui exige mudar lá
+' (HEADER_ALIASES e as listas de tipos no JS). O simulador em Python
+' (ferramentas/simular_gerarcsv.py) reproduz estas regras para conferência
+' sem Excel e também precisa acompanhar qualquer mudança de regra.
+' DE QUEM ESTE MÓDULO DEPENDE: das abas geradas pelas outras macros
+' (ConsolidarCartaoPonto, FormatarPausasTermicas, FormatarMarcacoesDigitadas,
+' FormatarAfastamentos, PURO_Para_EDITADO) — sempre achadas pelo cabeçalho.
+' Nenhuma função de outro módulo VBA é chamada: tudo o que é usado está aqui.
 ' =====================================================================
 
 ' ---- Regras configuráveis -------------------------------------------
@@ -736,8 +780,12 @@ ProximaAbaTratamento:
     GerarLinhasORG listaORG, dictRE, dictGrupoPorMatricula, wsCSV, linhaSaida, _
         IIf(Not wsCartao Is Nothing, dataAtualCartao, Date), qtdORG
 
+    ' Fecha o arquivo do PontoNet se ele foi aberto à parte (sem salvar nada nele).
     If Not wbAus Is Nothing Then wbAus.Close SaveChanges:=False
 
+    ' Monta a mensagem final: o que foi lido, quantas linhas de cada tipo saíram e
+    ' o que ficou de fora. É a forma de conferir, sem abrir o CSV, se todas as
+    ' abas foram encontradas.
     Dim msgAuditoria As String
     msgAuditoria = vbCrLf & "Abas de Tratamento lidas:" & resumoAbasTrat & vbCrLf
     If abasCartao.Count > 0 Then
@@ -782,6 +830,10 @@ End Sub
 
 ' ---------------------------------------------------------------------
 ' Sub: exporta a aba "CSV" em um arquivo por gestor + um arquivo geral
+' Segunda macro do fluxo, rodada DEPOIS do GerarAbaCSV. Não recalcula nada: só
+' copia a aba "CSV" para arquivos .csv na pasta escolhida. Os gestores recebem
+' o "dados_<nome>.csv" deles; o RH/supervisor usa o "dados_TODOS.csv". Esses
+' arquivos são os que se abrem no painel (botão "Carregar dados").
 ' ---------------------------------------------------------------------
 Public Sub ExportarCSVPorGestor()
     Dim wsCSV As Worksheet
@@ -816,6 +868,8 @@ Public Sub ExportarCSVPorGestor()
     Next r
 
     Dim k As Variant
+    ' Um arquivo por gestor distinto da coluna 4. Linhas sem gestor só vão para o
+    ' dados_TODOS.csv.
     For Each k In dictGestores.Keys
         ExportarLinhasParaCSV wsCSV, pasta & "\dados_" & NomeArquivoSeguro(CStr(k)) & ".csv", CStr(k)
     Next k
@@ -951,6 +1005,7 @@ Private Function DataMaximaAba(ws As Worksheet) As Date
         DataMaximaAba = maxData
         Exit Function
     End If
+    ' O cabeçalho dos Cartões fica na linha 2 e os dados começam na linha 3.
     colData = ColunaPorCabecalho(ws, "DT", 2)
     If colData = 0 Then
         DataMaximaAba = maxData
@@ -981,6 +1036,8 @@ Private Function AbasMaisRecentes(abas As Collection, maximoAbas As Long) As Col
     ReDim wsArr(1 To n)
     ReDim dtArr(1 To n)
 
+    ' Guarda cada aba e a sua data mais recente em dois arrays paralelos
+    ' (wsArr(i) <-> dtArr(i)) para poder ordenar as duas listas juntas.
     Dim i As Long, a As Variant
     i = 1
     For Each a In abas
@@ -1001,6 +1058,8 @@ Private Function AbasMaisRecentes(abas As Collection, maximoAbas As Long) As Col
         Next j
     Next i
 
+    ' Copia só as "maximoAbas" primeiras (as mais recentes) para o resultado.
+    ' Quem chama: GerarAbaCSV, com maximoAbas = 3. abasCartao(1) vira o "mês atual".
     Dim resultado As New Collection
     For i = 1 To n
         If i > maximoAbas Then Exit For
@@ -1022,6 +1081,8 @@ Private Function ContarExtraFaltaMesmoDia(ws As Worksheet, dictNomes As Object) 
         Exit Function
     End If
 
+    ' Colunas pelo nome, na linha 2 (layout do ConsolidarCartaoPonto). Sem a
+    ' coluna de matrícula ou a do "Sim", a aba é ignorada (dicionário vazio).
     Dim colMat As Long, colNome As Long, colFlag As Long
     colMat = ColunaPorCabecalho(ws, "Matrícula", 2)
     colNome = ColunaPorCabecalho(ws, "Nome", 2)
@@ -1033,6 +1094,8 @@ Private Function ContarExtraFaltaMesmoDia(ws As Worksheet, dictNomes As Object) 
 
     Dim ultimaLinha As Long, r As Long, mat As String, flagTxt As String, nome As String
     ultimaLinha = UltimaLinhaPreenchida(ws, colMat)
+    ' dict(matrícula) = quantos dias com "Sim" nesta aba. dictNomes é
+    ' compartilhado entre as 3 abas: guarda o 1º nome visto de cada matrícula.
     For r = 3 To ultimaLinha
         mat = TextoLimpo(ws.Cells(r, colMat).Value)
         If mat <> "" Then
@@ -1062,6 +1125,8 @@ End Function
 Private Sub GerarOcorrenciasCurtasDoCartao(ws As Worksheet, dictRE As Object, dictGestorPorMatricula As Object, _
     dictGrupoPorMatricula As Object, wsCSV As Worksheet, ByRef linhaSaida As Long, ByRef qtdGerada As Long)
 
+    ' Colunas do Cartão (linha 2) usadas aqui: a coluna "Tolerância < 15min" diz SE
+    ' o dia entra; BH/50%/100% dizem QUANTOS minutos.
     Dim colMat As Long, colNome As Long, colData As Long, colBH As Long
     Dim col50 As Long, col100 As Long, colTolerancia As Long
     colMat = ColunaPorCabecalho(ws, "Matrícula", 2)
@@ -1091,10 +1156,14 @@ Private Sub GerarOcorrenciasCurtasDoCartao(ws As Worksheet, dictRE As Object, di
         Dim setorNome As String, cargoNome As String
         ObterSetorCargo dictRE, mat, setorNome, cargoNome
 
+        ' Gestor e grupo vêm dos dicionários montados no loop da Tratamento (e
+        ' completados pelo ORG); quem não está em nenhum dos dois sai sem gestor.
         Dim gestor As String, grupo As String
         gestor = TextoDoDicionario(dictGestorPorMatricula, mat)
         grupo = TextoDoDicionario(dictGrupoPorMatricula, mat)
 
+        ' Minutos do dia: falta = BH; extra = 50% + 100%. Falta sai NEGATIVA no CSV
+        ' (convenção do campo duracao_minutos: negativo = falta, positivo = extra).
         Dim minFaltaBH As Double, minExtra As Double
         minFaltaBH = IIf(colBH > 0, NzNum(ws.Cells(r, colBH).Value), 0) * 24 * 60
         minExtra = (IIf(col50 > 0, NzNum(ws.Cells(r, col50).Value), 0) _
@@ -1147,6 +1216,7 @@ Private Sub GerarResumoHorasCartao(ws As Worksheet, dictRE As Object, dictGestor
     Set dictHoras = CreateObject("Scripting.Dictionary")
     Set dictNomesHoras = CreateObject("Scripting.Dictionary")
 
+    ' Primeiro soma tudo por matrícula (o Cartão tem uma linha por dia)...
     Dim ultimaLinha As Long, r As Long, mat As String
     Dim minExtraDia As Double, minBancoDia As Double, somaAtual As Variant
     ultimaLinha = UltimaLinhaPreenchida(ws, colMat)
@@ -1166,6 +1236,9 @@ Private Sub GerarResumoHorasCartao(ws As Worksheet, dictRE As Object, dictGestor
         End If
     Next r
 
+    ' ...depois grava UMA linha por pessoa com os totais. Quem não teve nenhum
+    ' minuto de extra nem de banco no mês não gera linha (por isso nem todo mundo
+    ' do Cartão aparece no gráfico do painel).
     Dim matK As Variant, totais As Variant, nomeHoras As String
     Dim setorNome As String, cargoNome As String
     For Each matK In dictHoras.Keys
@@ -1208,6 +1281,9 @@ Private Sub GerarAbsenteismo(abasCartao As Collection, dictRE As Object, dictGes
     Dim emendaTxt As String, descInicio As String
     Dim infoPessoa As Variant, nomeAus As String, setorAus As String, cargoAus As String
     Dim setorRE As String, cargoRE As String
+    ' Para cada pessoa, anda dia a dia do primeiro ao último dia dos Cartões.
+    ' Ao achar um dia de atestado, avança enquanto o dia seguinte também for
+    ' atestado: o trecho [inicioAus, fimAus] é UM atestado (uma linha no CSV).
     For Each matK In dictDias.Keys
         Set diasPessoa = dictDias(matK)
         d = dataMin
@@ -1222,6 +1298,8 @@ Private Sub GerarAbsenteismo(abasCartao As Collection, dictRE As Object, dictGes
 
                 emendaTxt = CalcularEmendaFolga(diasPessoa, inicioAus, fimAus)
 
+                ' Nome, setor e cargo: o Cartão mais recente tem prioridade para o setor; o
+                ' cadastro RE tem prioridade para o cargo.
                 infoPessoa = dictInfo(matK)
                 nomeAus = CStr(infoPessoa(0))
                 If nomeAus = "" Then nomeAus = "Matrícula " & matK
@@ -1260,6 +1338,9 @@ Private Sub MontarDiasCartao(abasCartao As Collection, ByRef dictDias As Object,
     Dim abaIter As Variant, ws As Worksheet
     Dim colMat As Long, colNome As Long, colData As Long, colDesc As Long, colSetor As Long, colCargo As Long
     Dim ultimaLinha As Long, r As Long, mat As String, vData As Variant, dtLong As Long
+    ' As datas viram Long (número de série do Excel, sem hora) para servirem de
+    ' chave: dia anterior = d - 1, dia seguinte = d + 1. Se o mesmo dia aparece em
+    ' duas abas, vale a primeira lida (a mais recente).
     For Each abaIter In abasCartao          ' a mais recente primeiro: nome/setor atuais
         Set ws = abaIter
         colMat = ColunaPorCabecalho(ws, "Matrícula", 2)
@@ -1340,6 +1421,8 @@ Private Sub GerarAfastamentos(ws As Worksheet, abasCartao As Collection, dictRE 
     Dim dictDias As Object, dictInfo As Object, dataMin As Long, dataMax As Long
     MontarDiasCartao abasCartao, dictDias, dictInfo, dataMin, dataMax
 
+    ' Colunas da aba Afastamentos (cabeçalho na linha 1, nomes definidos pelo
+    ' FormatarAfastamentos). Sem Matrícula ou Início não há o que gerar.
     Dim colMat As Long, colNome As Long, colSit As Long, colIni As Long, colHoraIni As Long
     Dim colFim As Long, colDias As Long, colHoras As Long
     colMat = ColunaPorCabecalho(ws, "Matrícula")
@@ -1358,6 +1441,9 @@ Private Sub GerarAfastamentos(ws As Worksheet, abasCartao As Collection, dictRE 
     Dim diasPessoa As Object, infoPessoa As Variant, setorAf As String, cargoAf As String
     Dim setorRE As String, cargoRE As String
     ultimaLinha = UltimaLinhaPreenchida(ws, colMat)
+    ' Para cada afastamento: calcula início/fim como Long, os dias (da coluna
+    ' Dias, ou término - início + 1), a data com hora de início e os minutos (só
+    ' afastamentos de poucas horas). Depois busca setor/cargo e grava a linha.
     For r = 2 To ultimaLinha
         mat = TextoLimpo(ws.Cells(r, colMat).Value)
         vIni = ws.Cells(r, colIni).Value2
@@ -1393,6 +1479,9 @@ Private Sub GerarAfastamentos(ws As Worksheet, abasCartao As Collection, dictRE 
         nomeAf = TextoDaCelula(ws, r, colNome)
         If nomeAf = "" Then nomeAf = "Matrícula " & mat
 
+        ' Setor/cargo: o Cartão é usado só se a pessoa estiver nele (dictDias); o
+        ' cadastro RE completa o setor e tem prioridade no cargo. diasPessoa também
+        ' alimenta CalcularEmendaFolga (sem a pessoa no Cartão, a folga fica vazia).
         Set diasPessoa = Nothing
         setorAf = ""
         cargoAf = ""
@@ -1412,6 +1501,9 @@ Private Sub GerarAfastamentos(ws As Worksheet, abasCartao As Collection, dictRE 
             diasAusencia:=diasAf, emendaFolga:=CalcularEmendaFolga(diasPessoa, iniLong, fimLong)
         linhaSaida = linhaSaida + 1
         qtdGerada = qtdGerada + 1
+        ' Os contadores de atestado são só para a mensagem final da macro: a linha
+        ' "Afastamento" é gravada para TODOS os tipos (férias, curso...), e quem
+        ' separa atestado do resto é o painel.
         If ContemAlgum(situacaoAf, ABSENTEISMO_CONTEM) Then
             qtdAtestadosAf = qtdAtestadosAf + 1
             qtdDiasAtestadoAf = qtdDiasAtestadoAf + CLng(diasAf)
@@ -1466,6 +1558,9 @@ Private Sub GerarLinhasDigitadas(ws As Worksheet, dictRE As Object, dictGestorPo
     dictGrupoPorMatricula As Object, wsCSV As Worksheet, ByRef linhaSaida As Long, ByRef qtdGerada As Long, _
     ByRef qtdOrigemE As Long)
 
+    ' Colunas da aba Marcações Digitadas (nomes definidos pelo
+    ' FormatarMarcacoesDigitadas). "Origem" pode não existir em abas antigas: aí
+    ' nenhuma batida é descartada.
     Dim colMat As Long, colNome As Long, colCargo As Long, colOrigem As Long
     Dim colData As Long, colHora As Long, colMotivo As Long, colJust As Long
     colMat = ColunaPorCabecalho(ws, "Matrícula")
@@ -1491,6 +1586,7 @@ Private Sub GerarLinhasDigitadas(ws As Worksheet, dictRE As Object, dictGestorPo
             GoTo ProximaDigitada
         End If
 
+        ' Data + hora da batida num só valor (a hora arredondada ao minuto).
         dataHora = CDate(Int(CDbl(vData)))
         If colHora > 0 Then
             vHora = ws.Cells(r, colHora).Value2
@@ -1534,6 +1630,8 @@ Private Function EncontrarAbaORG(wb As Workbook) As Worksheet
     Set EncontrarAbaORG = Nothing
 End Function
 
+' True se a aba tem, na linha 1, as colunas Matricula, Colaborador e Gestor
+' (sem diferenciar acento/maiúscula). Usada por EncontrarAbaORG.
 Private Function TemColunasORG(ws As Worksheet) As Boolean
     TemColunasORG = ColunaSemAcento(ws, "Matricula") > 0 And ColunaSemAcento(ws, "Colaborador") > 0 _
         And ColunaSemAcento(ws, "Gestor") > 0
@@ -1568,6 +1666,7 @@ Private Function LerListaORG(ws As Worksheet) As Collection
     Set LerListaORG = lista
     If ws Is Nothing Then Exit Function
 
+    ' Colunas do ORG (sem acento/maiúscula): "Descrição" é a área da pessoa.
     Dim colMat As Long, colNome As Long, colSetor As Long, colCargo As Long, colGestor As Long
     colMat = ColunaSemAcento(ws, "Matricula")
     colNome = ColunaSemAcento(ws, "Colaborador")
@@ -1576,6 +1675,9 @@ Private Function LerListaORG(ws As Worksheet) As Collection
     colGestor = ColunaSemAcento(ws, "Gestor")
     If colMat = 0 Or colNome = 0 Then Exit Function
 
+    ' dictMatVista: matrículas já incluídas (evita repetidas).
+    ' dictNomeVisto: nomes já incluídos (evita a duplicata "sem matrícula" de quem
+    ' já entrou com matrícula válida no passo 1).
     Dim dictMatVista As Object, dictNomeVisto As Object
     Set dictMatVista = CreateObject("Scripting.Dictionary")
     Set dictNomeVisto = CreateObject("Scripting.Dictionary")
@@ -1694,6 +1796,7 @@ Private Sub GerarResumoPausasTermicas(ws As Worksheet, linhaCabecalho As Long, d
     colImpares = ColunaPorCabecalho(ws, "Marcações Ímpares", linhaCabecalho)
     If colMat = 0 Then Exit Sub
 
+    ' Lê da linha logo abaixo do cabeçalho até a primeira matrícula vazia.
     Dim r As Long
     r = linhaCabecalho + 1
     Do While TextoLimpo(ws.Cells(r, colMat).Value) <> ""
@@ -1750,6 +1853,8 @@ End Function
 ' linhaHeader:=2.
 Private Function ColunaPorCabecalho(ws As Worksheet, cabecalho As String, Optional linhaHeader As Long = 1) As Long
     Dim ultimaColuna As Long, c As Long
+    ' Compara o texto EXATO (só sem espaços nas pontas): "Matrícula" com acento é
+    ' diferente de "Matricula". Por isso cada aba usa a grafia do seu cabeçalho.
     ultimaColuna = ws.Cells(linhaHeader, ws.Columns.Count).End(xlToLeft).Column
     For c = 1 To ultimaColuna
         If TextoLimpo(ws.Cells(linhaHeader, c).Value) = cabecalho Then
@@ -1796,6 +1901,7 @@ Private Function MontarDicionarioRE(ws As Worksheet) As Object
     End If
 
     Dim ultimaLinha As Long, r As Long, mat As String
+    ' Matrícula repetida na RE: vale a primeira linha.
     ultimaLinha = UltimaLinhaPreenchida(ws, colMat)
     For r = 2 To ultimaLinha
         mat = TextoLimpo(ws.Cells(r, colMat).Value)
@@ -1858,6 +1964,7 @@ Private Function MontarDicionarioCartao(ws As Worksheet) As Object
     Dim mat As String, dt As Variant, chave As String
     Dim bhMin As Double, extra50Min As Double, extra100Min As Double
 
+    ' Uma entrada por matrícula+dia; os dados começam na linha 3 (cabeçalho na 2).
     ultimaLinha = UltimaLinhaPreenchida(ws, colMat)
     For r = 3 To ultimaLinha
         mat = TextoLimpo(ws.Cells(r, colMat).Value)
@@ -1936,6 +2043,8 @@ Private Function MontarDicionarioAusencia(ws As Worksheet) As Object
     Dim situacaoAtual As String, integrado As Boolean
 
     ultimaLinha = UltimaLinhaPreenchida(ws, colMat)
+    ' Uma entrada por matrícula+data da falta. Se a mesma chave aparecer duas
+    ' vezes, vale a ÚLTIMA (atribuição direta dict(chave) = ...).
     For r = 2 To ultimaLinha
         mat = TextoLimpo(ws.Cells(r, colMat).Value)
         dt = ws.Cells(r, colData).Value
@@ -2096,6 +2205,9 @@ Private Function PrepararAbaCSV(wb As Workbook) As Worksheet
         ws.Cells.Clear
     End If
 
+    ' O CONTRATO COM O PAINEL: 29 colunas, nesta ordem. O index.html acha cada
+    ' coluna pelo nome (HEADER_ALIASES), mas o ExportarCSVPorGestor usa a posição 4
+    ' para o gestor. Coluna nova: acrescente no FIM, aqui e em EscreverLinhaCSV.
     Dim cabecalhos As Variant, i As Long
     cabecalhos = Array("data", "colaborador", "matricula", "gestor", "setor", "cargo", "tipo_ocorrencia", _
                         "situacao", "status", "duracao_minutos", "destino_horas_extra", "data_tratativa_pontonet", _
@@ -2134,6 +2246,9 @@ Private Sub EscreverLinhaCSV(ws As Worksheet, linha As Long, dataOcorrencia As V
     Optional origemMarcacao As String = "", Optional diasAusencia As Variant = Empty, _
     Optional emendaFolga As String = "")
 
+    ' Colunas 1 a 13: presentes em toda linha. 14/15: auditoria. 16 a 22: pausas.
+    ' 23: grupo. 24/25: resumo de horas. 26/27: marcação digitada. 28/29:
+    ' afastamento/absenteísmo. Opcional não informado = célula vazia.
     ws.Cells(linha, 1).Value = CDate(dataOcorrencia)
     ws.Cells(linha, 2).Value = nome
     ws.Cells(linha, 3).Value = matricula
@@ -2200,12 +2315,15 @@ End Function
 
 ' Escreve a aba "CSV" (ou só as linhas de um gestor) num arquivo texto
 ' em UTF-8, com aspas nos campos que precisarem, para o Painel de
-' Ponto (Dashboard-Ponto) conseguir ler nomes com acento sem problema.
+' Ponto (Dashboard/index.html) conseguir ler nomes com acento sem problema.
 Private Sub ExportarLinhasParaCSV(wsCSV As Worksheet, caminho As String, filtroGestor As String)
     Dim ultimaLinha As Long, ultimaColuna As Long
     ultimaLinha = UltimaLinhaPreenchida(wsCSV, 1)
     ultimaColuna = wsCSV.Cells(1, wsCSV.Columns.Count).End(xlToLeft).Column
 
+    ' ADODB.Stream com Charset "utf-8" grava o arquivo em UTF-8 COM BOM (os 3 bytes
+    ' EF BB BF no início). O BOM faz o Excel e o navegador reconhecerem os acentos;
+    ' o painel tira o BOM ao ler.
     Dim stream As Object
     Set stream = CreateObject("ADODB.Stream")
     stream.Type = 2 ' adTypeText
@@ -2215,6 +2333,8 @@ Private Sub ExportarLinhasParaCSV(wsCSV As Worksheet, caminho As String, filtroG
     Dim c As Long, r As Long
     Dim linhaTxt As String
 
+    ' Linha 1: cabeçalho. Depois, cada linha da aba CSV (todas, ou só as do gestor
+    ' pedido). Cada célula passa por TextoCelula (formata datas) e CampoCSV (aspas).
     linhaTxt = ""
     For c = 1 To ultimaColuna
         If c > 1 Then linhaTxt = linhaTxt & ","

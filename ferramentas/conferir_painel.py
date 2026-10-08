@@ -8,6 +8,9 @@ d=pickle.load(open(os.environ.get('PLANILHA_PKL','planilha.pkl'),'rb'))
 ui=json.load(open(sys.argv[1]))
 C=collections.Counter
 def norm(t): return unicodedata.normalize('NFD',t).encode('ascii','ignore').decode().lower().strip()
+# E = as ocorrências "esperadas", recalculadas direto da aba Tratamento com as mesmas regras
+# do GerarCSVPonto (Check "S", situação vazia/"Sem alteração" e "Problema horário" fora).
+# Cada item: nome, matrícula, situação, data, gestor, cargo e minutos de extra/falta.
 T=d['Tratamento']; th=hdrmap(T[0])
 RE=d['RE 08.09']; rh=hdrmap(RE[0]); recargo={s(r[rh['Matrícula']]):s(r[rh['Cargo']]) for r in RE[1:]}
 E=[]
@@ -21,6 +24,9 @@ for r in T[1:]:
     if not cg or cg.startswith('#'): cg=recargo.get(mat,'') or 'Sem cargo'
     E.append(dict(nome=s(r[th['Nome']]),mat=mat,sit=sit,data=r[th['Data']],gestor=g,cargo=cg,
        extra=(nz(r[th['Extras']])+nz(r[th['Extra 100%']]))*1440, falta=nz(r[th['Faltas']])*1440))
+# chk(nome, ok, detalhe): registra e imprime um item da conferência (OK ou FALHA).
+# tips(): lê os balões dos gráficos ("Nome: 12 (…)") e devolve {nome: número}.
+# kp: os 3 cards de KPI do topo, pelo título.
 res=[]
 def chk(nome,ok,det=''): res.append((nome,ok,det)); print(('OK   ' if ok else 'FALHA')+' '+nome+(' -> '+det if det else ''))
 def tips(lst):  # ignora os complementos " (...)" e " · clique para ver o colaborador"

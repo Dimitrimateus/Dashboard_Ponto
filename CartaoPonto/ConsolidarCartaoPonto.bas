@@ -56,6 +56,22 @@
 ' de auditoria. Quem lê esta aba depois (GerarCSVPonto) procura as colunas pelo NOME do
 ' cabeçalho, então a mudança de posição não quebra nada lá.
 ' ==============================================================================================================
+' COMO ESTA ABA É USADA DEPOIS (o que depende dela)
+'   Depois de gerada, a aba "Cartao_Consolidado" é RENOMEADA pelo RH para
+'   "Cartão <mês>" (ex.: "Cartão Agosto", "Cartão atual") e copiada para a planilha
+'   de Tratamento. O GerarAbaCSV (módulo GerarCSVPonto) procura as abas cujo nome
+'   começa com "Cartão" e que têm "Matrícula" e "DT" na LINHA 2 (por isso o
+'   cabeçalho fica na linha 2), usa as 3 mais recentes e lê as colunas pelo NOME:
+'     - BH, 50%, 100%            -> quantidade de falta/extra e o "Resumo Horas Cartão";
+'     - Banco de horas e extra no mesmo dia -> "Auditoria Extra e Falta (3 Meses)";
+'     - Tolerância < 15min       -> linhas "Falta < 15min"/"Extra < 15min";
+'     - Descrição Marcação       -> atestados (Absenteísmo) e folgas encostadas;
+'     - Setor, Nome              -> setor/nome das linhas de afastamento.
+'   Portanto: renomear qualquer um desses cabeçalhos exige mudar o GerarCSVPonto.
+'   Não depende de outros módulos: as funções auxiliares estão no fim deste
+'   arquivo (ResolverDataPorDiaSemana, ExtrairPeriodoDoCabecalho,
+'   SepararMarcacoesERecursos).
+' ==============================================================================================================
 
 ' Posição de cada coluna na aba de DESTINO (Cartao_Consolidado). Tudo que escreve ou lê o
 ' destino usa estas constantes: para mudar a ordem das colunas, basta mexer aqui (e no array
@@ -80,8 +96,15 @@ Private Const COL_MAIS4 As Integer = 27
 Private Const COL_TOLERANCIA As Integer = 28
 Private Const COL_PROXIMOS As Integer = 29
 
+' Macro principal (Desenvolvedor > Macros). Etapas: 1) cria/limpa a aba de
+' destino; 2) descobre o período do relatório; 3) escreve o cabeçalho; 4) lê o
+' relatório linha a linha gravando uma linha por dia; 5) formata. O rótulo
+' "Sair:" no fim religa o Excel em qualquer caso.
 Sub ConsolidarCartaoPontoDefinitivo()
 
+    ' wsOrigem = relatório bruto (aba ativa); wsDestino = "Cartao_Consolidado".
+    ' uLinha = última linha da origem; i/j = contadores de linha/coluna;
+    ' linDestino = próxima linha livre no destino (os dados começam na linha 3).
     Dim wsOrigem As Worksheet
     Dim wsDestino As Worksheet
     Dim uLinha As Long
@@ -89,6 +112,8 @@ Sub ConsolidarCartaoPontoDefinitivo()
     Dim j As Long
     Dim linDestino As Long
 
+    ' Contexto do colaborador que está sendo lido (preenchido nas linhas
+    ' "Empregado:", "Cargo:", "Localização:") e copiado em cada linha de dia dele.
     Dim vMatricula As String, vNome As String, vCargo As String
     Dim vSetor As String
     Dim vCodHorario As String, vHorarioDoDia As String
@@ -98,9 +123,13 @@ Sub ConsolidarCartaoPontoDefinitivo()
     Set dictHorarios = CreateObject("Scripting.Dictionary")
     Dim lendoHorarios As Boolean
 
+    ' flagPodeCapturar = "estamos dentro da tabela de dias" (entre "DT" e "Horas
+    ' normais:"). celA/celB = texto limpo das colunas A e B da linha atual.
     Dim flagPodeCapturar As Boolean
     Dim celA As String, celB As String
 
+    ' Período do relatório (lido do cabeçalho) e o "relógio" usado para montar a
+    ' data completa de cada dia (o relatório só traz o dia do mês e o dia da semana).
     Dim dataInicioRelatorio As Date, dataFimRelatorio As Date
     Dim temPeriodo As Boolean
     Dim diaAtual As Integer, mesAtual As Integer, anoAtual As Integer
@@ -108,11 +137,14 @@ Sub ConsolidarCartaoPontoDefinitivo()
     Dim dataCompleta As Date
     Dim semSenior As String
 
+    ' Batidas do dia: texto bruto da coluna D, a lista de horários extraída dele e o
+    ' texto que sobra (ex.: "Trabalhando", "DSR", "Atestado").
     Dim celMarcacoes As String
     Dim horarios() As String
     Dim txtDescricao As String
     Dim possuiHorarios As Boolean
 
+    ' Variáveis de apoio das 5 colunas de auditoria (ver "MÓDULO DE AUDITORIA").
     Dim pt1 As String, pt2 As String, pt3 As String, pt4 As String
     Dim pontosPreenchidos As Integer
     Dim extraMenor15 As Boolean, faltaMenor15 As Boolean
@@ -132,6 +164,7 @@ Sub ConsolidarCartaoPontoDefinitivo()
     ' ==================================================================================================
     ' 1. CRIAÇÃO DA PLANILHA DE DESTINO
     ' ==================================================================================================
+    ' Reaproveita a aba "Cartao_Consolidado" se existir (limpando tudo), senão cria.
     On Error Resume Next
     Set wsDestino = Sheets("Cartao_Consolidado")
     On Error GoTo 0
@@ -143,6 +176,7 @@ Sub ConsolidarCartaoPontoDefinitivo()
         wsDestino.Cells.Clear
     End If
 
+    ' Desliga atualização de tela e recálculo enquanto grava (religados em "Sair:").
     Application.ScreenUpdating = False
     Application.Calculation = xlCalculationManual
 
@@ -174,6 +208,7 @@ Sub ConsolidarCartaoPontoDefinitivo()
         On Error GoTo 0
     End If
 
+    ' Ponto de partida do "relógio" de mês/ano usado na reserva sequencial.
     mesAtual = Month(dataInicioRelatorio)
     anoAtual = Year(dataInicioRelatorio)
     diaAnterior = 0
@@ -181,6 +216,9 @@ Sub ConsolidarCartaoPontoDefinitivo()
     ' ==================================================================================================
     ' 3. CABEÇALHO DA PLANILHA DE DESTINO
     ' ==================================================================================================
+    ' Linha 1 = faixas coloridas com o nome dos grupos ("Horas faltas", "Horas
+    ' extras", "Painel de Auditoria"); linha 2 = nomes das colunas (é a linha que o
+    ' GerarCSVPonto lê). Só a linha 2 importa para quem lê a aba depois.
     With wsDestino
         .Range("A1:P1").Interior.Color = RGB(30, 30, 30)
 
@@ -233,6 +271,7 @@ Sub ConsolidarCartaoPontoDefinitivo()
         End With
     End With
 
+    ' Os dados começam na linha 3 (linhas 1 e 2 são cabeçalho).
     linDestino = 3
     flagPodeCapturar = False
 
@@ -569,6 +608,7 @@ Sub ConsolidarCartaoPontoDefinitivo()
             End If
         End If
 
+' Rótulo usado pelo "GoTo ContinuarLoop" da linha "DT": pula para a próxima linha.
 ContinuarLoop:
     Next i
 
@@ -599,6 +639,8 @@ ContinuarLoop:
         .Range("A1").Select
     End With
 
+' Rótulo de saída: alcançado no fim normal ou quando o usuário cancela a
+' digitação do período. Religa o Excel e mostra o resumo.
 Sair:
     Application.Calculation = xlCalculationAutomatic
     Application.ScreenUpdating = True
@@ -780,6 +822,10 @@ End Function
 ' ==============================================================================================================
 ' FUNÇÃO AUXILIAR: REGEX PARA MARCAÇÕES (sem alterações — estava correta)
 ' ==============================================================================================================
+' Recebe o texto da coluna D de um dia (ex.: "08:00 12:00 13:12 18:00  Trabalhando")
+' e devolve: outHorarios = cada "hh:mm" encontrado, na ordem; outDescricao = o
+' texto que sobrou sem os horários ("Trabalhando"). Retorna True se achou pelo
+' menos um horário. A descrição é o que vai para "Descrição Marcação".
 Private Function SepararMarcacoesERecursos(ByVal textoOriginal As String, ByRef outHorarios() As String, ByRef outDescricao As String) As Boolean
     Dim regEx As Object
     Dim matches As Object

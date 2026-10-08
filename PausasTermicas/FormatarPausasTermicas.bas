@@ -45,12 +45,28 @@ Option Explicit
 ' Rode este macro numa CÓPIA da planilha antes de usar em produção — ele
 ' reescreve a aba ativa por completo (Ctrl+Z desfaz se rodar por engano).
 ' ============================================================================
+' COMO SE LIGA AO RESTO DO PROJETO
+'   HRES114 (Senior) -> esta macro -> aba "Pausas Térmicas" na planilha de
+'   Tratamento -> GerarAbaCSV (GerarCSVPonto) acha a tabela pela linha que tem
+'   "Matrícula" + "Pausa corretas" e gera uma linha "Resumo Pausas Térmicas" por
+'   colaborador (colunas pausas_corretas ... pausas_marcacoes_impares do CSV) ->
+'   o painel mostra na seção "Pausas térmicas" e no card do colaborador.
+'   Os nomes do cabeçalho (subHeaders, mais abaixo) são procurados pelo
+'   GerarCSVPonto: mudar um nome aqui exige mudar lá.
+'   Não depende de outros módulos (a única rotina de apoio, FormatarCabecalho,
+'   está no fim deste arquivo).
+' ============================================================================
 
+' Macro principal: lê o relatório bruto de cima a baixo guardando os totais e
+' depois reescreve a aba só com as duas tabelas.
 Sub FormatarPausasTermicas()
 
     Dim ws As Worksheet
     Set ws = ActiveSheet
 
+    ' lastRow = última linha com algo na coluna A. Aqui End(xlUp) é seguro porque o
+    ' relatório recém-exportado não tem filtro (nas abas de Tratamento o projeto usa
+    ' UltimaLinhaPreenchida por causa dos filtros).
     Dim lastRow As Long
     lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
     If lastRow < 2 Then
@@ -58,6 +74,7 @@ Sub FormatarPausasTermicas()
         Exit Sub
     End If
 
+    ' Confirmação antes de apagar: o usuário pode desistir.
     If MsgBox("Este macro vai REESCREVER completamente a aba """ & ws.Name & _
               """, deixando só os totais por colaborador e o total geral." & vbCrLf & vbCrLf & _
               "Recomendado: rode numa CÓPIA do arquivo." & vbCrLf & vbCrLf & _
@@ -65,6 +82,8 @@ Sub FormatarPausasTermicas()
         Exit Sub
     End If
 
+    ' Desliga atualização de tela e cálculo automático durante a macro (mais
+    ' rápido); ambos são religados no fim. A barra de status mostra o andamento.
     Application.ScreenUpdating = False
     Application.Calculation = xlCalculationManual
     Application.StatusBar = "Lendo dados originais..."
@@ -187,6 +206,8 @@ Sub FormatarPausasTermicas()
     ws.Cells.Clear
     ActiveWindow.FreezePanes = False
 
+    ' Cabeçalho das duas tabelas. "Matrícula" e "Pausa corretas" são as palavras
+    ' que o GerarCSVPonto usa para achar esta tabela em qualquer aba.
     Dim subHeaders As Variant
     subHeaders = Array("Matrícula", "Colaborador", "Cargo", "Pausa corretas", _
                         "Pausa menor 0:20", "Pausa maior 0:20", "Trabalho correto 1:40", _
@@ -270,6 +291,7 @@ Sub FormatarPausasTermicas()
     ' ============================================================
     ' Ajustes finais de layout
     ' ============================================================
+    ' Fonte, larguras e alinhamento (só aparência; não afeta quem lê a aba).
     ws.Cells.Font.Name = "Calibri"
     ws.Cells.Font.Size = 10
 
@@ -288,6 +310,7 @@ Sub FormatarPausasTermicas()
 
     ws.Cells(1, 1).Select
 
+    ' Religa tudo o que foi desligado no começo e mostra o resumo.
     Application.ScreenUpdating = True
     Application.Calculation = xlCalculationAutomatic
     Application.StatusBar = False

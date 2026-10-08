@@ -1,6 +1,10 @@
 // Abre o index.html no Chromium (Playwright), carrega um CSV e grava em JSON o que cada
 // card/gráfico/tabela mostra. Uso:
 //   NODE_PATH=$(npm root -g) node extrair_painel.js /caminho/index.html /caminho/dados.csv painel.json
+// Onde se encaixa: passo de conferência (CLAUDE.md, seção 10). O JSON gerado aqui é lido
+// pelo conferir_painel.py, que compara cada número com a planilha. Se um id de elemento do
+// painel mudar, a leitura correspondente abaixo precisa mudar junto.
+// errs guarda erros de JavaScript e alertas da página: tem que sair vazio.
 const { chromium } = require('playwright');
 (async () => {
   const [,, html, csv, out] = process.argv;
@@ -13,6 +17,8 @@ const { chromium } = require('playwright');
   // o painel mostra uma seção por vez: abre "Todas as seções" para ler tudo
   await p.evaluate(() => { const b = document.querySelector('#menuSecoes button[data-pagina="todas"]'); if (b) b.click(); });
   await p.waitForTimeout(500);
+  // Dentro da página: lê o texto de cada card, os balões (data-tooltip) dos gráficos e as
+  // linhas das tabelas, pelo id de cada elemento do index.html.
   const data = await p.evaluate(() => {
     const $ = id => document.getElementById(id);
     const txt = id => $(id) ? $(id).textContent.trim() : null;
