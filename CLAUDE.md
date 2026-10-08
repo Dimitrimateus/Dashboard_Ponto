@@ -1,8 +1,11 @@
 # CONTEXTO DO PROJETO — Tratamento de Ponto e Painel de Ocorrências (AuroraCoop)
 
-> Arquivo de contexto para o Claude Code. Estado em **06/10/2026**. Leia inteiro antes de propor
+> Arquivo de contexto para o Claude Code. Estado em **08/10/2026**. Leia inteiro antes de propor
 > qualquer mudança: várias regras abaixo já foram discutidas e decididas com o Dimitri, e as
 > "armadilhas" já custaram retrabalho.
+>
+> **Chegou agora, sem histórico?** Comece pela seção **12 (Estado atual e como continuar)**: ela diz
+> onde está o código, o que o Dimitri está testando, o que falta decidir e como trabalhar com ele.
 
 ---
 
@@ -54,7 +57,7 @@ aba PURO (exportação de ocorrências)   ──► PURO_Para_EDITADO      ─�
 | `GerarCSVPonto/GerarCSVPonto.bas` | `GerarAbaCSV` (monta a aba CSV) e `ExportarCSVPorGestor` (grava os .csv) |
 | `Dashboard/index.html` | O painel. Contém o logo em base64 (linha enorme, ~60 KB); não leia o arquivo inteiro de uma vez |
 | `txt/*.txt` | As mesmas macros em `.txt`, CRLF, prontas para colar |
-| `ferramentas/` | Scripts para conferir CSV e painel sem Excel (ver seção 10) |
+| `ferramentas/` | Scripts para conferir CSV e painel sem Excel, formatar os relatórios em Python, inserir abas na planilha e checar colisões de nome no VBA (ver seção 10) |
 | `README.md` | Guia de uso e histórico de mudanças para humanos |
 
 Os `.bas` estão em **UTF-8**. **Arquivo > Importar** do VBA lê ANSI e estraga os acentos (e com
@@ -225,8 +228,9 @@ dias_ausencia, emenda_folga
   de dados; cada mudança de filtro refaz tudo (`renderDashboard`).
 - Parser próprio: aceita `,` ou `;`, BOM, datas `dd/mm/aaaa` ou ISO, cabeçalhos com sinônimos
   (`HEADER_ALIASES`).
-- **Classificação de linhas:** `TIPOS_RESUMO` (auditoria, pausas) e `TIPOS_CURTAS` ficam fora das
-  vistas gerais e têm vistas próprias; `TIPOS_HORA_EXTRA` entram só nas horas do gráfico de banco
+- **Classificação de linhas:** `TIPOS_RESUMO` (auditoria, pausas, "Resumo Horas Cartão", "Cadastro
+  ORG"), `TIPOS_CURTAS`, "Marcação Digitada" (`isTipoDigitada`) e "Absenteísmo"/"Afastamento"
+  (`isTipoAbsenteismo`) ficam fora das vistas gerais (`isTipoNaoOcorrencia`) e têm vistas próprias; `TIPOS_HORA_EXTRA` entram só nas horas do gráfico de banco
   de horas, **não** na contagem de ocorrências. `isTipoIgnorado` descarta "Problema horário" na
   leitura (proteção para CSV antigo); `textoCampo` transforma "Erro 2042"/`#N/D` em vazio.
 - `TIPOS_RESUMO` = auditoria, pausas e "Resumo Horas Cartão". O gráfico de banco de horas usa
@@ -275,8 +279,9 @@ dias_ausencia, emenda_folga
   (**Os cards de total de horas extra e de horas falta foram retirados a pedido do Dimitri.**)
 - Gráficos/tabelas: por tipo (rosca), por dia da semana, por data (linha), por gestor (top 12),
   por cargo (top 12), top 10 colaboradores, extra e falta no mesmo dia (mês/3 meses, alerta 10+),
-  ocorrências curtas (Faltas/Extras/Total), banco de horas × pagamento (top 10), pausas térmicas
-  (modal), demora por gestor e por colaborador, histórico paginado.
+  ocorrências curtas (Faltas/Extras/Total), banco de horas e hora extra (verde/vermelho + saldo, top
+  10 / "Mostrar todos"), pausas térmicas (tabela na seção), marcações digitadas, afastamentos
+  (atestados), demora por gestor e por colaborador, lista de colaboradores (ORG), histórico paginado.
 - Filtros: gestor, **grupo** (só aparece se o CSV tiver a coluna `grupo` preenchida), cargo,
   colaborador, tipo (chips), status (chips), período. Linhas de resumo ignoram o período.
 - Paleta: laranja `#F7931E`, vermelho `#E31E24`, amarelo `#FFC72C`, preto `#1A1A1A`, cinzas.
@@ -356,10 +361,16 @@ Afastamentos (07/10, relatório HRCL006): 33 atestados, 105 dias, 21 pessoas; ci
 
 ```bash
 pip install openpyxl                      # Playwright já vem no ambiente web do Claude Code
+# (opcional) formatar relatórios do sistema e inserir as abas na planilha, sem openpyxl:
+PYTHONPATH=ferramentas python3 ferramentas/formatar_marcacoes.py "Marcações digitadas.xlsx" marcacoes.pkl
+PYTHONPATH=ferramentas python3 ferramentas/formatar_afastamentos.py "Afastamentos.xlsx" afastamentos.pkl
+python3 ferramentas/adicionar_aba_xlsx.py entrada.xlsx saida.xlsx marcacoes.pkl marcacoes
+python3 ferramentas/adicionar_aba_xlsx.py saida.xlsx saida2.xlsx afastamentos.pkl afastamentos
 python3 ferramentas/carregar_planilha.py "Tratamento Ponto ....xlsx"     # -> planilha.pkl
 python3 ferramentas/simular_gerarcsv.py                                  # -> dados_TODOS.csv (regras da seção 5.4)
 NODE_PATH=$(npm root -g) node ferramentas/extrair_painel.js "$PWD/Dashboard/index.html" "$PWD/dados_TODOS.csv" painel.json
-PYTHONPATH=ferramentas python3 ferramentas/conferir_painel.py painel.json   # OK/FALHA item a item
+PYTHONPATH=ferramentas python3 ferramentas/conferir_painel.py painel.json   # OK/FALHA item a item (hoje 18 itens)
+python3 ferramentas/checar_colisoes_vba.py */*.bas                         # antes de entregar VBA
 ```
 Os scripts foram escritos para a planilha de 28/08 a 27/09 (nomes de aba fixos: "Tratamento",
 "RE 08.09", "Pontonet", "Pausas Térmicas", "Cartão atual/Agosto/Julho"). Ajuste os nomes para
@@ -384,3 +395,65 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
 - 07/10: macro FormatarAfastamentos e linhas "Afastamento" no CSV (relatório HRCL006 substitui o
   Cartão como fonte dos atestados); menu de seções; Pausas na própria seção com colunas estreitas;
   evolução de atestados reage ao ciclo.
+
+## 12. Estado atual e como continuar (08/10/2026)
+
+**Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`, branch `claude/new-session-69o070`.
+Os commits de 06/10 a 08/10 foram feitos, mas o **push para o GitHub foi bloqueado** pelas permissões
+do ambiente anterior. Se o seu repositório não tiver os arquivos `Afastamentos/`,
+`MarcacoesDigitadas/` e `ferramentas/formatar_afastamentos.py`, o código mais novo veio no zip
+`Dashboard_Ponto (codigo).zip` junto com este arquivo: use-o como base. Não tente "contornar" um
+bloqueio de push; peça para o Dimitri liberar ou empurrar ele mesmo.
+
+**O que o Dimitri tem para testar** (pacote `Teste Ponto 07-10.zip`, entregue a ele): as 6 macros em
+`.txt`, o `index.html`, a planilha `Tratamento Ponto 28.08 até 27.09_2 - com Marcações e
+Afastamentos.xlsx` (abas inseridas com `adicionar_aba_xlsx.py`) e um CSV de referência simulado.
+Números esperados quando ele rodar o GerarCSV nessa planilha: 138 ocorrências, 72 colaboradores,
+demora média 5,7 dias, 422 batidas digitadas (12 de Origem "E" ignoradas), 283 afastamentos (33
+atestados, 105 dias), 215 pessoas no ORG, 163 com horas no Cartão. **As macros nunca rodaram no
+Excel**: o próximo retorno dele provavelmente traz erros de compilação/execução (peça print da
+mensagem e da linha amarela).
+
+**Decisões já tomadas (não reabrir sem ele pedir):**
+- Check "S" ignora a linha inteira; "Problema horário" não entra; Origem "E" das digitadas não entra.
+- Cards de horas extra/falta foram retirados. Aviso vermelho "fora do ORG" na lista foi retirado.
+- Absenteísmo = **só atestados** por enquanto; fonte oficial = relatório HRCL006 (não o Cartão).
+- Visões de absenteísmo escolhidas: 2, 4, 5, 6, 7, 8 (sem cards de KPI e sem longo × curto).
+- O relatório de digitadas não diz quem digitou (colaborador × RH): não há como separar.
+- Painel em seções com menu ☰; Pausas Térmicas na própria seção, sem rolagem lateral.
+
+**Aguardando o Dimitri escolher** (sugestões feitas em 07/10, com base no HRCL006):
+1. Absenteísmo completo: somar acidente de trabalho e faltas injustificadas (e justificadas e
+   suspensão quando aparecerem) + **taxa de absenteísmo** (dias ausentes ÷ dias previstos no Cartão).
+2. Ausências por horas: "Saída Médico/Empresa" e "Horas Faltas" em horas por pessoa (uma pessoa
+   concentra 14 das 26 saídas médicas; ~65h no total).
+3. "Quem está fora agora": afastados no fim do ciclo com previsão de retorno.
+4. Mapa da equipe com todos os tipos de afastamento (uma cor por tipo).
+5. Cruzamento digitadas × afastamentos: das 167 digitadas por "atividade externa", só 2 caem em dia
+   com "Viagem a Serviço" registrada (auditoria).
+6. Férias por gestor/semana (55 períodos, 1.457 dias).
+7. Tempo de casa (admissão) × atestados.
+Também em aberto: Check "S" nas curtas/auditoria; critério Internos × Externos;
+`destino_horas_extra`; sugestões antigas da seção 9.
+
+**Correções de cadastro que o Dimitri vai fazer no ORG** (lista nominal só com ele): nome com letra
+trocada que quebra o PROCX, pessoas da RE fora do ORG, desligados ainda no ORG. Ele perguntou se
+corrigir direto no Excel resolve: sim, o GerarCSV lê o ORG a cada execução.
+
+**Como trabalhar com ele (o que funcionou):**
+- Toda resposta em pt-BR, explicando o porquê; dizer direto quando algo entregue estava errado.
+- Entregar VBA em `.txt` (CRLF): `sed 's/$/\r/' X/X.bas > txt/X.txt`. Manter `.bas` e `.txt` iguais.
+- Antes de entregar: `checar_colisoes_vba.py`, simular com `simular_gerarcsv.py`, abrir o painel no
+  Chromium (Playwright) e rodar `conferir_painel.py` (todos OK). Olhar screenshots desktop e 390px.
+- Relatórios novos do sistema (Senior) chegam como "dump" de impressão: cabeçalho repetido, valores
+  deslocados em relação aos títulos, textos quebrados na linha de baixo. Padrão adotado: uma macro
+  `FormatarX` que reescreve a aba ativa como tabela (cabeçalho na linha 1), achando colunas pelo
+  título; o GerarCSV acha a aba pelo cabeçalho; o painel ganha um `tipo_ocorrencia` novo, excluído
+  das vistas gerais e do `periodoCompleto`, com seção própria e texto de "De onde vem".
+- Quando ele manda uma planilha nova, quer as **abas inseridas na planilha de Tratamento** dele: use
+  `adicionar_aba_xlsx.py` (nunca salve com openpyxl). O LibreOffice deste tipo de ambiente não
+  abre nem planilhas simples: valide pela estrutura (zip/XML/contagens) e peça para ele abrir no Excel.
+- Ele manda pacotes de teste em zip quando pede "todos os arquivos": macros, painel, planilha e CSV de
+  referência, em pastas.
+- Dados pessoais (nomes, matrículas, salários): nunca no repositório nem em commits; só na conversa.
+
