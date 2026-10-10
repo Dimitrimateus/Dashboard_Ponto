@@ -206,7 +206,7 @@ if ui.get('absEvol'):
             um=datetime.timedelta(days=1)
             eps.append((m,ini,fim,fol(dd.get(ini-um,'')) or fol(dd.get(fim+um,'')))); i+=1
     esp=[[str(v[0]),str(len(v[1]))] for k,v in sorted(porC.items())]
-    got=[[r[1],r[3]] for r in ui['absEvol']]
+    got=[[r[1],r[-1]] for r in ui['absEvol']]   # dias e pessoas (1ª e última colunas de número)
     emend=sum(1 for e in eps if e[3])
     rk=collections.defaultdict(lambda:[0,set()])
     for m,ini,fim,_ in eps:

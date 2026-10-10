@@ -17,12 +17,15 @@ const { chromium } = require('playwright');
   // o painel mostra uma seção por vez: abre "Todas as seções" para ler tudo
   await p.evaluate(() => { const b = document.querySelector('#menuSecoes button[data-pagina="todas"]'); if (b) b.click(); });
   await p.waitForTimeout(500);
+  // a seção de afastamentos abre com todos os tipos; a conferência compara os atestados
+  await p.evaluate(() => { const s = document.getElementById('absMostrar'); if (s){ s.value = 'atestados'; s.dispatchEvent(new Event('change')); } });
+  await p.waitForTimeout(300);
   // Dentro da página: lê o texto de cada card, os balões (data-tooltip) dos gráficos e as
   // linhas das tabelas, pelo id de cada elemento do index.html.
   const data = await p.evaluate(() => {
     const $ = id => document.getElementById(id);
     const txt = id => $(id) ? $(id).textContent.trim() : null;
-    const tips = id => [...document.querySelectorAll('#'+id+' [data-tooltip]')].map(e=>e.getAttribute('data-tooltip'));
+    const tips = id => [...document.querySelectorAll('#'+id+' [data-tooltip]:not(.seg)')].map(e=>e.getAttribute('data-tooltip'));
     const table = id => [...document.querySelectorAll('#'+id+' tbody tr')].map(tr=>[...tr.children].map(td=>td.textContent.trim()));
     const kpis = [...document.querySelectorAll('#kpiRow .kpi-tile')].map(t=>[t.querySelector('.kpi-label').textContent.trim(), t.querySelector('.kpi-value').textContent.trim(), t.querySelector('.kpi-sub').textContent.trim()]);
     return {
@@ -34,7 +37,7 @@ const { chromium } = require('playwright');
       extraFalta: table('tableExtraFalta'), curtas: table('tableCurtas'), pausas: table('tablePausasTermicas'),
       demoraG: table('tableDemoraGestor'), demoraC: table('tableDemoraColaborador'),
       histCount: txt('historyCount'), fileStatus: txt('fileStatus'),
-      chipsTipo: [...document.querySelectorAll('#fTipo .chip')].map(c=>c.textContent),
+      chipsTipo: [...document.querySelectorAll('#fTipo .ms-op')].map(c=>c.textContent),   // opções do filtro de tipo
       digKpis: $('digKpis') ? $('digKpis').innerText : null,
       digMotivo: [...document.querySelectorAll('#chartDigMotivo .legend-row')].map(r=>[r.querySelector('.legend-label').textContent, r.querySelector('.legend-value').textContent]),
       digTop: tips('chartDigTop'), digLinhas: document.querySelectorAll('#tableDigLista tbody tr').length,
@@ -42,7 +45,7 @@ const { chromium } = require('playwright');
       absReinc: [...document.querySelectorAll('#tableAbsRanking tr.row-alert')].map(tr=>tr.children[0].textContent.trim()),
       orgResumo: $('orgResumo') ? $('orgResumo').innerText : null,
       orgLinhas: document.querySelectorAll('#tableOrg tbody tr').length,
-      grupoOpts: $('fGrupo') ? [...$('fGrupo').options].map(o=>o.value) : null,
+      grupoOpts: [...document.querySelectorAll('#fGrupo .ms-op input')].map(o=>o.value),
     };
   });
   data.errors = errs;

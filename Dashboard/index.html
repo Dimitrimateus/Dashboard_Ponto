@@ -222,7 +222,7 @@
   table.heat th.tot-h{ padding:0 6px; white-space:nowrap; }
   .heat-leg{ display:flex; gap:14px; font-size:11.5px; color:var(--c-muted); margin-top:8px; flex-wrap:wrap; }
   .heat-leg span::before{ content:""; display:inline-block; width:11px; height:11px; margin-right:5px; vertical-align:-1px; border:1px solid var(--c-line); }
-  .heat-leg .l-aus::before{ background:var(--c-terracotta); }
+  .heat-leg .l-aus::before{ background:var(--cor, var(--c-terracotta)); }
   .heat-leg .l-fds::before{ background:#F1F1F2; }
 
   /* ---------- Lista de colaboradores (ORG) ---------- */
@@ -344,6 +344,34 @@
   .date-range input{ flex:1 1 0; min-width:0; }
 
   .chip-group{ display:flex; flex-wrap:wrap; gap:6px; }
+  /* ---------- Filtro de marcar vários (componente "ms") ----------
+     Botão com o resumo da seleção; ao clicar abre .ms-pop logo abaixo, com
+     busca (quando a lista é longa), "Marcar todos"/"Limpar" e as caixinhas. */
+  .filter-label{ display:block; font-size:11.5px; font-weight:700; color:var(--c-muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px; }
+  .ms{ position:relative; }
+  .ms-btn{ width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; text-align:left;
+    font-size:13px; padding:9px 10px; border:1px solid var(--c-line-strong); border-radius:8px; background:#fff; color:var(--c-ink); cursor:pointer; }
+  .ms-btn.tem-sel{ border-color:var(--c-orange); background:#FFF7EE; font-weight:600; }
+  .ms-btn .ms-txt{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ms-btn svg{ flex:0 0 auto; width:14px; height:14px; color:var(--c-muted); }
+  .ms-btn:focus-visible{ outline:2px solid var(--c-orange); outline-offset:2px; }
+  .ms-pop{ position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:40; background:#fff; border:1px solid var(--c-line-strong);
+    border-radius:10px; box-shadow:0 10px 28px rgba(0,0,0,.14); padding:8px; }
+  .ms-busca{ width:100%; box-sizing:border-box; font-size:13px; padding:8px 9px; border:1px solid var(--c-line-strong); border-radius:7px; margin-bottom:6px; }
+  .ms-acoes{ display:flex; justify-content:space-between; gap:8px; margin-bottom:4px; }
+  .ms-acoes button{ background:none; border:0; padding:4px 2px; font-size:12px; font-weight:600; color:var(--c-orange); cursor:pointer; }
+  .ms-lista{ max-height:260px; overflow-y:auto; display:flex; flex-direction:column; }
+  /* .filter-group label (título em maiúsculas) não vale para as opções da lista */
+  .filter-group .ms-op{ display:flex; align-items:flex-start; gap:8px; padding:6px 4px; margin:0; font-size:13px; font-weight:400;
+    text-transform:none; letter-spacing:normal; color:var(--c-ink); border-radius:6px; cursor:pointer; line-height:1.3; }
+  .ms-op:hover{ background:#F4F4F5; }
+  .ms-op input{ margin:2px 0 0; accent-color:var(--c-orange); flex:0 0 auto; }
+  .txt-atest{ color:#C8281E; }
+  .legenda-mini{ display:flex; flex-wrap:wrap; gap:4px 12px; font-size:11.5px; color:var(--c-muted); margin:0 0 8px; }
+  .legenda-mini span{ display:inline-flex; align-items:center; gap:5px; }
+  .legenda-mini i{ width:10px; height:10px; border-radius:2px; display:inline-block; flex:0 0 auto; }
+  .legenda-mini b{ color:var(--c-ink); font-weight:600; }
+  .ms-vazio{ font-size:12.5px; color:var(--c-muted); padding:6px 4px; }
   .chip{
     font-size:11.5px; padding:6px 11px; border-radius:var(--radius-pill);
     border:1px solid var(--c-line-strong); background:#FFFFFF; color:var(--c-muted);
@@ -925,29 +953,32 @@
         </div>
 
       </div>
-      <!-- Seção "Afastamentos — atestados" (renderAbsenteismo), com o seletor de
-           ciclo (#absCiclo) e de agrupamento (#absAgrupar). -->
+      <!-- Seção "Afastamentos" (renderAbsenteismo), com os seletores de ciclo
+           (#absCiclo), de base (#absMostrar: todos os tipos ou só atestados) e de
+           agrupamento (#absAgrupar). -->
       <div class="pagina" data-pagina="afastamentos">
-        <h3 class="section-title">Afastamentos — atestados</h3>
+        <h3 class="section-title">Afastamentos</h3>
         <div id="absSemDados" class="card wide" hidden><div class="chart-empty">Este CSV não traz os afastamentos. Formate o relatório Histórico de Afastamentos com a macro FormatarAfastamentos, traga a aba para a planilha de Tratamento e gere o CSV de novo.</div></div>
         <div id="absCorpo">
-          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: relatório Histórico de Afastamentos do sistema (HRCL006)</span><p>Cada linha do relatório é um afastamento registrado no sistema, com início e término. Por enquanto as vistas contam <strong>só atestados</strong> (“Atestado até 15 dias”; o odontológico entra quando aparecer). Os dias são <strong>corridos</strong>, do início ao término; cada registro do sistema = <strong>1 atestado</strong> (dois atestados seguidos contam 2). Para saber se o atestado encosta numa folga, o painel olha o Cartão Ponto da pessoa no dia antes e no dia depois. Respeita os filtros de gestor, grupo, cargo e colaborador; o filtro de período não se aplica (use o seletor de ciclo abaixo). Sem o relatório de afastamentos, o painel usa os atestados tirados do Cartão.</p></div>
+          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: relatório Histórico de Afastamentos do sistema (HRCL006)</span><p>Cada linha do relatório é um afastamento registrado no sistema, com início e término. A evolução, o “por gestor” e o mapa mostram <strong>todos os tipos</strong>, cada um com uma cor (atestado em vermelho), agrupados em: atestado, férias, viagem a serviço, reunião/curso/treinamento, saída médica e horas, acidente/doença/falta e outros. Use “Mostrar: Só atestados” para ver só os atestados. Saídas de poucas horas (saída médica, horas faltas) não contam como dia: aparecem no resumo, em horas. As vistas “encostados em folga” e “ranking” são sempre só de atestados. Os dias são <strong>corridos</strong>, do início ao término; cada registro do sistema = <strong>1 atestado</strong> (dois atestados seguidos contam 2). Para saber se o atestado encosta numa folga, o painel olha o Cartão Ponto da pessoa no dia antes e no dia depois. Respeita os filtros de gestor, grupo, cargo e colaborador; o filtro de período não se aplica (use o seletor de ciclo abaixo). Sem o relatório de afastamentos, o painel usa os atestados tirados do Cartão.</p></div>
           <div class="abs-toolbar">
             <label for="absCiclo" style="font-size:11.5px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:.04em;">Ciclo</label>
             <select id="absCiclo"></select>
+            <label for="absMostrar" style="font-size:11.5px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:.04em;">Mostrar</label>
+            <select id="absMostrar"><option value="">Todos os afastamentos</option><option value="atestados">Só atestados</option></select>
             <span class="abs-resumo" id="absResumo" style="margin:0"></span>
           </div>
           <section class="grid">
             <div class="card wide">
-              <div class="card-title">Evolução mês a mês</div>
-              <div class="card-hint" id="absEvolHint">Dias de atestado em cada ciclo (28 a 27)</div>
+              <div class="card-title">Evolução mês a mês, por tipo</div>
+              <div class="card-hint" id="absEvolHint">Dias de afastamento em cada ciclo (28 a 27)</div>
               <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Afastamentos do sistema</span><p>Cada dia de atestado conta no ciclo em que caiu (um atestado que atravessa o dia 27/28 é dividido entre os dois ciclos). Com um ciclo escolhido no seletor, o gráfico mostra as semanas desse ciclo e a linha dele fica destacada na tabela. A tabela mostra também quantos atestados começaram no ciclo e quantas pessoas tiveram atestado.</p></div>
               <div class="card-body" id="chartAbsEvolucao"></div>
               <div class="card-body" id="tableAbsEvolucao" style="margin-top:10px"></div>
             </div>
             <div class="card">
               <div class="card-title">Por <select id="absAgrupar" style="width:auto;display:inline-block;padding:3px 8px;font-size:13px;"><option value="gestor">gestor</option><option value="setor">setor</option><option value="cargo">cargo</option></select></div>
-              <div class="card-hint">Dias de atestado no ciclo escolhido &middot; 12 maiores</div>
+              <div class="card-hint">Dias de afastamento no ciclo escolhido, por tipo &middot; 12 maiores</div>
               <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Afastamentos + relação colaborador × gestor</span><p>Gestor: da Tratamento ou, se a pessoa não aparece lá, do ORG. Setor: a coluna Setor do Cartão Ponto (a área, ex.: Ativ. Trade Marketing A). Cargo: do cadastro RE.</p></div>
               <div class="card-body" id="chartAbsGrupo"></div>
             </div>
@@ -972,10 +1003,10 @@
             </div>
             <div class="card wide">
               <div class="card-title">Mapa colaborador × dia</div>
-              <div class="card-hint" id="absHeatHint">Dias de atestado no ciclo</div>
+              <div class="card-hint" id="absHeatHint">Dias de afastamento no ciclo</div>
               <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Afastamentos do sistema</span><p>Uma linha para <strong>cada pessoa que teve atestado em algum momento dos últimos 3 meses</strong> (quem não teve atestado no ciclo mostrado fica com a linha vazia), uma coluna por dia (28 a 27). À direita, os dias de atestado no ciclo e nos 3 meses. Quadrado vermelho = dia de atestado; colunas cinza = sábado e domingo. Com “Últimos 3 meses” no seletor, o mapa mostra o ciclo mais recente.</p></div>
               <div class="heat-wrap" id="absHeat"></div>
-              <div class="heat-leg"><span class="l-aus">Atestado</span><span class="l-fds">Sábado e domingo</span></div>
+              <div class="heat-leg" id="absHeatLeg"><span class="l-fds">Sábado e domingo</span></div>
             </div>
           </section>
         </div>
@@ -1096,30 +1127,33 @@
               <svg class="filters-chevron" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 7l5 6 5-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </summary>
             <div class="filters-body">
+              <!-- Cada filtro é uma lista de marcar vários (componente "ms", ver
+                   msCriar no JS): clicar no botão abre as opções com caixinhas;
+                   nada marcado = todos. data-todos = texto do botão sem seleção,
+                   data-unidade = plural usado em "3 gestores". -->
               <div class="filter-group">
-                <label for="fGestor">Gestor</label>
-                <select id="fGestor"><option value="">Todos os gestores</option></select>
+                <span class="filter-label" id="lblGestor">Gestor</span>
+                <div class="ms" id="fGestor" data-todos="Todos os gestores" data-unidade="gestores" data-busca="1" aria-labelledby="lblGestor"></div>
               </div>
               <div class="filter-group" id="fGrupoGroup" hidden>
-                <label for="fGrupo">Grupo</label>
-                <select id="fGrupo"><option value="">Internos e externos</option></select>
+                <span class="filter-label" id="lblGrupo">Grupo</span>
+                <div class="ms" id="fGrupo" data-todos="Internos e externos" data-unidade="grupos" aria-labelledby="lblGrupo"></div>
               </div>
               <div class="filter-group">
-                <label for="fCargo">Cargo</label>
-                <select id="fCargo"><option value="">Todos os cargos</option></select>
+                <span class="filter-label" id="lblCargo">Cargo</span>
+                <div class="ms" id="fCargo" data-todos="Todos os cargos" data-unidade="cargos" data-busca="1" aria-labelledby="lblCargo"></div>
               </div>
               <div class="filter-group">
-                <label for="fColab">Colaborador</label>
-                <input type="text" id="fColab" list="colabList" placeholder="Buscar colaborador...">
-                <datalist id="colabList"></datalist>
+                <span class="filter-label" id="lblColab">Colaborador</span>
+                <div class="ms" id="fColab" data-todos="Todos os colaboradores" data-unidade="colaboradores" data-busca="1" aria-labelledby="lblColab"></div>
               </div>
               <div class="filter-group">
-                <label>Tipo de ocorrência</label>
-                <div class="chip-group" id="fTipo"></div>
+                <span class="filter-label" id="lblTipo">Tipo de ocorrência</span>
+                <div class="ms" id="fTipo" data-todos="Todos os tipos" data-unidade="tipos" aria-labelledby="lblTipo"></div>
               </div>
               <div class="filter-group" id="fStatusGroup">
-                <label>Status</label>
-                <div class="chip-group" id="fStatus"></div>
+                <span class="filter-label" id="lblStatus">Status</span>
+                <div class="ms" id="fStatus" data-todos="Todos os status" data-unidade="status" aria-labelledby="lblStatus"></div>
               </div>
               <div class="filter-group">
                 <label>Período</label>
@@ -1400,6 +1434,42 @@
     var t = stripAccents(r.situacao).toLowerCase();
     return r.tipo === TIPO_AFASTAMENTO && ATESTADO_CONTEM.some(function(x){ return t.indexOf(x) > -1; });
   }
+  // Todos os afastamentos do arquivo (qualquer tipo): as linhas "Afastamento"
+  // do relatório do sistema ou, num CSV antigo, as "Absenteísmo" do Cartão.
+  // filtrar = aplica os filtros de pessoa (gestor/grupo/cargo/colaborador).
+  function getAfastamentosBase(filtrar){
+    var temAf = state.records.some(function(r){ return r.tipo === TIPO_AFASTAMENTO; });
+    var tipo = temAf ? TIPO_AFASTAMENTO : TIPO_ABSENTEISMO;
+    return filtrar ? getResumoRecords(tipo) : state.records.filter(function(r){ return r.tipo === tipo; });
+  }
+  // Afastamento de poucas horas no mesmo dia (saída médica, horas faltas,
+  // reunião): tem duração em minutos e não conta como dia de afastamento.
+  // Atestado conta sempre como dia, mesmo quando começa no meio do dia.
+  function isPorHoras(r){ return r.tipo === TIPO_AFASTAMENTO && r.duracao > 0 && !isAtestado(r); }
+  // Os afastamentos são agrupados em 7 tipos, cada um com uma cor fixa
+  // (atestado sempre em vermelho, para saltar aos olhos). "tem" = trechos
+  // procurados na situação, sem acento/maiúscula; o primeiro que bater vale.
+  var GRUPOS_AFAST = [
+    { nome:"Atestado", cor:"#E31E24", tem:["atest"] },
+    { nome:"Férias", cor:"#FFC72C", tem:["ferias"] },
+    { nome:"Viagem a serviço", cor:"#F7931E", tem:["viagem"] },
+    { nome:"Reunião, curso e treinamento", cor:"#58595B", tem:["reuni", "curso", "trein", "integra"] },
+    { nome:"Saída médica e horas", cor:"#B3701A", tem:["medico", "horas falta"] },
+    { nome:"Acidente, doença e falta", cor:"#8C1518", tem:["acidente", "doenca", "falta"] },
+    { nome:"Outros (licenças, dispensas…)", cor:"#A7A9AC", tem:[] }
+  ];
+  function grupoAfast(r){
+    if (r.tipo === TIPO_ABSENTEISMO || isAtestado(r)) return GRUPOS_AFAST[0].nome;
+    var t = stripAccents(r.situacao).toLowerCase();
+    for (var i = 1; i < GRUPOS_AFAST.length - 1; i++){
+      if (GRUPOS_AFAST[i].tem.some(function(x){ return t.indexOf(x) > -1; })) return GRUPOS_AFAST[i].nome;
+    }
+    return GRUPOS_AFAST[GRUPOS_AFAST.length - 1].nome;
+  }
+  function corAfast(nome){
+    for (var i = 0; i < GRUPOS_AFAST.length; i++) if (GRUPOS_AFAST[i].nome === nome) return GRUPOS_AFAST[i].cor;
+    return "#A7A9AC";
+  }
   // Atestados do arquivo: do relatório de afastamentos, se o CSV tiver; senão,
   // as linhas "Absenteísmo" antigas (do Cartão). filtrar = aplica gestor/grupo/
   // cargo/colaborador (getResumoRecords).
@@ -1449,7 +1519,7 @@
   // de Histórico (seção 7), que é a única com paginação própria.
   var state = {
     records: [],
-    colorMaps: { gestor:{}, setor:{}, cargo:{}, tipo:{}, status:{} },
+    colorMaps: { gestor:{}, setor:{}, cargo:{}, tipo:{}, status:{}, motivo:{} },
     historySort: { key:"data", dir:"desc" },
     historyPage: 1,
     historyPageSize: 25,
@@ -1806,6 +1876,40 @@
   // Esconde o balão (mouse saiu do elemento).
   function hideTooltip(){ $("chartTooltip").hidden = true; }
 
+  // ---------- Barras empilhadas por tipo ----------
+  // Para mostrar "do que é feita" cada barra (ex.: as ocorrências de sexta
+  // por tipo). empilhar() recebe os itens já calculados ({label, value}), os
+  // registros e duas funções: chaveFn(registro) -> a qual barra ele pertence
+  // (o mesmo texto de item.label) e segFn(registro) -> o tipo dele. Põe em
+  // cada item a lista item.segs [{label, value, color}] e devolve a legenda
+  // (tipos do maior para o menor no total), que vai como opts.legenda para
+  // renderBarH/renderBarV desenharem a legendinha em cima do gráfico.
+  function empilhar(items, records, chaveFn, segFn, corFn){
+    var porChave = {}, total = {};
+    records.forEach(function(r){
+      var k = chaveFn(r), sg = segFn(r);
+      if (k == null || sg == null) return;
+      porChave[k] = porChave[k] || {};
+      porChave[k][sg] = (porChave[k][sg] || 0) + 1;
+      total[sg] = (total[sg] || 0) + 1;
+    });
+    var ordem = Object.keys(total).sort(function(a,b){ return total[b]-total[a] || a.localeCompare(b,"pt-BR"); });
+    items.forEach(function(it){
+      var m = porChave[it.label] || {};
+      it.segs = ordem.filter(function(sg){ return m[sg]; }).map(function(sg){ return { label:sg, value:m[sg], color:corFn(sg) }; });
+    });
+    return ordem.map(function(sg){ return { label:sg, color:corFn(sg), value:total[sg] }; });
+  }
+  // Legendinha (bolinha colorida + nome + total) que fica em cima do gráfico.
+  function legendaMini(lista){
+    var div = document.createElement("div");
+    div.className = "legenda-mini";
+    div.innerHTML = lista.map(function(l){
+      return '<span><i style="background:' + l.color + '"></i>' + escapeHtml(l.label) + (l.value != null ? ' <b>' + formatNum(l.value) + '</b>' : '') + '</span>';
+    }).join("");
+    return div;
+  }
+
   // Barras horizontais (usado nos rankings tipo "Ocorrências por
   // gestor/setor/cargo" e "Colaboradores com mais ocorrências") — itens
   // empilhados de cima pra baixo, um por linha, largura proporcional ao
@@ -1830,15 +1934,28 @@
       svg.appendChild(label);
       var track = svgEl("rect", { x:leftW, y:y, width:plotW, height:rowH, class:"chart-track", rx:3 });
       svg.appendChild(track);
-      var bar = svgEl("rect", { x:leftW, y:y, width:w, height:rowH, fill: it.color || "var(--c-orange)", class:"chart-bar", rx:3, "data-tooltip": it.label + ": " + formatNum(it.value) + (it.extra ? " (" + it.extra + ")" : "") + (opts.colab ? " · clique para ver o colaborador" : "") });
+      var bar = svgEl("rect", { x:leftW, y:y, width:it.segs ? 0 : w, height:rowH, fill: it.color || "var(--c-orange)", class:"chart-bar", rx:3, "data-tooltip": it.label + ": " + formatNum(it.value) + (it.extra ? " (" + it.extra + ")" : "") + (opts.colab ? " · clique para ver o colaborador" : "") });
       svg.appendChild(bar);
+      // it.segs: barra empilhada (um pedaço por tipo, da esquerda para a direita)
+      var segEls = [];
+      if (it.segs){
+        var xs = leftW;
+        it.segs.forEach(function(sg){
+          if (!sg.value) return;
+          var ws = max ? (sg.value/max) * plotW : 0;
+          var r = svgEl("rect", { x:xs, y:y, width:Math.max(ws, 1), height:rowH, fill: sg.color, class:"chart-bar seg",
+            "data-tooltip": it.label + " · " + sg.label + ": " + formatNum(sg.value) + " (" + Math.round(sg.value*100/it.value) + "%)" });
+          svg.appendChild(r); segEls.push(r); xs += ws;
+        });
+      }
       // opts.colab: cada linha é um colaborador — nome, trilho e barra
       // abrem o card do colaborador (ver abrirCardColaborador, seção 9)
-      if (opts.colab){ [label, track, bar].forEach(function(el){ el.setAttribute("data-colab", it.label); }); }
+      if (opts.colab){ [label, track, bar].concat(segEls).forEach(function(el){ el.setAttribute("data-colab", it.label); }); }
       var val = svgEl("text", { x: leftW + w + 8, y: y+rowH/2+4, class:"chart-value" });
       val.textContent = formatNum(it.value);
       svg.appendChild(val);
     });
+    if (opts.legenda) container.appendChild(legendaMini(opts.legenda));
     container.appendChild(svg);
     wireTooltips(svg);
   }
@@ -1917,7 +2034,23 @@
       var w = bw*0.64;
       var h = max ? (it.value/max)*plotH : 0;
       var y = padT + plotH - h;
-      svg.appendChild(svgEl("rect", { x:x, y:y, width:w, height:Math.max(h,0), fill: it.color || "var(--c-navy)", rx:3, class:"chart-bar", "data-tooltip": it.label+": "+formatNum(it.value) }));
+      if (it.segs){
+        // barra empilhada: um pedaço por tipo, de baixo para cima. Atrás
+        // deles, um retângulo transparente guarda o total no balão (é o que
+        // a ferramenta de conferência lê; o mouse vê os pedaços por cima).
+        svg.appendChild(svgEl("rect", { x:x, y:y, width:w, height:Math.max(h,0), fill:"transparent",
+          "data-tooltip": it.label + ": " + formatNum(it.value) }));
+        var yb = padT + plotH;
+        it.segs.forEach(function(sg){
+          if (!sg.value) return;
+          var hs = max ? (sg.value/max)*plotH : 0;
+          yb -= hs;
+          svg.appendChild(svgEl("rect", { x:x, y:yb, width:w, height:Math.max(hs, 0.5), fill: sg.color, class:"chart-bar seg",
+            "data-tooltip": it.label + " · " + sg.label + ": " + formatNum(sg.value) + " (" + Math.round(sg.value*100/it.value) + "%)" }));
+        });
+      } else {
+        svg.appendChild(svgEl("rect", { x:x, y:y, width:w, height:Math.max(h,0), fill: it.color || "var(--c-navy)", rx:3, class:"chart-bar", "data-tooltip": it.label+": "+formatNum(it.value) }));
+      }
       var vt = svgEl("text", { x:x+w/2, y:y-6, class:"chart-value-top", "text-anchor":"middle" });
       vt.textContent = formatNum(it.value);
       svg.appendChild(vt);
@@ -1925,6 +2058,7 @@
       lbl.textContent = it.label;
       svg.appendChild(lbl);
     });
+    if (opts.legenda) container.appendChild(legendaMini(opts.legenda));
     container.appendChild(svg);
     wireTooltips(svg);
   }
@@ -2093,6 +2227,8 @@
       .map(function(k){ return { label:k, value:map[k], color: colorFor("tipo", k) }; });
   }
   // Sempre devolve os 7 dias (seg..dom), mesmo com zero, para o eixo ficar fixo.
+  // Rótulo do dia da semana de um registro ("Seg".."Dom"), igual ao de ocorrenciasPorDiaSemana.
+  function diaSemanaRotulo(r){ return DIAS_LABELS[DIAS_ORDER.indexOf(r.data.getDay())]; }
   function ocorrenciasPorDiaSemana(records){
     var map = {}; DIAS_ORDER.forEach(function(d){ map[d]=0; });
     records.forEach(function(r){ map[r.data.getDay()] = (map[r.data.getDay()]||0)+1; });
@@ -2349,45 +2485,16 @@
     var statuses = uniqueSorted(state.records.filter(function(r){ return !isTipoNaoOcorrencia(r.tipo); }), function(r){ return r.status; });
     var colaboradores = uniqueSorted(state.records, function(r){ return r.colaborador; });
 
-    var selGestor = $("fGestor");
-    selGestor.innerHTML = '<option value="">Todos os gestores</option>' +
-      gestores.map(function(g){ return '<option value="'+escapeHtml(g)+'">'+escapeHtml(g)+'</option>'; }).join("");
-
+    msCriar($("fGestor"), gestores);
     // Grupo (Interno/Externo): só aparece quando o CSV traz a coluna
     // "grupo" preenchida (planilhas com "Tratamento - Internos"/"Externos").
     var grupos = uniqueSorted(state.records.filter(function(r){ return r.grupo; }), function(r){ return r.grupo; });
-    $("fGrupo").innerHTML = '<option value="">Internos e externos</option>' +
-      grupos.map(function(g){ return '<option value="'+escapeHtml(g)+'">'+escapeHtml(g)+'</option>'; }).join("");
+    msCriar($("fGrupo"), grupos);
     $("fGrupoGroup").hidden = grupos.length === 0;
-
-    var selCargo = $("fCargo");
-    selCargo.innerHTML = '<option value="">Todos os cargos</option>' +
-      cargos.map(function(c){ return '<option value="'+escapeHtml(c)+'">'+escapeHtml(c)+'</option>'; }).join("");
-
-    var colabList = $("colabList");
-    colabList.innerHTML = colaboradores.map(function(c){ return '<option value="'+escapeHtml(c)+'">'; }).join("");
-
-    var tipoGroup = $("fTipo");
-    tipoGroup.innerHTML = "";
-    tipos.forEach(function(t){
-      var chip = document.createElement("div");
-      chip.className = "chip";
-      chip.textContent = t;
-      chip.dataset.value = t;
-      chip.addEventListener("click", function(){ chip.classList.toggle("active"); applyFilters(); });
-      tipoGroup.appendChild(chip);
-    });
-
-    var statusGroup = $("fStatus");
-    statusGroup.innerHTML = "";
-    statuses.forEach(function(s){
-      var chip = document.createElement("div");
-      chip.className = "chip";
-      chip.textContent = s;
-      chip.dataset.value = s;
-      chip.addEventListener("click", function(){ chip.classList.toggle("active"); applyFilters(); });
-      statusGroup.appendChild(chip);
-    });
+    msCriar($("fCargo"), cargos);
+    msCriar($("fColab"), colaboradores);
+    msCriar($("fTipo"), tipos);
+    msCriar($("fStatus"), statuses);
     $("fStatusGroup").hidden = statuses.length < 2;
 
     // pré-preenche o período com o intervalo total do arquivo (ver
@@ -2399,14 +2506,94 @@
     return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
   }
 
-  // Os filtros de Tipo e Status são "chips" clicáveis (multi-seleção),
-  // não um <select> — junta os que estão .active num set pra checagem
-  // O(1) em getFilteredRecords.
-  function activeChipValues(container){
-    var set = {};
-    container.querySelectorAll(".chip.active").forEach(function(c){ set[c.dataset.value] = true; });
+  /* ---------- Filtro de marcar vários (componente "ms") ----------
+     Usado em gestor, grupo, cargo, colaborador, tipo e status. O estado é
+     o próprio elemento: el._opcoes (lista de valores) e el._sel ({valor:
+     true} dos marcados). Nada marcado = sem filtro (todos). Cada mudança
+     chama applyFilters. msCriar monta o botão e a janelinha uma vez e
+     troca as opções a cada arquivo carregado (a seleção é zerada). */
+  var SETA_MS = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 7l5 6 5-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function msMontar(el){
+    if (el._montado) return;
+    el._montado = true;
+    el.innerHTML = '<button type="button" class="ms-btn" aria-expanded="false"><span class="ms-txt"></span>' + SETA_MS + '</button>' +
+      '<div class="ms-pop" hidden>' + (el.dataset.busca ? '<input type="text" class="ms-busca" placeholder="Buscar..." aria-label="Buscar">' : '') +
+      '<div class="ms-acoes"><button type="button" data-acao="todos">Marcar todos</button><button type="button" data-acao="limpar">Limpar</button></div>' +
+      '<div class="ms-lista"></div></div>';
+    var btn = el.querySelector(".ms-btn"), pop = el.querySelector(".ms-pop"), busca = el.querySelector(".ms-busca");
+    btn.addEventListener("click", function(e){
+      e.stopPropagation();
+      var abrir = pop.hidden;
+      msFecharTodos();
+      if (abrir){
+        pop.hidden = false; btn.setAttribute("aria-expanded", "true");
+        if (busca){ busca.value = ""; msFiltrarLista(el, ""); busca.focus(); }
+      }
+    });
+    pop.addEventListener("click", function(e){ e.stopPropagation(); });
+    if (busca) busca.addEventListener("input", function(){ msFiltrarLista(el, busca.value); });
+    pop.querySelector(".ms-acoes").addEventListener("click", function(e){
+      var b = e.target.closest("button[data-acao]");
+      if (!b) return;
+      el.querySelectorAll(".ms-op").forEach(function(op){
+        if (op.hidden) return;   // "Marcar todos" marca só o que a busca está mostrando
+        var cb = op.querySelector("input");
+        cb.checked = b.dataset.acao === "todos";
+        el._sel[cb.value] = cb.checked;
+      });
+      msMudou(el);
+    });
+    pop.querySelector(".ms-lista").addEventListener("change", function(e){
+      if (e.target.type !== "checkbox") return;
+      el._sel[e.target.value] = e.target.checked;
+      msMudou(el);
+    });
+  }
+  function msCriar(el, opcoes){
+    msMontar(el);
+    el._opcoes = opcoes;
+    el._sel = {};
+    el.querySelector(".ms-lista").innerHTML = opcoes.length ? opcoes.map(function(o){
+      return '<label class="ms-op"><input type="checkbox" value="' + escapeHtml(o) + '"><span>' + escapeHtml(o) + '</span></label>';
+    }).join("") : '<div class="ms-vazio">Nenhuma opção neste arquivo</div>';
+    msAtualizaBotao(el);
+  }
+  function msFiltrarLista(el, q){
+    q = stripAccents(String(q || "").trim().toLowerCase());
+    el.querySelectorAll(".ms-op").forEach(function(op){
+      op.hidden = !!q && stripAccents(op.textContent.toLowerCase()).indexOf(q) === -1;
+    });
+  }
+  function msValores(el){ var s = el && el._sel || {}; return Object.keys(s).filter(function(k){ return s[k]; }); }
+  // set {valor: true} dos marcados, ou null quando nada está marcado (= todos)
+  function msSetOf(id){
+    var v = msValores($(id));
+    if (!v.length) return null;
+    var set = {}; v.forEach(function(x){ set[x] = true; });
     return set;
   }
+  function msAtualizaBotao(el){
+    if (!el._montado) return;
+    var v = msValores(el), btn = el.querySelector(".ms-btn");
+    btn.querySelector(".ms-txt").textContent = !v.length ? el.dataset.todos : (v.length === 1 ? v[0] : v.length + " " + el.dataset.unidade);
+    btn.classList.toggle("tem-sel", v.length > 0);
+    btn.title = v.join(", ");
+  }
+  function msLimpar(el){
+    if (!el._montado) return;
+    el._sel = {};
+    el.querySelectorAll(".ms-op input").forEach(function(cb){ cb.checked = false; });
+    msAtualizaBotao(el);
+  }
+  function msMudou(el){ msAtualizaBotao(el); applyFilters(); }
+  function msFecharTodos(){
+    document.querySelectorAll(".ms").forEach(function(el){
+      var pop = el.querySelector(".ms-pop"), btn = el.querySelector(".ms-btn");
+      if (pop && !pop.hidden){ pop.hidden = true; btn.setAttribute("aria-expanded", "false"); }
+    });
+  }
+  document.addEventListener("click", msFecharTodos);
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape") msFecharTodos(); });
 
   // O filtro "principal": aplicado nos KPIs, gráficos e histórico
   // gerais. Lê os controles de filtro direto do DOM (não guarda o
@@ -2417,94 +2604,58 @@
   // "tipoSet vazio" e "statusSet vazio" significam "nenhum chip
   // marcado" = sem filtro nesse eixo (mostra tudo), não "esconde tudo".
   function getFilteredRecords(){
-    var gestor = $("fGestor").value;
-    var grupo = $("fGrupo").value;
-    var cargo = $("fCargo").value;
-    var colabQuery = stripAccents($("fColab").value.trim().toLowerCase());
-    var tipoSet = activeChipValues($("fTipo"));
-    var statusSet = activeChipValues($("fStatus"));
-    var tipoAll = Object.keys(tipoSet).length === 0;
-    var statusAll = Object.keys(statusSet).length === 0;
-    var dIni = $("fDataIni").value ? new Date($("fDataIni").value+"T00:00:00") : null;
-    var dFim = $("fDataFim").value ? new Date($("fDataFim").value+"T23:59:59") : null;
-
+    var f = filtroPessoas(), per = periodoFiltro();
+    var tipoSet = msSetOf("fTipo"), statusSet = msSetOf("fStatus");
     return state.records.filter(function(r){
-      // linhas-resumo (auditoria de 3 meses, resumo de pausas térmicas) e
-      // ocorrências curtas (<15min) não contam como ocorrência normal:
-      // têm suas próprias vistas dedicadas, não entram nos
-      // gráficos/KPIs/histórico gerais.
+      // linhas-resumo, curtas, digitadas, afastamentos e jornada não contam
+      // como ocorrência normal: têm suas próprias vistas dedicadas.
       if (isTipoResumo(r.tipo) || isTipoCurta(r.tipo) || isTipoDigitada(r.tipo) || isTipoAbsenteismo(r.tipo) || isTipoJornada(r.tipo)) return false;
-      if (gestor && r.gestor !== gestor) return false;
-      if (grupo && r.grupo !== grupo) return false;
-      if (cargo && r.cargo !== cargo) return false;
-      if (colabQuery && stripAccents(r.colaborador.toLowerCase()).indexOf(colabQuery) === -1) return false;
-      if (!tipoAll && !tipoSet[r.tipo]) return false;
-      if (!statusAll && !statusSet[r.status]) return false;
-      if (dIni && r.data < dIni) return false;
-      if (dFim && r.data > dFim) return false;
-      return true;
+      if (!passaPessoa(r, f)) return false;
+      if (tipoSet && !tipoSet[r.tipo]) return false;
+      if (statusSet && !statusSet[r.status]) return false;
+      return noPeriodoFiltro(r, per);
     });
   }
 
-  // Filtra linhas-resumo por colaborador (auditoria de extra+falta ou
-  // resumo de pausas térmicas) só por gestor/cargo/colaborador — o
-  // período filtrado não se aplica (são sempre agregados de vários
-  // meses, não um recorte de datas).
-  function getResumoRecords(tipo){
-    var gestor = $("fGestor").value;
-    var cargo = $("fCargo").value;
-    var colabQuery = stripAccents($("fColab").value.trim().toLowerCase());
-    var grupo = $("fGrupo").value;
-    return state.records.filter(function(r){
-      if (r.tipo !== tipo) return false;
-      if (gestor && r.gestor !== gestor) return false;
-      if (grupo && r.grupo !== grupo) return false;
-      if (cargo && r.cargo !== cargo) return false;
-      if (colabQuery && stripAccents(r.colaborador.toLowerCase()).indexOf(colabQuery) === -1) return false;
-      return true;
-    });
+  // Filtros de pessoa (gestor, grupo, cargo, colaborador), lidos uma vez:
+  // cada um é null (nada marcado = todos) ou um set {valor: true}.
+  function filtroPessoas(){
+    return { gestor: msSetOf("fGestor"), grupo: msSetOf("fGrupo"), cargo: msSetOf("fCargo"), colab: msSetOf("fColab") };
   }
-  // Marcações digitadas: gestor/grupo/cargo/colaborador + período (são
-  // eventos datados), sem os chips de tipo/status (que são da Tratamento).
+  function passaPessoa(r, f){
+    if (f.gestor && !f.gestor[r.gestor]) return false;
+    if (f.grupo && !f.grupo[r.grupo]) return false;
+    if (f.cargo && !f.cargo[r.cargo]) return false;
+    if (f.colab && !f.colab[r.colaborador]) return false;
+    return true;
+  }
+  // Período dos campos de data (null = sem limite naquela ponta).
+  function periodoFiltro(){
+    return { ini: $("fDataIni").value ? new Date($("fDataIni").value+"T00:00:00") : null,
+             fim: $("fDataFim").value ? new Date($("fDataFim").value+"T23:59:59") : null };
+  }
+  function noPeriodoFiltro(r, per){ return (!per.ini || r.data >= per.ini) && (!per.fim || r.data <= per.fim); }
+
+  // Linhas-resumo de um tipo (auditoria, pausas, horas do Cartão, ORG,
+  // afastamentos): só os filtros de pessoa — o período não se aplica (são
+  // agregados do mês ou de vários meses, não um recorte de datas).
+  function getResumoRecords(tipo){
+    var f = filtroPessoas();
+    return state.records.filter(function(r){ return r.tipo === tipo && passaPessoa(r, f); });
+  }
+  // Marcações digitadas: filtros de pessoa + período (são eventos datados),
+  // sem tipo/status (que são da Tratamento).
   function getDigitadasRecords(){
-    var gestor = $("fGestor").value, grupo = $("fGrupo").value, cargo = $("fCargo").value;
-    var colabQuery = stripAccents($("fColab").value.trim().toLowerCase());
-    var dIni = $("fDataIni").value ? new Date($("fDataIni").value+"T00:00:00") : null;
-    var dFim = $("fDataFim").value ? new Date($("fDataFim").value+"T23:59:59") : null;
-    return state.records.filter(function(r){
-      if (!isTipoDigitada(r.tipo)) return false;
-      if (gestor && r.gestor !== gestor) return false;
-      if (grupo && r.grupo !== grupo) return false;
-      if (cargo && r.cargo !== cargo) return false;
-      if (colabQuery && stripAccents(r.colaborador.toLowerCase()).indexOf(colabQuery) === -1) return false;
-      if (dIni && r.data < dIni) return false;
-      if (dFim && r.data > dFim) return false;
-      return true;
-    });
+    var f = filtroPessoas(), per = periodoFiltro();
+    return state.records.filter(function(r){ return isTipoDigitada(r.tipo) && passaPessoa(r, f) && noPeriodoFiltro(r, per); });
   }
   function getAuditoriaRecords(){ return getResumoRecords(TIPO_AUDITORIA_EXTRA_FALTA); }
   function getPausasTermicasRecords(){ return getResumoRecords(TIPO_RESUMO_PAUSAS_TERMICAS); }
 
-  // Ocorrências curtas: respeitam os mesmos filtros de gestor/cargo/
-  // colaborador/período que o resto do painel (diferente das
-  // linhas-resumo acima, que são agregados fora do recorte de datas).
+  // Ocorrências curtas: filtros de pessoa + período, como o resto do painel.
   function getCurtasRecords(){
-    var gestor = $("fGestor").value;
-    var cargo = $("fCargo").value;
-    var colabQuery = stripAccents($("fColab").value.trim().toLowerCase());
-    var dIni = $("fDataIni").value ? new Date($("fDataIni").value+"T00:00:00") : null;
-    var dFim = $("fDataFim").value ? new Date($("fDataFim").value+"T23:59:59") : null;
-    var grupo = $("fGrupo").value;
-    return state.records.filter(function(r){
-      if (!isTipoCurta(r.tipo)) return false;
-      if (gestor && r.gestor !== gestor) return false;
-      if (grupo && r.grupo !== grupo) return false;
-      if (cargo && r.cargo !== cargo) return false;
-      if (colabQuery && stripAccents(r.colaborador.toLowerCase()).indexOf(colabQuery) === -1) return false;
-      if (dIni && r.data < dIni) return false;
-      if (dFim && r.data > dFim) return false;
-      return true;
-    });
+    var f = filtroPessoas(), per = periodoFiltro();
+    return state.records.filter(function(r){ return isTipoCurta(r.tipo) && passaPessoa(r, f) && noPeriodoFiltro(r, per); });
   }
 
   // Quantos filtros estão "ativos" (diferentes do estado inicial) —
@@ -2516,12 +2667,7 @@
   // aplicado pelo usuário.
   function countActiveFilters(){
     var n = 0;
-    if ($("fGestor").value) n++;
-    if ($("fGrupo").value) n++;
-    if ($("fCargo").value) n++;
-    if ($("fColab").value.trim()) n++;
-    if (document.querySelectorAll("#fTipo .chip.active").length) n++;
-    if (document.querySelectorAll("#fStatus .chip.active").length) n++;
+    ["fGestor","fGrupo","fCargo","fColab","fTipo","fStatus"].forEach(function(id){ if (msValores($(id)).length) n++; });
     var total = periodoCompleto();
     if (total){
       if ($("fDataIni").value && $("fDataIni").value !== total.ini) n++;
@@ -2670,14 +2816,21 @@
     renderKPIs(records, ocorrenciasRecords);
 
     renderDonut($("chartTipo"), ocorrenciasPorTipo(ocorrenciasRecords));
-    renderBarV($("chartDiaSemana"), ocorrenciasPorDiaSemana(ocorrenciasRecords));
+    // barras com uma cor por tipo de ocorrência (mesmas cores da rosca "por tipo")
+    var corTipo = function(t){ return colorFor("tipo", t); }, tipoDe = function(r){ return r.tipo; };
+    var itDia = ocorrenciasPorDiaSemana(ocorrenciasRecords);
+    var legDia = empilhar(itDia, ocorrenciasRecords, diaSemanaRotulo, tipoDe, corTipo);
+    renderBarV($("chartDiaSemana"), itDia, { legenda: legDia });
     renderLine($("chartPorData"), ocorrenciasPorData(ocorrenciasRecords));
-    renderBarH($("chartPorGestor"), ocorrenciasPorGestor(ocorrenciasRecords, 12));
-    renderBarH($("chartPorCargo"), ocorrenciasPorCargo(ocorrenciasRecords, 12));
+    var itGestor = ocorrenciasPorGestor(ocorrenciasRecords, 12);
+    renderBarH($("chartPorGestor"), itGestor, { legenda: empilhar(itGestor, ocorrenciasRecords, function(r){ return r.gestor; }, tipoDe, corTipo) });
+    var itCargo = ocorrenciasPorCargo(ocorrenciasRecords, 12);
+    renderBarH($("chartPorCargo"), itCargo, { legenda: empilhar(itCargo, ocorrenciasRecords, function(r){ return r.cargo; }, tipoDe, corTipo) });
 
     // Seção "Colaboradores em destaque": top 10 por ocorrências, extra e
     // falta no mesmo dia (auditoria de 3 meses), curtas e banco de horas.
-    renderBarH($("chartTopColaboradores"), topColaboradores(ocorrenciasRecords, 10), { colab:true });
+    var itTop = topColaboradores(ocorrenciasRecords, 10);
+    renderBarH($("chartTopColaboradores"), itTop, { colab:true, legenda: empilhar(itTop, ocorrenciasRecords, function(r){ return r.colaborador; }, tipoDe, corTipo) });
 
     renderTableSimple($("tableExtraFalta"),
       [{label:"Colaborador", render:function(r){return colabLink(r.colaborador);}},
@@ -2812,8 +2965,11 @@
     // Rosca por motivo, barras por dia da semana e linha por data.
     var porMotivo = countBy(dig, function(r){ return r.situacao || "Sem motivo"; });
     renderDonut($("chartDigMotivo"), Object.keys(porMotivo).sort(function(a,b){ return porMotivo[b]-porMotivo[a]; })
-      .map(function(k, i){ return { label:k, value:porMotivo[k], color: PALETTE[i % PALETTE.length] }; }));
-    renderBarV($("chartDigDiaSemana"), ocorrenciasPorDiaSemana(dig));
+      .map(function(k){ return { label:k, value:porMotivo[k], color: colorFor("motivo", k) }; }));
+    // barras com uma cor por motivo (mesmas cores da rosca acima)
+    var corMotivo = function(m){ return colorFor("motivo", m); }, motivoDe = function(r){ return r.situacao || "Sem motivo"; };
+    var itDigDia = ocorrenciasPorDiaSemana(dig);
+    renderBarV($("chartDigDiaSemana"), itDigDia, { legenda: empilhar(itDigDia, dig, diaSemanaRotulo, motivoDe, corMotivo) });
     renderLine($("chartDigData"), ocorrenciasPorData(dig));
 
     // Top de colaboradores (20 + "Mostrar todos"), com quantas foram por
@@ -2826,8 +2982,9 @@
     var topDig = limitarLista(Object.values(porColab).sort(function(a,b){ return b.value-a.value || a.label.localeCompare(b.label,"pt-BR"); }),
       "digTop", LIMITE_LISTA, "btnDigTopTodos");
     topDig.forEach(function(t){ t.color = "var(--c-orange)"; t.extra = t.esq + " por esquecimento"; });
-    renderBarH($("chartDigTop"), topDig, { colab:true });
-    renderBarH($("chartDigGestor"), ocorrenciasPorGestor(dig, 12));
+    renderBarH($("chartDigTop"), topDig, { colab:true, legenda: empilhar(topDig, dig, function(r){ return r.colaborador; }, motivoDe, corMotivo) });
+    var itDigGestor = ocorrenciasPorGestor(dig, 12);
+    renderBarH($("chartDigGestor"), itDigGestor, { legenda: empilhar(itDigGestor, dig, function(r){ return r.gestor; }, motivoDe, corMotivo) });
 
     // Barras por hora cheia, da menor à maior hora que aparece (horas sem batida
     // entram com zero para o eixo ficar contínuo).
@@ -2837,7 +2994,7 @@
     var hMin = horas.length ? Math.min.apply(null, horas) : 0, hMax = horas.length ? Math.max.apply(null, horas) : 0;
     var itensHora = [];
     for (var h = hMin; h <= hMax && horas.length; h++) itensHora.push({ label: h + "h", value: porHora[h] || 0, color:"var(--c-navy)" });
-    renderBarV($("chartDigHora"), itensHora);
+    renderBarV($("chartDigHora"), itensHora, { legenda: empilhar(itensHora, dig, function(r){ return r.data.getHours() + "h"; }, motivoDe, corMotivo) });
 
     // Esquecimento repetido: por pessoa, quantas batidas e em quantos dias
     // diferentes foram "Inclusão por esquecimento" (top 15).
@@ -2941,17 +3098,23 @@
   }
 
   function renderAbsenteismo(){
-    var todos = getAtestados(false);
+    var todos = getAfastamentosBase(false);
     $("absSemDados").hidden = todos.length > 0;
     $("absCorpo").hidden = todos.length === 0;
     if (!todos.length) return;
 
     // ciclos existentes no arquivo (para o seletor), do mais recente ao mais antigo
-    // Monta o seletor "Ciclo" com todos os ciclos que têm algum dia de atestado.
+    // Monta o seletor "Ciclo" com todos os ciclos que têm algum dia de afastamento.
     // A opção escolhida (sel.value) é guardada antes e reaplicada se ainda existir.
+    var soAtest = $("absMostrar").value === "atestados";
     var ciclosSet = {};
-    todos.forEach(function(r){ diasDoAtestado(r).forEach(function(d){ ciclosSet[cicloDe(d)] = true; }); });
-    var ciclos = Object.keys(ciclosSet).sort().reverse();
+    (soAtest ? getAtestados(false) : todos).filter(function(r){ return !isPorHoras(r); })
+      .forEach(function(r){ diasDoAtestado(r).forEach(function(d){ ciclosSet[cicloDe(d)] = true; }); });
+    // Ciclos depois do fim do arquivo (ex.: férias já programadas para
+    // outubro num arquivo que vai até 27/09) ficam de fora: seriam meses
+    // incompletos, com só o que já estava agendado.
+    var fimArq = periodoCompleto(), cicloMax = fimArq ? cicloDe(new Date(fimArq.fim + "T00:00:00")) : null;
+    var ciclos = Object.keys(ciclosSet).filter(function(k){ return !cicloMax || k <= cicloMax; }).sort().reverse();
     var sel = $("absCiclo"), atual = sel.value;
     var opts = '<option value="">Últimos 3 meses</option>' + ciclos.map(function(k){
       var f = cicloInicioFim(k);
@@ -2959,68 +3122,91 @@
     }).join("");
     if (sel.innerHTML !== opts){ sel.innerHTML = opts; sel.value = ciclos.indexOf(atual) > -1 ? atual : ""; }
     var cicloSel = sel.value;
+    function noCiclo(d){ var k = cicloDe(d); return cicloSel ? k === cicloSel : ciclos.indexOf(k) > -1; }
 
-    // abs = atestados que passam no filtro de gestor/grupo/cargo/colaborador
-    // (o período do filtro NÃO se aplica aqui: a seção cobre 3 meses).
-    // noCiclo(d) = o dia d está no ciclo escolhido (ou qualquer um, sem escolha).
+    // O seletor "Mostrar" escolhe a base das vistas gerais (resumo, evolução,
+    // por gestor e mapa): todos os afastamentos (cada tipo com uma cor) ou só
+    // atestados. As vistas de atestado (encostado em folga, ranking) usam
+    // sempre só os atestados (abs). Afastamentos por horas (saída médica,
+    // horas faltas: duracao > 0) não contam como dia de afastamento: entram só
+    // no resumo, em horas.
     var abs = getAtestados(true);
-    function noCiclo(d){ return !cicloSel || cicloDe(d) === cicloSel; }
-    // atestados (registros) que têm pelo menos um dia no ciclo escolhido
-    var absCiclo = abs.filter(function(r){ return diasDoAtestado(r).some(noCiclo); });
-    var diasCiclo = 0, pessoasCiclo = {};
-    absCiclo.forEach(function(r){
-      diasDoAtestado(r).forEach(function(d){ if (noCiclo(d)) diasCiclo++; });
-      pessoasCiclo[chavePessoa(r)] = true;
+    var baseFiltrada = soAtest ? abs : getAfastamentosBase(true);
+    var vis = baseFiltrada.filter(function(r){ return !isPorHoras(r); });
+    var porHoras = baseFiltrada.filter(isPorHoras).filter(function(r){ return noCiclo(r.data); });
+
+    // afastamentos (registros) que têm pelo menos um dia no ciclo escolhido
+    var visCiclo = vis.filter(function(r){ return diasDoAtestado(r).some(noCiclo); });
+    var diasCiclo = 0, pessoasCiclo = {}, atCiclo = 0, diasAtCiclo = 0;
+    visCiclo.forEach(function(r){
+      var n = diasDoAtestado(r).filter(noCiclo).length;
+      diasCiclo += n; pessoasCiclo[chavePessoa(r)] = true;
+      if (isAtestado(r)){ atCiclo++; diasAtCiclo += n; }
     });
-    $("absResumo").innerHTML = '<b>' + formatNum(absCiclo.length) + '</b> atestado(s) &middot; <b>' + formatNum(diasCiclo) +
-      '</b> dia(s) &middot; <b>' + formatNum(Object.keys(pessoasCiclo).length) + '</b> pessoa(s)';
+    var minHoras = porHoras.reduce(function(sm, r){ return sm + (r.duracao || 0); }, 0);
+    $("absResumo").innerHTML = soAtest
+      ? '<b>' + formatNum(visCiclo.length) + '</b> atestado(s) &middot; <b>' + formatNum(diasCiclo) + '</b> dia(s) &middot; <b>' +
+        formatNum(Object.keys(pessoasCiclo).length) + '</b> pessoa(s)'
+      : '<b>' + formatNum(visCiclo.length) + '</b> afastamento(s) &middot; <b>' + formatNum(diasCiclo) + '</b> dia(s) &middot; <b>' +
+        formatNum(Object.keys(pessoasCiclo).length) + '</b> pessoa(s) &middot; desses, <b class="txt-atest">' + formatNum(atCiclo) +
+        '</b> atestado(s) com <b class="txt-atest">' + formatNum(diasAtCiclo) + '</b> dia(s) (' + (diasCiclo ? Math.round(diasAtCiclo*100/diasCiclo) : 0) + '% dos dias)' +
+        (porHoras.length ? ' &middot; fora da conta de dias: <b>' + formatNum(porHoras.length) + '</b> saída(s) por horas (' + formatHoras(minHoras) + ')' : '');
+
+    // Cada dia de afastamento vira um "pedaço" {ciclo, semana, grupo} para as
+    // barras empilhadas por tipo (empilhar conta um por pedaço).
+    var pedacos = [];
+    vis.forEach(function(r){
+      var g = grupoAfast(r);
+      diasDoAtestado(r).forEach(function(d){ pedacos.push({ d:d, grupo:g, r:r }); });
+    });
+    var grupoDe = function(x){ return x.grupo; };
 
     // 2. evolução (sempre os 3 meses)
     var porCiclo = {};
-    ciclos.slice().reverse().forEach(function(k){ porCiclo[k] = { dias:0, atestados:0, pessoas:{} }; });
-    abs.forEach(function(r){
+    ciclos.slice().reverse().forEach(function(k){ porCiclo[k] = { dias:0, registros:0, atestados:0, pessoas:{} }; });
+    vis.forEach(function(r){
       var kIni = cicloDe(r.data);
-      if (porCiclo[kIni]) porCiclo[kIni].atestados++;
+      if (porCiclo[kIni]){ porCiclo[kIni].registros++; if (isAtestado(r)) porCiclo[kIni].atestados++; }
       diasDoAtestado(r).forEach(function(d){
         var k = cicloDe(d);
         if (porCiclo[k]){ porCiclo[k].dias++; porCiclo[k].pessoas[chavePessoa(r)] = true; }
       });
     });
     var ordem = Object.keys(porCiclo).sort();
+    var nomeBase = soAtest ? "atestado" : "afastamento";
     if (!cicloSel){
-      $("absEvolHint").textContent = "Dias de atestado em cada ciclo (28 a 27) · escolha um ciclo no seletor para ver semana a semana";
-      renderBarV($("chartAbsEvolucao"), ordem.map(function(k){ return { label: cicloLabel(k), value: porCiclo[k].dias, color:"var(--c-terracotta)" }; }));
+      $("absEvolHint").textContent = "Dias de " + nomeBase + " em cada ciclo (28 a 27)" + (soAtest ? "" : ", por tipo") + " · escolha um ciclo no seletor para ver semana a semana";
+      var itCiclo = ordem.map(function(k){ return { label: cicloLabel(k), value: porCiclo[k].dias, color:"var(--c-terracotta)" }; });
+      renderBarV($("chartAbsEvolucao"), itCiclo, { legenda: empilhar(itCiclo, pedacos, function(x){ return cicloLabel(cicloDe(x.d)); }, grupoDe, corAfast) });
     } else {
-      // ciclo escolhido: dias de atestado em cada semana do ciclo (a partir do dia 28)
+      // ciclo escolhido: dias de afastamento em cada semana do ciclo (a partir do dia 28)
       var fc = cicloInicioFim(cicloSel), semanas = [];
       for (var ws = new Date(fc.ini); ws <= fc.fim; ws = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate()+7)){
         var we = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate()+6); if (we > fc.fim) we = new Date(fc.fim);
-        semanas.push({ ini: ws, fim: we, dias: 0 });
+        semanas.push({ ini: ws, fim: we, dias: 0, label: formatDateBR(ws).slice(0,5) + "–" + formatDateBR(we).slice(0,5) });
       }
-      abs.forEach(function(r){ diasDoAtestado(r).forEach(function(d){
-        semanas.forEach(function(sm){ if (d >= sm.ini && d <= sm.fim) sm.dias++; });
-      }); });
-      $("absEvolHint").textContent = "Ciclo " + cicloLabel(cicloSel) + ": dias de atestado em cada semana · “Últimos 3 meses” no seletor volta para a comparação entre ciclos";
-      renderBarV($("chartAbsEvolucao"), semanas.map(function(sm){
-        return { label: formatDateBR(sm.ini).slice(0,5) + "–" + formatDateBR(sm.fim).slice(0,5), value: sm.dias, color:"var(--c-terracotta)" };
-      }));
+      function semanaDe(d){ for (var i = 0; i < semanas.length; i++) if (d >= semanas[i].ini && d <= semanas[i].fim) return semanas[i]; return null; }
+      pedacos.forEach(function(x){ var sm = semanaDe(x.d); if (sm) sm.dias++; });
+      $("absEvolHint").textContent = "Ciclo " + cicloLabel(cicloSel) + ": dias de " + nomeBase + " em cada semana · “Últimos 3 meses” no seletor volta para a comparação entre ciclos";
+      var itSem = semanas.map(function(sm){ return { label: sm.label, value: sm.dias, color:"var(--c-terracotta)" }; });
+      renderBarV($("chartAbsEvolucao"), itSem, { legenda: empilhar(itSem, pedacos, function(x){ var sm = semanaDe(x.d); return sm ? sm.label : null; }, grupoDe, corAfast) });
     }
     renderTableSimple($("tableAbsEvolucao"),
       [{label:"Ciclo", render:function(k){ var f = cicloInicioFim(k); return cicloLabel(k) + ' <span style="color:var(--c-muted-2)">(' + formatDateBR(f.ini) + ' a ' + formatDateBR(f.fim) + ')</span>'; }},
-       {label:"Dias", width:"80px", render:function(k){ return "<strong>" + porCiclo[k].dias + "</strong>"; }},
+       {label:"Dias", width:"70px", render:function(k){ return "<strong>" + porCiclo[k].dias + "</strong>"; }},
+       {label: soAtest ? "Atestados" : "Afastamentos", width:"110px", render:function(k){ return porCiclo[k].registros; }},
        {label:"Atestados", width:"90px", render:function(k){ return porCiclo[k].atestados; }},
        {label:"Pessoas", width:"80px", render:function(k){ return Object.keys(porCiclo[k].pessoas).length; }}],
       ordem, {rowClass:function(k){ return k === cicloSel ? "row-sel" : ""; }});
 
-    // 4. por gestor / setor / cargo (ciclo escolhido, em dias)
+    // 4. por gestor / setor / cargo (ciclo escolhido, em dias, por tipo)
     var campo = $("absAgrupar").value || "gestor";
     var porGrupo = {};
-    absCiclo.forEach(function(r){
-      var k = r[campo] || "Não informado";
-      diasDoAtestado(r).forEach(function(d){ if (noCiclo(d)) porGrupo[k] = (porGrupo[k]||0) + 1; });
-    });
-    renderBarH($("chartAbsGrupo"), Object.keys(porGrupo).sort(function(a,b){ return porGrupo[b]-porGrupo[a]; }).slice(0,12)
-      .map(function(k){ return { label:k, value:porGrupo[k], color: colorFor(campo === "cargo" ? "cargo" : (campo === "setor" ? "setor" : "gestor"), k) }; }));
+    pedacos.forEach(function(x){ if (noCiclo(x.d)){ var k = x.r[campo] || "Não informado"; porGrupo[k] = (porGrupo[k]||0) + 1; } });
+    var itGrupo = Object.keys(porGrupo).sort(function(a,b){ return porGrupo[b]-porGrupo[a]; }).slice(0,12)
+      .map(function(k){ return { label:k, value:porGrupo[k], color: colorFor(campo === "cargo" ? "cargo" : (campo === "setor" ? "setor" : "gestor"), k) }; });
+    renderBarH($("chartAbsGrupo"), itGrupo, { legenda: empilhar(itGrupo, pedacos.filter(function(x){ return noCiclo(x.d); }),
+      function(x){ return x.r[campo] || "Não informado"; }, grupoDe, corAfast) });
 
     // 6. encostados em folga + dia da semana do início (ciclo escolhido, pelo início)
     var iniciados = abs.filter(function(r){ return noCiclo(r.data); });
@@ -3067,22 +3253,28 @@
     // todo mundo que teve atestado em algum momento dos 3 meses aparece no
     // mapa (pedido do RH), mesmo sem atestado no ciclo mostrado
     var porPessoa = {};
-    abs.forEach(function(r){
+    vis.forEach(function(r){
       var k = chavePessoa(r);
       if (!porPessoa[k]) porPessoa[k] = { colaborador:r.colaborador, dias:{}, desc:{}, total3m:0 };
-      porPessoa[k].total3m += diasDoAtestado(r).length;
+      porPessoa[k].total3m += diasDoAtestado(r).filter(function(d){ return ciclos.indexOf(cicloDe(d)) > -1; }).length;
       diasDoAtestado(r).forEach(function(dd){
         if (cicloDe(dd) !== cicloMapa) return;
-        porPessoa[k].dias[dateKey(dd)] = true; porPessoa[k].desc[dateKey(dd)] = r.situacao;
+        porPessoa[k].dias[dateKey(dd)] = grupoAfast(r); porPessoa[k].desc[dateKey(dd)] = r.situacao;
       });
     });
-    var pessoasMapa = Object.values(porPessoa).sort(function(a,b){
+    var pessoasMapa = Object.values(porPessoa).filter(function(p){ return p.total3m > 0; }).sort(function(a,b){
       return Object.keys(b.dias).length - Object.keys(a.dias).length || b.total3m - a.total3m || a.colaborador.localeCompare(b.colaborador,"pt-BR");
     });
-    $("absHeatHint").textContent = "Dias de atestado no ciclo " + cicloLabel(cicloMapa) + " (" + formatDateBR(f.ini) + " a " + formatDateBR(f.fim) + ")" +
-      " · todas as " + pessoasMapa.length + " pessoas com atestado nos últimos 3 meses (linha sem quadrado vermelho = sem atestado neste ciclo)";
+    $("absHeatHint").textContent = "Dias de " + nomeBase + " no ciclo " + cicloLabel(cicloMapa) + " (" + formatDateBR(f.ini) + " a " + formatDateBR(f.fim) + ")" +
+      " · todas as " + pessoasMapa.length + " pessoas com " + nomeBase + " nos últimos 3 meses (linha vazia = nada neste ciclo) · passe o mouse num quadrado para ver o tipo";
+    // legenda do mapa: só os tipos que aparecem nele, com a cor de cada um
+    var gruposNoMapa = {};
+    pessoasMapa.forEach(function(p){ Object.keys(p.dias).forEach(function(k){ gruposNoMapa[p.dias[k]] = true; }); });
+    $("absHeatLeg").innerHTML = GRUPOS_AFAST.filter(function(g){ return gruposNoMapa[g.nome]; }).map(function(g){
+      return '<span class="l-aus" style="--cor:' + g.cor + '">' + escapeHtml(g.nome) + '</span>';
+    }).join("") + '<span class="l-fds">Sábado e domingo</span>';
     if (!pessoasMapa.length){
-      $("absHeat").innerHTML = ""; $("absHeat").appendChild(emptyMsg("Nenhum atestado nos últimos 3 meses para o filtro atual."));
+      $("absHeat").innerHTML = ""; $("absHeat").appendChild(emptyMsg("Nenhum " + nomeBase + " nos últimos 3 meses para o filtro atual."));
     } else {
       var letras = ["D","S","T","Q","Q","S","S"];
       var html = '<table class="heat"><thead><tr><th class="nome">Colaborador</th>' + diasMapa.map(function(dd){
@@ -3092,7 +3284,7 @@
       pessoasMapa.forEach(function(p){
         html += '<tr><td class="nome">' + colabLink(p.colaborador) + '</td>' + diasMapa.map(function(dd){
           var k = dateKey(dd), fds = dd.getDay() === 0 || dd.getDay() === 6;
-          if (p.dias[k]) return '<td class="aus" title="' + escapeHtml(formatDateBR(dd) + " · " + p.desc[k]) + '"></td>';
+          if (p.dias[k]) return '<td class="aus" style="background:' + corAfast(p.dias[k]) + '" title="' + escapeHtml(formatDateBR(dd) + " · " + p.desc[k]) + '"></td>';
           return '<td' + (fds ? ' class="fds"' : '') + '></td>';
         }).join("") + '<td class="tot">' + (Object.keys(p.dias).length || "&ndash;") + '</td><td class="tot">' + p.total3m + '</td></tr>';
       });
@@ -3101,6 +3293,7 @@
   }
   $("absCiclo").addEventListener("change", applyFilters);
   $("absAgrupar").addEventListener("change", applyFilters);
+  $("absMostrar").addEventListener("change", applyFilters);
 
   /* ---------- Lista de colaboradores (ORG) ----------
      Base: as linhas "Cadastro ORG" (respeitam gestor/grupo/cargo/
@@ -3314,7 +3507,7 @@
         return;
       }
       state.records = result.records;
-      state.colorMaps = { gestor:{}, setor:{}, cargo:{}, tipo:{}, status:{} };
+      state.colorMaps = { gestor:{}, setor:{}, cargo:{}, tipo:{}, status:{}, motivo:{} };
       limparControlesFiltro();
 
       // state.records inclui linhas que não são ocorrência (resumos, curtas,
@@ -3369,11 +3562,8 @@
     state.records = [];
     limparControlesFiltro();
     // as opções dos filtros eram do arquivo que saiu: esvazia
-    $("fGestor").innerHTML = '<option value="">Todos os gestores</option>';
-    $("fGrupo").innerHTML = '<option value="">Internos e externos</option>';
+    ["fGestor","fGrupo","fCargo","fColab","fTipo","fStatus"].forEach(function(id){ msCriar($(id), []); });
     $("fGrupoGroup").hidden = true;
-    $("fCargo").innerHTML = '<option value="">Todos os cargos</option>';
-    $("colabList").innerHTML = ""; $("fTipo").innerHTML = ""; $("fStatus").innerHTML = "";
     $("filtersBadge").hidden = true;
     $("topbarPeriod").hidden = true;
     fecharModalColab();
@@ -3395,10 +3585,8 @@
     $("btnExplica").hidden = true;
   });
 
-  // Cada mudança num filtro redesenha o painel (a busca de colaborador espera
-  // 200 ms sem digitar, via debounce, para não redesenhar a cada tecla).
-  ["fGestor","fGrupo","fCargo"].forEach(function(id){ $(id).addEventListener("change", applyFilters); });
-  $("fColab").addEventListener("input", debounce(applyFilters, 200));
+  // Mudou a data do período: redesenha o painel. (Os filtros de marcar
+  // vários chamam applyFilters sozinhos, em msMudou.)
   $("fDataIni").addEventListener("change", applyFilters);
   $("fDataFim").addEventListener("change", applyFilters);
   // Volta todos os filtros ao estado inicial. Usada pelo botão "Limpar
@@ -3409,14 +3597,13 @@
   // (periodoCompleto, a mesma referência de populateFilterOptions e
   // countActiveFilters) ou fica vazio sem arquivo.
   function limparControlesFiltro(){
-    $("fGestor").value = ""; $("fGrupo").value = ""; $("fCargo").value = ""; $("fColab").value = "";
-    document.querySelectorAll("#fTipo .chip, #fStatus .chip").forEach(function(c){ c.classList.remove("active"); });
+    ["fGestor","fGrupo","fCargo","fColab","fTipo","fStatus"].forEach(function(id){ msLimpar($(id)); });
     var total = periodoCompleto();
     $("fDataIni").value = total ? total.ini : "";
     $("fDataFim").value = total ? total.fim : "";
     $("historySearch").value = "";
     $("orgBusca").value = ""; $("orgMostrar").value = ""; $("digBusca").value = "";
-    $("absCiclo").value = ""; $("absAgrupar").value = "gestor";
+    $("absCiclo").value = ""; $("absAgrupar").value = "gestor"; $("absMostrar").value = "";
     state.historySort = { key:"data", dir:"desc" };
     state.historyPage = 1;
     state.bancoMostrarTodos = false;

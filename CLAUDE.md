@@ -274,6 +274,21 @@ dias_ausencia, emenda_folga, minutos_trabalhados, minutos_descanso, marcacoes_di
   as caixas `.card-fonte` (texto de "de onde vem" de cada card, escrito a partir do guia do
   Dimitri). **Só aparece com arquivo carregado** (pedido do Dimitri, 08/10); sem arquivo, a
   tela inicial (`#emptyState`) traz o passo a passo "Como usar o painel".
+- **Filtros de marcar vários** (10/10, pedido do Dimitri): gestor, grupo, cargo, colaborador, tipo e
+  status são o componente `.ms` (`msCriar`, `msValores`, `msSetOf`, `msLimpar`): botão que abre a
+  lista com caixinhas (busca em gestor/cargo/colaborador); nada marcado = todos. Os filtros são lidos
+  por `filtroPessoas`/`passaPessoa`/`periodoFiltro` (getFilteredRecords, getResumoRecords,
+  getDigitadasRecords, getCurtasRecords). O extrator lê as opções em `#fTipo .ms-op`.
+- **Barras empilhadas por tipo** (`empilhar` + `legendaMini`, `it.segs` em renderBarH/renderBarV;
+  pedaços com classe `seg`, ignorados pelo extrator): Visão geral (dia da semana, gestor, cargo,
+  top colaboradores) por tipo de ocorrência (`colorFor("tipo")`, mesmas cores da rosca);
+  digitadas (dia, top, gestor, hora) por motivo (`colorFor("motivo")`); afastamentos por grupo.
+- **Afastamentos com todos os tipos** (10/10): seletor `#absMostrar` (todos × só atestados);
+  `getAfastamentosBase`, `GRUPOS_AFAST` (7 grupos com cor fixa, atestado vermelho), `grupoAfast`,
+  `corAfast`; `isPorHoras` (duração > 0 e não atestado: saída médica, horas faltas, reunião curta)
+  fica fora da conta de dias e aparece no resumo em horas. Ciclos cortados no fim do arquivo
+  (`periodoCompleto`), para férias já programadas não criarem um mês incompleto. Encostados em
+  folga e ranking continuam só de atestados. Extrator escolhe "Só atestados" antes de ler.
 - Listas com "Mostrar todos" (`limitarLista`, `state.mostrarTodos`, botões `.btn-todos`): curtas
   e top de digitadas mostram 20 (`LIMITE_LISTA`).
 - Filtro de status: opções só das ocorrências (as linhas-resumo saem do macro como "Pendente");
@@ -456,6 +471,12 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   excedentes), abas inseridas na planilha de ORG corrigido, GerarCSV com 32 colunas e 4 tipos
   novos (105 linhas). Painel: só exclui os tipos novos das vistas gerais (conferência 18/18);
   seção própria aguardando o Dimitri escolher as vistas.
+
+- 10/10 (depois): filtros de marcar vários, barras empilhadas por tipo com legenda, afastamentos com
+  todos os tipos. Ideias para o Dimitri escolher numa página com banco de dados (artifact
+  https://claude.ai/artifact/SZEwQzRntr66SCDMms4YBG, doc `escolhas/atual`: marcadas[], observacao);
+  códigos J1–J8 (jornada), A1–A7 (afastamentos), P1–P12 (pegar no pulo), M1–M12 (melhorias).
+  Gestores também veem as análises de "pegar no pulo" (decisão do Dimitri).
 
 ## 12. Estado atual e como continuar (08/10/2026)
 
