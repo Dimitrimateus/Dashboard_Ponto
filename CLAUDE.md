@@ -477,6 +477,13 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   https://claude.ai/artifact/SZEwQzRntr66SCDMms4YBG, doc `escolhas/atual`: marcadas[], observacao);
   códigos J1–J8 (jornada), A1–A7 (afastamentos), P1–P12 (pegar no pulo), M1–M12 (melhorias).
   Gestores também veem as análises de "pegar no pulo" (decisão do Dimitri).
+  **Escolhas salvas do Dimitri (10/10)**, a implementar: J1 resumo de jornada por ciclo, J2 horas
+  acima de 10h por pessoa, J7 risco trabalhista por gestor, P1 atestado no mesmo dia da semana, P2
+  atestado de 1 dia na segunda/sexta, P3 atestado colado em férias, P10 esquecimento crônico, M3
+  ocorrências por pessoa da equipe, M4 clicar no gráfico filtra o painel, M7 percentuais nos
+  gráficos, M10 legenda clicável. Depois ele pediu ideias para Pausas Térmicas: tema T (T1–T12)
+  acrescentado à mesma página, aguardando ele marcar (T10/T11 exigem voltar a guardar o detalhe
+  diário do HRES114; T12 depende de saber quais cargos/setores fazem pausa).
 
 ## 12. Estado atual e como continuar (08/10/2026)
 
