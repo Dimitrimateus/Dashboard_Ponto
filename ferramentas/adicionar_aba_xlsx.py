@@ -6,7 +6,8 @@ from xml.sax.saxutils import escape
 # as partes do zip são copiadas byte a byte; só mudam workbook.xml, workbook.xml.rels,
 # [Content_Types].xml, docProps/app.xml e styles.xml (estilos novos no fim), e entra
 # xl/worksheets/sheetN.xml. Textos vão como inlineStr (não mexe no sharedStrings).
-# Uso: python3 adicionar_aba_xlsx.py entrada.xlsx saida.xlsx linhas.pkl marcacoes|afastamentos ["Nome da aba"]
+# Uso: python3 adicionar_aba_xlsx.py entrada.xlsx saida.xlsx linhas.pkl LAYOUT ["Nome da aba"]
+#   LAYOUT = marcacoes | afastamentos | intrajornada | interjornada | intersemanal | excedentes
 # (linhas.pkl = saída do formatar_marcacoes.py ou do formatar_afastamentos.py)
 
 # Layout de cada aba: cabeçalho, larguras, colunas de texto (códigos com zero à esquerda),
@@ -16,6 +17,22 @@ LAYOUTS = {
         cab=["Matrícula", "Colaborador", "Cód. Cargo", "Cargo", "Cód. Local", "Local", "Origem",
              "Data", "Hora", "Dia da semana", "Coletor", "Função", "Motivo", "Justificativa"],
         larg=[11, 34, 9, 26, 18, 28, 8, 11, 8, 9, 8, 8, 36, 60], texto={3, 5, 11, 12}, hora={9}, dur=set()),
+    # Os 4 relatórios de jornada (formatar_jornada.py / FormatarJornada.bas).
+    'intrajornada': dict(nome='Intrajornada',
+        cab=["Matrícula", "Colaborador", "Local", "Admissão", "Cargo", "Data", "Dia", "Cód. Horário",
+             "Marcações", "Carga horária", "Intervalo 1", "Intervalo 2", "Intervalo 3", "Intervalo total"],
+        larg=[11, 36, 26, 11, 28, 11, 6, 9, 30, 10, 10, 10, 10, 10], texto={8}, hora=set(), dur={10, 11, 12, 13, 14}),
+    'interjornada': dict(nome='Interjornada',
+        cab=["Matrícula", "Colaborador", "Cód. Local", "Local", "Cargo", "C.C.", "Data apuração",
+             "Marcação anterior", "Marcação atual", "Horas descansadas", "Ocorrência"],
+        larg=[11, 36, 16, 26, 28, 7, 11, 16, 16, 11, 20], texto={3, 6}, hora=set(), dur={10}),
+    'intersemanal': dict(nome='Interjornada Semanal',
+        cab=["Matrícula", "Colaborador", "Cód. Local", "Local", "Data DSR/Feriado", "Ocorrência"],
+        larg=[11, 36, 18, 30, 12, 34], texto={3}, hora=set(), dur=set()),
+    'excedentes': dict(nome='Horas Excedentes',
+        cab=["Matrícula", "Colaborador", "Cargo", "C.C.", "Filial", "Cód. Local", "Local", "Data",
+             "Carga horária", "Marcações", "Extras", "Horas trabalhadas", "Conv. noturna", "Total"],
+        larg=[11, 36, 28, 7, 7, 18, 28, 11, 10, 30, 10, 10, 10, 10], texto={4, 5, 6}, hora=set(), dur={9, 11, 12, 13, 14}),
     'afastamentos': dict(nome='Afastamentos',
         cab=["Matrícula", "Colaborador", "Admissão", "Cód. Situação", "Situação", "Início", "Hora início",
              "Término", "Hora término", "Dias", "Horas", "Prev. Término", "Exame"],
@@ -29,9 +46,9 @@ def letra(n):
     return s
 
 # Para a aba nova ter cabeçalho cinza em negrito e bordas, acrescenta no FIM do styles.xml
-# uma fonte, um preenchimento, uma borda e 6 formatos de célula (os índices dos estilos que já
+# uma fonte, um preenchimento, uma borda e 7 formatos de célula (os índices dos estilos que já
 # existem não mudam, então as outras abas continuam iguais). add() insere um item numa lista
-# do XML e corrige o atributo count dela. numFmtId: 14 = data, 20 = h:mm, 46 = [h]:mm:ss,
+# do XML e corrige o atributo count dela. numFmtId: 14 = data, 22 = data e hora, 20 = h:mm, 46 = [h]:mm:ss,
 # 49 = texto (mantém zeros à esquerda).
 def acrescentar_estilos(styles):
     """Devolve (styles novo, ids) com 5 xfs novos: cabeçalho, data, hora, número, texto."""
@@ -54,6 +71,7 @@ def acrescentar_estilos(styles):
     ids['hora'] = add('cellXfs', '<xf numFmtId="20" fontId="0" fillId="0" borderId="%d" xfId="0" applyNumberFormat="1" applyBorder="1"/>' % borda)
     ids['dur'] = add('cellXfs', '<xf numFmtId="46" fontId="0" fillId="0" borderId="%d" xfId="0" applyNumberFormat="1" applyBorder="1"/>' % borda)
     ids['num'] = add('cellXfs', '<xf numFmtId="0" fontId="0" fillId="0" borderId="%d" xfId="0" applyBorder="1"/>' % borda)
+    ids['datahora'] = add('cellXfs', '<xf numFmtId="22" fontId="0" fillId="0" borderId="%d" xfId="0" applyNumberFormat="1" applyBorder="1"/>' % borda)
     ids['txt'] = add('cellXfs', '<xf numFmtId="49" fontId="0" fillId="0" borderId="%d" xfId="0" applyNumberFormat="1" applyBorder="1"/>' % borda)
     return styles, ids
 
@@ -75,7 +93,10 @@ def montar_sheet(linhas, ids, lay):
             if v is None or v == '':
                 cel.append('<c r="%s" s="%d"/>' % (ref, ids['txt']))
             elif isinstance(v, datetime.datetime):
-                cel.append('<c r="%s" s="%d"><v>%d</v></c>' % (ref, ids['data'], (v - base).days))
+                if v.hour or v.minute:   # data com hora (ex.: marcação da Interjornada): número de série com fração
+                    cel.append('<c r="%s" s="%d"><v>%r</v></c>' % (ref, ids['datahora'], (v - base).total_seconds() / 86400))
+                else:
+                    cel.append('<c r="%s" s="%d"><v>%d</v></c>' % (ref, ids['data'], (v - base).days))
             elif i in lay['hora'] or i in lay['dur']:
                 cel.append('<c r="%s" s="%d"><v>%r</v></c>' % (ref, ids['hora' if i in lay['hora'] else 'dur'], float(v)))
             elif isinstance(v, (int, float)) and i not in TEXTO_COLS:
@@ -133,9 +154,10 @@ def adicionar_aba(entrada, saida, linhas, nome_aba, lay):
         zout.writestr(parte, montar_sheet(linhas, ids, lay).encode('utf-8'))
     return parte
 
-# Argumentos: entrada.xlsx saida.xlsx linhas.pkl marcacoes|afastamentos ["Nome da aba"].
+# Argumentos: entrada.xlsx saida.xlsx linhas.pkl LAYOUT (ver o topo do arquivo) ["Nome da aba"].
 if __name__ == '__main__':
     linhas = pickle.load(open(sys.argv[3], 'rb'))
+    if isinstance(linhas, tuple): linhas = linhas[1]   # formatar_jornada.py grava (tipo, linhas)
     lay = LAYOUTS[sys.argv[4]]
     nome = sys.argv[5] if len(sys.argv) > 5 else lay['nome']
     print('aba gravada em', adicionar_aba(sys.argv[1], sys.argv[2], linhas, nome, lay))

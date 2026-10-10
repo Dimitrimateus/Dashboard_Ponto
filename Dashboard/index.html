@@ -1247,7 +1247,9 @@
        outras linhas que também NÃO são ocorrência e têm seção própria:
        "Cadastro ORG" (lista de colaboradores), "Marcação Digitada" (batidas
        digitadas), "Afastamento"/"Absenteísmo" (afastamentos e atestados) e
-       "Resumo Horas Cartão" (horas do mês). Todas entram em
+       "Resumo Horas Cartão" (horas do mês) e os limites de jornada
+       ("Intrajornada", "Interjornada", "Interjornada Semanal", "Horas
+       Excedentes", isTipoJornada). Todas entram em
        isTipoNaoOcorrencia e ficam fora dos gráficos gerais.
      
      O QUE APARECE NA TELA -> QUEM DESENHA -> DE ONDE VÊM OS DADOS
@@ -1335,7 +1337,10 @@
     justificativaMarcacao: ["justificativa_marcacao"],
     origemMarcacao: ["origem_marcacao"],
     diasAusencia: ["dias_ausencia"],
-    emendaFolga: ["emenda_folga"]
+    emendaFolga: ["emenda_folga"],
+    minutosTrabalhados: ["minutos_trabalhados"],
+    minutosDescanso: ["minutos_descanso"],
+    marcacoesDia: ["marcacoes_dia"]
   };
 
   // Situações que o painel ignora mesmo que venham no CSV (o GerarCSV
@@ -1383,6 +1388,13 @@
   // sem acento/maiúscula). Por enquanto só atestados (decisão do RH, 06/10).
   var ATESTADO_CONTEM = ["atest"];
   function isTipoAbsenteismo(tipo){ return tipo === TIPO_ABSENTEISMO || tipo === TIPO_AFASTAMENTO; }
+  // Limites de jornada (GerarLinhasJornada do macro, abas do FormatarJornada):
+  // uma linha por ocorrência de cada relatório do sistema. Usam as colunas
+  // minutos_trabalhados, minutos_descanso e marcacoes_dia. Não são
+  // ocorrências da Tratamento: ficam fora dos gráficos gerais e do período
+  // padrão (cobrem 3 meses).
+  var TIPOS_JORNADA = ["Intrajornada", "Interjornada", "Interjornada Semanal", "Horas Excedentes"];
+  function isTipoJornada(tipo){ return TIPOS_JORNADA.indexOf(tipo) !== -1; }
   function isAtestado(r){
     if (r.tipo === TIPO_ABSENTEISMO) return true;
     var t = stripAccents(r.situacao).toLowerCase();
@@ -1422,7 +1434,7 @@
   // Combina os três: nada disso conta como "ocorrência" pros
   // gráficos/KPI de ocorrências/histórico/filtro de Tipo.
   function isTipoNaoOcorrencia(tipo){
-    return isTipoResumo(tipo) || isTipoCurta(tipo) || isTipoHoraExtra(tipo) || isTipoDigitada(tipo) || isTipoAbsenteismo(tipo);
+    return isTipoResumo(tipo) || isTipoCurta(tipo) || isTipoHoraExtra(tipo) || isTipoDigitada(tipo) || isTipoAbsenteismo(tipo) || isTipoJornada(tipo);
   }
 
   // Estado global do painel inteiro — de propósito, um único objeto
@@ -1673,7 +1685,8 @@
       //   extraFalta* (auditoria), pausa*/trabalho* (pausas térmicas),
       //   minHoraExtraCartao/minBancoHorasCartao (resumo de horas),
       //   justificativaMarcacao/origemMarcacao (digitadas),
-      //   diasAusencia/emendaFolga (afastamentos).
+      //   diasAusencia/emendaFolga (afastamentos),
+      //   minutosTrabalhados/minutosDescanso/marcacoesDia (limites de jornada).
       // textoCampo() troca erros do Excel ("#N/A", "Erro 2042") por vazio.
       var rec = {
         data: dt,
@@ -1705,7 +1718,11 @@
         justificativaMarcacao: idx.justificativaMarcacao != null ? textoCampo(r[idx.justificativaMarcacao]) : "",
         origemMarcacao: idx.origemMarcacao != null ? textoCampo(r[idx.origemMarcacao]) : "",
         diasAusencia: idx.diasAusencia != null ? parseNumber(r[idx.diasAusencia]) : 0,
-        emendaFolga: idx.emendaFolga != null ? textoCampo(r[idx.emendaFolga]) : ""
+        emendaFolga: idx.emendaFolga != null ? textoCampo(r[idx.emendaFolga]) : "",
+        // jornada: vazio = null (a diferença entre "0 minutos" e "não informado" importa)
+        minutosTrabalhados: idx.minutosTrabalhados != null && textoCampo(r[idx.minutosTrabalhados]) !== "" ? parseNumber(r[idx.minutosTrabalhados]) : null,
+        minutosDescanso: idx.minutosDescanso != null && textoCampo(r[idx.minutosDescanso]) !== "" ? parseNumber(r[idx.minutosDescanso]) : null,
+        marcacoesDia: idx.marcacoesDia != null ? textoCampo(r[idx.marcacoesDia]) : ""
       };
       out.push(rec);
     }
@@ -2416,7 +2433,7 @@
       // ocorrências curtas (<15min) não contam como ocorrência normal:
       // têm suas próprias vistas dedicadas, não entram nos
       // gráficos/KPIs/histórico gerais.
-      if (isTipoResumo(r.tipo) || isTipoCurta(r.tipo) || isTipoDigitada(r.tipo) || isTipoAbsenteismo(r.tipo)) return false;
+      if (isTipoResumo(r.tipo) || isTipoCurta(r.tipo) || isTipoDigitada(r.tipo) || isTipoAbsenteismo(r.tipo) || isTipoJornada(r.tipo)) return false;
       if (gestor && r.gestor !== gestor) return false;
       if (grupo && r.grupo !== grupo) return false;
       if (cargo && r.cargo !== cargo) return false;
@@ -2590,7 +2607,7 @@
   // resumo de pausas, cuja data cai em "hoje" quando não há Cartão.
   function periodoCompleto(){
     // o absenteísmo cobre 3 meses de Cartão: fica fora do período padrão
-    var recs = state.records.filter(function(r){ return r.tipo !== TIPO_RESUMO_PAUSAS_TERMICAS && !isTipoAbsenteismo(r.tipo); });
+    var recs = state.records.filter(function(r){ return r.tipo !== TIPO_RESUMO_PAUSAS_TERMICAS && !isTipoAbsenteismo(r.tipo) && !isTipoJornada(r.tipo); });
     if (!recs.length) return null;
     var dates = recs.map(function(r){ return r.data.getTime(); });
     return { ini: toISODate(new Date(Math.min.apply(null, dates))), fim: toISODate(new Date(Math.max.apply(null, dates))) };

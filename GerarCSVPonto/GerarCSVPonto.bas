@@ -91,7 +91,7 @@ Option Explicit
 ' -----------------------------------------------------------------
 ' PRA ONDE CADA COISA VAI: A ABA "CSV" (formato de saída)
 '
-' Uma linha = um evento. O cabeçalho tem 29 colunas (ver
+' Uma linha = um evento. O cabeçalho tem 32 colunas (ver
 ' PrepararAbaCSV); a maioria das linhas só preenche as primeiras 13
 ' (ocorrência normal — extra, falta, hora extra 100%, curta etc.) e a
 ' 23ª ("grupo" = Interno/Externo, preenchida em toda linha cujo
@@ -119,6 +119,11 @@ Option Explicit
 '   - tipo_ocorrencia = "Cadastro ORG" → uma por pessoa da aba ORG
 '     (nome, matrícula, gestor, cargo; situacao = área do ORG); não
 '     usa as colunas extras. Alimenta a lista de colaboradores do painel.
+'   - tipo_ocorrencia = "Intrajornada", "Interjornada", "Interjornada
+'     Semanal" ou "Horas Excedentes" → uma por ocorrência das abas de
+'     jornada (formatadas pelo FormatarJornada); colunas 30 a 32 =
+'     minutos_trabalhados, minutos_descanso, marcacoes_dia. Ver
+'     GerarLinhasJornada.
 '   - tipo_ocorrencia = "Resumo Horas Cartão" → preenche
 '     minutos_hora_extra_cartao / minutos_banco_horas_cartao (total do
 '     mês atual, direto do Cartão Ponto, ver GerarResumoHorasCartao).
@@ -230,6 +235,9 @@ Option Explicit
 '   |     (ou, sem a aba, GerarAbsenteismo -> "Absenteísmo")
 '   |     ambos usam MontarDiasCartao + CalcularEmendaFolga (folga encostada)
 '   |- EncontrarAbaDigitadas + GerarLinhasDigitadas -> "Marcação Digitada"
+'   |- EncontrarAbaJornada + GerarLinhasJornada (MinutosDaCelula,
+'   |     HorasMinutosTexto) -> "Intrajornada", "Interjornada",
+'   |     "Interjornada Semanal", "Horas Excedentes"
 '   |- GerarLinhasORG ........................ -> "Cadastro ORG"
 ' ExportarCSVPorGestor
 '   |- EscolherPasta, NomeArquivoSeguro
@@ -244,7 +252,8 @@ Option Explicit
 ' sem Excel e também precisa acompanhar qualquer mudança de regra.
 ' DE QUEM ESTE MÓDULO DEPENDE: das abas geradas pelas outras macros
 ' (ConsolidarCartaoPonto, FormatarPausasTermicas, FormatarMarcacoesDigitadas,
-' FormatarAfastamentos, PURO_Para_EDITADO) — sempre achadas pelo cabeçalho.
+' FormatarAfastamentos, FormatarJornada, PURO_Para_EDITADO) — sempre achadas
+' pelo cabeçalho.
 ' Nenhuma função de outro módulo VBA é chamada: tudo o que é usado está aqui.
 ' =====================================================================
 
@@ -774,6 +783,27 @@ ProximaAbaTratamento:
             wsCSV, linhaSaida, qtdDigitadas, qtdDigitadasOrigemE
     End If
 
+    ' =====================================================================
+    ' Limites de jornada (abas formatadas pelo FormatarJornada, achadas pelo
+    ' cabeçalho): uma linha por ocorrência de cada relatório, com o tipo
+    ' "Intrajornada", "Interjornada", "Interjornada Semanal" ou "Horas
+    ' Excedentes". Não dependem da Tratamento nem do Check: é o relatório como
+    ' veio do sistema. Ver GerarLinhasJornada.
+    ' =====================================================================
+    Dim tiposJornada As Variant, iJor As Long, wsJor As Worksheet, qtdJor As Long, msgJornada As String
+    tiposJornada = Array("Intrajornada", "Interjornada", "Interjornada Semanal", "Horas Excedentes")
+    For iJor = LBound(tiposJornada) To UBound(tiposJornada)
+        Set wsJor = EncontrarAbaJornada(wbTrat, CStr(tiposJornada(iJor)))
+        If wsJor Is Nothing Then
+            msgJornada = msgJornada & vbCrLf & "Aba de " & tiposJornada(iJor) & " não encontrada."
+        Else
+            qtdJor = 0
+            GerarLinhasJornada wsJor, CStr(tiposJornada(iJor)), dictRE, dictGestorPorMatricula, dictGrupoPorMatricula, _
+                wsCSV, linhaSaida, qtdJor
+            msgJornada = msgJornada & vbCrLf & qtdJor & " ocorrência(s) de " & tiposJornada(iJor) & " (aba " & wsJor.Name & ")."
+        End If
+    Next iJor
+
     ' Uma linha "Cadastro ORG" por pessoa da lista do ORG (ver acima).
     Dim qtdORG As Long
     qtdORG = 0
@@ -811,6 +841,7 @@ ProximaAbaTratamento:
     End If
     ' If em vez de IIf: o IIf avalia os dois lados e wsORG.Name daria erro
     ' quando a aba não existe.
+    msgAuditoria = msgAuditoria & msgJornada
     If wsORG Is Nothing Then
         msgAuditoria = msgAuditoria & vbCrLf & "Aba ORG não encontrada; a lista de colaboradores do painel não foi gerada."
     Else
@@ -1534,6 +1565,153 @@ Private Function ContemAlgum(ByVal texto As String, ByVal lista As String) As Bo
     ContemAlgum = False
 End Function
 
+' ---------------------------------------------------------------------
+' LIMITES DE JORNADA (abas do FormatarJornada)
+' ---------------------------------------------------------------------
+' Acha a aba de um dos 4 relatórios de jornada pelos títulos da linha 1:
+'   Intrajornada         -> Matrícula, Data, Intervalo total
+'   Interjornada         -> Matrícula, Data apuração, Horas descansadas
+'   Interjornada Semanal -> Matrícula, Data DSR/Feriado
+'   Horas Excedentes     -> Matrícula, Data, Conv. noturna, Total
+' Nothing se não achar.
+Private Function EncontrarAbaJornada(wb As Workbook, ByVal tipoLinha As String) As Worksheet
+    Dim exigidos As Variant, ws As Worksheet, i As Long, temTodos As Boolean
+    Select Case tipoLinha
+        Case "Intrajornada": exigidos = Array("Matrícula", "Data", "Intervalo total")
+        Case "Interjornada": exigidos = Array("Matrícula", "Data apuração", "Horas descansadas")
+        Case "Interjornada Semanal": exigidos = Array("Matrícula", "Data DSR/Feriado")
+        Case Else: exigidos = Array("Matrícula", "Data", "Conv. noturna", "Total")
+    End Select
+    For Each ws In wb.Worksheets
+        temTodos = True
+        For i = LBound(exigidos) To UBound(exigidos)
+            If ColunaPorCabecalho(ws, CStr(exigidos(i))) = 0 Then temTodos = False: Exit For
+        Next i
+        If temTodos Then
+            Set EncontrarAbaJornada = ws
+            Exit Function
+        End If
+    Next ws
+    Set EncontrarAbaJornada = Nothing
+End Function
+
+' Uma linha no CSV por ocorrência da aba de jornada. Colunas usadas:
+'   data            = Data (Intrajornada/Horas Excedentes), Data apuração
+'                     (Interjornada) ou Data DSR/Feriado (semanal)
+'   situacao        = o que aconteceu, em texto:
+'                     Intrajornada: "Sem intervalo" ou "Intervalo de 0:55"
+'                     Interjornada / semanal: a coluna Ocorrência do relatório
+'                     Horas Excedentes: "Total de 12:40 no dia"
+'   duracao_minutos = só nas Horas Excedentes: os minutos de extra do dia
+'   minutos_trabalhados (30) = carga trabalhada (Intrajornada) ou total do
+'                     dia (Horas Excedentes)
+'   minutos_descanso (31)    = intervalo feito (Intrajornada) ou horas
+'                     descansadas entre os dias (Interjornada)
+'   marcacoes_dia (32)       = as batidas do dia; na Interjornada,
+'                     "19/08 10:05 -> 19/08 21:00" (marcação anterior e atual)
+' Setor/cargo: cadastro RE (se a pessoa não estiver na RE, o local/cargo do
+' próprio relatório); gestor e grupo: dicionários (Tratamento, depois ORG).
+Private Sub GerarLinhasJornada(ws As Worksheet, ByVal tipoLinha As String, dictRE As Object, _
+    dictGestorPorMatricula As Object, dictGrupoPorMatricula As Object, wsCSV As Worksheet, _
+    ByRef linhaSaida As Long, ByRef qtdGerada As Long)
+
+    Dim colMat As Long, colNome As Long, colCargo As Long, colLocal As Long, colData As Long
+    Dim colTrab As Long, colDesc As Long, colMarc As Long, colExtra As Long, colOc As Long
+    Dim colAnt As Long, colAtu As Long
+    colMat = ColunaPorCabecalho(ws, "Matrícula")
+    colNome = ColunaPorCabecalho(ws, "Colaborador")
+    colCargo = ColunaPorCabecalho(ws, "Cargo")
+    colLocal = ColunaPorCabecalho(ws, "Local")
+    colOc = ColunaPorCabecalho(ws, "Ocorrência")
+    colMarc = ColunaPorCabecalho(ws, "Marcações")
+    Select Case tipoLinha
+        Case "Intrajornada"
+            colData = ColunaPorCabecalho(ws, "Data")
+            colTrab = ColunaPorCabecalho(ws, "Carga horária")
+            colDesc = ColunaPorCabecalho(ws, "Intervalo total")
+        Case "Interjornada"
+            colData = ColunaPorCabecalho(ws, "Data apuração")
+            colDesc = ColunaPorCabecalho(ws, "Horas descansadas")
+            colAnt = ColunaPorCabecalho(ws, "Marcação anterior")
+            colAtu = ColunaPorCabecalho(ws, "Marcação atual")
+        Case "Interjornada Semanal"
+            colData = ColunaPorCabecalho(ws, "Data DSR/Feriado")
+        Case Else   ' Horas Excedentes
+            colData = ColunaPorCabecalho(ws, "Data")
+            colTrab = ColunaPorCabecalho(ws, "Total")
+            colExtra = ColunaPorCabecalho(ws, "Extras")
+    End Select
+    If colMat = 0 Or colData = 0 Then Exit Sub
+
+    Dim ultimaLinha As Long, r As Long, mat As String, vData As Variant, nomeJor As String
+    Dim minTrab As Variant, minDesc As Variant, minExtra As Double, situacaoJor As String, marcasJor As String
+    Dim setorNome As String, cargoNome As String, vAnt As Variant, vAtu As Variant
+    ultimaLinha = UltimaLinhaPreenchida(ws, colMat)
+    For r = 2 To ultimaLinha
+        mat = TextoLimpo(ws.Cells(r, colMat).Value)
+        vData = ws.Cells(r, colData).Value2
+        If mat = "" Or Not IsNumeric(vData) Or IsEmpty(vData) Then GoTo ProximaJornada
+
+        nomeJor = TextoDaCelula(ws, r, colNome)
+        If nomeJor = "" Then nomeJor = "Matrícula " & mat
+        minTrab = MinutosDaCelula(ws, r, colTrab)
+        minDesc = MinutosDaCelula(ws, r, colDesc)
+        minExtra = 0
+        If colExtra > 0 Then minExtra = Round(NzNum(ws.Cells(r, colExtra).Value2) * 1440, 0)
+        marcasJor = TextoDaCelula(ws, r, colMarc)
+
+        Select Case tipoLinha
+            Case "Intrajornada"
+                If IsEmpty(minDesc) Then
+                    situacaoJor = "Sem intervalo"
+                ElseIf minDesc = 0 Then
+                    situacaoJor = "Sem intervalo"
+                Else
+                    situacaoJor = "Intervalo de " & HorasMinutosTexto(CLng(minDesc))
+                End If
+            Case "Horas Excedentes"
+                situacaoJor = "Total de " & HorasMinutosTexto(CLng(NzNum(minTrab))) & " no dia"
+            Case Else
+                situacaoJor = TextoDaCelula(ws, r, colOc)
+        End Select
+        If tipoLinha = "Interjornada" And colAnt > 0 And colAtu > 0 Then
+            vAnt = ws.Cells(r, colAnt).Value2
+            vAtu = ws.Cells(r, colAtu).Value2
+            If IsNumeric(vAnt) And Not IsEmpty(vAnt) And IsNumeric(vAtu) And Not IsEmpty(vAtu) Then
+                marcasJor = Format$(CDate(vAnt), "dd/mm hh:mm") & " -> " & Format$(CDate(vAtu), "dd/mm hh:mm")
+            End If
+        End If
+        If tipoLinha = "Interjornada" And situacaoJor = "" Then situacaoJor = "Descanso menor que 11h"
+
+        ObterSetorCargo dictRE, mat, setorNome, cargoNome
+        If setorNome = "Sem setor" And TextoDaCelula(ws, r, colLocal) <> "" Then setorNome = TextoDaCelula(ws, r, colLocal)
+        If cargoNome = "" Then cargoNome = TextoDaCelula(ws, r, colCargo)
+
+        EscreverLinhaCSV wsCSV, linhaSaida, CDate(Int(CDbl(vData))), nomeJor, mat, _
+            TextoDoDicionario(dictGestorPorMatricula, mat), setorNome, cargoNome, tipoLinha, situacaoJor, _
+            "Pendente", minExtra, "", Empty, _
+            grupo:=TextoDoDicionario(dictGrupoPorMatricula, mat), _
+            minutosTrabalhados:=minTrab, minutosDescanso:=minDesc, marcacoesDia:=marcasJor
+        linhaSaida = linhaSaida + 1
+        qtdGerada = qtdGerada + 1
+ProximaJornada:
+    Next r
+End Sub
+
+' Minutos (inteiros) de uma célula de duração/hora (fração do dia); Empty se a
+' coluna não existir (col = 0) ou a célula estiver vazia.
+Private Function MinutosDaCelula(ws As Worksheet, ByVal r As Long, ByVal col As Long) As Variant
+    MinutosDaCelula = Empty
+    If col = 0 Then Exit Function
+    If IsEmpty(ws.Cells(r, col).Value2) Then Exit Function
+    If IsNumeric(ws.Cells(r, col).Value2) Then MinutosDaCelula = CLng(Round(CDbl(ws.Cells(r, col).Value2) * 1440, 0))
+End Function
+
+' 655 -> "10:55" (horas podem passar de 24).
+Private Function HorasMinutosTexto(ByVal minutos As Long) As String
+    HorasMinutosTexto = (minutos \ 60) & ":" & Format$(minutos Mod 60, "00")
+End Function
+
 ' Aba de Marcações digitadas já formatada: a primeira que tiver, na linha
 ' 1, as colunas Matrícula, Data, Hora, Motivo e Justificativa.
 Private Function EncontrarAbaDigitadas(wb As Workbook) As Worksheet
@@ -2205,7 +2383,7 @@ Private Function PrepararAbaCSV(wb As Workbook) As Worksheet
         ws.Cells.Clear
     End If
 
-    ' O CONTRATO COM O PAINEL: 29 colunas, nesta ordem. O index.html acha cada
+    ' O CONTRATO COM O PAINEL: 32 colunas, nesta ordem. O index.html acha cada
     ' coluna pelo nome (HEADER_ALIASES), mas o ExportarCSVPorGestor usa a posição 4
     ' para o gestor. Coluna nova: acrescente no FIM, aqui e em EscreverLinhaCSV.
     Dim cabecalhos As Variant, i As Long
@@ -2216,7 +2394,8 @@ Private Function PrepararAbaCSV(wb As Workbook) As Worksheet
                         "trabalho_maior_140", "trabalho_menor_140", "pausas_marcacoes_impares", "grupo", _
                         "minutos_hora_extra_cartao", "minutos_banco_horas_cartao", _
                         "justificativa_marcacao", "origem_marcacao", _
-                        "dias_ausencia", "emenda_folga")
+                        "dias_ausencia", "emenda_folga", _
+                        "minutos_trabalhados", "minutos_descanso", "marcacoes_dia")
     For i = LBound(cabecalhos) To UBound(cabecalhos)
         ws.Cells(1, i + 1).Value = cabecalhos(i)
     Next i
@@ -2244,11 +2423,13 @@ Private Sub EscreverLinhaCSV(ws As Worksheet, linha As Long, dataOcorrencia As V
     Optional grupo As String = "", Optional minHoraExtraCartao As Variant = Empty, _
     Optional minBancoHorasCartao As Variant = Empty, Optional justificativaMarcacao As String = "", _
     Optional origemMarcacao As String = "", Optional diasAusencia As Variant = Empty, _
-    Optional emendaFolga As String = "")
+    Optional emendaFolga As String = "", Optional minutosTrabalhados As Variant = Empty, _
+    Optional minutosDescanso As Variant = Empty, Optional marcacoesDia As String = "")
 
     ' Colunas 1 a 13: presentes em toda linha. 14/15: auditoria. 16 a 22: pausas.
     ' 23: grupo. 24/25: resumo de horas. 26/27: marcação digitada. 28/29:
-    ' afastamento/absenteísmo. Opcional não informado = célula vazia.
+    ' afastamento/absenteísmo. 30 a 32: jornada (trabalhado, descanso, batidas).
+    ' Opcional não informado = célula vazia.
     ws.Cells(linha, 1).Value = CDate(dataOcorrencia)
     ws.Cells(linha, 2).Value = nome
     ws.Cells(linha, 3).Value = matricula
@@ -2282,6 +2463,9 @@ Private Sub EscreverLinhaCSV(ws As Worksheet, linha As Long, dataOcorrencia As V
     If origemMarcacao <> "" Then ws.Cells(linha, 27).Value = origemMarcacao
     If Not IsEmpty(diasAusencia) Then ws.Cells(linha, 28).Value = diasAusencia
     If emendaFolga <> "" Then ws.Cells(linha, 29).Value = emendaFolga
+    If Not IsEmpty(minutosTrabalhados) Then ws.Cells(linha, 30).Value = minutosTrabalhados
+    If Not IsEmpty(minutosDescanso) Then ws.Cells(linha, 31).Value = minutosDescanso
+    If marcacoesDia <> "" Then ws.Cells(linha, 32).Value = marcacoesDia
 End Sub
 
 ' Pede ao usuário a pasta de destino dos CSVs exportados por

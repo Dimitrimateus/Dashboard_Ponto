@@ -264,6 +264,18 @@ justificativa, ou o RH lançou no sistema.
 - Filtro de status: o "Pendente" vinha das linhas-resumo; agora só conta ocorrências, e o
   filtro some quando há um só status.
 
+## Limites de jornada (10/10)
+- **Macro nova `FormatarJornada`** (pasta `Jornada/`): uma macro só para os 4 relatórios do sistema
+  — Intrajornada (intervalo menor que o mínimo), Interjornada (menos de 11h entre um dia e outro),
+  Interjornada semanal (trabalhou no DSR/feriado) e Horas excedentes (mais de 10h no dia). Abra o
+  relatório, deixe a aba dele ativa e rode a macro: ela descobre qual é, transforma em tabela e
+  renomeia a aba. Copie a aba para a planilha de Tratamento.
+- **GerarCSVPonto**: acha as 4 abas pelo cabeçalho e gera uma linha por ocorrência
+  (tipo_ocorrencia = "Intrajornada", "Interjornada", "Interjornada Semanal", "Horas Excedentes").
+  O CSV passa a ter 32 colunas: `minutos_trabalhados`, `minutos_descanso` e `marcacoes_dia` no fim.
+- Painel: por enquanto essas linhas só ficam fora das contagens gerais; a seção própria depende
+  das vistas que o RH escolher.
+
 ## Ordem de uso no mês
 
 1. Rodar `ConsolidarCartaoPonto` no HRCP102 e colar o resultado numa aba `Cartão <Mês>`.

@@ -232,6 +232,34 @@ for nome_aba,rows_d in d.items():
             W(dt,s(r[hd['Colaborador']]) or 'Matrícula '+m,m,gestorPor.get(m,''),se,caRE or s(r[hd['Cargo']]),'Marcação Digitada',
               s(r[hd['Motivo']]),'Pendente',0,just=s(r[hd['Justificativa']]),orig=s(r[hd['Origem']]) if 'Origem' in hd else '')
         break
+# limites de jornada (GerarLinhasJornada): abas achadas pelo cabeçalho, uma linha por ocorrência
+EXIGE={'Intrajornada':('Matrícula','Data','Intervalo total'),'Interjornada':('Matrícula','Data apuração','Horas descansadas'),
+       'Interjornada Semanal':('Matrícula','Data DSR/Feriado'),'Horas Excedentes':('Matrícula','Data','Conv. noturna','Total')}
+def minutos(v): return None if v in (None,'') else vround(nz(v)*1440)
+def hmtxt(m): return f"{m//60}:{m%60:02d}"
+for tipoJ,exig in EXIGE.items():
+    aba=next((n for n,rw in d.items() if rw and all(k in hdrmap(rw[0]) for k in exig)), None)
+    if not aba: continue
+    rw=d[aba]; hj=hdrmap(rw[0]); g=lambda r,k: r[hj[k]] if k in hj else None
+    colData={'Interjornada':'Data apuração','Interjornada Semanal':'Data DSR/Feriado'}.get(tipoJ,'Data')
+    for r in rw[1:]:
+        m=s(g(r,'Matrícula')); dt=g(r,colData)
+        if not m or not isinstance(dt,datetime.datetime): continue
+        trab=minutos(g(r,'Carga horária') if tipoJ=='Intrajornada' else g(r,'Total') if tipoJ=='Horas Excedentes' else None)
+        desc=minutos(g(r,'Intervalo total') if tipoJ=='Intrajornada' else g(r,'Horas descansadas') if tipoJ=='Interjornada' else None)
+        extra=minutos(g(r,'Extras')) or 0 if tipoJ=='Horas Excedentes' else 0
+        marc=s(g(r,'Marcações'))
+        if tipoJ=='Intrajornada': sit='Sem intervalo' if not desc else 'Intervalo de '+hmtxt(desc)
+        elif tipoJ=='Horas Excedentes': sit='Total de '+hmtxt(trab or 0)+' no dia'
+        else: sit=s(g(r,'Ocorrência'))
+        if tipoJ=='Interjornada':
+            a,b=g(r,'Marcação anterior'),g(r,'Marcação atual')
+            if isinstance(a,datetime.datetime) and isinstance(b,datetime.datetime): marc=a.strftime('%d/%m %H:%M')+' -> '+b.strftime('%d/%m %H:%M')
+            sit=sit or 'Descanso menor que 11h'
+        se,ca=setorcargo(m)
+        if se=='Sem setor' and s(g(r,'Local')): se=s(g(r,'Local'))
+        W(datetime.datetime(dt.year,dt.month,dt.day),s(g(r,'Colaborador')) or 'Matrícula '+m,m,gestorPor.get(m,''),se,ca or s(g(r,'Cargo')),
+          tipoJ,sit,'Pendente',extra,trab=trab,desc=desc,marc=marc)
 for m,nm,ar,ca,g in listaORG:
     se,caRE=setorcargo(m) if m else ('Sem setor','')
     if se=='Sem setor' and ar: se=ar
@@ -242,7 +270,7 @@ print('cartoes',cards); print(len(out), collections.Counter(o['tipo'] for o in o
 
 def exportar_csv(linhas, caminho='dados_TODOS.csv'):
     """Mesmo formato do ExportarLinhasParaCSV: vírgula, UTF-8 com BOM, datas dd/mm/aaaa."""
-    cab=["data","colaborador","matricula","gestor","setor","cargo","tipo_ocorrencia","situacao","status","duracao_minutos","destino_horas_extra","data_tratativa_pontonet","horas_excedentes","ocorrencias_extra_falta_mes_atual","ocorrencias_extra_falta_3_meses","pausas_corretas","pausas_menor_20min","pausas_maior_20min","trabalho_correto_140","trabalho_maior_140","trabalho_menor_140","pausas_marcacoes_impares","grupo","minutos_hora_extra_cartao","minutos_banco_horas_cartao","justificativa_marcacao","origem_marcacao","dias_ausencia","emenda_folga"]
+    cab=["data","colaborador","matricula","gestor","setor","cargo","tipo_ocorrencia","situacao","status","duracao_minutos","destino_horas_extra","data_tratativa_pontonet","horas_excedentes","ocorrencias_extra_falta_mes_atual","ocorrencias_extra_falta_3_meses","pausas_corretas","pausas_menor_20min","pausas_maior_20min","trabalho_correto_140","trabalho_maior_140","trabalho_menor_140","pausas_marcacoes_impares","grupo","minutos_hora_extra_cartao","minutos_banco_horas_cartao","justificativa_marcacao","origem_marcacao","dias_ausencia","emenda_folga","minutos_trabalhados","minutos_descanso","marcacoes_dia"]
     def t(v):
         if v is None: return ''
         if isinstance(v,datetime.datetime): return v.strftime('%d/%m/%Y') if v.hour==0 and v.minute==0 else v.strftime('%d/%m/%Y %H:%M')
@@ -251,7 +279,7 @@ def exportar_csv(linhas, caminho='dados_TODOS.csv'):
     q=lambda x: '"'+x.replace('"','""')+'"' if (',' in x or '"' in x or '\n' in x) else x
     out=[','.join(cab)]
     for o in linhas:
-        v=[o['data'],o['colaborador'],o['matricula'],o['gestor'],o['setor'],o['cargo'],o['tipo'],o['situacao'],o['status'],o['duracao'],'',o['tratativa'],'',o.get('mesAtual'),o.get('total3'),o.get('pc'),o.get('pm'),o.get('pM'),o.get('tc'),o.get('tM'),o.get('tm'),o.get('imp'),o.get('grupo',''),o.get('hx'),o.get('hb'),o.get('just'),o.get('orig'),o.get('diasAus'),o.get('emenda')]
+        v=[o['data'],o['colaborador'],o['matricula'],o['gestor'],o['setor'],o['cargo'],o['tipo'],o['situacao'],o['status'],o['duracao'],'',o['tratativa'],'',o.get('mesAtual'),o.get('total3'),o.get('pc'),o.get('pm'),o.get('pM'),o.get('tc'),o.get('tM'),o.get('tm'),o.get('imp'),o.get('grupo',''),o.get('hx'),o.get('hb'),o.get('just'),o.get('orig'),o.get('diasAus'),o.get('emenda'),o.get('trab'),o.get('desc'),o.get('marc')]
         out.append(','.join(q(t(x)) for x in v))
     open(caminho,'w',encoding='utf-8-sig').write('\n'.join(out)+'\n')
 

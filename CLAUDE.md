@@ -23,6 +23,9 @@ HRCP102 (cartão ponto, sistema Senior) ──► ConsolidarCartaoPonto ──�
 HRES114 (pausas térmicas, Senior)      ──► FormatarPausasTermicas ──► aba "Pausas Térmicas"
 Marcações digitadas (Senior)           ──► FormatarMarcacoesDigitadas ──► aba "Marcações Digitadas"
 HRCL006 Histórico de Afastamentos      ──► FormatarAfastamentos   ──► aba "Afastamentos"
+Intrajornada (HRES108), Interjornada,
+Interjornada semanal, Horas excedentes ──► FormatarJornada (1 macro, acha o tipo) ──► abas "Intrajornada",
+                                           "Interjornada", "Interjornada Semanal", "Horas Excedentes"
 aba PURO (exportação de ocorrências)   ──► PURO_Para_EDITADO      ──► aba EDITADO_MESAA ─► (Dimitri trata) ─► "Tratamento - Internos" / "Tratamento - Externos"
                                                          todas as abas ──► GerarAbaCSV ──► aba "CSV" ──► ExportarCSVPorGestor ──► dados_<gestor>.csv + dados_TODOS.csv
                                                                                                                                   └──► index.html (abre no navegador)
@@ -54,6 +57,7 @@ aba PURO (exportação de ocorrências)   ──► PURO_Para_EDITADO      ─�
 | `PuroParaEditado/PURO_Para_EDITADO.bas` | aba `PURO` → `EDITADO_MESAA` (reordena, X→SIM, tira espaços) |
 | `MarcacoesDigitadas/FormatarMarcacoesDigitadas.bas` | relatório "Marcações digitadas" → a mesma aba como tabela (renomeada "Marcações Digitadas") |
 | `Afastamentos/FormatarAfastamentos.bas` | relatório HRCL006 "Histórico de Afastamentos" → a mesma aba como tabela (renomeada "Afastamentos") |
+| `Jornada/FormatarJornada.bas` | os 4 relatórios de limite de jornada (intra, inter, inter semanal, horas excedentes) → a mesma aba como tabela, renomeada pelo tipo |
 | `GerarCSVPonto/GerarCSVPonto.bas` | `GerarAbaCSV` (monta a aba CSV) e `ExportarCSVPorGestor` (grava os .csv) |
 | `Dashboard/index.html` | O painel. Contém o logo em base64 (linha enorme, ~60 KB); não leia o arquivo inteiro de uma vez |
 | `txt/*.txt` | As mesmas macros em `.txt`, CRLF, prontas para colar |
@@ -136,6 +140,27 @@ conteúdo num módulo.
   atestados emendados separados; alguns do Cartão são de desligados ou começam antes de 30/06).
   **O relatório do sistema é a fonte oficial** (decisão do Dimitri, 07/10).
 
+### 5.3d FormatarJornada (aba ativa = um dos 4 relatórios de jornada)
+- Uma macro só: `TipoDoRelatorio` olha os títulos ("Registros de Ponto"+"Intervalo" → intra;
+  "Horas Descansadas" → inter; "Horas DSR"/"Marcação Antes DSR" → semanal; "Carga Hor."+"Extras" →
+  excedentes) e chama a rotina `Montar*` do tipo. Versão Python: `ferramentas/formatar_jornada.py`.
+- **Intrajornada** (HRES108, intervalo menor que o mínimo): batidas começam NA coluna de "Registros
+  de Ponto" (8 colunas); depois carga e até 3 intervalos. "Dia" = "Sex (985)" (dia + cód. horário).
+  Saída: `Matrícula, Colaborador, Local, Admissão, Cargo, Data, Dia, Cód. Horário, Marcações, Carga
+  horária, Intervalo 1, Intervalo 2, Intervalo 3, Intervalo total`.
+- **Interjornada** (< 11h entre dias): valores = título+1 (marcações: data em +1, hora em +2).
+  Saída: `Matrícula, Colaborador, Cód. Local, Local, Cargo, C.C., Data apuração, Marcação anterior,
+  Marcação atual, Horas descansadas, Ocorrência`.
+- **Interjornada semanal** (trabalhou no DSR/feriado): texto "Trabalhou no Dia do DSR/Feriado
+  (dd/mm/aaaa)" numa célula mesclada (H ou I); linha sem matrícula = mesma pessoa. Saída:
+  `Matrícula, Colaborador, Cód. Local, Local, Data DSR/Feriado, Ocorrência`.
+- **Horas excedentes** (> 10h no dia): matrícula na col. de "Colaborador/Nome" (nome +1); carga =
+  título+1; batidas = 8 colunas a partir de "Marcações"+1, depois extras, horas, conv. noturna, total.
+  Saída: `Matrícula, Colaborador, Cargo, C.C., Filial, Cód. Local, Local, Data, Carga horária,
+  Marcações, Extras, Horas trabalhadas, Conv. noturna, Total`.
+- Arquivos de 09/10 (28/06 a 27/09): intra 21 ocorrências/18 pessoas; inter 1; semanal 11/8;
+  excedentes 72/34. Horas arredondadas ao minuto (o sistema grava 10:05:00,96).
+
 ### 5.4 GerarCSVPonto
 **Entradas (achadas por nome/cabeçalho, nunca por posição):**
 - Abas cujo nome começa com **"Tratamento"** e que têm a coluna `Matricula` na linha 1:
@@ -192,6 +217,11 @@ conteúdo num módulo.
      `FOLGA_CONTEM`). Só atestados por decisão do Dimitri; a lista completa de absenteísmo dele
      (print da Jussara): suspensão, acidente trab. 15, acidente trabalho, atest. odontológico,
      atest. médico até 15, faltas justificadas, faltas injustificadas.
+   - "Intrajornada" / "Interjornada" / "Interjornada Semanal" / "Horas Excedentes" (10/10):
+     `EncontrarAbaJornada` (pelos títulos) + `GerarLinhasJornada`, uma por ocorrência. situacao =
+     "Sem intervalo"/"Intervalo de 0:55" (intra), a Ocorrência (inter e semanal), "Total de 12:40
+     no dia" (excedentes); duracao_minutos = extras (só excedentes); colunas 30/31/32 =
+     minutos_trabalhados / minutos_descanso / marcacoes_dia. Sem Tratamento nem Check.
    - "Cadastro ORG": uma por pessoa do ORG (matrícula repetida = 1ª linha; matrícula `#N/A` entra
      sem matrícula, salvo se o nome já existe com matrícula válida); situacao = área do ORG.
    Gestor e grupo dessas linhas vêm do primeiro gestor/grupo visto para a matrícula na Tratamento;
@@ -200,7 +230,7 @@ conteúdo num módulo.
    `UltimaLinhaPreenchida` (não usa `End(xlUp)`).
 10. `TextoLimpo`: erro do Excel (`#N/A`) vira "", quebras de linha viram espaço.
 
-**Saída: contrato do CSV (29 colunas, nesta ordem):**
+**Saída: contrato do CSV (32 colunas, nesta ordem):**
 ```
 data, colaborador, matricula, gestor, setor, cargo, tipo_ocorrencia, situacao, status,
 duracao_minutos, destino_horas_extra, data_tratativa_pontonet, horas_excedentes,
@@ -208,9 +238,10 @@ ocorrencias_extra_falta_mes_atual, ocorrencias_extra_falta_3_meses, pausas_corre
 pausas_menor_20min, pausas_maior_20min, trabalho_correto_140, trabalho_maior_140,
 trabalho_menor_140, pausas_marcacoes_impares, grupo,
 minutos_hora_extra_cartao, minutos_banco_horas_cartao, justificativa_marcacao, origem_marcacao,
-dias_ausencia, emenda_folga
+dias_ausencia, emenda_folga, minutos_trabalhados, minutos_descanso, marcacoes_dia
 ```
-(24/25 só na "Resumo Horas Cartão"; 26/27 só na "Marcação Digitada"; 28/29 na "Absenteísmo" e na "Afastamento")
+(24/25 só na "Resumo Horas Cartão"; 26/27 só na "Marcação Digitada"; 28/29 na "Absenteísmo" e na
+"Afastamento"; 30/31/32 nas 4 de jornada)
 - Separador **vírgula**; campo com vírgula/aspas/quebra vai entre aspas (RFC 4180); UTF-8 com BOM
   (`ADODB.Stream`); datas `dd/mm/aaaa` (`dd/mm/aaaa hh:mm` quando tem hora); duração em minutos
   inteiros (negativo = falta); `grupo` = Interno/Externo pelo nome da aba (vazio na planilha antiga).
@@ -230,7 +261,8 @@ dias_ausencia, emenda_folga
   (`HEADER_ALIASES`).
 - **Classificação de linhas:** `TIPOS_RESUMO` (auditoria, pausas, "Resumo Horas Cartão", "Cadastro
   ORG"), `TIPOS_CURTAS`, "Marcação Digitada" (`isTipoDigitada`) e "Absenteísmo"/"Afastamento"
-  (`isTipoAbsenteismo`) ficam fora das vistas gerais (`isTipoNaoOcorrencia`) e têm vistas próprias; `TIPOS_HORA_EXTRA` entram só nas horas do gráfico de banco
+  (`isTipoAbsenteismo`) e os 4 de jornada (`isTipoJornada`, `TIPOS_JORNADA`; ainda sem seção
+  própria no painel, 10/10) ficam fora das vistas gerais (`isTipoNaoOcorrencia`) e têm vistas próprias; `TIPOS_HORA_EXTRA` entram só nas horas do gráfico de banco
   de horas, **não** na contagem de ocorrências. `isTipoIgnorado` descarta "Problema horário" na
   leitura (proteção para CSV antigo); `textoCampo` transforma "Erro 2042"/`#N/D` em vazio.
 - `TIPOS_RESUMO` = auditoria, pausas e "Resumo Horas Cartão". O gráfico de banco de horas usa
@@ -377,6 +409,8 @@ PYTHONPATH=ferramentas python3 ferramentas/formatar_marcacoes.py "Marcações di
 PYTHONPATH=ferramentas python3 ferramentas/formatar_afastamentos.py "Afastamentos.xlsx" afastamentos.pkl
 python3 ferramentas/adicionar_aba_xlsx.py entrada.xlsx saida.xlsx marcacoes.pkl marcacoes
 python3 ferramentas/adicionar_aba_xlsx.py saida.xlsx saida2.xlsx afastamentos.pkl afastamentos
+PYTHONPATH=ferramentas python3 ferramentas/formatar_jornada.py "intrajornada.xlsx" intra.pkl   # idem p/ os outros 3
+python3 ferramentas/adicionar_aba_xlsx.py saida2.xlsx saida3.xlsx intra.pkl intrajornada        # interjornada|intersemanal|excedentes
 python3 ferramentas/carregar_planilha.py "Tratamento Ponto ....xlsx"     # -> planilha.pkl
 python3 ferramentas/simular_gerarcsv.py                                  # -> dados_TODOS.csv (regras da seção 5.4)
 NODE_PATH=$(npm root -g) node ferramentas/extrair_painel.js "$PWD/Dashboard/index.html" "$PWD/dados_TODOS.csv" painel.json
@@ -417,6 +451,11 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   Resultado: 210 no ORG, 283 afastamentos, 33 atestados; conferência 18/18. Aviso de férias: só
   1 gestor. **O Tyrone não está no HRCL006 nem no Cartão** (só na RE): o relatório de
   afastamentos precisa ser exportado incluindo os gestores para o aviso dele aparecer.
+
+- 10/10: macro FormatarJornada (intrajornada, interjornada, interjornada semanal, horas
+  excedentes), abas inseridas na planilha de ORG corrigido, GerarCSV com 32 colunas e 4 tipos
+  novos (105 linhas). Painel: só exclui os tipos novos das vistas gerais (conferência 18/18);
+  seção própria aguardando o Dimitri escolher as vistas.
 
 ## 12. Estado atual e como continuar (08/10/2026)
 
