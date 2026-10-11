@@ -780,7 +780,7 @@
           <div class="kpi-label">Colaboradores envolvidos</div>
           <div class="kpi-value" id="kpiColaboradores">0</div>
           <div class="kpi-sub" id="kpiColaboradoresSub"></div>
-          <div class="card-fonte"><span class="fonte-origem">De onde vem: planilha de Tratamento, coluna Nome</span><p>Quantas pessoas <strong>diferentes</strong> aparecem nas ocorrências do período filtrado. O número menor embaixo é o total de pessoas do arquivo, contando também quem só aparece no Cartão Ponto ou nas Pausas Térmicas.</p></div>
+          <div class="card-fonte"><span class="fonte-origem">De onde vem: planilha de Tratamento, coluna Nome</span><p>Quantas pessoas <strong>diferentes</strong> aparecem nas ocorrências do período filtrado. O número menor embaixo é o tamanho da equipe: sem filtro, todas as pessoas do ORG; filtrando um ou mais gestores, só as pessoas das equipes deles (o mesmo vale para grupo e cargo). Vem da lista do ORG, e quem tem ocorrência mas não está no ORG também conta.</p></div>
         </div>
         <div class="kpi-tile">
           <div class="kpi-label">Ocorrências no período</div>
@@ -2711,18 +2711,49 @@
   // extra. ocorrenciasRecords: usado pra contagem de ocorrências — sem
   // hora extra (pedido do RH). Os cards de total de horas extra e de
   // horas falta foram retirados a pedido do RH.
+  // Tamanho da equipe do recorte de pessoas do filtro (gestor, grupo, cargo,
+  // colaborador). Base: as linhas "Cadastro ORG" que passam no filtro (a
+  // relação oficial colaborador × gestor), somadas a quem aparece em
+  // `extras` (ex.: as ocorrências do filtro) e não está no ORG, para o
+  // total nunca ficar menor que a parte. Sem ORG no CSV, conta todas as
+  // pessoas do arquivo que passam no filtro. Período, tipo e status não
+  // entram: a equipe é a mesma em qualquer data.
+  // Devolve { n, rotulo } — rotulo completa a frase "de <n> ..." (ex.: "na
+  // equipe de FULANO", "nas equipes dos 2 gestores"). Usado nos subtítulos
+  // dos cards do topo e nos KPIs das digitadas.
+  function equipeDoFiltro(extras){
+    var f = filtroPessoas(), chaves = {};
+    var temOrg = state.records.some(function(r){ return r.tipo === TIPO_CADASTRO_ORG; });
+    state.records.forEach(function(r){
+      if (temOrg && r.tipo !== TIPO_CADASTRO_ORG) return;
+      if (r.colaborador && passaPessoa(r, f)) chaves[chavePessoa(r)] = true;
+    });
+    (extras || []).forEach(function(r){ if (r.colaborador) chaves[chavePessoa(r)] = true; });
+    var n = Object.keys(chaves).length;
+    function qtd(set){ return set ? Object.keys(set).length : 0; }
+    var nG = qtd(f.gestor), nGr = qtd(f.grupo), nC = qtd(f.cargo), nCo = qtd(f.colab);
+    var rotulo;
+    if (nCo) rotulo = nCo === 1 ? "colaborador selecionado" : "colaboradores selecionados";
+    else if (nG && !nGr && !nC) rotulo = nG === 1 ? "na equipe de " + Object.keys(f.gestor)[0] : "nas equipes dos " + nG + " gestores";
+    else if (nC && !nG && !nGr) rotulo = nC === 1 ? "com o cargo " + Object.keys(f.cargo)[0] : "com os " + nC + " cargos escolhidos";
+    else if (nGr && !nG && !nC) rotulo = "no grupo " + Object.keys(f.grupo).join(" e ");
+    else if (nG || nGr || nC) rotulo = "no recorte do filtro (" + [nG ? "gestor" : "", nGr ? "grupo" : "", nC ? "cargo" : ""].filter(Boolean).join(" + ") + ")";
+    else rotulo = temOrg ? "pessoas no ORG" : "no arquivo carregado";
+    return { n: n, rotulo: rotulo, temOrg: temOrg };
+  }
   function renderKPIs(records, ocorrenciasRecords){
     var colaboradoresSet = {};
     records.forEach(function(r){ colaboradoresSet[r.colaborador] = true; });
     var totalColaboradores = Object.keys(colaboradoresSet).length;
-    // total do ARQUIVO inteiro, independente do filtro atual — por isso
-    // não depende de totalColaboradores (que É o filtrado): se um filtro
-    // zera o resultado, "de X no arquivo carregado" continua mostrando o
-    // X real, não 0.
-    var totalGeral = uniqueSorted(state.records, function(r){ return r.colaborador; }).length;
+    // "de X ..." embaixo = tamanho da equipe do recorte de pessoas do filtro
+    // (gestor, grupo, cargo, colaborador), não das ocorrências: filtrando um
+    // gestor, X é quantas pessoas a equipe dele tem (pedido do RH, 11/10).
+    // Não depende do período nem do tipo/status: se o filtro zera as
+    // ocorrências, X continua mostrando a equipe real, não 0.
+    var eq = equipeDoFiltro(records);
 
     $("kpiColaboradores").textContent = formatNum(totalColaboradores);
-    $("kpiColaboradoresSub").textContent = "de " + formatNum(totalGeral) + " no arquivo carregado";
+    $("kpiColaboradoresSub").textContent = "de " + formatNum(eq.n) + " " + eq.rotulo;
 
     $("kpiOcorrencias").textContent = formatNum(ocorrenciasRecords.length);
     $("kpiOcorrenciasSub").textContent = ocorrenciasRecords.length ? (formatDateSpan(ocorrenciasRecords)) : "";
@@ -2945,13 +2976,14 @@
     ocorrenciasRecords.forEach(function(r){ diasComOcorrencia[chavePessoa(r) + "|" + r.dateKey] = true; });
     dig.forEach(function(r){ r.temOcorrenciaNoDia = !!diasComOcorrencia[chavePessoa(r) + "|" + r.dateKey]; });
 
-    // KPIs da seção: total de batidas, pessoas diferentes (e % do ORG) e quantas
+    // KPIs da seção: total de batidas, pessoas diferentes (e % da equipe do filtro) e quantas
     // foram por esquecimento (os cards "No dia de uma ocorrência" e "Horário
     // redondo" foram retirados a pedido do RH, 08/10).
     var pessoas = {};
     dig.forEach(function(r){ pessoas[chavePessoa(r)] = true; });
     var nPessoas = Object.keys(pessoas).length;
-    var noOrg = state.records.filter(function(r){ return r.tipo === TIPO_CADASTRO_ORG; }).length;
+    // base do % = a equipe do filtro (todas do ORG sem filtro de pessoa)
+    var eqDig = equipeDoFiltro(dig);
     var nEsq = dig.filter(isEsquecimento).length;
     function pct(a, b){ return b ? Math.round(a*100/b) + "%" : "0%"; }
     function tile(label, valor, sub){
@@ -2959,7 +2991,7 @@
     }
     $("digKpis").innerHTML =
       tile("Marcações digitadas", formatNum(dig.length), "batidas no filtro") +
-      tile("Colaboradores", formatNum(nPessoas), noOrg ? pct(nPessoas, noOrg) + " das pessoas do ORG" : "com batida digitada") +
+      tile("Colaboradores", formatNum(nPessoas), pct(nPessoas, eqDig.n) + " de " + formatNum(eqDig.n) + " " + eqDig.rotulo) +
       tile("Por esquecimento", formatNum(nEsq), pct(nEsq, dig.length) + " das digitadas");
 
     // Rosca por motivo, barras por dia da semana e linha por data.

@@ -482,8 +482,14 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   atestado de 1 dia na segunda/sexta, P3 atestado colado em férias, P10 esquecimento crônico, M3
   ocorrências por pessoa da equipe, M4 clicar no gráfico filtra o painel, M7 percentuais nos
   gráficos, M10 legenda clicável. Depois ele pediu ideias para Pausas Térmicas: tema T (T1–T12)
-  acrescentado à mesma página, aguardando ele marcar (T10/T11 exigem voltar a guardar o detalhe
-  diário do HRES114; T12 depende de saber quais cargos/setores fazem pausa).
+  na mesma página; marcou (11/10) **T1** 4 números no topo, **T3** trabalho acima de 1h40 por
+  pessoa/gestor, **T4** pausas por gestor e cargo, **T8** pausas no card do colaborador, **T9**
+  evolução mês a mês (exige manter a aba de pausas de cada mês).
+- 11/10: subtítulo "de X ..." do card "Colaboradores envolvidos" e o % de pessoas das digitadas
+  usam `equipeDoFiltro` (tamanho da equipe do recorte gestor/grupo/cargo/colaborador, pelas linhas
+  "Cadastro ORG" + quem tem ocorrência e não está no ORG; sem período/tipo/status). Ex.: "de 22 na
+  equipe de <gestor>", "de 34 nas equipes dos 2 gestores", "de 211 pessoas no ORG" (210 no ORG +
+  1 com ocorrência fora dele). Antes era sempre o total do arquivo.
 
 ## 12. Estado atual e como continuar (08/10/2026)
 

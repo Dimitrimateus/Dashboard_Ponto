@@ -276,6 +276,14 @@ justificativa, ou o RH lançou no sistema.
 - Painel: por enquanto essas linhas só ficam fora das contagens gerais; a seção própria depende
   das vistas que o RH escolher.
 
+## Subtítulos que acompanham o filtro (11/10)
+
+- Card **Colaboradores envolvidos**: o "de X" embaixo agora é o tamanho da equipe do filtro. Sem
+  filtro, todas as pessoas do ORG; com um gestor, "de 22 na equipe de <gestor>"; com vários, "nas
+  equipes dos N gestores" (o mesmo para grupo e cargo). Quem tem ocorrência e não está no ORG
+  também conta, para o total nunca ficar menor que a parte.
+- Seção **Marcações digitadas**: o % de pessoas usa a mesma equipe do filtro.
+
 ## Ordem de uso no mês
 
 1. Rodar `ConsolidarCartaoPonto` no HRCP102 e colar o resultado numa aba `Cartão <Mês>`.
