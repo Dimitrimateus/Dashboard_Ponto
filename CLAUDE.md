@@ -539,6 +539,10 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   especificidade e escrita depois no arquivo. Agora é `.modal-body.origem-body`. Testado no
   Chromium com a roda do mouse: desktop, 390 px e com o gráfico em tela cheia. Lição: regra
   específica de um modal precisa vencer a de `.modal-body` pela especificidade, não pela ordem.
+- 13/10 (depois 5): na janela "de onde vem", o cabeçalho da tabela grudava 14 px abaixo do topo
+  (padding da janela) e as linhas apareciam nessa faixa. Agora a janela não tem padding em cima
+  (fica nos nomes, `.origem-pessoas{padding-top}`) e o `th` gruda em `top:0` com linha embaixo.
+  No celular a tabela vira cartões, sem cabeçalho (cada cartão tem os rótulos).
 
 ## 12. Estado atual e como continuar (13/10/2026)
 

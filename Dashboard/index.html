@@ -540,9 +540,13 @@
   /* a janela inteira rola (nomes e tabela), em vez de cortar a lista de nomes.
      Precisa de ".modal-body.origem-body": só ".origem-body" perdia para a regra
      ".modal-body" (overflow:hidden), que vem depois no arquivo, e nada rolava. */
-  .modal-body.origem-body{ display:block; flex:1 1 auto; min-height:0; overflow-y:auto; padding:14px 20px 20px; }
+  .modal-body.origem-body{ display:block; flex:1 1 auto; min-height:0; overflow-y:auto; padding:0 20px 20px; }
   .modal-body.origem-body .table-scroll{ max-height:none; overflow:visible; }
-  .origem-pessoas{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+  /* o cabeçalho da tabela gruda no topo da janela ao rolar. O espaço de cima
+     fica nos nomes (padding-top), não na janela: com padding na janela o
+     cabeçalho parava 14px abaixo do topo e as linhas apareciam nessa faixa. */
+  .modal-body.origem-body table.data-table th{ top:0; z-index:2; box-shadow:inset 0 -1px 0 var(--c-line); }
+  .origem-pessoas{ display:flex; flex-wrap:wrap; gap:6px; padding-top:14px; margin-bottom:12px; }
   .origem-chip{ font:inherit; font-size:12px; color:var(--c-ink); background:#F6F6F6; border:1px solid var(--c-line); border-radius:999px; padding:3px 10px; cursor:pointer; }
   .origem-chip:hover{ border-color:var(--c-line-strong); }
   .origem-chip.sel{ background:#FFF1DE; border-color:var(--c-orange); }
