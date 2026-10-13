@@ -523,6 +523,15 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   "Tratamento", "DSR"; explicam o que é cada coisa (espelho de ponto, ciclo 28→27, batida
   digitada, pausa térmica, afastamento). Card da pessoa: "Não está na lista de equipes".
   Ao escrever texto novo para a tela, manter esse tom.
+- 13/10 (depois 3): na janela "de onde vem", os nomes de cima viraram **filtros** da tabela
+  (`desenharOrigem`, `state.origem.sel`; o card da pessoa abre pelo nome na tabela) e a janela rola
+  inteira (`.origem-body` com `min-height:0; overflow-y:auto`). Varredura completa no Chromium
+  (todas as seções, cliques em todas as legendas, tela cheia de todo card, 3 cliques de origem por
+  gráfico, filtros, período vazio, ciclos/seletores dos afastamentos, lista de equipes, recarregar
+  arquivo, CSV antigo de 23 colunas, celular 390 e 360 px): sem erro de JavaScript nem texto
+  "NaN/undefined". Corrigidos: topo passava da tela no celular (rolagem lateral de 6 px em 390 e
+  4 px em 360); "Esconder filtros" ficava laranja no modo explicação; termos técnicos nos
+  subtítulos e selos ("Cartão Ponto", "DSR", "ORG", "#N/A") trocados por linguagem simples.
 
 ## 12. Estado atual e como continuar (08/10/2026)
 

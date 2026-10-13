@@ -136,8 +136,10 @@
   body.sem-lateral #btnLateral{ background:var(--c-orange); border-color:var(--c-orange); color:#fff; }
   .btn-explica svg{ width:16px; height:16px; }
   .btn-explica .q{ display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:var(--c-orange); color:#fff; font-size:12px; font-weight:800; }
-  body.modo-explicacao .btn-explica{ background:var(--c-orange); border-color:var(--c-orange); color:#fff; }
-  body.modo-explicacao .btn-explica .q{ background:#fff; color:var(--c-orange); }
+  /* só o botão "Entenda o painel" fica laranja no modo explicação (o "Esconder
+     filtros" usa a mesma classe e ficava laranja junto, parecendo ligado) */
+  body.modo-explicacao #btnExplica{ background:var(--c-orange); border-color:var(--c-orange); color:#fff; }
+  body.modo-explicacao #btnExplica .q{ background:#fff; color:var(--c-orange); }
 
   /* ---------- Modo explicação ("Entenda o painel") ---------- */
   .card-fonte{ display:none; }
@@ -535,9 +537,14 @@
   svg .chart-bar.drill:hover, svg .chart-seg.drill:hover{ filter:brightness(.88); }
   #origemOverlay{ z-index:280; }
   .modal-panel.origem-panel{ width:min(1000px, 96vw); }
-  .origem-body{ display:block; overflow:auto; padding:14px 20px 20px; }
+  /* a janela inteira rola (nomes e tabela), em vez de cortar a lista de nomes */
+  .origem-body{ display:block; flex:1 1 auto; min-height:0; overflow-y:auto; padding:14px 20px 20px; }
+  .origem-body .table-scroll{ max-height:none; overflow:visible; }
   .origem-pessoas{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
-  .origem-chip{ font-size:12px; background:#F6F6F6; border:1px solid var(--c-line); border-radius:999px; padding:3px 10px; }
+  .origem-chip{ font:inherit; font-size:12px; color:var(--c-ink); background:#F6F6F6; border:1px solid var(--c-line); border-radius:999px; padding:3px 10px; cursor:pointer; }
+  .origem-chip:hover{ border-color:var(--c-line-strong); }
+  .origem-chip.sel{ background:#FFF1DE; border-color:var(--c-orange); }
+  .origem-chip.off{ opacity:.5; }
   .origem-chip b{ color:var(--c-ink); margin-left:2px; }
   #chartTooltip{
     position:fixed; z-index:200; pointer-events:none;
@@ -643,9 +650,21 @@
     .colab-kpis{ grid-template-columns:repeat(2, minmax(0,1fr)); }
   }
   @media (max-width: 420px){
-    .brand-mark{ height:26px; }
+    /* no celular estreito o topo não pode passar da tela (13/10: sobravam 6px
+       e a página inteira rolava para o lado) */
+    .topbar{ padding:0 6px; gap:5px; }
+    .brand{ gap:6px; }
+    .topbar-right{ gap:5px; }
+    .topbar-period{ padding:3px 7px; }
+    .btn-explica{ padding:5px 6px; }
+    .brand-mark{ height:22px; }
     .topbar-period .tp-label{ font-size:9px; }
     .topbar-period .tp-value{ font-size:12.5px; }
+  }
+  @media (max-width: 380px){
+    .brand-mark{ height:17px; }
+    .topbar-period{ padding:2px 5px; }
+    .topbar-period .tp-value{ font-size:11px; }
   }
   /* Tablet range: keep the real table, but let it scroll horizontally with the first column pinned */
   @media (min-width: 769px) and (max-width: 980px){
@@ -899,7 +918,7 @@
           </div>
           <div class="card">
             <div class="card-title">Banco de horas e hora extra por colaborador</div>
-            <div class="card-hint" id="hintBancoHoras">Mês atual do Cartão Ponto &middot; verde = hora extra, vermelho = banco de horas, à direita o saldo (extra &minus; banco)</div>
+            <div class="card-hint" id="hintBancoHoras">Mês atual do espelho de ponto &middot; verde = hora extra, vermelho = banco de horas, à direita o saldo (extra &minus; banco)</div>
             <div class="card-fonte"><span class="fonte-origem">De onde vem: o espelho de ponto deste mês, somado por pessoa</span><p>O total do mês de cada pessoa. <strong>Verde</strong> = horas extras. <strong>Vermelho</strong> = horas descontadas do banco de horas (por falta, atraso ou saída antes do horário). <strong>À direita</strong>, o saldo: verde com “+” quando a pessoa fez mais hora extra do que teve desconto; vermelho com “&minus;” quando teve mais desconto. Vale o mês inteiro, sem depender do filtro de período. Ordem: quem tem mais horas somadas. Clique no nome para ver a pessoa.</p></div>
             <div class="card-body" id="chartBancoHoras"></div>
             <div class="card-toolbar"><button type="button" class="btn-ghost" id="btnBancoTodos" hidden>Mostrar todos</button></div>
@@ -1020,7 +1039,7 @@
             </div>
             <div class="card">
               <div class="card-title">Atestados encostados em folga</div>
-              <div class="card-hint">O dia logo antes do início ou logo depois do fim do atestado é folga da pessoa (DSR, folga, compensado ou feriado) &middot; a lista abaixo mostra qual dia e qual folga</div>
+              <div class="card-hint">O dia logo antes do início ou logo depois do fim do atestado é folga da pessoa (folga semanal, folga compensada ou feriado) &middot; a lista abaixo mostra qual dia e qual folga</div>
               <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de afastamentos + o espelho de ponto</span><p>Para cada atestado, o painel olha no espelho de ponto da própria pessoa o dia anterior ao início e o dia seguinte ao fim. Se um desses dias era folga (folga semanal, folga compensada ou feriado), o atestado “encosta” na folga e emenda o descanso. O gráfico mostra em que dia da semana os atestados começam. <strong>Clique</strong> numa barra (ou num pedaço colorido dela) para ver a lista de pessoas e registros que formam aquele número.</p></div>
               <div class="abs-resumo" id="absEmendaResumo"></div>
               <div class="card-body" id="chartAbsDiaSemana"></div>
@@ -1033,7 +1052,7 @@
             </div>
             <div class="card wide">
               <div class="card-title">Atestados encostados em folga — lista</div>
-              <div class="card-hint">No ciclo escolhido &middot; “Folga encostada” = o dia de folga que fica colado no atestado (ex.: atestado na segunda com o domingo de DSR antes)</div>
+              <div class="card-hint">No ciclo escolhido &middot; “Folga encostada” = o dia de folga que fica colado no atestado (ex.: atestado na segunda com a folga de domingo antes)</div>
               <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de afastamentos + o espelho de ponto</span><p>Cada atestado que encosta numa folga. A coluna “Folga encostada” mostra o dia (data e dia da semana), que tipo de folga era (folga semanal, compensada, feriado…) e se ela fica <strong>antes do início</strong> ou <strong>depois do fim</strong> do atestado. Quando as duas pontas encostam em folga, aparecem as duas.</p></div>
               <div class="card-body" id="tableAbsEmendas"></div>
             </div>
@@ -1071,15 +1090,15 @@
       </div>
       <!-- Seção "Lista de colaboradores (ORG)" (renderListaORG). -->
       <div class="pagina" data-pagina="org">
-        <h3 class="section-title">Lista de colaboradores (ORG)</h3>
+        <h3 class="section-title">Lista de colaboradores</h3>
         <section class="card wide" id="orgSection">
           <div class="card-fonte"><span class="fonte-origem">De onde vem: a lista de equipes que o RH mantém (quem é gestor de quem)</span><p>Todas as pessoas da lista de equipes, com o gestor de cada uma. Para cada pessoa, o painel junta as ocorrências do filtro, as batidas digitadas e as horas do mês. O seletor ao lado da busca ajuda a achar cadastros incompletos (sem matrícula, sem gestor, sem cargo ou sem área). Quem aparece no arquivo mas não está na lista de equipes não aparece aqui; o resumo dessa pessoa avisa “Não está na lista de equipes”. Clique no nome para abrir o resumo.</p></div>
           <div class="org-resumo" id="orgResumo"></div>
           <div class="org-toolbar">
             <input type="text" id="orgBusca" placeholder="Buscar por nome, matrícula, gestor, cargo...">
             <select id="orgMostrar">
-              <option value="">Todos do ORG</option>
-              <option value="semmat">Sem matrícula (#N/A no ORG)</option>
+              <option value="">Todos da lista</option>
+              <option value="semmat">Sem matrícula (cadastro incompleto)</option>
               <option value="semgestor">Sem gestor</option>
               <option value="semcargo">Sem cargo</option>
               <option value="semarea">Sem área</option>
@@ -2921,7 +2940,7 @@
     else if (nC && !nG && !nGr) rotulo = nC === 1 ? "com o cargo " + Object.keys(f.cargo)[0] : "com os " + nC + " cargos escolhidos";
     else if (nGr && !nG && !nC) rotulo = "no grupo " + Object.keys(f.grupo).join(" e ");
     else if (nG || nGr || nC) rotulo = "no recorte do filtro (" + [nG ? "gestor" : "", nGr ? "grupo" : "", nC ? "cargo" : ""].filter(Boolean).join(" + ") + ")";
-    else rotulo = temOrg ? "pessoas no ORG" : "no arquivo carregado";
+    else rotulo = temOrg ? "pessoas na lista de equipes" : "no arquivo carregado";
     return { n: n, rotulo: rotulo, temOrg: temOrg };
   }
   function renderKPIs(records, ocorrenciasRecords){
@@ -3086,7 +3105,7 @@
     $("btnBancoTodos").hidden = bancoCheio || horas.lista.length <= limiteBanco;
     $("btnBancoTodos").textContent = "Ver todos (" + horas.lista.length + ") em tela cheia";
     $("hintBancoHoras").innerHTML = horas.doCartao
-      ? "Mês atual do Cartão Ponto &middot; verde = hora extra, vermelho = banco de horas, à direita o saldo (extra &minus; banco)"
+      ? "Mês atual do espelho de ponto &middot; verde = hora extra, vermelho = banco de horas, à direita o saldo (extra &minus; banco)"
       : "CSV antigo (sem o resumo do Cartão): só os dias que viraram ocorrência na Tratamento &middot; gere o CSV de novo com a macro atual";
 
     // colunas estreitas com o cabeçalho em 2 linhas, para a tabela caber
@@ -4004,7 +4023,7 @@
                 ["Cargo", primeiro("cargo","Sem cargo") || "Sem cargo"], ["Setor", primeiro("setor","Sem setor") || "Sem setor"],
                 ["Grupo", primeiro("grupo")]];
     var linhaOrg = todas.filter(function(r){ return r.tipo === TIPO_CADASTRO_ORG; })[0];
-    if (linhaOrg && linhaOrg.situacao) meta.push(["Área (ORG)", linhaOrg.situacao]);
+    if (linhaOrg && linhaOrg.situacao) meta.push(["Área", linhaOrg.situacao]);
     var foraOrg = !linhaOrg && state.records.some(function(r){ return r.tipo === TIPO_CADASTRO_ORG; });
     $("colabModalMeta").innerHTML = meta.filter(function(m){ return m[1]; }).map(function(m){
       return "<span>"+m[0]+": <b>"+escapeHtml(m[1])+"</b></span>";
@@ -4022,8 +4041,8 @@
     // afastamentos, digitadas e ocorrências da pessoa.
     var html = '<div class="colab-kpis">' +
       tile("Ocorrências", formatNum(ocorrencias.length), periodoTxt) +
-      tile("Hora extra", horas ? formatHoras(horas.minHoraExtraCartao) : "&ndash;", "Cartão do mês atual") +
-      tile("Banco de horas", horas ? formatHoras(horas.minBancoHorasCartao) : "&ndash;", "Cartão do mês atual") +
+      tile("Hora extra", horas ? formatHoras(horas.minHoraExtraCartao) : "&ndash;", "espelho de ponto do mês") +
+      tile("Banco de horas", horas ? formatHoras(horas.minBancoHorasCartao) : "&ndash;", "espelho de ponto do mês") +
       tile("Saldo", horas ? formatSaldo(saldo) : "&ndash;", "extra &minus; banco", horas ? (saldo > 0 ? "pos" : (saldo < 0 ? "neg" : "")) : "") +
       tile("Extra e falta no mesmo dia", aud ? (aud.extraFaltaMesAtual + " / " + aud.extraFaltaTotal3Meses) : "0", "este mês / 3 meses",
            aud && aud.extraFaltaTotal3Meses >= LIMITE_AUDITORIA_EXTRA_FALTA ? "alerta" : "") +
@@ -4238,13 +4257,34 @@
     var nomes = Object.keys(porPessoa).sort(function(a,b){ return porPessoa[b]-porPessoa[a] || a.localeCompare(b,"pt-BR"); });
     var unidade = tipo === "digitada" ? "batida(s) digitada(s)" : (tipo === "ocorrencia" ? "ocorrência(s)" : "afastamento(s)");
     $("origemTitulo").textContent = titulo + (recorte ? " · " + recorte : "");
-    $("origemSub").textContent = formatNum(linhas.length) + " " + unidade + " de " + formatNum(nomes.length) + " pessoa(s) · clique num nome para abrir o card da pessoa";
-    $("origemPessoas").innerHTML = nomes.map(function(n){
-      return '<span class="origem-chip">' + colabLink(n) + ' <b>' + porPessoa[n] + '</b></span>';
-    }).join("");
-    renderTableSimple($("origemTabela"), colunas, linhas);
+    state.origem = { linhas:linhas, colunas:colunas, nomes:nomes, porPessoa:porPessoa, unidade:unidade, sel:{} };
+    desenharOrigem();
     $("origemOverlay").hidden = false;
+    $("origemOverlay").querySelector(".origem-body").scrollTop = 0;
   }
+  // Os nomes de cima são FILTROS da tabela de baixo (pedido do RH, 13/10):
+  // clicar marca/desmarca a pessoa; com alguém marcado, a tabela mostra só
+  // as linhas dessas pessoas. O card da pessoa abre pelo nome na tabela.
+  function desenharOrigem(){
+    var o = state.origem, temSel = Object.keys(o.sel).length > 0;
+    var vis = temSel ? o.linhas.filter(function(x){ return o.sel[(x.r || x).colaborador]; }) : o.linhas;
+    $("origemSub").textContent = formatNum(o.linhas.length) + " " + o.unidade + " de " + formatNum(o.nomes.length) + " pessoa(s)" +
+      (temSel ? " · mostrando " + formatNum(vis.length) + " de " + Object.keys(o.sel).length + " pessoa(s) escolhida(s)" : "") +
+      " · clique num nome aqui em cima para filtrar a lista; clique no nome na lista para ver o resumo da pessoa";
+    $("origemPessoas").innerHTML = o.nomes.map(function(n){
+      return '<button type="button" class="origem-chip' + (o.sel[n] ? ' sel' : (temSel ? ' off' : '')) + '" data-origem-pessoa="' + escapeHtml(n) + '">' +
+        escapeHtml(n) + ' <b>' + o.porPessoa[n] + '</b></button>';
+    }).join("") + (temSel ? '<button type="button" class="leg-limpar" data-origem-pessoa="">Mostrar todos</button>' : '');
+    renderTableSimple($("origemTabela"), o.colunas, vis);
+  }
+  $("origemPessoas").addEventListener("click", function(e){
+    var b = e.target.closest("[data-origem-pessoa]");
+    if (!b || !state.origem) return;
+    e.stopPropagation();
+    var n = b.getAttribute("data-origem-pessoa"), sel = state.origem.sel;
+    if (!n) state.origem.sel = {}; else if (sel[n]) delete sel[n]; else sel[n] = true;
+    desenharOrigem();
+  });
   function fecharOrigem(){ $("origemOverlay").hidden = true; }
   $("origemFechar").addEventListener("click", fecharOrigem);
   $("origemOverlay").addEventListener("click", function(e){ if (e.target === $("origemOverlay")) fecharOrigem(); });
@@ -4277,11 +4317,11 @@
     var ab = state.absPeriodo || {};
     var textos = {
       filtro: ini && fim ? "Período do filtro: " + intervaloBR(ini, fim) : "Período: todo o arquivo",
-      cartao: cart ? "Mês do Cartão Ponto: " + intervaloBR(cart.ini, cart.fim) + " (não segue o filtro de período)" : "Mês atual do Cartão Ponto",
-      cartao3: cart ? "Mês do Cartão: " + intervaloBR(cart.ini, cart.fim) + " + os 2 meses anteriores (não segue o filtro de período)" : "Mês atual do Cartão e os 2 anteriores",
+      cartao: cart ? "Mês do espelho de ponto: " + intervaloBR(cart.ini, cart.fim) + " (não segue o filtro de período)" : "Mês atual do espelho de ponto",
+      cartao3: cart ? "Mês do espelho de ponto: " + intervaloBR(cart.ini, cart.fim) + " + os 2 meses anteriores (não segue o filtro de período)" : "Mês atual do espelho de ponto e os 2 anteriores",
       pausas: paus ? "Relatório de pausas do mês: " + intervaloBR(paus.ini, paus.fim) + " (não segue o filtro de período)" : "Relatório de pausas do mês",
       absEvol: ab.ciclo, absCiclo: ab.ciclo, abs3m: ab.tres, absMapa: ab.mapa,
-      cadastro: "Cadastro atual do ORG (não depende de período)"
+      cadastro: "Lista de equipes atual (não depende de período)"
     };
     Object.keys(PERIODO_DOS_CARDS).forEach(function(tipo){
       PERIODO_DOS_CARDS[tipo].forEach(function(id){

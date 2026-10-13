@@ -305,6 +305,9 @@ justificativa, ou o RH lançou no sistema.
   num quadrado do mapa abre a lista de pessoas e registros que formam aquele número (ex.: o pedaço
   vermelho da barra de um gestor nos afastamentos mostra quem teve atestado). O nome abre o card.
 - **Entenda o painel** reescrito para quem não conhece os processos do RH, sem termos técnicos.
+- Na janela "de onde vem", os nomes de cima filtram a lista (o resumo da pessoa abre pelo nome na
+  lista) e a janela rola inteira. Revisão geral: topo do celular sem rolagem lateral, botão
+  "Esconder filtros" não fica mais laranja no modo explicação, subtítulos sem termos técnicos.
 
 ## Ordem de uso no mês
 
