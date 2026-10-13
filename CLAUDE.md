@@ -198,7 +198,11 @@ conteúdo num módulo.
    - "Falta < 15min" / "Extra < 15min": direto da coluna "Tolerância < 15min" do Cartão atual
      ("Extra e Falta" gera 2 linhas). **Não dependem do Check da Tratamento**: está em aberto com o
      Dimitri se um dia com Check "S" deve sair dessa lista.
-   - "Resumo Pausas Térmicas": uma por colaborador da tabela de pausas.
+   - "Resumo Pausas Térmicas": uma por colaborador da tabela de pausas, **de cada aba de pausas**
+     (13/10, T9): a aba sem mês no nome é o mês atual (data = fim do Cartão); as de meses
+     anteriores têm o mês por extenso no nome ("Pausas Térmicas Agosto") e saem com a data 27
+     daquele mês (`CabecalhoPausasNaAba`, `MesNoNomeDaAba`, `DataDoMesDaAba`); mês repetido é
+     ignorado com aviso. O painel usa só o mês mais recente, menos na evolução e no card.
    - "Resumo Horas Cartão" (06/10): uma por matrícula do Cartão atual com o total do mês de
      hora extra (50% + 100%) e de banco de horas (BH). Sem Tratamento, sem Check, sem período.
      No Cartão, BH é sempre positivo e é **débito** (dias de "Falta (Banco Horas)" e minutos de
@@ -261,8 +265,8 @@ dias_ausencia, emenda_folga, minutos_trabalhados, minutos_descanso, marcacoes_di
   (`HEADER_ALIASES`).
 - **Classificação de linhas:** `TIPOS_RESUMO` (auditoria, pausas, "Resumo Horas Cartão", "Cadastro
   ORG"), `TIPOS_CURTAS`, "Marcação Digitada" (`isTipoDigitada`) e "Absenteísmo"/"Afastamento"
-  (`isTipoAbsenteismo`) e os 4 de jornada (`isTipoJornada`, `TIPOS_JORNADA`; ainda sem seção
-  própria no painel, 10/10) ficam fora das vistas gerais (`isTipoNaoOcorrencia`) e têm vistas próprias; `TIPOS_HORA_EXTRA` entram só nas horas do gráfico de banco
+  (`isTipoAbsenteismo`) e os 4 de jornada (`isTipoJornada`, `TIPOS_JORNADA`; seção "Jornada"
+  desde 13/10) ficam fora das vistas gerais (`isTipoNaoOcorrencia`) e têm vistas próprias; `TIPOS_HORA_EXTRA` entram só nas horas do gráfico de banco
   de horas, **não** na contagem de ocorrências. `isTipoIgnorado` descarta "Problema horário" na
   leitura (proteção para CSV antigo); `textoCampo` transforma "Erro 2042"/`#N/D` em vazio.
 - `TIPOS_RESUMO` = auditoria, pausas e "Resumo Horas Cartão". O gráfico de banco de horas usa
@@ -344,6 +348,27 @@ dias_ausencia, emenda_folga, minutos_trabalhados, minutos_descanso, marcacoes_di
   (atestados), demora por gestor e por colaborador, lista de colaboradores (ORG), histórico paginado.
 - Filtros: gestor, **grupo** (só aparece se o CSV tiver a coluna `grupo` preenchida), cargo,
   colaborador, tipo (chips), status (chips), período. Linhas de resumo ignoram o período.
+- **Jornada** (13/10, `renderJornada`, `getJornadaRecords`: filtros de pessoa, sem período, seletor
+  `#jorCiclo`): J1 4 números + barras por ciclo por tipo; J2 mais de 10h por pessoa (barra = minutos
+  acima de 10h, texto "N dias · Xh", clique = dias com batidas); J7 por gestor (gráfico + tabela com
+  % da equipe via `tamanhoEquipes`) + lista. Nomes leigos em `JORNADA_INFO` ("Mais de 10h no dia",
+  "Intervalo de almoço curto", "Trabalho na folga ou feriado", "Menos de 11h de descanso").
+  **Horas do dia = coluna "Total"** do relatório (relógio + conversão da hora noturna), a que o
+  sistema usa para o limite; "Horas trabalhadas" (só relógio) daria 28h51 em vez de 66h acima.
+- **Sinais de atestado** (`renderSinaisAtestado`, 3 meses): P1 2+ atestados começando no mesmo dia da
+  semana; P2 atestado de 1 dia na seg/sex (resumo, por pessoa, por equipe); P3 atestado a até 3 dias
+  das férias (`DIST_FERIAS_DIAS`, antes/depois/dentro). Selo "pegar no pulo" (`.tag-pulo`).
+- **Esquecimento crônico** (P10, `renderEsquecimentoCronico`): por pessoa e ciclo, sem período,
+  tendência penúltimo → último ciclo, vermelho com `LIMITE_ESQUECIMENTO` (5)+ no último.
+- **Pausas** (`renderPausas`): T1 4 números; T3 acima de 1h40 por pessoa (vermelho > 30%,
+  `LIMITE_ACIMA_PCT`) e por gestor; T4 certas/curtas/longas por gestor ou cargo (`#pauAgrupar`);
+  T9 evolução por mês (`getPausasTodosMeses`); T8 no card (`pausasDoCard`, pessoa × média da equipe).
+  `getPausasTermicasRecords` = só o mês mais recente (`mesPausasAtual`).
+- **M3** `renderPorGestor` (seletor `#gestorMedida`: total × por pessoa da equipe); **M4** botões
+  "Filtrar o painel: ..." na janela de origem (`opts.filtro`/`filtroSeg` → `marcarOrigem` →
+  `aplicarFiltroDoGrafico`; tipos "Outros" não filtram; ponto da linha filtra o dia); **M7** % do
+  total (`opts.total`, `pctTxt`, `.legend-pct` na rosca, fora do que o extrator lê).
+  `it.texto` (texto à direita da barra) e `it.dica` (balão) sobrescrevem o padrão em renderBarH.
 - Paleta: laranja `#F7931E`, vermelho `#E31E24`, amarelo `#FFC72C`, preto `#1A1A1A`, cinzas.
 
 ## 7. Conferência feita (01/10/2026)
@@ -431,7 +456,7 @@ python3 ferramentas/adicionar_aba_xlsx.py saida2.xlsx saida3.xlsx intra.pkl intr
 python3 ferramentas/carregar_planilha.py "Tratamento Ponto ....xlsx"     # -> planilha.pkl
 python3 ferramentas/simular_gerarcsv.py                                  # -> dados_TODOS.csv (regras da seção 5.4)
 NODE_PATH=$(npm root -g) node ferramentas/extrair_painel.js "$PWD/Dashboard/index.html" "$PWD/dados_TODOS.csv" painel.json
-PYTHONPATH=ferramentas python3 ferramentas/conferir_painel.py painel.json   # OK/FALHA item a item (hoje 18 itens)
+PYTHONPATH=ferramentas python3 ferramentas/conferir_painel.py painel.json   # OK/FALHA item a item (hoje 26 itens)
 python3 ferramentas/checar_colisoes_vba.py */*.bas                         # antes de entregar VBA
 ```
 Os scripts foram escritos para a planilha de 28/08 a 27/09 (nomes de aba fixos: "Tratamento",
@@ -544,10 +569,22 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   (fica nos nomes, `.origem-pessoas{padding-top}`) e o `th` gruda em `top:0` com linha embaixo.
   No celular a tabela vira cartões, sem cabeçalho (cada cartão tem os rótulos).
 
+- 13/10 (depois 6): **construídas as 15 escolhas pendentes** da página de ideias (J1, J2, J7, P1,
+  P2, P3, P10, T1, T3, T4, T8, T9, M3, M4, M7; ver seção 6). GerarCSV lê todas as abas de pausas
+  (T9); simulador igual. M4 virou botão dentro do "de onde vem" (o clique na barra continua abrindo
+  a origem, decisão de 13/10). Conferência 26/26 (8 itens novos); varredura no Chromium (todas as
+  seções, 1400/390/360 px, cliques de origem, legendas, tela cheia, modo explicação; CSV atual,
+  antigo de 23 colunas e um de teste com 2 meses de pausas): sem erro de JS, NaN ou rolagem lateral.
+  Também sugeridas (não aprovadas) ideias para reunião R1–R10: página da equipe por gestor, pontos
+  de atenção em frases, pendências com idade, quadro comparando gestores, seta vs ciclo anterior,
+  modo reunião (com nomes escondidos), PDF por equipe, combinados (aba nova), custo da hora extra
+  (salário da RE, só por equipe), atividade externa sem viagem. Perguntas em aberto: reunião é por
+  gestor ou com todos? Pode usar salário (só total da equipe)?
+
 ## 12. Estado atual e como continuar (13/10/2026)
 
 **Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`, branch
-`claude/fervent-hamilton-281bul` (push funcionando; último commit da revisão geral de 13/10). O
+`ccr-c6360952-zmkobs` (continuação da `claude/fervent-hamilton-281bul`; push funcionando). O
 `Dashboard/index.html` é o painel; as macros ficam em `<Pasta>/<Macro>.bas` e `txt/<Macro>.txt`.
 
 **O que o Dimitri tem em mãos.**
@@ -557,7 +594,9 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   Semanal, Horas Excedentes) e o CSV de referência simulado.
 - Depois disso recebeu só o `index.html` atualizado (13/10): tela cheia, filtro na legenda por
   gráfico, selo de período, clique "de onde vem" com nomes que filtram, textos para leigos,
-  correções da revisão geral. As macros e a planilha não mudaram desde 10/10.
+  correções da revisão geral; depois, a rolagem e o cabeçalho fixo da janela "de onde vem".
+- Por último (13/10), o pacote com as 15 escolhas construídas: `index.html` + `GerarCSVPonto.txt`
+  (única macro alterada: lê todas as abas de pausas). A planilha não mudou desde 10/10.
 - Números esperados ao rodar o GerarAbaCSV nessa planilha: 138 ocorrências, 72 colaboradores,
   demora média 5,7 dias (56 tratadas), 422 digitadas, 283 afastamentos (33 atestados, 105 dias),
   210 pessoas no ORG, 163 com horas no Cartão, Intrajornada 21, Interjornada 1, Interjornada
@@ -565,16 +604,10 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
 - **As macros nunca rodaram no Excel dele.** O próximo retorno pode trazer erro de compilação ou
   execução: peça print da mensagem e da linha amarela.
 
-**Escolhas dele ainda NÃO implementadas** (página de ideias com banco de dados:
-https://claude.ai/artifact/SZEwQzRntr66SCDMms4YBG, doc `escolhas/atual`, campo `marcadas`):
-J1 resumo de jornada por ciclo · J2 horas acima de 10h por pessoa · J7 risco trabalhista por gestor
-(os 4 relatórios de jornada ainda não têm seção no painel) · P1 atestado no mesmo dia da semana ·
-P2 atestado de 1 dia na segunda/sexta · P3 atestado colado em férias · P10 esquecimento crônico ·
-T1 quatro números no topo das pausas · T3 trabalho acima de 1h40 por pessoa/gestor · T4 pausas por
-gestor e cargo · T8 pausas no card do colaborador · T9 evolução mês a mês das pausas (exige manter a
-aba de pausas de cada mês) · M3 ocorrências por pessoa da equipe · M4 clicar no gráfico filtra o
-painel · M7 percentuais nos gráficos. (M10 legenda clicável já foi feita em 13/10.) Na última
-conversa ele não confirmou quando construir; pergunte antes.
+**Escolhas da página de ideias** (https://claude.ai/artifact/SZEwQzRntr66SCDMms4YBG, doc
+`escolhas/atual`, campo `marcadas`): **todas construídas** (13/10). Em aberto: as sugestões para
+reunião R1–R10 (seção 11, 13/10 depois 6), que esperam ele responder se a reunião é por gestor ou
+com todos e se pode usar salário (só o total da equipe).
 
 **Decisões já tomadas (não reabrir sem ele pedir):**
 - Check "S" ignora a linha inteira; "Problema horário" não entra; Origem "E" das digitadas não entra.

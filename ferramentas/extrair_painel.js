@@ -46,8 +46,26 @@ const { chromium } = require('playwright');
       orgResumo: $('orgResumo') ? $('orgResumo').innerText : null,
       orgLinhas: document.querySelectorAll('#tableOrg tbody tr').length,
       grupoOpts: [...document.querySelectorAll('#fGrupo .ms-op input')].map(o=>o.value),
+      // itens novos (out/2026): jornada, sinais de atestado, esquecimento crônico, pausas
+      jorKpis: $('jorKpis') ? [...document.querySelectorAll('#jorKpis .colab-kpi')].map(k=>[k.querySelector('.ck-label').textContent, k.querySelector('.ck-value').textContent, k.querySelector('.ck-sub').textContent]) : null,
+      jorDez: [...document.querySelectorAll('#chartJorDezHoras .chart-bar[data-tooltip]')].map(e=>e.getAttribute('data-tooltip')),
+      jorGestor: table('tableJorGestor'),
+      absMesmoDia: table('tableAbsMesmoDia'), absSegSex: txt('absSegSexResumo'), absSegSexPessoas: table('tableAbsSegSex'),
+      absFerias: table('tableAbsFerias'),
+      digEsq: table('tableDigEsquecimento'), digEsqAlerta: [...document.querySelectorAll('#tableDigEsquecimento tr.row-alert')].map(tr=>tr.children[0].textContent.trim()),
+      pauKpis: [...document.querySelectorAll('#pauKpis .colab-kpi')].map(k=>[k.querySelector('.ck-label').textContent, k.querySelector('.ck-value').textContent, k.querySelector('.ck-sub').textContent]),
     };
   });
+  // ranking de mais de 10h e esquecimento crônico: lista inteira (só em tela cheia)
+  for (const [id, chave, sel] of [['chartJorDezHoras','jorDez','.chart-bar[data-tooltip]'], ['tableDigEsquecimento','digEsqAlerta','tr.row-alert']]) {
+    data[chave] = await p.evaluate(([id, sel]) => {
+      const card = document.getElementById(id).closest('.card');
+      card.querySelector('.btn-cheia').click();
+      const r = [...document.querySelectorAll('#'+id+' '+sel)].map(e => sel.startsWith('tr') ? e.children[0].textContent.trim() : e.getAttribute('data-tooltip'));
+      card.querySelector('.btn-cheia').click();
+      return r;
+    }, [id, sel]);
+  }
   data.errors = errs;
   require('fs').writeFileSync(out, JSON.stringify(data, null, 1));
   await b.close();

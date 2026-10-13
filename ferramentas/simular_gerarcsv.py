@@ -166,14 +166,37 @@ for m,(ex,bh) in hrs.items():
     if vround(ex)>0 or vround(bh)>0:
         se,ca=setorcargo(m)
         W(dmax,nomesH[m] or 'Matrícula '+m,m,gestorPor.get(m,''),se,ca,'Resumo Horas Cartão','','Pendente',0,hx=vround(ex),hb=vround(bh))
-# pausas
-Pz=d['Pausas Térmicas']; pz=hdrmap(Pz[0])
-for r in Pz[1:]:
-    m=s(r[pz['Matrícula']])
-    if not m: break
-    se,ca=setorcargo(m)
-    W(dmax,s(r[pz['Colaborador']]),m,gestorPor.get(m,''),se,s(r[pz['Cargo']]) or ca,'Resumo Pausas Térmicas','','Pendente',0,
-      pc=nz(r[pz['Pausa corretas']]),pm=nz(r[pz['Pausa menor 0:20']]),pM=nz(r[pz['Pausa maior 0:20']]),tc=nz(r[pz['Trabalho correto 1:40']]),tM=nz(r[pz['Trabalho maior 1:40']]),tm=nz(r[pz['Trabalho menor 1:40']]),imp=nz(r[pz['Marcações Ímpares']]))
+# pausas: toda aba com a tabela de pausas (Matrícula + Pausa corretas na linha 1), uma por
+# mês (GerarCSV: CabecalhoPausasNaAba/MesNoNomeDaAba/DataDoMesDaAba). Aba sem mês no nome
+# = mês atual (dmax); com o mês no nome = dia 27 daquele mês; mês repetido = ignorada.
+MESES_NOME=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro']
+def mes_no_nome(nome):
+    t=semac(nome).lower()
+    for i,mn in enumerate(MESES_NOME):
+        if mn in t: return i+1
+    return 0
+def data_do_mes(mes, ref):
+    mr, ar = ref.month, ref.year
+    if ref.day>=28:
+        mr+=1
+        if mr>12: mr=1; ar+=1
+    if mes>mr: ar-=1
+    return datetime.datetime(ar, mes, 27)
+mesesPz=set()
+for aba,Pz in d.items():
+    if not Pz or not Pz[0]: continue
+    cab=[s(c) for c in Pz[0]]
+    if 'Matrícula' not in cab or 'Pausa corretas' not in cab: continue
+    mn=mes_no_nome(aba); dref=dmax if mn==0 else data_do_mes(mn, dmax)
+    if (dref.year,dref.month) in mesesPz: print('pausas: aba ignorada (mês repetido):',aba); continue
+    mesesPz.add((dref.year,dref.month))
+    pz=hdrmap(Pz[0])
+    for r in Pz[1:]:
+        m=s(r[pz['Matrícula']])
+        if not m: break
+        se,ca=setorcargo(m)
+        W(dref,s(r[pz['Colaborador']]),m,gestorPor.get(m,''),se,s(r[pz['Cargo']]) or ca,'Resumo Pausas Térmicas','','Pendente',0,
+          pc=nz(r[pz['Pausa corretas']]),pm=nz(r[pz['Pausa menor 0:20']]),pM=nz(r[pz['Pausa maior 0:20']]),tc=nz(r[pz['Trabalho correto 1:40']]),tM=nz(r[pz['Trabalho maior 1:40']]),tm=nz(r[pz['Trabalho menor 1:40']]),imp=nz(r[pz['Marcações Ímpares']]))
 # absenteísmo (GerarAbsenteismo): só atestados; dias seguidos = 1 atestado; emenda = dia antes/depois é folga
 ABS=('atest',); FOLGA=('dsr','compensado','folga','feriado')
 def contem(t,lista): t=semac(t).lower(); return any(x in t for x in lista)

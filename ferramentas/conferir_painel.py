@@ -217,3 +217,118 @@ if ui.get('absEvol'):
     ok=got==esp and ui['absEmenda'].startswith(f"{emend} de {len(eps)} ") and ui['absRankN']==len(rk) and sorted(ui['absReinc'])==reinc
     chk('Absenteísmo (atestados: dias/pessoas por ciclo, encostados em folga, reincidentes)', ok,
         f"ciclos {esp}; {emend} de {len(eps)} atestados encostam em folga; {len(reinc)} reincidentes" if ok else f"painel {got} {ui['absEmenda']} {ui['absRankN']} {ui['absReinc']} / fonte {esp} {emend}/{len(eps)} {len(rk)} {reinc}")
+
+# ---------- Itens novos (out/2026): jornada, sinais de atestado, esquecimento crônico, pausas ----------
+# Tudo recalculado das abas de origem. Horas acima de 10h = coluna "Total" do relatório de
+# horas excedentes (relógio + conversão da hora noturna), a mesma que o sistema usa para o limite. O gestor de cada matrícula vem da mesma regra do
+# GerarCSV (1º gestor visto na Tratamento, senão o do ORG), reaproveitada do simulador.
+import re, simular_gerarcsv as SIM
+def mins(v): return round(v.total_seconds()/60) if isinstance(v,datetime.timedelta) else (round(v*1440) if isinstance(v,(int,float)) else None)
+def nums(t): return [int(x.replace('.','')) for x in re.findall(r'\d[\d.]*', t)]
+def fmt_h(m): return f"{m//60}h" + (f" {m%60:02d}min" if m%60 else "")
+def ciclo_de(x):   # ciclo 28 -> 27, com o nome do mês em que termina
+    y,mo=x.year,x.month
+    if x.day>=28:
+        mo+=1
+        if mo>12: mo=1; y+=1
+    return (y,mo)
+JOR={'Horas Excedentes':'Data','Intrajornada':'Data','Interjornada':'Data apuração','Interjornada Semanal':'Data DSR/Feriado'}
+jr=[]   # (tipo, matrícula, data, linha, cabeçalho)
+for aba,colData in JOR.items():
+    if aba not in d: continue
+    rw=d[aba]; h=hdrmap(rw[0]); ult=None
+    for r in rw[1:]:
+        m=s(r[h['Matrícula']]) or (ult if aba=='Interjornada Semanal' else '')
+        if not m or not isinstance(r[h[colData]],datetime.datetime): continue
+        ult=m; jr.append((aba,m,r[h[colData]],r,h))
+if jr and ui.get('jorKpis'):
+    k={x[0]:x for x in ui['jorKpis']}
+    nomeK={'Horas Excedentes':'Mais de 10h no dia','Intrajornada':'Intervalo de almoço curto','Interjornada Semanal':'Trabalho na folga ou feriado','Interjornada':'Menos de 11h de descanso'}
+    ok=True; det=[]
+    for t,nk in nomeK.items():
+        l=[x for x in jr if x[0]==t]; pes=len({x[1] for x in l})
+        g=k.get(nk); v=int(g[1]) if g else -1; pp=nums(g[2])[0] if g else -1
+        ok = ok and v==len(l) and pp==pes; det.append(f"{nk}: {len(l)} ({pes} pessoas)")
+    he=[x for x in jr if x[0]=='Horas Excedentes']
+    acima=sum(max(0,mins(x[3][x[4]['Total']])-600) for x in he)
+    semi=sum(1 for x in jr if x[0]=='Intrajornada' and not mins(x[3][x[4]['Intervalo total']]))
+    okh = fmt_h(acima) in k['Mais de 10h no dia'][2] and f"{semi} sem intervalo" in k['Intervalo de almoço curto'][2]
+    chk('Jornada: números do topo (J1)', ok and okh, '; '.join(det) + f"; {fmt_h(acima)} acima de 10h; {semi} sem intervalo" if ok and okh else f"painel {ui['jorKpis']} / fonte {det} {fmt_h(acima)} {semi}")
+    # J2: dias e minutos acima de 10h por pessoa (a lista inteira)
+    porP=collections.defaultdict(lambda:[0,0,'']); 
+    for x in he: p_=porP[x[1]]; p_[0]+=1; p_[1]+=max(0,mins(x[3][x[4]['Total']])-600); p_[2]=s(x[3][x[4]['Colaborador']])
+    esp=sorted((v[2],v[0],v[1]) for v in porP.values())
+    got=[]
+    for t in ui['jorDez']:
+        mm=re.match(r'(.*): (\d+) dias? acima de 10h, (?:(\d+)h)?\s*(?:(\d+)min)? além', t)
+        got.append((mm.group(1), int(mm.group(2)), int(mm.group(3) or 0)*60+int(mm.group(4) or 0)))
+    # o painel usa o nome da linha do CSV; a comparação é por dias e minutos de cada pessoa
+    chk('Jornada: mais de 10h por pessoa (J2)', sorted(g[1:] for g in got)==sorted(e[1:] for e in esp) and len(got)==len(esp),
+        f"{len(esp)} pessoas; maior {max(esp,key=lambda e:e[2])[1:]} (dias, minutos)" if sorted(g[1:] for g in got)==sorted(e[1:] for e in esp) else f"painel {sorted(got)[:5]} / fonte {esp[:5]}")
+    # J7: por gestor (total, por tipo, pessoas)
+    pg=collections.defaultdict(lambda:[0,C(),set()])
+    for x in jr:
+        g=SIM.gestorPor.get(x[1],'') or 'Sem gestor'; pg[g][0]+=1; pg[g][1][x[0]]+=1; pg[g][2].add(x[1])
+    ordem=['Horas Excedentes','Intrajornada','Interjornada Semanal','Interjornada']
+    esp={g:[v[0]]+[v[1][t] for t in ordem]+[len(v[2])] for g,v in pg.items()}
+    got={r[0]:[int(c) if c.isdigit() else 0 for c in r[1:7]] for r in ui['jorGestor']}
+    chk('Jornada: risco por gestor (J7)', got==esp, f"{len(esp)} gestores; total {sum(v[0] for v in esp.values())}" if got==esp else f"painel {got} / fonte {esp}")
+# P1, P2, P3: atestados e férias da aba de afastamentos (últimos 3 meses = o relatório inteiro)
+abaAf=next((n for n,rw in d.items() if rw and all(k in hdrmap(rw[0]) for k in ('Matrícula','Situação','Início','Término'))), None)
+if abaAf and ui.get('absSegSex') is not None:
+    rw=d[abaAf]; ha=hdrmap(rw[0]); at=[]; fe=[]
+    for r in rw[1:]:
+        m=s(r[ha['Matrícula']]); ini=r[ha['Início']]
+        if not m or not isinstance(ini,datetime.datetime): continue
+        fim=r[ha['Término']] if isinstance(r[ha['Término']],datetime.datetime) else ini
+        sit=norm(s(r[ha['Situação']]))
+        if 'atest' in sit: at.append((m,ini.date(),fim.date(),s(r[ha['Colaborador']])))
+        elif 'ferias' in sit: fe.append((m,ini.date(),fim.date()))
+    dl=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom']
+    rep_=collections.defaultdict(list)
+    for a in at: rep_[(a[0],a[1].weekday())].append(a)
+    esp=sorted((dl[k[1]],len(v)) for k,v in rep_.items() if len(v)>=2)
+    got=sorted((r[1],int(r[2].split(' de ')[0])) for r in ui['absMesmoDia'])
+    chk('Atestado no mesmo dia da semana (P1)', got==esp, f"{len(esp)} pessoa(s): {esp}" if got==esp else f"painel {got} / fonte {esp}")
+    ss=[a for a in at if a[1].weekday() in (0,4)]; um=[a for a in ss if a[2]==a[1]]
+    n=nums(ui['absSegSex'])
+    ok=n[:3]==[len(ss),len(at),round(len(ss)*100/len(at))] and n[3]==len(um) and sum(int(r[1]) for r in ui['absSegSexPessoas'])==len(um)
+    chk('Atestado de 1 dia na segunda ou sexta (P2)', ok, f"{len(ss)} de {len(at)} na seg/sex; {len(um)} de 1 dia" if ok else f"painel {ui['absSegSex']} / fonte {len(ss)} {len(at)} {len(um)}")
+    casos=0
+    for a in at:
+        for f in fe:
+            if f[0]!=a[0]: continue
+            antes=(f[1]-a[2]).days-1; depois=(a[1]-f[2]).days-1
+            if (a[1]<=f[2] and f[1]<=a[2]) or 0<=antes<=3 or 0<=depois<=3: casos+=1
+    chk('Atestado colado em férias (P3)', len(ui['absFerias'])==casos, f"{casos} caso(s)")
+# P10: esquecimentos por pessoa no último ciclo das digitadas (Origem D)
+MD=d.get('Marcações Digitadas')
+if MD and ui.get('digEsqAlerta') is not None:
+    hm=hdrmap(MD[0]); cont=C(); cic=set()
+    for r in MD[1:]:
+        if s(r[hm['Origem']]).upper()!='D' or not isinstance(r[hm['Data']],datetime.datetime): continue
+        cic.add(ciclo_de(r[hm['Data']]))
+    ult=max(cic)
+    for r in MD[1:]:
+        if s(r[hm['Origem']]).upper()!='D' or not isinstance(r[hm['Data']],datetime.datetime): continue
+        if 'esquecimento' in norm(s(r[hm['Motivo']])) and ciclo_de(r[hm['Data']])==ult: cont[s(r[hm['Matrícula']])]+=1
+    esp=sorted(v for v in cont.values() if v>=5)
+    got=sorted(int(r[-1]) for r in ui['digEsq'] if r[0] in ui['digEsqAlerta'])
+    chk('Esquecimento crônico (P10)', len(ui['digEsqAlerta'])==len(esp) and got==esp, f"{len(esp)} pessoa(s) com 5+ no último ciclo: {esp}" if got==esp else f"painel {got} / fonte {esp}")
+# T1: quatro números das pausas
+PZ=d.get('Pausas Térmicas')
+if PZ and ui.get('pauKpis'):
+    hp=hdrmap(PZ[0]); L=[]
+    for r in PZ[1:]:
+        if not s(r[hp['Matrícula']]): break
+        L.append(r)
+    g=lambda r,c: nz(r[hp[c]])
+    cor=sum(g(r,'Pausa corretas') for r in L); tot=sum(g(r,'Pausa corretas')+g(r,'Pausa menor 0:20')+g(r,'Pausa maior 0:20') for r in L)
+    ac=sum(g(r,'Trabalho maior 1:40') for r in L); bl=sum(g(r,'Trabalho correto 1:40')+g(r,'Trabalho maior 1:40')+g(r,'Trabalho menor 1:40') for r in L)
+    p30=sum(1 for r in L if (g(r,'Trabalho correto 1:40')+g(r,'Trabalho maior 1:40')+g(r,'Trabalho menor 1:40')) and g(r,'Trabalho maior 1:40')/(g(r,'Trabalho correto 1:40')+g(r,'Trabalho maior 1:40')+g(r,'Trabalho menor 1:40'))>0.3)
+    imp=sum(g(r,'Marcações Ímpares') for r in L)
+    k={x[0]:x for x in ui['pauKpis']}
+    esp=[len(L), round(cor*100/tot), int(ac), round(ac*100/bl), p30, int(imp)]
+    got=[int(k['Pessoas no relatório'][1]), int(k['Pausas certas'][1].rstrip('%')), int(k['Trabalho acima de 1h40'][1].replace('.','')),
+         nums(k['Trabalho acima de 1h40'][2])[0], nums(k['Trabalho acima de 1h40'][2])[1], int(k['Batida de pausa faltando'][1])]
+    chk('Pausas: números do topo (T1)', got==esp, f"{esp[0]} pessoas, {esp[1]}% certas, {esp[2]} períodos acima de 1h40 ({esp[3]}%), {esp[4]} acima de 30%, {esp[5]} batidas faltando" if got==esp else f"painel {got} / fonte {esp}")

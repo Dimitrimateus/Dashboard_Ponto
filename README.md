@@ -309,6 +309,35 @@ justificativa, ou o RH lançou no sistema.
   lista) e a janela rola inteira. Revisão geral: topo do celular sem rolagem lateral, botão
   "Esconder filtros" não fica mais laranja no modo explicação, subtítulos sem termos técnicos.
 
+- Correções (13/10): a janela "de onde vem" voltava a não rolar no computador (regra de estilo
+  sobrescrita) e o cabeçalho da tabela dela agora fica fixo no topo ao rolar.
+
+## Escolhas da página de ideias construídas (14/10)
+
+As 15 ideias marcadas na página de ideias que ainda faltavam:
+
+- **Jornada (seção nova no menu)**: J1 quatro números (mais de 10h no dia, intervalo de almoço
+  curto, trabalho na folga ou feriado, menos de 11h de descanso) e gráfico por ciclo com uma cor por
+  tipo; J2 ranking de mais de 10h por pessoa (dias e horas acima de 10h; clique mostra as batidas de
+  cada dia); J7 risco trabalhista por gestor (gráfico e tabela com a % da equipe atingida). Seletor
+  de ciclo próprio. As horas do dia são o "Total" do relatório (com a conversão da hora noturna).
+- **Pegar no pulo (afastamentos)**: P1 atestado sempre no mesmo dia da semana; P2 atestado de 1 dia
+  na segunda ou na sexta (por pessoa e por equipe); P3 atestado a até 3 dias das férias.
+- **Pegar no pulo (digitadas)**: P10 "Esquecimento crônico": esquecimentos por pessoa em cada ciclo,
+  com a tendência quando o arquivo tem mais de um ciclo; vermelho = 5 ou mais no último ciclo.
+- **Pausas térmicas**: T1 quatro números no topo; T3 trabalho acima de 1h40 sem pausa por pessoa
+  (vermelho acima de 30% dos períodos) e por gestor; T4 pausas certas/curtas/longas por gestor ou
+  cargo; T8 pausas no card do colaborador, comparadas com a média da equipe; T9 evolução mês a mês.
+- **T9 na macro GerarCSVPonto**: agora lê **todas** as abas de pausas. A aba sem mês no nome é a do
+  mês atual; as dos meses anteriores precisam do nome do mês no nome da aba (ex.: "Pausas Térmicas
+  Agosto"). Duas abas do mesmo mês: só a primeira entra (a mensagem final avisa).
+- **M3**: no gráfico por gestor, o seletor do título troca "total" por "por pessoa da equipe"
+  (ocorrências ÷ pessoas da equipe na lista de equipes).
+- **M4**: na janela "de onde vem" aparecem botões "Filtrar o painel: gestor X / tipo Y / dia Z"
+  (o clique na barra continua abrindo "de onde vem", como decidido em 13/10).
+- **M7**: porcentagem do total ao lado do número nas barras e na legenda das roscas.
+- Conferência: 26 itens (os 18 de antes + jornada, sinais de atestado, esquecimento e pausas).
+
 ## Ordem de uso no mês
 
 1. Rodar `ConsolidarCartaoPonto` no HRCP102 e colar o resultado numa aba `Cartão <Mês>`.

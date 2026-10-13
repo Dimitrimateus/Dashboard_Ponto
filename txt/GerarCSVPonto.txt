@@ -82,11 +82,17 @@ Option Explicit
 '     FormatarPausasTermicas (pasta PausasTermicas/ do repositório). Não
 '     importa o nome da aba: o macro procura, em todas as abas, a linha
 '     de cabeçalho da tabela de colaboradores ("Matrícula" + "Pausa
-'     corretas", ver EncontrarTabelaPausas) e lê as colunas pelo NOME do
+'     corretas", ver CabecalhoPausasNaAba) e lê as colunas pelo NOME do
 '     cabeçalho. Se existir, a tabela de colaboradores é repassada pro
 '     CSV tal como está, sem recalcular nada (ver
 '     GerarResumoPausasTermicas); a tabela de total, logo abaixo, não
 '     entra no CSV.
+'     VÁRIOS MESES (out/2026, para a evolução das pausas no painel): toda
+'     aba com a tabela de pausas entra. A aba SEM mês no nome é a do mês
+'     atual (data = fim do Cartão atual); as dos meses anteriores levam o
+'     nome do mês no nome da aba (ex.: "Pausas Térmicas Agosto") e saem
+'     com a data 27 daquele mês (MesNoNomeDaAba / DataDoMesDaAba). Duas
+'     abas do mesmo mês: só a primeira entra (avisado na mensagem final).
 '
 ' -----------------------------------------------------------------
 ' PRA ONDE CADA COISA VAI: A ABA "CSV" (formato de saída)
@@ -230,7 +236,8 @@ Option Explicit
 '   |- ContarExtraFaltaMesmoDia .............. -> "Auditoria Extra e Falta (3 Meses)"
 '   |- GerarOcorrenciasCurtasDoCartao ........ -> "Falta < 15min" / "Extra < 15min"
 '   |- GerarResumoHorasCartao ................ -> "Resumo Horas Cartão"
-'   |- EncontrarTabelaPausas + GerarResumoPausasTermicas -> "Resumo Pausas Térmicas"
+'   |- CabecalhoPausasNaAba + GerarResumoPausasTermicas -> "Resumo Pausas Térmicas"
+'   |     (uma vez por aba de pausas: mês atual + meses anteriores, MesNoNomeDaAba)
 '   |- EncontrarAbaAfastamentos + GerarAfastamentos -> "Afastamento"
 '   |     (ou, sem a aba, GerarAbsenteismo -> "Absenteísmo")
 '   |     ambos usam MontarDiasCartao + CalcularEmendaFolga (folga encostada)
@@ -730,20 +737,37 @@ ProximaAbaTratamento:
     ' maior e Trabalho correto/maior/menor 1:40 e Marcações Ímpares) — não
     ' recalcula nada, só repassa esses números pro CSV, numa linha própria
     ' por colaborador. A aba é achada pelo cabeçalho da tabela, não pelo
-    ' nome (ver EncontrarTabelaPausas).
+    ' nome (ver CabecalhoPausasNaAba).
     ' =====================================================================
     Dim qtdResumoPausas As Long
     qtdResumoPausas = 0
-    Dim wsPausas As Worksheet, linhaCabecalhoPausas As Long
-    Set wsPausas = EncontrarTabelaPausas(wbTrat, linhaCabecalhoPausas)
-    If Not wsPausas Is Nothing Then
-        ' dataAtualCartao só foi calculada acima se wsCartao existe (é o
-        ' mesmo teste); sem Cartão Ponto nenhum, usa a data de hoje como
-        ' referência só pra a linha ter uma data válida no CSV.
-        GerarResumoPausasTermicas wsPausas, linhaCabecalhoPausas, dictRE, dictGestorPorMatricula, _
-            dictGrupoPorMatricula, wsCSV, linhaSaida, _
-            IIf(Not wsCartao Is Nothing, dataAtualCartao, Date), qtdResumoPausas
-    End If
+    ' Uma aba de pausas por mês (para a evolução mês a mês do painel). A aba
+    ' sem mês no nome é a do mês atual e usa a data de fim do Cartão atual
+    ' (sem Cartão nenhum, a data de hoje, só pra a linha ter uma data válida);
+    ' as outras usam o dia 27 do mês que está no nome da aba.
+    Dim wsPausas As Worksheet, wsP As Worksheet, linhaCabecalhoPausas As Long
+    Dim dataRefPausas As Date, dataMesPausas As Date, mesAbaPausas As Long
+    Dim mesesPausasVistos As Object, chaveMesPausas As String, msgPausas As String, qtdAbasPausas As Long
+    Set mesesPausasVistos = CreateObject("Scripting.Dictionary")
+    If Not wsCartao Is Nothing Then dataRefPausas = dataAtualCartao Else dataRefPausas = Date
+    For Each wsP In wbTrat.Worksheets
+        linhaCabecalhoPausas = CabecalhoPausasNaAba(wsP)
+        If linhaCabecalhoPausas > 0 Then
+            mesAbaPausas = MesNoNomeDaAba(wsP.Name)
+            If mesAbaPausas = 0 Then dataMesPausas = dataRefPausas Else dataMesPausas = DataDoMesDaAba(mesAbaPausas, dataRefPausas)
+            chaveMesPausas = Format$(dataMesPausas, "yyyy-mm")
+            If mesesPausasVistos.Exists(chaveMesPausas) Then
+                msgPausas = msgPausas & vbCrLf & "Aba de pausas """ & wsP.Name & """ ignorada: o mesmo mês da aba """ & _
+                    mesesPausasVistos(chaveMesPausas) & """ (deixe o nome do mês só nas abas dos meses anteriores)."
+            Else
+                mesesPausasVistos.Add chaveMesPausas, wsP.Name
+                GerarResumoPausasTermicas wsP, linhaCabecalhoPausas, dictRE, dictGestorPorMatricula, _
+                    dictGrupoPorMatricula, wsCSV, linhaSaida, dataMesPausas, qtdResumoPausas
+                If wsPausas Is Nothing Then Set wsPausas = wsP
+                qtdAbasPausas = qtdAbasPausas + 1
+            End If
+        End If
+    Next wsP
 
     ' =====================================================================
     ' Afastamentos. Fonte principal: a aba "Afastamentos" (relatório
@@ -849,7 +873,7 @@ ProximaAbaTratamento:
     End If
     msgAuditoria = msgAuditoria & vbCrLf & IIf(wsPausas Is Nothing, _
         "Nenhuma aba de Pausas Térmicas (já formatada) encontrada; resumo de pausas térmicas não gerado.", _
-        qtdResumoPausas & " colaborador(es) no resumo de Pausas Térmicas.")
+        qtdResumoPausas & " linha(s) no resumo de Pausas Térmicas (" & qtdAbasPausas & " mês(es))." & msgPausas)
 
     If abasComFiltro <> "" Then
         msgAuditoria = msgAuditoria & vbCrLf & vbCrLf & "Filtros removidos antes da leitura (reaplique se precisar):" & abasComFiltro
@@ -1927,26 +1951,54 @@ Private Sub GerarLinhasORG(listaORG As Collection, dictRE As Object, dictGrupoPo
     Next itemLista
 End Sub
 
-' Procura, em todas as abas, a tabela de colaboradores que o macro
+' Diz se a aba tem a tabela de colaboradores que o macro
 ' FormatarPausasTermicas deixa pronta: a linha de cabeçalho que tem, ao
 ' mesmo tempo, uma célula "Matrícula" e uma célula "Pausa corretas". Olha
-' só as primeiras 10 linhas de cada aba (o FormatarPausasTermicas atual
-' põe o cabeçalho na linha 1; a versão anterior punha na linha 2, abaixo
-' de um título). Devolve a aba (Nothing se não achar) e, em
-' linhaCabecalho, a linha do cabeçalho.
-Private Function EncontrarTabelaPausas(wb As Workbook, ByRef linhaCabecalho As Long) As Worksheet
-    Dim ws As Worksheet, r As Long
-    linhaCabecalho = 0
-    For Each ws In wb.Worksheets
-        For r = 1 To 10
-            If ColunaPorCabecalho(ws, "Matrícula", r) > 0 And ColunaPorCabecalho(ws, "Pausa corretas", r) > 0 Then
-                linhaCabecalho = r
-                Set EncontrarTabelaPausas = ws
-                Exit Function
-            End If
-        Next r
-    Next ws
-    Set EncontrarTabelaPausas = Nothing
+' só as primeiras 10 linhas (o FormatarPausasTermicas atual põe o
+' cabeçalho na linha 1; a versão anterior punha na linha 2, abaixo de um
+' título). Devolve a linha do cabeçalho, ou 0 se a aba não é de pausas.
+Private Function CabecalhoPausasNaAba(ws As Worksheet) As Long
+    Dim r As Long
+    For r = 1 To 10
+        If ColunaPorCabecalho(ws, "Matrícula", r) > 0 And ColunaPorCabecalho(ws, "Pausa corretas", r) > 0 Then
+            CabecalhoPausasNaAba = r
+            Exit Function
+        End If
+    Next r
+    CabecalhoPausasNaAba = 0
+End Function
+
+' Mês (1 a 12) escrito por extenso no nome da aba, sem ligar para acento
+' nem maiúscula ("Pausas Térmicas Agosto" -> 8; "Pausas MARÇO" -> 3);
+' 0 se o nome não tem mês (= aba do mês atual).
+Private Function MesNoNomeDaAba(ByVal nomeAba As String) As Long
+    Dim meses As Variant, i As Long, t As String
+    meses = Array("janeiro", "fevereiro", "marco", "abril", "maio", "junho", "julho", _
+                  "agosto", "setembro", "outubro", "novembro", "dezembro")
+    t = LCase$(SemAcento(nomeAba))
+    For i = 0 To 11
+        If InStr(1, t, meses(i), vbBinaryCompare) > 0 Then
+            MesNoNomeDaAba = i + 1
+            Exit Function
+        End If
+    Next i
+    MesNoNomeDaAba = 0
+End Function
+
+' Data de referência de uma aba de pausas de mês anterior: dia 27 (fim do
+' ciclo do ponto) do mês do nome da aba. O ano é o do ciclo atual; se o
+' mês é depois do mês do ciclo atual, é do ano anterior (ex.: "Dezembro"
+' com o ciclo atual em janeiro). O ciclo atual é o do Cartão: uma data a
+' partir do dia 28 já é do ciclo do mês seguinte.
+Private Function DataDoMesDaAba(ByVal mes As Long, ByVal dataRef As Date) As Date
+    Dim mesRef As Long, anoRef As Long
+    mesRef = Month(dataRef): anoRef = Year(dataRef)
+    If Day(dataRef) >= 28 Then
+        mesRef = mesRef + 1
+        If mesRef > 12 Then mesRef = 1: anoRef = anoRef + 1
+    End If
+    If mes > mesRef Then anoRef = anoRef - 1
+    DataDoMesDaAba = DateSerial(anoRef, mes, 27)
 End Function
 
 ' Repassa pro CSV, uma linha por colaborador, os números já calculados
