@@ -284,6 +284,20 @@ justificativa, ou o RH lançou no sistema.
   também conta, para o total nunca ficar menor que a parte.
 - Seção **Marcações digitadas**: o % de pessoas usa a mesma equipe do filtro.
 
+## Gráficos mais fáceis de ler (13/10)
+
+- **Tela cheia**: botão ⛶ no canto de cada card (Esc ou ✕ fecham).
+- **Filtrar dentro do gráfico**: clique num item da legenda para ver só ele (ex.: só "Inclusão por
+  esquecimento" nas digitadas); clique em outros para somar; "Mostrar todos" volta. Vale para os
+  gráficos da seção; os números do topo e os filtros da lateral não mudam.
+- **Período de cada card**: etiqueta amarela 📅 embaixo do título (período do filtro, mês do
+  Cartão, relatório de pausas, ciclo ou últimos 3 meses dos afastamentos, cadastro do ORG).
+- **Mapa colaborador × dia**: ao passar o mouse aparece a pessoa, o dia e o tipo de afastamento; a
+  legenda também filtra.
+- Ao abrir, os filtros sempre aparecem; ao carregar o arquivo, o painel vai para a Visão geral.
+- Cores: 5 cores bem diferentes (conferidas para daltonismo) e cinza para "Outros"; o vermelho
+  ficou só para alerta, falta, banco de horas e atestado.
+
 ## Ordem de uso no mês
 
 1. Rodar `ConsolidarCartaoPonto` no HRCP102 e colar o resultado numa aba `Cartão <Mês>`.

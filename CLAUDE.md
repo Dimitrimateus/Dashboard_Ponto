@@ -308,8 +308,8 @@ dias_ausencia, emenda_folga, minutos_trabalhados, minutos_descanso, marcacoes_di
   matrícula (`chavePessoa`) com ocorrências do filtro, digitadas e horas do Cartão. O aviso em
   vermelho de "fora do ORG" foi **retirado a pedido do Dimitri** (06/10); o card da pessoa ainda
   mostra "Não está no ORG".
-- Botão **"Esconder filtros"** (`setLateralOculta`, `body.sem-lateral`, guardado em
-  localStorage `painelPonto.lateralOculta`); redesenha os gráficos.
+- Botão **"Esconder filtros"** (`setLateralOculta`, `body.sem-lateral`); redesenha os gráficos.
+  Não é guardado: ao abrir, os filtros sempre aparecem (13/10).
 - Card do colaborador: `.modal-body.colab-modal-body` é `display:block` (rola inteiro); tabelas
   internas usam `.colab-tab` (máx. 340px só no desktop). Não usar `max-height` inline nelas: no
   celular a tabela vira cartões e o conteúdo vazava por cima.
@@ -490,6 +490,20 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   "Cadastro ORG" + quem tem ocorrência e não está no ORG; sem período/tipo/status). Ex.: "de 22 na
   equipe de <gestor>", "de 34 nas equipes dos 2 gestores", "de 211 pessoas no ORG" (210 no ORG +
   1 com ocorrência fora dele). Antes era sempre o total do arquivo.
+- 13/10: pedidos do Dimitri no painel. (1) Botão ⛶ em todo card com gráfico/tabela: tela cheia
+  (`abrirTelaCheia`, `.card-cheia`; `containerWidth` desenha a 2/3 para tudo ficar 1,5x maior; Esc
+  fecha). (2) **Filtro dentro do gráfico**: legenda clicável (`legendaSerie`, `filtrarSerie`,
+  `state.serieSel` por dimensão: `tipo` na Visão geral/destaque, `motivo` nas digitadas, `afast` nos
+  afastamentos, incluindo o mapa); clicar = só aquele, outros somam, "Mostrar todos" volta; não
+  muda KPIs, resumos, tabelas nem filtros da lateral. (3) Selo 📅 em cada card com o período que
+  ele considera (`atualizarPeriodosCards`, `PERIODO_DOS_CARDS`: filtro, mês do Cartão, pausas,
+  ciclo/3 meses dos afastamentos via `state.absPeriodo`, cadastro). (4) Mapa colaborador × dia:
+  balão do painel (`data-tooltip`) com pessoa, dia e tipo. (5) Filtros da lateral sempre visíveis ao
+  abrir (não guarda mais `painelPonto.lateralOculta`). (6) Arquivo carregado abre na Visão geral.
+  (7) Cores: `CORES_SERIE` (5 cores validadas para daltonismo, sem vermelho, que é alerta) +
+  cinza "Outros" a partir do 6º tipo; cor fixa por tipo, decidida ao carregar
+  (`prepararCoresSeries`). `GRUPOS_AFAST` recolorido (atestado continua vermelho; antes havia
+  laranja×marrom e vermelho×vinho parecidos). Conferência 18/18.
 
 ## 12. Estado atual e como continuar (08/10/2026)
 

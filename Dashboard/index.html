@@ -221,7 +221,7 @@
   table.heat td.tot{ padding:0 6px; font-weight:700; color:var(--c-navy-dark); }
   table.heat th.tot-h{ padding:0 6px; white-space:nowrap; }
   .heat-leg{ display:flex; gap:14px; font-size:11.5px; color:var(--c-muted); margin-top:8px; flex-wrap:wrap; }
-  .heat-leg span::before{ content:""; display:inline-block; width:11px; height:11px; margin-right:5px; vertical-align:-1px; border:1px solid var(--c-line); }
+  .heat-leg span::before, .heat-leg button::before{ content:""; display:inline-block; width:11px; height:11px; margin-right:5px; vertical-align:-1px; border:1px solid var(--c-line); }
   .heat-leg .l-aus::before{ background:var(--cor, var(--c-terracotta)); }
   .heat-leg .l-fds::before{ background:#F1F1F2; }
 
@@ -504,6 +504,31 @@
   .pagination button:disabled{ opacity:.4; cursor:not-allowed; }
 
   /* ---------- Tooltip ---------- */
+
+  /* Filtro dentro do gráfico: itens da legenda clicáveis (13/10) */
+  .leg-item{ font:inherit; color:inherit; background:none; border:1px solid transparent; border-radius:999px; padding:2px 8px 2px 6px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; }
+  .leg-item:hover{ border-color:var(--c-line-strong); background:#F6F6F6; }
+  .leg-item.off{ opacity:.38; }
+  .leg-item.off i, .leg-item.off .legend-dot{ background:#C9CACC !important; }
+  .leg-limpar{ font:inherit; font-size:11.5px; background:none; border:none; color:var(--c-orange-dark, #B35F00); text-decoration:underline; cursor:pointer; padding:2px 4px; }
+  button.legend-row{ width:100%; text-align:left; border-radius:6px; padding:2px 6px; }
+  .chart-seg.off{ opacity:.18; }
+  .heat-leg button.l-aus{ font-size:11.5px; color:var(--c-muted); }
+  .heat-leg .leg-limpar::before{ display:none !important; }
+  .heat-leg .l-aus.off::before{ background:#C9CACC; }
+  /* Período de cada card (selo "📅") */
+  .card-periodo{ display:inline-block; font-size:11px; font-weight:600; color:#6B4A00; background:#FFF6DC; border:1px solid #F3E2AE; border-radius:999px; padding:2px 10px; margin:4px 0 6px; }
+  /* Tela cheia nos cards */
+  .card.tem-btn-cheia{ position:relative; }
+  .card.tem-btn-cheia > .card-title{ padding-right:36px; }
+  .btn-cheia{ position:absolute; top:10px; right:10px; width:28px; height:28px; border:1px solid var(--c-line); border-radius:6px; background:var(--c-card); color:var(--c-muted); cursor:pointer; font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center; z-index:2; }
+  .btn-cheia:hover{ color:var(--c-ink); border-color:var(--c-line-strong); }
+  body.tem-cheia{ overflow:hidden; }
+  body.tem-cheia::before{ content:""; position:fixed; inset:0; background:rgba(20,20,20,.55); z-index:140; }
+  .card.card-cheia{ position:fixed !important; inset:16px; z-index:150; overflow:auto; padding:20px 24px 24px; box-shadow:0 10px 40px rgba(0,0,0,.35); }
+  .card.card-cheia > .card-title{ font-size:18px; }
+  .card.card-cheia .colab-tab, .card.card-cheia .card-body{ max-height:none; }
+  @media (max-width: 620px){ .card.card-cheia{ inset:0; border-radius:0; padding:14px; } }
   #chartTooltip{
     position:fixed; z-index:200; pointer-events:none;
     background:var(--c-navy-dark); color:#FFFFFF; font-size:12px;
@@ -766,6 +791,7 @@
             <li><strong>Abra o arquivo aqui.</strong> No bloco “Carregar dados” (à direita; no celular, no alto da tela), clique para escolher o arquivo ou arraste-o para cima do bloco. O arquivo é lido só no seu navegador: nada é enviado para a internet.</li>
             <li><strong>Escolha a seção.</strong> O botão <strong>&#9776;</strong> no canto superior esquerdo troca de seção: Visão geral, Colaboradores em destaque, Pausas térmicas, Marcações digitadas, Afastamentos, Demora no PontoNet, Lista de colaboradores e Histórico. A última opção mostra tudo numa página só.</li>
             <li><strong>Filtre.</strong> Em “Filtros” escolha gestor, cargo, colaborador, tipo de ocorrência ou período. Tudo no painel muda junto. “Limpar filtros” volta ao arquivo inteiro; “Esconder filtros”, no topo, dá mais espaço aos gráficos.</li>
+            <li><strong>Use os gráficos.</strong> Clique num item da legenda (as bolinhas coloridas em cima do gráfico) para ver só aquele tipo; clique em outros para somar e em “Mostrar todos” para voltar. O botão <strong>&#x26F6;</strong> no canto de cada card abre o gráfico em tela cheia (Esc fecha). A etiqueta amarela 📅 embaixo do título diz qual período aquele card considera.</li>
             <li><strong>Veja uma pessoa.</strong> Clique no nome de qualquer colaborador (gráficos e tabelas) para abrir o card dele, com ocorrências, horas, pausas, batidas digitadas e afastamentos.</li>
             <li><strong>Dúvida sobre um número?</strong> Depois de abrir o arquivo, o botão <strong>“Entenda o painel”</strong>, no topo, mostra embaixo de cada gráfico de onde vem a informação e como ela é calculada.</li>
           </ol>
@@ -1289,6 +1315,11 @@
      O QUE APARECE NA TELA -> QUEM DESENHA -> DE ONDE VÊM OS DADOS
        (cada .pagina[data-pagina] do HTML é uma seção do menu ☰)
        Cards do topo (#kpiRow) ......... renderKPIs ............. getFilteredRecords
+       Legenda clicável (filtro dentro do gráfico) ... legendaSerie/filtrarSerie,
+         state.serieSel (tipo na "geral", motivo nas digitadas, afast nos afastamentos);
+         cores fixas por tipo: prepararCoresSeries/serieDe/corSerie (5 cores + "Outros")
+       Selo 📅 de período de cada card ... atualizarPeriodosCards (PERIODO_DOS_CARDS)
+       Botão ⛶ (tela cheia) ............ abrirTelaCheia/fecharTelaCheia (.card-cheia)
        "geral": por tipo/dia/data/gestor/cargo  renderDonut/BarV/Line/BarH + ocorrenciasPor*
                                                  ................. getFilteredRecords sem Hora Extra
        "destaque": top colaboradores ... topColaboradores ....... idem
@@ -1333,6 +1364,15 @@
   // DIAS_LABELS/DIAS_ORDER: os gráficos por dia da semana começam na segunda;
   // DIAS_ORDER traduz a posição do rótulo para o getDay() do JavaScript.
   var PALETTE = ["#F7931E","#E31E24","#FFC72C","#1A1A1A","#58595B","#A7A9AC","#B3701A","#8C1518"];
+  // Cores das séries dos gráficos empilhados (tipo de ocorrência e motivo da
+  // digitada): 5 cores bem diferentes entre si, conferidas para daltonismo, e
+  // um cinza para "Outros". A cor segue o tipo, não a posição: é decidida uma
+  // vez ao carregar o arquivo (prepararCoresSeries), pelos 5 tipos mais
+  // frequentes do arquivo inteiro, e não muda com filtro. Do 6º tipo em
+  // diante, tudo vira "Outros" (pedido do RH: gráficos menos confusos).
+  // O vermelho fica de fora de propósito: no painel ele quer dizer alerta,
+  // falta, banco de horas e atestado.
+  var CORES_SERIE = ["#E8840C","#2a78d6","#1baf7a","#e87ba4","#3C3C3E"], COR_OUTROS = "#B9BBBE", ROTULO_OUTROS = "Outros";
   var DIAS_LABELS = ["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"];
   var DIAS_ORDER  = [1,2,3,4,5,6,0]; // getDay(): 0=Dom..6=Sáb
 
@@ -1451,12 +1491,12 @@
   // procurados na situação, sem acento/maiúscula; o primeiro que bater vale.
   var GRUPOS_AFAST = [
     { nome:"Atestado", cor:"#E31E24", tem:["atest"] },
-    { nome:"Férias", cor:"#FFC72C", tem:["ferias"] },
-    { nome:"Viagem a serviço", cor:"#F7931E", tem:["viagem"] },
-    { nome:"Reunião, curso e treinamento", cor:"#58595B", tem:["reuni", "curso", "trein", "integra"] },
-    { nome:"Saída médica e horas", cor:"#B3701A", tem:["medico", "horas falta"] },
-    { nome:"Acidente, doença e falta", cor:"#8C1518", tem:["acidente", "doenca", "falta"] },
-    { nome:"Outros (licenças, dispensas…)", cor:"#A7A9AC", tem:[] }
+    { nome:"Férias", cor:"#2a78d6", tem:["ferias"] },
+    { nome:"Viagem a serviço", cor:"#E8840C", tem:["viagem"] },
+    { nome:"Reunião, curso e treinamento", cor:"#1baf7a", tem:["reuni", "curso", "trein", "integra"] },
+    { nome:"Saída médica e horas", cor:"#e87ba4", tem:["medico", "horas falta"] },
+    { nome:"Acidente, doença e falta", cor:"#3C3C3E", tem:["acidente", "doenca", "falta"] },
+    { nome:"Outros (licenças, dispensas…)", cor:"#B9BBBE", tem:[] }
   ];
   function grupoAfast(r){
     if (r.tipo === TIPO_ABSENTEISMO || isAtestado(r)) return GRUPOS_AFAST[0].nome;
@@ -1520,6 +1560,11 @@
   var state = {
     records: [],
     colorMaps: { gestor:{}, setor:{}, cargo:{}, tipo:{}, status:{}, motivo:{} },
+    // series: cor de cada tipo/motivo (prepararCoresSeries). serieSel: o
+    // "filtro dentro do gráfico" de cada dimensão (clique na legenda):
+    // {série: true} = só essas aparecem nos gráficos; vazio = todas.
+    series: { tipo:{}, motivo:{} },
+    serieSel: { tipo:{}, motivo:{}, afast:{} },
     historySort: { key:"data", dir:"desc" },
     historyPage: 1,
     historyPageSize: 25,
@@ -1594,6 +1639,54 @@
     }
     return map[key];
   }
+  // Escolhe a cor de cada tipo de ocorrência e de cada motivo de digitada
+  // (chamada ao carregar o arquivo): os 5 mais frequentes do arquivo inteiro
+  // ganham as CORES_SERIE, na ordem; o resto vira "Outros".
+  function prepararCoresSeries(){
+    var cont = { tipo:{}, motivo:{} };
+    state.records.forEach(function(r){
+      if (isTipoDigitada(r.tipo)){ var m = r.situacao || "Sem motivo"; cont.motivo[m] = (cont.motivo[m] || 0) + 1; }
+      else if (!isTipoNaoOcorrencia(r.tipo) && !isTipoHoraExtra(r.tipo)) cont.tipo[r.tipo] = (cont.tipo[r.tipo] || 0) + 1;
+    });
+    state.series = {};
+    Object.keys(cont).forEach(function(dim){
+      var c = cont[dim];
+      state.series[dim] = {};
+      Object.keys(c).sort(function(a,b){ return c[b]-c[a] || a.localeCompare(b,"pt-BR"); })
+        .slice(0, CORES_SERIE.length).forEach(function(k, i){ state.series[dim][k] = CORES_SERIE[i]; });
+    });
+  }
+  // Série de um valor (o próprio tipo, ou "Outros" se ficou sem cor) e a cor dela.
+  function serieDe(dim, cat){ return state.series[dim] && state.series[dim][cat] ? cat : ROTULO_OUTROS; }
+  function corSerie(dim, s){ return (state.series[dim] && state.series[dim][s]) || COR_OUTROS; }
+
+  // ---------- Filtro dentro do gráfico (clique na legenda) ----------
+  // Clicar num item da legenda mostra só aquele tipo/motivo nos gráficos da
+  // seção; clicar em outros soma; "Mostrar todos" volta. Vale para a
+  // dimensão inteira (todos os gráficos da seção que usam aquela legenda),
+  // não mexe nos filtros da lateral nem nos números do topo.
+  function temSelecaoSerie(dim){ return !!(state.serieSel[dim] && Object.keys(state.serieSel[dim]).length); }
+  function serieAtiva(dim, s){ return !temSelecaoSerie(dim) || !!state.serieSel[dim][s]; }
+  function filtrarSerie(dim, recs, serieFn){ return temSelecaoSerie(dim) ? recs.filter(function(r){ return serieAtiva(dim, serieFn(r)); }) : recs; }
+  // Legenda completa (todas as séries dos registros, mesmo as desligadas),
+  // da maior para a menor, "Outros" por último.
+  function legendaSerie(dim, recs, serieFn, corFn){
+    var tot = {};
+    recs.forEach(function(r){ var sr = serieFn(r); if (sr != null) tot[sr] = (tot[sr] || 0) + 1; });
+    return Object.keys(tot).sort(function(a,b){
+      return (a === ROTULO_OUTROS) - (b === ROTULO_OUTROS) || tot[b]-tot[a] || a.localeCompare(b,"pt-BR");
+    }).map(function(sr){ return { label:sr, color:corFn(sr), value:tot[sr], dim:dim, off:!serieAtiva(dim, sr) }; });
+  }
+  document.addEventListener("click", function(e){
+    var b = e.target.closest && e.target.closest("[data-serie-dim]");
+    if (!b) return;
+    var dim = b.getAttribute("data-serie-dim"), sr = b.getAttribute("data-serie");
+    var sel = state.serieSel[dim] = state.serieSel[dim] || {};
+    if (sr == null) state.serieSel[dim] = {};          // "Mostrar todos"
+    else if (sel[sr]) delete sel[sr]; else sel[sr] = true;
+    renderDashboard();
+  });
+
   // Data -> "aaaa-mm-dd": chave para agrupar por dia (record.dateKey) e para
   // comparar datas sem a hora.
   function dateKey(d){
@@ -1846,8 +1939,12 @@
   // (clientWidth ainda 0) ou se o container ficou oculto (display:none
   // também dá clientWidth 0). Mínimo de 240 evita um SVG praticamente
   // colapsado em telas muito estreitas.
+  // Em tela cheia (card .card-cheia) devolve 2/3 da largura real: o desenho
+  // é feito menor e o navegador estica até a largura do card, então tudo
+  // (barras, letras, números) fica 1,5x maior.
   function containerWidth(container, fallback){
     var w = container && container.clientWidth;
+    if (w && container.closest && container.closest(".card-cheia") && w > 700) w = w / 1.5;
     return Math.max(240, Math.round(w) || fallback);
   }
   // Liga o tooltip customizado (ver showTooltip/hideTooltip) em todo
@@ -1901,12 +1998,17 @@
     return ordem.map(function(sg){ return { label:sg, color:corFn(sg), value:total[sg] }; });
   }
   // Legendinha (bolinha colorida + nome + total) que fica em cima do gráfico.
+  // Itens com .dim (legendaSerie) viram botões: clicar filtra o gráfico.
   function legendaMini(lista){
     var div = document.createElement("div");
     div.className = "legenda-mini";
+    var dim = lista.length && lista[0].dim;
     div.innerHTML = lista.map(function(l){
-      return '<span><i style="background:' + l.color + '"></i>' + escapeHtml(l.label) + (l.value != null ? ' <b>' + formatNum(l.value) + '</b>' : '') + '</span>';
-    }).join("");
+      var miolo = '<i style="background:' + l.color + '"></i>' + escapeHtml(l.label) + (l.value != null ? ' <b>' + formatNum(l.value) + '</b>' : '');
+      if (!l.dim) return '<span>' + miolo + '</span>';
+      return '<button type="button" class="leg-item' + (l.off ? ' off' : '') + '" data-serie-dim="' + l.dim + '" data-serie="' + escapeHtml(l.label) +
+        '" title="Clique para ver só este no gráfico; clique em outros para somar">' + miolo + '</button>';
+    }).join("") + (dim && temSelecaoSerie(dim) ? '<button type="button" class="leg-limpar" data-serie-dim="' + dim + '">Mostrar todos</button>' : '');
     return div;
   }
 
@@ -2084,9 +2186,13 @@
   // degenerado (a0==a1 depois de dar a volta completa), então um item
   // único vira um círculo cheio simples em vez de passar pelo cálculo
   // de ângulos.
+  // Itens com .dim (legendaSerie): a legenda vira botão (filtro dentro do
+  // gráfico) e as fatias desligadas (.off) ficam apagadas; o número do meio
+  // soma só as ligadas.
   function renderDonut(container, items){
     container.innerHTML = "";
     var total = items.reduce(function(s,i){ return s+i.value; }, 0);
+    var totalLigado = items.reduce(function(s,i){ return s + (i.off ? 0 : i.value); }, 0);
     if (!items.length || total <= 0){ container.appendChild(emptyMsg()); return; }
     var wrap = document.createElement("div");
     var W=150,H=150,cx=W/2,cy=H/2,rOuter=68,rInner=40;
@@ -2101,11 +2207,11 @@
         var a0 = angle, a1 = angle + frac*Math.PI*2;
         angle = a1;
         var d = donutSegmentPath(cx,cy,rInner,rOuter,a0,a1);
-        svg.appendChild(svgEl("path", { d:d, fill: it.color, class:"chart-seg", "data-tooltip": it.label+": "+formatNum(it.value)+" ("+(frac*100).toFixed(1)+"%)" }));
+        svg.appendChild(svgEl("path", { d:d, fill: it.color, class:"chart-seg" + (it.off ? " off" : ""), "data-tooltip": it.label+": "+formatNum(it.value)+" ("+(frac*100).toFixed(1)+"%)" }));
       });
     }
     var centerText = svgEl("text", { x:cx, y:cy+6, "text-anchor":"middle", class:"donut-total" });
-    centerText.textContent = formatNum(total);
+    centerText.textContent = formatNum(totalLigado);
     svg.appendChild(centerText);
     wrap.appendChild(svg);
     wireTooltips(svg);
@@ -2113,13 +2219,23 @@
     var legend = document.createElement("div");
     legend.className = "legend";
     items.forEach(function(it){
-      var row = document.createElement("div");
-      row.className = "legend-row";
+      var row = document.createElement(it.dim ? "button" : "div");
+      row.className = "legend-row" + (it.dim ? " leg-item" : "") + (it.off ? " off" : "");
+      if (it.dim){
+        row.type = "button"; row.setAttribute("data-serie-dim", it.dim); row.setAttribute("data-serie", it.label);
+        row.title = "Clique para ver só este nos gráficos da seção; clique em outros para somar";
+      }
       row.innerHTML = '<span class="legend-dot" style="background:'+it.color+'"></span>'+
                       '<span class="legend-label">'+escapeHtml(it.label)+'</span>'+
                       '<span class="legend-value">'+formatNum(it.value)+'</span>';
       legend.appendChild(row);
     });
+    var dimLeg = items.length && items[0].dim;
+    if (dimLeg && temSelecaoSerie(dimLeg)){
+      var lim = document.createElement("button");
+      lim.type = "button"; lim.className = "leg-limpar"; lim.setAttribute("data-serie-dim", dimLeg); lim.textContent = "Mostrar todos";
+      legend.appendChild(lim);
+    }
     container.className = "card-body donut-wrap";
     container.appendChild(wrap);
     container.appendChild(legend);
@@ -2128,8 +2244,10 @@
   // Gráfico de linha com área preenchida embaixo — usado só pro
   // histórico de ocorrências ao longo do tempo (eixo X = dias/meses,
   // ver seção 6/7). Mesmo esquema de eixo Y "nice" que renderBarV.
-  function renderLine(container, points){
+  function renderLine(container, points, opts){
+    opts = opts || {};
     container.innerHTML = "";
+    if (opts.legenda) container.appendChild(legendaMini(opts.legenda));
     if (!points.length){ container.appendChild(emptyMsg()); return; }
     var max = niceMax(Math.max.apply(null, points.map(function(p){ return p.value; }).concat([1])));
     var W=containerWidth(container, 1040),H=230,padL=36,padR=14,padT=24,padB=28;
@@ -2224,7 +2342,7 @@
   function ocorrenciasPorTipo(records){
     var map = countBy(records, function(r){ return r.tipo; });
     return Object.keys(map).sort(function(a,b){ return map[b]-map[a]; })
-      .map(function(k){ return { label:k, value:map[k], color: colorFor("tipo", k) }; });
+      .map(function(k){ return { label:k, value:map[k], color: corSerie("tipo", serieDe("tipo", k)) }; });
   }
   // Sempre devolve os 7 dias (seg..dom), mesmo com zero, para o eixo ficar fixo.
   // Rótulo do dia da semana de um registro ("Seg".."Dom"), igual ao de ocorrenciasPorDiaSemana.
@@ -2837,7 +2955,10 @@
     container.innerHTML = html;
   }
 
-  function renderDashboard(){
+  // Maestro + o selo de período de cada card (atualizarPeriodosCards), que
+  // depende do que o miolo calculou (ex.: o ciclo dos afastamentos).
+  function renderDashboard(){ renderDashboardMiolo(); atualizarPeriodosCards(); }
+  function renderDashboardMiolo(){
     var records = getFilteredRecords();
     // hora extra continua nas horas (KPI, banco de horas) mas não entra
     // na CONTAGEM de ocorrências (gráficos "Ocorrências por...",
@@ -2846,22 +2967,30 @@
 
     renderKPIs(records, ocorrenciasRecords);
 
-    renderDonut($("chartTipo"), ocorrenciasPorTipo(ocorrenciasRecords));
-    // barras com uma cor por tipo de ocorrência (mesmas cores da rosca "por tipo")
-    var corTipo = function(t){ return colorFor("tipo", t); }, tipoDe = function(r){ return r.tipo; };
-    var itDia = ocorrenciasPorDiaSemana(ocorrenciasRecords);
-    var legDia = empilhar(itDia, ocorrenciasRecords, diaSemanaRotulo, tipoDe, corTipo);
-    renderBarV($("chartDiaSemana"), itDia, { legenda: legDia });
-    renderLine($("chartPorData"), ocorrenciasPorData(ocorrenciasRecords));
-    var itGestor = ocorrenciasPorGestor(ocorrenciasRecords, 12);
-    renderBarH($("chartPorGestor"), itGestor, { legenda: empilhar(itGestor, ocorrenciasRecords, function(r){ return r.gestor; }, tipoDe, corTipo) });
-    var itCargo = ocorrenciasPorCargo(ocorrenciasRecords, 12);
-    renderBarH($("chartPorCargo"), itCargo, { legenda: empilhar(itCargo, ocorrenciasRecords, function(r){ return r.cargo; }, tipoDe, corTipo) });
+    // Gráficos por tipo de ocorrência: uma cor por tipo (os 5 maiores; o resto
+    // em "Outros"). legTipo = legenda clicável (filtro dentro do gráfico);
+    // ocG = as ocorrências que sobram depois desse filtro. Os números do topo
+    // (renderKPIs) não mudam com ele.
+    var corTipo = function(t){ return corSerie("tipo", t); }, tipoDe = function(r){ return serieDe("tipo", r.tipo); };
+    var legTipo = legendaSerie("tipo", ocorrenciasRecords, tipoDe, corTipo);
+    var ocG = filtrarSerie("tipo", ocorrenciasRecords, tipoDe);
+    renderDonut($("chartTipo"), legTipo);
+    var itDia = ocorrenciasPorDiaSemana(ocG);
+    empilhar(itDia, ocG, diaSemanaRotulo, tipoDe, corTipo);
+    renderBarV($("chartDiaSemana"), itDia, { legenda: legTipo });
+    renderLine($("chartPorData"), ocorrenciasPorData(ocG), { legenda: legTipo });
+    var itGestor = ocorrenciasPorGestor(ocG, 12);
+    empilhar(itGestor, ocG, function(r){ return r.gestor; }, tipoDe, corTipo);
+    renderBarH($("chartPorGestor"), itGestor, { legenda: legTipo });
+    var itCargo = ocorrenciasPorCargo(ocG, 12);
+    empilhar(itCargo, ocG, function(r){ return r.cargo; }, tipoDe, corTipo);
+    renderBarH($("chartPorCargo"), itCargo, { legenda: legTipo });
 
     // Seção "Colaboradores em destaque": top 10 por ocorrências, extra e
     // falta no mesmo dia (auditoria de 3 meses), curtas e banco de horas.
-    var itTop = topColaboradores(ocorrenciasRecords, 10);
-    renderBarH($("chartTopColaboradores"), itTop, { colab:true, legenda: empilhar(itTop, ocorrenciasRecords, function(r){ return r.colaborador; }, tipoDe, corTipo) });
+    var itTop = topColaboradores(ocG, 10);
+    empilhar(itTop, ocG, function(r){ return r.colaborador; }, tipoDe, corTipo);
+    renderBarH($("chartTopColaboradores"), itTop, { colab:true, legenda: legTipo });
 
     renderTableSimple($("tableExtraFalta"),
       [{label:"Colaborador", render:function(r){return colabLink(r.colaborador);}},
@@ -2995,38 +3124,45 @@
       tile("Por esquecimento", formatNum(nEsq), pct(nEsq, dig.length) + " das digitadas");
 
     // Rosca por motivo, barras por dia da semana e linha por data.
-    var porMotivo = countBy(dig, function(r){ return r.situacao || "Sem motivo"; });
-    renderDonut($("chartDigMotivo"), Object.keys(porMotivo).sort(function(a,b){ return porMotivo[b]-porMotivo[a]; })
-      .map(function(k){ return { label:k, value:porMotivo[k], color: colorFor("motivo", k) }; }));
-    // barras com uma cor por motivo (mesmas cores da rosca acima)
-    var corMotivo = function(m){ return colorFor("motivo", m); }, motivoDe = function(r){ return r.situacao || "Sem motivo"; };
-    var itDigDia = ocorrenciasPorDiaSemana(dig);
-    renderBarV($("chartDigDiaSemana"), itDigDia, { legenda: empilhar(itDigDia, dig, diaSemanaRotulo, motivoDe, corMotivo) });
-    renderLine($("chartDigData"), ocorrenciasPorData(dig));
+    // Gráficos por motivo: uma cor por motivo; legMot = legenda clicável
+    // (filtro dentro do gráfico, ex.: ver só "Inclusão por esquecimento");
+    // digG = as batidas que sobram depois desse filtro. Os números do topo
+    // da seção, o esquecimento repetido, as justificativas e a lista não mudam.
+    var corMotivo = function(m){ return corSerie("motivo", m); }, motivoDe = function(r){ return serieDe("motivo", r.situacao || "Sem motivo"); };
+    var legMot = legendaSerie("motivo", dig, motivoDe, corMotivo);
+    var digG = filtrarSerie("motivo", dig, motivoDe);
+    renderDonut($("chartDigMotivo"), legMot);
+    var itDigDia = ocorrenciasPorDiaSemana(digG);
+    empilhar(itDigDia, digG, diaSemanaRotulo, motivoDe, corMotivo);
+    renderBarV($("chartDigDiaSemana"), itDigDia, { legenda: legMot });
+    renderLine($("chartDigData"), ocorrenciasPorData(digG), { legenda: legMot });
 
     // Top de colaboradores (20 + "Mostrar todos"), com quantas foram por
     // esquecimento no balão; e o gráfico por gestor.
     var porColab = {};
-    dig.forEach(function(r){
+    digG.forEach(function(r){
       if (!porColab[r.colaborador]) porColab[r.colaborador] = { label:r.colaborador, value:0, esq:0 };
       porColab[r.colaborador].value++; if (isEsquecimento(r)) porColab[r.colaborador].esq++;
     });
     var topDig = limitarLista(Object.values(porColab).sort(function(a,b){ return b.value-a.value || a.label.localeCompare(b.label,"pt-BR"); }),
       "digTop", LIMITE_LISTA, "btnDigTopTodos");
     topDig.forEach(function(t){ t.color = "var(--c-orange)"; t.extra = t.esq + " por esquecimento"; });
-    renderBarH($("chartDigTop"), topDig, { colab:true, legenda: empilhar(topDig, dig, function(r){ return r.colaborador; }, motivoDe, corMotivo) });
-    var itDigGestor = ocorrenciasPorGestor(dig, 12);
-    renderBarH($("chartDigGestor"), itDigGestor, { legenda: empilhar(itDigGestor, dig, function(r){ return r.gestor; }, motivoDe, corMotivo) });
+    empilhar(topDig, digG, function(r){ return r.colaborador; }, motivoDe, corMotivo);
+    renderBarH($("chartDigTop"), topDig, { colab:true, legenda: legMot });
+    var itDigGestor = ocorrenciasPorGestor(digG, 12);
+    empilhar(itDigGestor, digG, function(r){ return r.gestor; }, motivoDe, corMotivo);
+    renderBarH($("chartDigGestor"), itDigGestor, { legenda: legMot });
 
     // Barras por hora cheia, da menor à maior hora que aparece (horas sem batida
     // entram com zero para o eixo ficar contínuo).
     var porHora = {};
-    dig.forEach(function(r){ var h = r.data.getHours(); porHora[h] = (porHora[h]||0) + 1; });
+    digG.forEach(function(r){ var h = r.data.getHours(); porHora[h] = (porHora[h]||0) + 1; });
     var horas = Object.keys(porHora).map(Number);
     var hMin = horas.length ? Math.min.apply(null, horas) : 0, hMax = horas.length ? Math.max.apply(null, horas) : 0;
     var itensHora = [];
     for (var h = hMin; h <= hMax && horas.length; h++) itensHora.push({ label: h + "h", value: porHora[h] || 0, color:"var(--c-navy)" });
-    renderBarV($("chartDigHora"), itensHora, { legenda: empilhar(itensHora, dig, function(r){ return r.data.getHours() + "h"; }, motivoDe, corMotivo) });
+    empilhar(itensHora, digG, function(r){ return r.data.getHours() + "h"; }, motivoDe, corMotivo);
+    renderBarV($("chartDigHora"), itensHora, { legenda: legMot });
 
     // Esquecimento repetido: por pessoa, quantas batidas e em quantos dias
     // diferentes foram "Inclusão por esquecimento" (top 15).
@@ -3130,6 +3266,7 @@
   }
 
   function renderAbsenteismo(){
+    state.absPeriodo = null;
     var todos = getAfastamentosBase(false);
     $("absSemDados").hidden = todos.length > 0;
     $("absCorpo").hidden = todos.length === 0;
@@ -3154,6 +3291,11 @@
     }).join("");
     if (sel.innerHTML !== opts){ sel.innerHTML = opts; sel.value = ciclos.indexOf(atual) > -1 ? atual : ""; }
     var cicloSel = sel.value;
+    // textos do selo de período dos cards da seção (atualizarPeriodosCards)
+    var f3 = ciclos.length ? { ini: cicloInicioFim(ciclos[ciclos.length-1]).ini, fim: cicloInicioFim(ciclos[0]).fim } : null;
+    var txtCiclo = function(k){ var fc = cicloInicioFim(k); return "Ciclo " + cicloLabel(k) + ": " + formatDateBR(fc.ini) + " a " + formatDateBR(fc.fim); };
+    var txt3m = f3 ? "Últimos 3 meses: " + formatDateBR(f3.ini) + " a " + formatDateBR(f3.fim) : "Últimos 3 meses";
+    state.absPeriodo = { tres: txt3m, ciclo: cicloSel ? txtCiclo(cicloSel) : txt3m, mapa: ciclos.length ? txtCiclo(cicloSel || ciclos[0]) : txt3m };
     function noCiclo(d){ var k = cicloDe(d); return cicloSel ? k === cicloSel : ciclos.indexOf(k) > -1; }
 
     // O seletor "Mostrar" escolhe a base das vistas gerais (resumo, evolução,
@@ -3192,6 +3334,10 @@
       diasDoAtestado(r).forEach(function(d){ pedacos.push({ d:d, grupo:g, r:r }); });
     });
     var grupoDe = function(x){ return x.grupo; };
+    // Filtro dentro do gráfico (clique na legenda de tipos): pedG = os dias
+    // dos tipos ligados. Vale para a evolução, o "Por gestor" e o mapa; o
+    // resumo, a tabela da evolução, o encostado em folga e o ranking não mudam.
+    var pedG = filtrarSerie("afast", pedacos, grupoDe);
 
     // 2. evolução (sempre os 3 meses)
     var porCiclo = {};
@@ -3208,8 +3354,11 @@
     var nomeBase = soAtest ? "atestado" : "afastamento";
     if (!cicloSel){
       $("absEvolHint").textContent = "Dias de " + nomeBase + " em cada ciclo (28 a 27)" + (soAtest ? "" : ", por tipo") + " · escolha um ciclo no seletor para ver semana a semana";
-      var itCiclo = ordem.map(function(k){ return { label: cicloLabel(k), value: porCiclo[k].dias, color:"var(--c-terracotta)" }; });
-      renderBarV($("chartAbsEvolucao"), itCiclo, { legenda: empilhar(itCiclo, pedacos, function(x){ return cicloLabel(cicloDe(x.d)); }, grupoDe, corAfast) });
+      var diasG = {};
+      pedG.forEach(function(x){ var k = cicloDe(x.d); diasG[k] = (diasG[k] || 0) + 1; });
+      var itCiclo = ordem.map(function(k){ return { label: cicloLabel(k), value: diasG[k] || 0, color:"var(--c-terracotta)" }; });
+      empilhar(itCiclo, pedG, function(x){ return cicloLabel(cicloDe(x.d)); }, grupoDe, corAfast);
+      renderBarV($("chartAbsEvolucao"), itCiclo, { legenda: legendaSerie("afast", pedacos.filter(function(x){ return porCiclo[cicloDe(x.d)]; }), grupoDe, corAfast) });
     } else {
       // ciclo escolhido: dias de afastamento em cada semana do ciclo (a partir do dia 28)
       var fc = cicloInicioFim(cicloSel), semanas = [];
@@ -3218,10 +3367,11 @@
         semanas.push({ ini: ws, fim: we, dias: 0, label: formatDateBR(ws).slice(0,5) + "–" + formatDateBR(we).slice(0,5) });
       }
       function semanaDe(d){ for (var i = 0; i < semanas.length; i++) if (d >= semanas[i].ini && d <= semanas[i].fim) return semanas[i]; return null; }
-      pedacos.forEach(function(x){ var sm = semanaDe(x.d); if (sm) sm.dias++; });
+      pedG.forEach(function(x){ var sm = semanaDe(x.d); if (sm) sm.dias++; });
       $("absEvolHint").textContent = "Ciclo " + cicloLabel(cicloSel) + ": dias de " + nomeBase + " em cada semana · “Últimos 3 meses” no seletor volta para a comparação entre ciclos";
       var itSem = semanas.map(function(sm){ return { label: sm.label, value: sm.dias, color:"var(--c-terracotta)" }; });
-      renderBarV($("chartAbsEvolucao"), itSem, { legenda: empilhar(itSem, pedacos, function(x){ var sm = semanaDe(x.d); return sm ? sm.label : null; }, grupoDe, corAfast) });
+      empilhar(itSem, pedG, function(x){ var sm = semanaDe(x.d); return sm ? sm.label : null; }, grupoDe, corAfast);
+      renderBarV($("chartAbsEvolucao"), itSem, { legenda: legendaSerie("afast", pedacos.filter(function(x){ return semanaDe(x.d); }), grupoDe, corAfast) });
     }
     renderTableSimple($("tableAbsEvolucao"),
       [{label:"Ciclo", render:function(k){ var f = cicloInicioFim(k); return cicloLabel(k) + ' <span style="color:var(--c-muted-2)">(' + formatDateBR(f.ini) + ' a ' + formatDateBR(f.fim) + ')</span>'; }},
@@ -3234,11 +3384,11 @@
     // 4. por gestor / setor / cargo (ciclo escolhido, em dias, por tipo)
     var campo = $("absAgrupar").value || "gestor";
     var porGrupo = {};
-    pedacos.forEach(function(x){ if (noCiclo(x.d)){ var k = x.r[campo] || "Não informado"; porGrupo[k] = (porGrupo[k]||0) + 1; } });
+    pedG.forEach(function(x){ if (noCiclo(x.d)){ var k = x.r[campo] || "Não informado"; porGrupo[k] = (porGrupo[k]||0) + 1; } });
     var itGrupo = Object.keys(porGrupo).sort(function(a,b){ return porGrupo[b]-porGrupo[a]; }).slice(0,12)
       .map(function(k){ return { label:k, value:porGrupo[k], color: colorFor(campo === "cargo" ? "cargo" : (campo === "setor" ? "setor" : "gestor"), k) }; });
-    renderBarH($("chartAbsGrupo"), itGrupo, { legenda: empilhar(itGrupo, pedacos.filter(function(x){ return noCiclo(x.d); }),
-      function(x){ return x.r[campo] || "Não informado"; }, grupoDe, corAfast) });
+    empilhar(itGrupo, pedG.filter(function(x){ return noCiclo(x.d); }), function(x){ return x.r[campo] || "Não informado"; }, grupoDe, corAfast);
+    renderBarH($("chartAbsGrupo"), itGrupo, { legenda: legendaSerie("afast", pedacos.filter(function(x){ return noCiclo(x.d); }), grupoDe, corAfast) });
 
     // 6. encostados em folga + dia da semana do início (ciclo escolhido, pelo início)
     var iniciados = abs.filter(function(r){ return noCiclo(r.data); });
@@ -3284,8 +3434,11 @@
     for (var d = new Date(f.ini); d <= f.fim; d = new Date(d.getFullYear(), d.getMonth(), d.getDate()+1)) diasMapa.push(d);
     // todo mundo que teve atestado em algum momento dos 3 meses aparece no
     // mapa (pedido do RH), mesmo sem atestado no ciclo mostrado
-    var porPessoa = {};
+    var porPessoa = {}, gruposNoMapa = {};
     vis.forEach(function(r){
+      // legenda do mapa: todos os tipos que aparecem nos 3 meses (mesmo os desligados)
+      if (diasDoAtestado(r).some(function(d){ return ciclos.indexOf(cicloDe(d)) > -1; })) gruposNoMapa[grupoAfast(r)] = (gruposNoMapa[grupoAfast(r)] || 0) + 1;
+      if (!serieAtiva("afast", grupoAfast(r))) return;   // filtro dentro do gráfico
       var k = chavePessoa(r);
       if (!porPessoa[k]) porPessoa[k] = { colaborador:r.colaborador, dias:{}, desc:{}, total3m:0 };
       porPessoa[k].total3m += diasDoAtestado(r).filter(function(d){ return ciclos.indexOf(cicloDe(d)) > -1; }).length;
@@ -3299,12 +3452,13 @@
     });
     $("absHeatHint").textContent = "Dias de " + nomeBase + " no ciclo " + cicloLabel(cicloMapa) + " (" + formatDateBR(f.ini) + " a " + formatDateBR(f.fim) + ")" +
       " · todas as " + pessoasMapa.length + " pessoas com " + nomeBase + " nos últimos 3 meses (linha vazia = nada neste ciclo) · passe o mouse num quadrado para ver o tipo";
-    // legenda do mapa: só os tipos que aparecem nele, com a cor de cada um
-    var gruposNoMapa = {};
-    pessoasMapa.forEach(function(p){ Object.keys(p.dias).forEach(function(k){ gruposNoMapa[p.dias[k]] = true; }); });
+    // legenda do mapa: os tipos dos 3 meses, cada um com a cor dele; clicar
+    // mostra só aquele tipo no mapa (mesmo filtro da evolução e do "Por gestor")
     $("absHeatLeg").innerHTML = GRUPOS_AFAST.filter(function(g){ return gruposNoMapa[g.nome]; }).map(function(g){
-      return '<span class="l-aus" style="--cor:' + g.cor + '">' + escapeHtml(g.nome) + '</span>';
-    }).join("") + '<span class="l-fds">Sábado e domingo</span>';
+      return '<button type="button" class="l-aus leg-item' + (serieAtiva("afast", g.nome) ? '' : ' off') + '" style="--cor:' + g.cor +
+        '" data-serie-dim="afast" data-serie="' + escapeHtml(g.nome) + '" title="Clique para ver só este tipo; clique em outros para somar">' + escapeHtml(g.nome) + '</button>';
+    }).join("") + (temSelecaoSerie("afast") ? '<button type="button" class="leg-limpar" data-serie-dim="afast">Mostrar todos</button>' : '') +
+      '<span class="l-fds">Sábado e domingo</span>';
     if (!pessoasMapa.length){
       $("absHeat").innerHTML = ""; $("absHeat").appendChild(emptyMsg("Nenhum " + nomeBase + " nos últimos 3 meses para o filtro atual."));
     } else {
@@ -3316,11 +3470,14 @@
       pessoasMapa.forEach(function(p){
         html += '<tr><td class="nome">' + colabLink(p.colaborador) + '</td>' + diasMapa.map(function(dd){
           var k = dateKey(dd), fds = dd.getDay() === 0 || dd.getDay() === 6;
-          if (p.dias[k]) return '<td class="aus" style="background:' + corAfast(p.dias[k]) + '" title="' + escapeHtml(formatDateBR(dd) + " · " + p.desc[k]) + '"></td>';
+          // balão ao passar o mouse: pessoa, dia e o tipo de afastamento
+          if (p.dias[k]) return '<td class="aus" style="background:' + corAfast(p.dias[k]) + '" data-tooltip="' +
+            escapeHtml(p.colaborador + " · " + diaSemanaCurto(dd) + " " + formatDateBR(dd) + " · " + p.desc[k] + (p.desc[k] && stripAccents(p.desc[k].toLowerCase()).indexOf(stripAccents(p.dias[k].split(/[ ,]/)[0].toLowerCase())) === -1 ? " (" + p.dias[k] + ")" : "")) + '"></td>';
           return '<td' + (fds ? ' class="fds"' : '') + '></td>';
         }).join("") + '<td class="tot">' + (Object.keys(p.dias).length || "&ndash;") + '</td><td class="tot">' + p.total3m + '</td></tr>';
       });
       $("absHeat").innerHTML = html + '</tbody></table>';
+      wireTooltips($("absHeat"));
     }
   }
   $("absCiclo").addEventListener("change", applyFilters);
@@ -3540,6 +3697,7 @@
       }
       state.records = result.records;
       state.colorMaps = { gestor:{}, setor:{}, cargo:{}, tipo:{}, status:{}, motivo:{} };
+      prepararCoresSeries();
       limparControlesFiltro();
 
       // state.records inclui linhas que não são ocorrência (resumos, curtas,
@@ -3560,6 +3718,11 @@
       $("btnExplica").hidden = false;
 
       populateFilterOptions();
+      // arquivo novo sempre abre na Visão geral (pedido do RH, 13/10)
+      paginaAtual = "geral";
+      try { localStorage.setItem("painelPonto.pagina", "geral"); } catch(e){}
+      aplicarPagina();
+      window.scrollTo({ top:0 });
       renderDashboard();
     };
     reader.onerror = function(){
@@ -3640,6 +3803,7 @@
     state.historyPage = 1;
     state.bancoMostrarTodos = false;
     state.mostrarTodos = {};
+    state.serieSel = { tipo:{}, motivo:{}, afast:{} };   // filtros dentro dos gráficos
   }
   $("clearFilters").addEventListener("click", function(){
     limparControlesFiltro();
@@ -3906,20 +4070,116 @@
   if (!document.querySelector('.pagina[data-pagina="' + paginaAtual + '"]') && paginaAtual !== "todas") paginaAtual = "geral";
   aplicarPagina();
 
+
+  /* ---------- Período de cada card (selo "📅") ----------
+     Cada card ganha, embaixo do título, uma linha dizendo QUE PERÍODO aquela
+     vista considera (pedido do RH, 13/10), porque nem todo card segue o filtro
+     de período: alguns são do mês do Cartão, outros dos 3 meses ou do ciclo
+     escolhido nos afastamentos. O tipo de cada card vem de PERIODO_DOS_CARDS
+     (pelo id do gráfico/tabela que fica dentro dele). */
+  var PERIODO_DOS_CARDS = {
+    filtro: ["chartTipo","chartDiaSemana","chartPorData","chartPorGestor","chartPorCargo","chartTopColaboradores","tableCurtas",
+             "chartDigMotivo","chartDigDiaSemana","chartDigData","chartDigTop","chartDigGestor","chartDigHora","tableDigEsquecimento",
+             "tableDigJust","tableDigLista","tableDemoraGestor","tableDemoraColaborador","historySection"],
+    cartao: ["chartBancoHoras"], cartao3: ["tableExtraFalta"], pausas: ["tablePausasTermicas"],
+    absEvol: ["chartAbsEvolucao"], absCiclo: ["chartAbsGrupo","chartAbsDiaSemana","tableAbsEmendas"], abs3m: ["tableAbsRanking"],
+    absMapa: ["absHeat"], cadastro: ["orgSection"]
+  };
+  function intervaloBR(ini, fim){ return formatDateBR(ini) + " a " + formatDateBR(fim); }
+  // ciclo (28 a 27) das linhas-resumo de um tipo (todas têm a data do fim do ciclo)
+  function cicloDoResumo(tipo){
+    var r = state.records.filter(function(x){ return x.tipo === tipo && x.data; })[0];
+    return r ? cicloInicioFim(cicloDe(r.data)) : null;
+  }
+  function atualizarPeriodosCards(){
+    var per = periodoFiltro(), tot = periodoCompleto();
+    var ini = per.ini || (tot && new Date(tot.ini + "T00:00:00")), fim = per.fim || (tot && new Date(tot.fim + "T00:00:00"));
+    var cart = cicloDoResumo(TIPO_RESUMO_HORAS_CARTAO) || cicloDoResumo(TIPO_AUDITORIA_EXTRA_FALTA);
+    var paus = cicloDoResumo(TIPO_RESUMO_PAUSAS_TERMICAS) || cart;
+    var ab = state.absPeriodo || {};
+    var textos = {
+      filtro: ini && fim ? "Período do filtro: " + intervaloBR(ini, fim) : "Período: todo o arquivo",
+      cartao: cart ? "Mês do Cartão Ponto: " + intervaloBR(cart.ini, cart.fim) + " (não segue o filtro de período)" : "Mês atual do Cartão Ponto",
+      cartao3: cart ? "Mês do Cartão: " + intervaloBR(cart.ini, cart.fim) + " + os 2 meses anteriores (não segue o filtro de período)" : "Mês atual do Cartão e os 2 anteriores",
+      pausas: paus ? "Relatório de pausas do mês: " + intervaloBR(paus.ini, paus.fim) + " (não segue o filtro de período)" : "Relatório de pausas do mês",
+      absEvol: ab.ciclo, absCiclo: ab.ciclo, abs3m: ab.tres, absMapa: ab.mapa,
+      cadastro: "Cadastro atual do ORG (não depende de período)"
+    };
+    Object.keys(PERIODO_DOS_CARDS).forEach(function(tipo){
+      PERIODO_DOS_CARDS[tipo].forEach(function(id){
+        var el = $(id), card = el && (el.classList.contains("card") ? el : el.closest(".card"));
+        if (!card) return;
+        var selo = card.querySelector(":scope > .card-periodo");
+        if (!selo){
+          selo = document.createElement("div");
+          selo.className = "card-periodo";
+          var titulo = card.querySelector(":scope > .card-title");
+          if (titulo) titulo.insertAdjacentElement("afterend", selo); else card.insertBefore(selo, card.firstChild);
+        }
+        selo.hidden = !textos[tipo];
+        selo.textContent = textos[tipo] ? "📅 " + textos[tipo] : "";
+      });
+    });
+  }
+
+  /* ---------- Tela cheia nos gráficos ----------
+     Todo card com gráfico ou tabela ganha o botão ⛶ no canto (pedido do RH,
+     13/10). Ele abre o card ocupando a tela (classe .card-cheia, fundo
+     escuro em body.tem-cheia) e redesenha: em tela cheia containerWidth
+     devolve uma largura menor que a real, e o SVG (que estica até a largura
+     do card) fica maior, com letras maiores. Esc ou o ✕ fecham. */
+  function fecharTelaCheia(){
+    var c = document.querySelector(".card.card-cheia");
+    if (!c) return;
+    c.classList.remove("card-cheia"); document.body.classList.remove("tem-cheia");
+    var b = c.querySelector(":scope > .btn-cheia");
+    if (b){ b.innerHTML = "&#x26F6;"; b.title = "Ver em tela cheia"; b.setAttribute("aria-label", b.title); }
+    if (state.records.length) renderDashboard();
+  }
+  function abrirTelaCheia(card){
+    fecharTelaCheia();
+    card.classList.add("card-cheia"); document.body.classList.add("tem-cheia");
+    var b = card.querySelector(":scope > .btn-cheia");
+    if (b){ b.innerHTML = "&#x2715;"; b.title = "Fechar tela cheia (Esc)"; b.setAttribute("aria-label", b.title); }
+    card.scrollTop = 0;
+    if (state.records.length) renderDashboard();
+  }
+  document.querySelectorAll(".pagina .card").forEach(function(card){
+    if (!card.querySelector(".card-body") || card.querySelector(":scope > .btn-cheia")) return;
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "btn-cheia"; b.innerHTML = "&#x26F6;";
+    b.title = "Ver em tela cheia"; b.setAttribute("aria-label", b.title);
+    b.addEventListener("click", function(e){
+      e.stopPropagation();
+      if (card.classList.contains("card-cheia")) fecharTelaCheia(); else abrirTelaCheia(card);
+    });
+    card.classList.add("tem-btn-cheia");
+    card.insertBefore(b, card.firstChild);
+  });
+  document.addEventListener("keydown", function(e){
+    // com o card do colaborador aberto por cima, o Esc fecha só ele
+    if (e.key === "Escape" && $("colabModalOverlay").hidden) fecharTelaCheia();
+  });
+  document.addEventListener("click", function(e){
+    // clique no fundo escuro (fora do card aberto) também fecha
+    if (document.body.classList.contains("tem-cheia") && !e.target.closest(".card-cheia") && !e.target.closest(".modal-overlay, #chartTooltip, .ms")) fecharTelaCheia();
+  });
+
   /* ---------- Esconder o painel da direita ----------
      Tira a coluna "Carregar dados / Filtros" para os gráficos usarem a
-     largura toda. Os filtros continuam valendo. A escolha fica guardada no
-     navegador de quem usa (localStorage, se disponível). Os gráficos são
+     largura toda. Os filtros continuam valendo. A escolha NÃO é guardada:
+     toda vez que o painel abre, os filtros aparecem (13/10). Os gráficos são
      redesenhados porque a largura deles é calculada em pixels. */
   function setLateralOculta(oculta){
     document.body.classList.toggle("sem-lateral", oculta);
     $("btnLateral").setAttribute("aria-pressed", oculta ? "true" : "false");
     $("btnLateralTxt").textContent = oculta ? "Mostrar filtros" : "Esconder filtros";
-    try { localStorage.setItem("painelPonto.lateralOculta", oculta ? "1" : "0"); } catch(e){}
     if (state.records.length) renderDashboard();
   }
   $("btnLateral").addEventListener("click", function(){ setLateralOculta(!document.body.classList.contains("sem-lateral")); });
-  try { if (localStorage.getItem("painelPonto.lateralOculta") === "1") setLateralOculta(true); } catch(e){}
+  // Ao abrir o painel, os filtros SEMPRE aparecem (pedido do RH, 13/10): é ali
+  // que fica o "Carregar dados", e quem chega precisa ver onde soltar o
+  // arquivo. "Esconder filtros" vale só enquanto a página está aberta.
   $("btnExplicaVoltar").addEventListener("click", function(){ setModoExplicacao(false); });
 
   // Mudou o tamanho da janela ou girou o celular: redesenha (os SVG são
