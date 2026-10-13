@@ -534,6 +534,11 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   "NaN/undefined". Corrigidos: topo passava da tela no celular (rolagem lateral de 6 px em 390 e
   4 px em 360); "Esconder filtros" ficava laranja no modo explicação; termos técnicos nos
   subtítulos e selos ("Cartão Ponto", "DSR", "ORG", "#N/A") trocados por linguagem simples.
+- 13/10 (depois 4): a janela "de onde vem" **não rolava** (relato do Dimitri): a regra
+  `.origem-body{overflow-y:auto}` perdia para `.modal-body{overflow:hidden}`, de mesma
+  especificidade e escrita depois no arquivo. Agora é `.modal-body.origem-body`. Testado no
+  Chromium com a roda do mouse: desktop, 390 px e com o gráfico em tela cheia. Lição: regra
+  específica de um modal precisa vencer a de `.modal-body` pela especificidade, não pela ordem.
 
 ## 12. Estado atual e como continuar (13/10/2026)
 
