@@ -1,6 +1,6 @@
 # CONTEXTO DO PROJETO — Tratamento de Ponto e Painel de Ocorrências (AuroraCoop)
 
-> Arquivo de contexto para o Claude Code. Estado em **08/10/2026**. Leia inteiro antes de propor
+> Arquivo de contexto para o Claude Code. Estado em **13/10/2026**. Leia inteiro antes de propor
 > qualquer mudança: várias regras abaixo já foram discutidas e decididas com o Dimitri, e as
 > "armadilhas" já custaram retrabalho.
 >
@@ -266,7 +266,7 @@ dias_ausencia, emenda_folga, minutos_trabalhados, minutos_descanso, marcacoes_di
   de horas, **não** na contagem de ocorrências. `isTipoIgnorado` descarta "Problema horário" na
   leitura (proteção para CSV antigo); `textoCampo` transforma "Erro 2042"/`#N/D` em vazio.
 - `TIPOS_RESUMO` = auditoria, pausas e "Resumo Horas Cartão". O gráfico de banco de horas usa
-  esse resumo (verde = extra, vermelho = banco, saldo à direita, "Mostrar todos"); sem ele (CSV
+  esse resumo (verde = extra, vermelho = banco, saldo à direita, lista inteira em tela cheia); sem ele (CSV
   antigo) cai para as linhas da Tratamento e avisa no subtítulo.
 - Topo (faixa preta): **período** em destaque = valores do filtro de período; o período padrão
   (`periodoCompleto`) vai da 1ª data das ocorrências/curtas até a data das linhas-resumo do
@@ -281,8 +281,10 @@ dias_ausencia, emenda_folga, minutos_trabalhados, minutos_descanso, marcacoes_di
   getDigitadasRecords, getCurtasRecords). O extrator lê as opções em `#fTipo .ms-op`.
 - **Barras empilhadas por tipo** (`empilhar` + `legendaMini`, `it.segs` em renderBarH/renderBarV;
   pedaços com classe `seg`, ignorados pelo extrator): Visão geral (dia da semana, gestor, cargo,
-  top colaboradores) por tipo de ocorrência (`colorFor("tipo")`, mesmas cores da rosca);
-  digitadas (dia, top, gestor, hora) por motivo (`colorFor("motivo")`); afastamentos por grupo.
+  top colaboradores) por tipo de ocorrência (`corSerie("tipo")`, mesmas cores da rosca);
+  digitadas (dia, top, gestor, hora) por motivo (`corSerie("motivo")`); afastamentos por grupo.
+  Cada gráfico tem filtro próprio na legenda, tela cheia (⛶), selo 📅 de período e clique
+  "de onde vem" (ver histórico 13/10 na seção 11).
 - **Afastamentos com todos os tipos** (10/10): seletor `#absMostrar` (todos × só atestados);
   `getAfastamentosBase`, `GRUPOS_AFAST` (7 grupos com cor fixa, atestado vermelho), `grupoAfast`,
   `corAfast`; `isPorHoras` (duração > 0 e não atestado: saída médica, horas faltas, reunião curta)
@@ -307,7 +309,7 @@ dias_ausencia, emenda_folga, minutos_trabalhados, minutos_descanso, marcacoes_di
 - **Lista de colaboradores (ORG)** (`renderListaORG`): linhas "Cadastro ORG" casadas por
   matrícula (`chavePessoa`) com ocorrências do filtro, digitadas e horas do Cartão. O aviso em
   vermelho de "fora do ORG" foi **retirado a pedido do Dimitri** (06/10); o card da pessoa ainda
-  mostra "Não está no ORG".
+  mostra "Não está na lista de equipes".
 - Botão **"Esconder filtros"** (`setLateralOculta`, `body.sem-lateral`); redesenha os gráficos.
   Não é guardado: ao abrir, os filtros sempre aparecem (13/10).
 - Card do colaborador: `.modal-body.colab-modal-body` é `display:block` (rola inteiro); tabelas
@@ -533,72 +535,71 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   4 px em 360); "Esconder filtros" ficava laranja no modo explicação; termos técnicos nos
   subtítulos e selos ("Cartão Ponto", "DSR", "ORG", "#N/A") trocados por linguagem simples.
 
-## 12. Estado atual e como continuar (08/10/2026)
+## 12. Estado atual e como continuar (13/10/2026)
 
-**Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`, branch `claude/new-session-69o070`.
-Os commits de 06/10 a 08/10 foram feitos, mas o **push para o GitHub foi bloqueado** pelas permissões
-do ambiente anterior. Se o seu repositório não tiver os arquivos `Afastamentos/`,
-`MarcacoesDigitadas/` e `ferramentas/formatar_afastamentos.py`, o código mais novo veio no zip
-`Dashboard_Ponto (codigo).zip` junto com este arquivo: use-o como base. Não tente "contornar" um
-bloqueio de push; peça para o Dimitri liberar ou empurrar ele mesmo.
+**Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`, branch
+`claude/fervent-hamilton-281bul` (push funcionando; último commit da revisão geral de 13/10). O
+`Dashboard/index.html` é o painel; as macros ficam em `<Pasta>/<Macro>.bas` e `txt/<Macro>.txt`.
 
-**O que o Dimitri tem para testar** (pacote `Teste Ponto 07-10.zip`, entregue a ele): as 6 macros em
-`.txt`, o `index.html`, a planilha `Tratamento Ponto 28.08 até 27.09_2 - com Marcações e
-Afastamentos.xlsx` (abas inseridas com `adicionar_aba_xlsx.py`) e um CSV de referência simulado.
-Números esperados quando ele rodar o GerarCSV nessa planilha: 138 ocorrências, 72 colaboradores,
-demora média 5,7 dias, 422 batidas digitadas (12 de Origem "E" ignoradas), 283 afastamentos (33
-atestados, 105 dias), 215 pessoas no ORG, 163 com horas no Cartão. **As macros nunca rodaram no
-Excel**: o próximo retorno dele provavelmente traz erros de compilação/execução (peça print da
-mensagem e da linha amarela).
+**O que o Dimitri tem em mãos.**
+- Pacote `Teste Ponto 11-10.zip` (pastas Macros / Planilhas / Site + LEIA-ME): as 7 macros em
+  `.txt`, a planilha `Tratamento Ponto 28.08 até 27.09_2 - completa (com Jornada).xlsx` (ORG
+  corrigido + abas Marcações Digitadas, Afastamentos, Intrajornada, Interjornada, Interjornada
+  Semanal, Horas Excedentes) e o CSV de referência simulado.
+- Depois disso recebeu só o `index.html` atualizado (13/10): tela cheia, filtro na legenda por
+  gráfico, selo de período, clique "de onde vem" com nomes que filtram, textos para leigos,
+  correções da revisão geral. As macros e a planilha não mudaram desde 10/10.
+- Números esperados ao rodar o GerarAbaCSV nessa planilha: 138 ocorrências, 72 colaboradores,
+  demora média 5,7 dias (56 tratadas), 422 digitadas, 283 afastamentos (33 atestados, 105 dias),
+  210 pessoas no ORG, 163 com horas no Cartão, Intrajornada 21, Interjornada 1, Interjornada
+  Semanal 11, Horas Excedentes 72; CSV com 32 colunas e 1.757 linhas.
+- **As macros nunca rodaram no Excel dele.** O próximo retorno pode trazer erro de compilação ou
+  execução: peça print da mensagem e da linha amarela.
+
+**Escolhas dele ainda NÃO implementadas** (página de ideias com banco de dados:
+https://claude.ai/artifact/SZEwQzRntr66SCDMms4YBG, doc `escolhas/atual`, campo `marcadas`):
+J1 resumo de jornada por ciclo · J2 horas acima de 10h por pessoa · J7 risco trabalhista por gestor
+(os 4 relatórios de jornada ainda não têm seção no painel) · P1 atestado no mesmo dia da semana ·
+P2 atestado de 1 dia na segunda/sexta · P3 atestado colado em férias · P10 esquecimento crônico ·
+T1 quatro números no topo das pausas · T3 trabalho acima de 1h40 por pessoa/gestor · T4 pausas por
+gestor e cargo · T8 pausas no card do colaborador · T9 evolução mês a mês das pausas (exige manter a
+aba de pausas de cada mês) · M3 ocorrências por pessoa da equipe · M4 clicar no gráfico filtra o
+painel · M7 percentuais nos gráficos. (M10 legenda clicável já foi feita em 13/10.) Na última
+conversa ele não confirmou quando construir; pergunte antes.
 
 **Decisões já tomadas (não reabrir sem ele pedir):**
 - Check "S" ignora a linha inteira; "Problema horário" não entra; Origem "E" das digitadas não entra.
-- Cards de horas extra/falta foram retirados. Aviso vermelho "fora do ORG" na lista foi retirado.
-- Absenteísmo = **só atestados** por enquanto; fonte oficial = relatório HRCL006 (não o Cartão).
-- Visões de absenteísmo escolhidas: 2, 4, 5, 6, 7, 8 (sem cards de KPI e sem longo × curto).
-- O relatório de digitadas não diz quem digitou (colaborador × RH): não há como separar.
-- Painel em seções com menu ☰; Pausas Térmicas na própria seção, sem rolagem lateral.
-- (08/10) Sem os cards "No dia de uma ocorrência" e "Horário redondo" nas digitadas; sem
-  "com/sem ocorrência no filtro" na lista do ORG; "Entenda o painel" só com arquivo carregado.
+- Cards de horas extra/falta retirados; aviso vermelho "fora do ORG" na lista retirado.
+- Absenteísmo = só atestados nas vistas de atestado; fonte oficial = relatório HRCL006.
+  Afastamentos mostram todos os tipos por cor, com opção "Só atestados".
+- O relatório de digitadas não diz quem digitou (colaborador × RH).
+- Painel em seções com menu ☰; Pausas Térmicas na própria seção.
+- Filtros da lateral sempre visíveis ao abrir; arquivo carregado abre na Visão geral.
+- Filtro da legenda vale só para o gráfico clicado e não mexe nos números do topo.
+- Listas longas (curtas, top de digitadas, banco de horas) inteiras só em tela cheia.
+- Clique na barra/fatia/ponto/quadrado abre "de onde vem"; os nomes de cima dessa janela são
+  filtros; o resumo da pessoa abre pelo nome na tabela.
+- Textos da tela para leigos: sem aba, coluna, macro, código de relatório, Check, ORG,
+  Tratamento, DSR. Cores: 5 cores de série + cinza "Outros"; vermelho só para alerta/atestado.
+- Gestores também veem as análises de "pegar no pulo".
 
-**Aguardando o Dimitri escolher** (sugestões feitas em 07/10, com base no HRCL006):
-1. Absenteísmo completo: somar acidente de trabalho e faltas injustificadas (e justificadas e
-   suspensão quando aparecerem) + **taxa de absenteísmo** (dias ausentes ÷ dias previstos no Cartão).
-2. Ausências por horas: "Saída Médico/Empresa" e "Horas Faltas" em horas por pessoa (uma pessoa
-   concentra 14 das 26 saídas médicas; ~65h no total).
-3. "Quem está fora agora": afastados no fim do ciclo com previsão de retorno.
-4. Mapa da equipe com todos os tipos de afastamento (uma cor por tipo).
-5. Cruzamento digitadas × afastamentos: das 167 digitadas por "atividade externa", só 2 caem em dia
-   com "Viagem a Serviço" registrada (auditoria).
-6. Férias por gestor/semana (55 períodos, 1.457 dias).
-7. Tempo de casa (admissão) × atestados.
-Também em aberto: Check "S" nas curtas/auditoria; critério Internos × Externos;
-`destino_horas_extra`; sugestões antigas da seção 9.
-
-**Correções de cadastro que o Dimitri vai fazer no ORG** (lista nominal só com ele): nome com letra
-trocada que quebra o PROCX, pessoas da RE fora do ORG, desligados ainda no ORG. Ele perguntou se
-corrigir direto no Excel resolve: sim, o GerarCSV lê o ORG a cada execução.
+**Ainda em aberto com ele:** Check "S" nas curtas/auditoria; critério Internos × Externos;
+`destino_horas_extra`; absenteísmo completo (acidente, faltas, taxa); sugestões de 07/10 (horas de
+saída médica, quem está fora agora, férias por gestor, tempo de casa × atestados); o Tyrone só
+aparece no aviso de férias se o HRCL006 for exportado incluindo os gestores.
 
 **Como trabalhar com ele (o que funcionou):**
 - Toda resposta em pt-BR, explicando o porquê; dizer direto quando algo entregue estava errado.
 - Entregar VBA em `.txt` (CRLF): `sed 's/$/\r/' X/X.bas > txt/X.txt`. Manter `.bas` e `.txt` iguais.
-- Antes de entregar: `checar_colisoes_vba.py`, simular com `simular_gerarcsv.py`, abrir o painel no
-  Chromium (Playwright) e rodar `conferir_painel.py` (todos OK). Olhar screenshots desktop e 390px.
-- Relatórios novos do sistema (Senior) chegam como "dump" de impressão: cabeçalho repetido, valores
-  deslocados em relação aos títulos, textos quebrados na linha de baixo. Padrão adotado: uma macro
-  `FormatarX` que reescreve a aba ativa como tabela (cabeçalho na linha 1), achando colunas pelo
-  título; o GerarCSV acha a aba pelo cabeçalho; o painel ganha um `tipo_ocorrencia` novo, excluído
-  das vistas gerais e do `periodoCompleto`, com seção própria e texto de "De onde vem".
-- Quando ele manda uma planilha nova, quer as **abas inseridas na planilha de Tratamento** dele: use
-  `adicionar_aba_xlsx.py` (nunca salve com openpyxl). O LibreOffice deste tipo de ambiente não
-  abre nem planilhas simples: valide pela estrutura (zip/XML/contagens) e peça para ele abrir no Excel.
-- Ele manda pacotes de teste em zip quando pede "todos os arquivos": macros, painel, planilha e CSV de
-  referência, em pastas.
+- Antes de entregar: `checar_colisoes_vba.py`, `simular_gerarcsv.py`, abrir o painel no Chromium
+  (Playwright), `conferir_painel.py` (18/18), screenshots desktop, 390 e 360 px, procurar erro de
+  JavaScript e texto "NaN/undefined". O extrator (`extrair_painel.js`) lê balões `data-tooltip`
+  sem a classe `seg` e a legenda `.legend-row` da rosca: não mude esses formatos sem ajustá-lo.
+- Relatórios novos do sistema (Senior) chegam como "dump" de impressão: macro `FormatarX` que
+  reescreve a aba ativa como tabela; o GerarCSV acha a aba pelo cabeçalho; o painel ganha um
+  `tipo_ocorrencia` novo, fora das vistas gerais e do `periodoCompleto`, com seção própria.
+- Planilha nova dele: inserir abas com `adicionar_aba_xlsx.py` (nunca salvar com openpyxl).
+- Pacotes de teste em zip (Macros / Planilhas / Site + LEIA-ME) quando ele pede "tudo".
 - Dados pessoais (nomes, matrículas, salários): nunca no repositório nem em commits; só na conversa.
-- Código comentado para leigos (08/10, pedido do Dimitri): cada arquivo tem no topo "de onde vem /
-  para onde vai / quem depende dele"; o GerarCSVPonto tem um "MAPA DO MÓDULO" (quem chama quem e
-  que rotina gera cada tipo de linha) e o index.html tem "O QUE APARECE NA TELA -> QUEM DESENHA ->
-  DE ONDE VÊM OS DADOS" no comentário do topo do script e comentários no HTML de cada seção.
-  Ao mudar código, atualize esses mapas. Para conferir que uma mudança só mexeu em comentários,
-  compare o arquivo sem comentários com o do HEAD (o código restante tem que ser idêntico).
-
+- Código comentado para leigos; ao mudar código, atualizar os mapas no topo do index.html
+  ("O QUE APARECE NA TELA") e do GerarCSVPonto ("MAPA DO MÓDULO") e o histórico (seção 11).
