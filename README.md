@@ -301,6 +301,10 @@ justificativa, ou o RH lançou no sistema.
   cheia sem ela fechar; listas longas (curtas, top de digitadas, banco de horas) aparecem inteiras
   só em tela cheia ("Ver todos em tela cheia"); no mapa colaborador × dia a legenda fica em cima, há
   tela cheia, e com filtro some quem não tem nada no ciclo.
+- **De onde vem**: clicar numa barra, num pedaço colorido dela, numa fatia, num ponto da linha ou
+  num quadrado do mapa abre a lista de pessoas e registros que formam aquele número (ex.: o pedaço
+  vermelho da barra de um gestor nos afastamentos mostra quem teve atestado). O nome abre o card.
+- **Entenda o painel** reescrito para quem não conhece os processos do RH, sem termos técnicos.
 
 ## Ordem de uso no mês
 

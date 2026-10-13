@@ -529,6 +529,16 @@
   .card.card-cheia > .card-title{ font-size:18px; }
   .card.card-cheia .colab-tab, .card.card-cheia .card-body{ max-height:none; }
   @media (max-width: 620px){ .card.card-cheia{ inset:0; border-radius:0; padding:14px; } }
+
+  /* "De onde vem": marcas clicáveis e a janela com os registros */
+  .drill{ cursor:pointer; }
+  svg .chart-bar.drill:hover, svg .chart-seg.drill:hover{ filter:brightness(.88); }
+  #origemOverlay{ z-index:280; }
+  .modal-panel.origem-panel{ width:min(1000px, 96vw); }
+  .origem-body{ display:block; overflow:auto; padding:14px 20px 20px; }
+  .origem-pessoas{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+  .origem-chip{ font-size:12px; background:#F6F6F6; border:1px solid var(--c-line); border-radius:999px; padding:3px 10px; }
+  .origem-chip b{ color:var(--c-ink); margin-left:2px; }
   #chartTooltip{
     position:fixed; z-index:200; pointer-events:none;
     background:var(--c-navy-dark); color:#FFFFFF; font-size:12px;
@@ -774,7 +784,7 @@
       <!-- Faixa laranja do modo "Entenda o painel" (só visível com
            body.modo-explicacao). -->
       <section class="explica-banner" id="explicaBanner">
-        <p><strong>Modo explicação.</strong> É o mesmo painel, com uma caixa laranja em cada número, gráfico e tabela dizendo de onde vem a informação e como ela é calculada. Os filtros continuam funcionando. Clique em <strong>Voltar ao painel</strong> para esconder as explicações.</p>
+        <p><strong>Modo explicação.</strong> É o mesmo painel, com uma caixa laranja em cada número, gráfico e tabela dizendo, em palavras simples, de onde vem a informação e como ela é contada. Os filtros continuam funcionando, e clicar numa barra continua mostrando quem está nela. Clique em <strong>Voltar ao painel</strong> para esconder as explicações.</p>
         <button type="button" class="btn" id="btnExplicaVoltar">Voltar ao painel</button>
       </section>
 
@@ -806,19 +816,19 @@
           <div class="kpi-label">Colaboradores envolvidos</div>
           <div class="kpi-value" id="kpiColaboradores">0</div>
           <div class="kpi-sub" id="kpiColaboradoresSub"></div>
-          <div class="card-fonte"><span class="fonte-origem">De onde vem: planilha de Tratamento, coluna Nome</span><p>Quantas pessoas <strong>diferentes</strong> aparecem nas ocorrências do período filtrado. O número menor embaixo é o tamanho da equipe: sem filtro, todas as pessoas do ORG; filtrando um ou mais gestores, só as pessoas das equipes deles (o mesmo vale para grupo e cargo). Vem da lista do ORG, e quem tem ocorrência mas não está no ORG também conta.</p></div>
+          <div class="card-fonte"><span class="fonte-origem">De onde vem: o arquivo que o RH preparou para o painel</span><p>Quantas pessoas <strong>diferentes</strong> tiveram pelo menos uma ocorrência de ponto no período escolhido. Ocorrência é um problema no registro de ponto do dia: uma batida que faltou, um dia sem nenhuma batida, uma batida repetida etc. O número menor embaixo é o tamanho da equipe: sem filtro, todas as pessoas da empresa que estão no arquivo; escolhendo um ou mais gestores, só as pessoas das equipes deles (o mesmo vale para grupo e cargo). Assim dá para ler, por exemplo, “6 de 22 pessoas da equipe tiveram ocorrência”.</p></div>
         </div>
         <div class="kpi-tile">
           <div class="kpi-label">Ocorrências no período</div>
           <div class="kpi-value" id="kpiOcorrencias">0</div>
           <div class="kpi-sub" id="kpiOcorrenciasSub"></div>
-          <div class="card-fonte"><span class="fonte-origem">De onde vem: planilha de Tratamento, uma linha = uma ocorrência</span><p>Conta todas as linhas de ocorrência da Tratamento. <strong>Não entram:</strong> linhas com Check = S (o RH conferiu e não é problema), situação vazia ou “Sem alteração” e “Problema horário”. Hora extra, ocorrências curtas e os resumos têm vistas próprias e não entram nesta conta.</p></div>
+          <div class="card-fonte"><span class="fonte-origem">De onde vem: as ocorrências de ponto do mês, conferidas pelo RH</span><p>Quantas ocorrências de ponto aconteceram no período. Todo mês o RH recebe do sistema de ponto a lista de dias com problema (batida faltando, dia sem batida, batida repetida…) e confere um por um. Ficam <strong>de fora</strong> os casos que o RH conferiu e viu que não eram problema, e os dias sem alteração. Hora extra e atrasos pequenos (menos de 15 minutos) têm cards próprios e não entram nesta conta.</p></div>
         </div>
         <div class="kpi-tile k-slate">
           <div class="kpi-label">Demora média no PontoNet</div>
           <div class="kpi-value" id="kpiDemora">&ndash;</div>
           <div class="kpi-sub" id="kpiDemoraSub">Da ocorrência até a tratativa</div>
-          <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório baixado direto do PontoNet</span><p>Para cada ocorrência já <strong>INTEGRADA</strong> no PontoNet, mede o tempo entre a data da ocorrência e a data “Avaliado em”. O card mostra a média. Ocorrências ainda em aberto não entram, porque a data delas é provisória.</p></div>
+          <div class="card-fonte"><span class="fonte-origem">De onde vem: o PontoNet, onde o gestor aprova as justificativas</span><p>Quando há uma ocorrência, a justificativa precisa ser aprovada no PontoNet. Este número é o tempo médio entre o dia da ocorrência e o dia em que ela foi aprovada. Só entram as que já foram aprovadas; as que ainda estão esperando não entram, porque ainda não têm data de aprovação.</p></div>
         </div>
       </section>
 
@@ -834,31 +844,31 @@
           <div class="card">
             <div class="card-title">Ocorrências por tipo</div>
             <div class="card-hint">Distribuição das ocorrências registradas por tipo</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: planilha de Tratamento, coluna Situação</span><p>Cada fatia é uma situação (Falta ponto de saída, Sem marcação, Registro duplo…). O número no meio é o total, igual ao card “Ocorrências no período”.</p></div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: as ocorrências de ponto do mês</span><p>Cada fatia é um tipo de problema no ponto (faltou a batida de saída, dia sem nenhuma batida, batida repetida…). O número no meio é o total. <strong>Clique numa fatia</strong> para ver quem teve aquele tipo de ocorrência e em que dia. Clique nos nomes da legenda para mostrar só alguns tipos.</p></div>
             <div class="card-body donut-wrap" id="chartTipo"></div>
           </div>
           <div class="card">
             <div class="card-title">Ocorrências por dia da semana</div>
             <div class="card-hint">Em qual dia da semana as ocorrências mais acontecem</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: data da ocorrência (já vem no relatório do sistema)</span><p>As ocorrências baixadas do sistema já vêm com a data; o painel transforma a data no dia da semana e conta quantas caem em cada um.</p></div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: a data de cada ocorrência</span><p>Cada ocorrência tem uma data; o painel descobre o dia da semana dela e conta quantas caem em cada dia. Ajuda a ver se os problemas se concentram, por exemplo, na sexta ou na segunda. <strong>Clique</strong> numa barra (ou num pedaço colorido dela) para ver a lista de pessoas e registros que formam aquele número.</p></div>
             <div class="card-body" id="chartDiaSemana"></div>
           </div>
           <div class="card wide">
             <div class="card-title">Ocorrências por data</div>
             <div class="card-hint">Evolução diária no período filtrado</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: data da ocorrência (já vem no relatório do sistema)</span><p>Quantas ocorrências aconteceram em cada dia do período filtrado. Passe o mouse num ponto para ver o número exato daquele dia.</p></div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: a data de cada ocorrência</span><p>Quantas ocorrências aconteceram em cada dia do período. Passe o mouse num ponto para ver o número daquele dia; <strong>clique no ponto</strong> para ver quem foi.</p></div>
             <div class="card-body" id="chartPorData"></div>
           </div>
           <div class="card">
             <div class="card-title">Ocorrências por gestor</div>
             <div class="card-hint">Volume de ocorrências das equipes de cada gestor</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: relação colaborador × gestor</span><p>O gestor de cada linha vem da relação colaborador × gestor (coluna Gestor da Tratamento). “Sem gestor” = matrícula que não está na relação. Mostra os 12 gestores com mais ocorrências.</p></div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: a lista de quem é gestor de quem</span><p>Cada pessoa é ligada ao seu gestor pela lista de equipes que o RH mantém. A barra mostra quantas ocorrências a equipe de cada gestor teve, separadas por tipo (uma cor por tipo). “Sem gestor” = pessoa que não está nessa lista. Aparecem os 12 gestores com mais ocorrências. <strong>Clique</strong> numa barra (ou num pedaço colorido dela) para ver a lista de pessoas e registros que formam aquele número.</p></div>
             <div class="card-body" id="chartPorGestor"></div>
           </div>
           <div class="card">
             <div class="card-title">Ocorrências por cargo</div>
             <div class="card-hint">Volume de ocorrências por cargo/função</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: cargo de cada colaborador (cadastro RE)</span><p>Puxamos o cargo de cada um: primeiro a coluna Cargo da Tratamento; se estiver vazia, o cadastro (aba RE). Mostra os 12 cargos com mais ocorrências.</p></div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: o cadastro de cada colaborador</span><p>O cargo de cada pessoa vem do cadastro dos colaboradores. A barra mostra quantas ocorrências houve em cada cargo, separadas por tipo. Aparecem os 12 cargos com mais ocorrências. <strong>Clique</strong> numa barra (ou num pedaço colorido dela) para ver a lista de pessoas e registros que formam aquele número.</p></div>
             <div class="card-body" id="chartPorCargo"></div>
           </div>
         </section>
@@ -871,26 +881,26 @@
           <div class="card">
             <div class="card-title">Colaboradores com mais ocorrências</div>
             <div class="card-hint">Top 10 no período filtrado</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: planilha de Tratamento, coluna Nome</span><p>Contamos quantas vezes cada colaborador aparece na Tratamento (depois das mesmas exclusões do card “Ocorrências no período”). <strong>Clique no nome</strong> para abrir o card do colaborador.</p></div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: as ocorrências de ponto do mês</span><p>As pessoas com mais ocorrências no período, contadas do mesmo jeito que o card “Ocorrências no período”. <strong>Clique no nome</strong> para abrir o resumo completo da pessoa; clique na barra para ver cada ocorrência dela.</p></div>
             <div class="card-body" id="chartTopColaboradores"></div>
           </div>
           <div class="card">
             <div class="card-title">Extra e falta no mesmo dia</div>
             <div class="card-hint">Este mês e total dos últimos 3 meses &middot; linhas em vermelho atingiram 10+ ocorrências na soma dos 3 meses (pontuação negativa na auditoria)</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: Cartão Ponto (mês atual e os 2 anteriores) + fórmula</span><p>Puxamos o cartão ponto e uma fórmula marca “Sim” na coluna <strong>Banco de horas e extra no mesmo dia</strong> quando, no mesmo dia, a pessoa teve hora extra e lançamento no banco de horas. Contamos os “Sim”: <strong>Este mês</strong> = Cartão atual; <strong>3 meses</strong> = soma dos 3 Cartões. Com 10 ou mais, a linha fica vermelha. Não muda com o filtro de período.</p></div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: o espelho de ponto deste mês e dos 2 meses anteriores</span><p>O espelho de ponto é o relatório do sistema com todos os dias de cada pessoa: as batidas, as horas trabalhadas, as horas extras e as horas tiradas do banco de horas. Aqui contamos os dias em que a mesma pessoa, <strong>no mesmo dia</strong>, fez hora extra e também teve horas descontadas do banco (por atraso ou saída antes). Isso costuma indicar horário trocado ou batida no horário errado. <strong>Este mês</strong> = só o mês atual; <strong>3 meses</strong> = a soma dos 3 últimos. Com 10 ou mais na soma, a linha fica vermelha. Não muda com o filtro de período.</p></div>
             <div class="card-body" id="tableExtraFalta"></div>
           </div>
           <div class="card">
             <div class="card-title">Ocorrências curtas (&lt; 15 minutos)</div>
             <div class="card-hint">Colaboradores com mais faltas/atrasos ou horas extra registrados com menos de 15 minutos &middot; os 20 primeiros (a lista inteira abre em tela cheia)</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: Cartão Ponto do mês atual + fórmula</span><p>Puxamos o cartão ponto e uma fórmula preenche a coluna <strong>Tolerância &lt; 15min</strong> quando o dia teve falta/atraso ou hora extra de menos de 15 minutos. Cada dia marcado conta 1 (“Extra e Falta” conta 1 em cada coluna). Não depende do Check da Tratamento.</p></div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: o espelho de ponto deste mês</span><p>Dias em que a pessoa chegou atrasada, saiu antes ou fez hora extra de <strong>menos de 15 minutos</strong>. São diferenças pequenas, que muitas vezes passam despercebidas, mas que repetidas várias vezes mostram um hábito. Cada dia conta 1; quando no mesmo dia houve atraso e hora extra, conta 1 em cada coluna.</p></div>
             <div class="card-body" id="tableCurtas"></div>
             <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="curtas" id="btnCurtasTodos" hidden>Mostrar todos</button></div>
           </div>
           <div class="card">
             <div class="card-title">Banco de horas e hora extra por colaborador</div>
             <div class="card-hint" id="hintBancoHoras">Mês atual do Cartão Ponto &middot; verde = hora extra, vermelho = banco de horas, à direita o saldo (extra &minus; banco)</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: Cartão Ponto do mês atual, somado por colaborador</span><p>Puxamos o cartão ponto e somamos o mês inteiro de cada pessoa. <strong>Verde</strong> = hora extra (colunas 50% e 100%). <strong>Vermelho</strong> = banco de horas (coluna BH: horas descontadas do banco por falta, atraso ou saída antecipada). <strong>À direita</strong>, o saldo = extra &minus; banco: verde com “+” quando a pessoa fez mais extra do que faltou; vermelho com “&minus;” quando faltou mais. Não depende da Tratamento, do Check nem do filtro de período. Ordem: quem tem mais horas somadas (extra + banco).</p></div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: o espelho de ponto deste mês, somado por pessoa</span><p>O total do mês de cada pessoa. <strong>Verde</strong> = horas extras. <strong>Vermelho</strong> = horas descontadas do banco de horas (por falta, atraso ou saída antes do horário). <strong>À direita</strong>, o saldo: verde com “+” quando a pessoa fez mais hora extra do que teve desconto; vermelho com “&minus;” quando teve mais desconto. Vale o mês inteiro, sem depender do filtro de período. Ordem: quem tem mais horas somadas. Clique no nome para ver a pessoa.</p></div>
             <div class="card-body" id="chartBancoHoras"></div>
             <div class="card-toolbar"><button type="button" class="btn-ghost" id="btnBancoTodos" hidden>Mostrar todos</button></div>
           </div>
@@ -904,7 +914,7 @@
           <div class="card wide">
             <div class="card-title">Resumo por colaborador</div>
             <div class="card-hint">Pausas e intervalos de trabalho do relatório de Pausas Térmicas do mês atual &middot; linhas em vermelho têm marcações inválidas</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Pausas Térmicas do sistema (HRES114)</span><p>Puxamos o relatório de pausas térmicas direto do sistema e a macro deixa só a tabela por colaborador. Para cada pessoa: pausas corretas (20 min), pausas mais curtas ou mais longas que 20 min, blocos de trabalho de 1h40 corretos, maiores ou menores, e marcações ímpares (batida faltando). Nada é recalculado: o painel mostra os números do relatório.</p></div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de pausas térmicas do sistema de ponto</span><p>Quem trabalha em ambiente frio precisa fazer uma pausa de <strong>20 minutos</strong> a cada <strong>1 hora e 40 minutos</strong> de trabalho. O sistema de ponto confere isso pelas batidas de saída e volta da pausa. Para cada pessoa: quantas pausas foram certas (20 minutos), quantas foram mais curtas ou mais longas, quantos períodos de trabalho tiveram 1h40 certinho, mais ou menos, e quantas vezes ficou faltando uma batida (o sistema chama de “marcação ímpar”: a pessoa bateu a saída e não bateu a volta, por exemplo). O painel só mostra os números do relatório, sem recalcular.</p></div>
             <div class="card-body" id="tablePausasTermicas"></div>
           </div>
         </section>
@@ -916,62 +926,62 @@
         <h3 class="section-title">Marcações digitadas</h3>
         <div id="digSemDados" class="card wide" hidden><div class="chart-empty">Este CSV não traz as marcações digitadas. Formate o relatório com a macro FormatarMarcacoesDigitadas, traga a aba para a planilha de Tratamento e gere o CSV de novo.</div></div>
         <div id="digCorpo">
-          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema</span><p>Marcação digitada é a batida que <strong>não veio do relógio</strong>: o colaborador incluiu no PontoNet com uma justificativa, ou o RH lançou no sistema. Cada linha do relatório é uma marcação (uma batida), com o dia, a hora, o <strong>motivo</strong> (Inclusão por esquecimento, por atividade externa, problema no dispositivo...) e o texto da justificativa. As linhas com Origem “E” no relatório ficam de fora. O relatório não diz quem digitou (o colaborador ou o RH). Respeita os filtros de gestor, grupo, cargo, colaborador e período; não usa os filtros de tipo e status, que são das ocorrências da Tratamento.</p></div>
+          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: o relatório de batidas digitadas do sistema de ponto</span><p>Batida digitada é a batida que <strong>não foi feita no relógio de ponto</strong>: alguém lançou a hora à mão no sistema, com um motivo (esqueceu de bater, o relógio deu problema, estava trabalhando fora…) e um texto de justificativa. Cada batida digitada conta 1. O relatório não informa quem digitou (se foi a própria pessoa ou o RH). Esta seção segue os filtros de gestor, grupo, cargo, colaborador e período.</p></div>
           <section class="dig-kpis" id="digKpis"></section>
           <section class="grid">
             <div class="card">
               <div class="card-title">Marcações digitadas por motivo</div>
               <div class="card-hint">Por que a batida foi digitada</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema, coluna Motivo</span><p>O motivo escolhido na hora de incluir a marcação. “Esquecimento” é o que mais depende do colaborador; “dispositivo” e “atividade externa” costumam apontar relógio com problema ou trabalho fora do local.</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de batidas digitadas, motivo de cada uma</span><p>O motivo escolhido quando a batida foi digitada. “Esquecimento” é o que mais depende da própria pessoa; “problema no relógio” e “atividade externa” costumam indicar equipamento com defeito ou trabalho fora da empresa. <strong>Clique numa fatia</strong> para ver quem são as pessoas. Clique nos nomes da legenda para mostrar só alguns motivos.</p></div>
               <div class="card-body donut-wrap" id="chartDigMotivo"></div>
             </div>
             <div class="card">
               <div class="card-title">Por dia da semana</div>
               <div class="card-hint">Em que dia as batidas digitadas acontecem</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema, coluna Data</span><p>O dia da batida digitada (não o dia em que ela foi lançada no sistema).</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de batidas digitadas, data de cada uma</span><p>O dia da semana da batida digitada (o dia a que a batida se refere, não o dia em que ela foi lançada no sistema). <strong>Clique</strong> numa barra (ou num pedaço colorido dela) para ver a lista de pessoas e registros que formam aquele número.</p></div>
               <div class="card-body" id="chartDigDiaSemana"></div>
             </div>
             <div class="card wide">
               <div class="card-title">Por data</div>
               <div class="card-hint">Batidas digitadas dia a dia no período filtrado</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema, coluna Data</span><p>Quantas batidas digitadas existem para cada dia. Picos costumam coincidir com relógio parado ou com atividade externa da equipe.</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de batidas digitadas, data de cada uma</span><p>Quantas batidas foram digitadas para cada dia. Picos costumam coincidir com relógio parado ou com trabalho fora da empresa. <strong>Clique num ponto</strong> para ver quem foi.</p></div>
               <div class="card-body" id="chartDigData"></div>
             </div>
             <div class="card">
               <div class="card-title">Colaboradores com mais marcações digitadas</div>
               <div class="card-hint">Os 20 primeiros (a lista inteira abre em tela cheia) &middot; clique no nome para ver o colaborador</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema</span><p>Conta as batidas digitadas de cada pessoa. Passe o mouse para ver quantas foram por esquecimento.</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de batidas digitadas</span><p>Quantas batidas digitadas cada pessoa teve, separadas por motivo. Passe o mouse para ver quantas foram por esquecimento. Clique no nome para abrir o resumo da pessoa; clique na barra para ver cada batida dela.</p></div>
               <div class="card-body" id="chartDigTop"></div>
               <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="digTop" id="btnDigTopTodos" hidden>Mostrar todos</button></div>
             </div>
             <div class="card">
               <div class="card-title">Marcações digitadas por gestor</div>
               <div class="card-hint">Equipes que mais digitam batidas</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema + relação colaborador × gestor</span><p>O gestor vem da Tratamento ou, se a pessoa não aparece lá, da aba ORG. Mostra os 12 maiores.</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de batidas digitadas + a lista de quem é gestor de quem</span><p>Quantas batidas digitadas houve em cada equipe, separadas por motivo. Aparecem os 12 gestores com mais batidas. <strong>Clique</strong> numa barra (ou num pedaço colorido dela) para ver a lista de pessoas e registros que formam aquele número.</p></div>
               <div class="card-body" id="chartDigGestor"></div>
             </div>
             <div class="card wide">
               <div class="card-title">Horário das marcações digitadas</div>
               <div class="card-hint">Hora da batida digitada &middot; mostra se o que se digita é a entrada, o intervalo ou a saída</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema, coluna Hora</span><p>Batidas digitadas agrupadas pela hora cheia (7h = de 07:00 a 07:59).</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de batidas digitadas, hora de cada uma</span><p>As batidas digitadas agrupadas pela hora (7h = de 07:00 a 07:59). Mostra se o que se digita é mais a entrada, a volta do almoço ou a saída. <strong>Clique</strong> numa barra (ou num pedaço colorido dela) para ver a lista de pessoas e registros que formam aquele número.</p></div>
               <div class="card-body" id="chartDigHora"></div>
             </div>
             <div class="card">
               <div class="card-title">Esquecimento repetido</div>
               <div class="card-hint">Quem mais digitou batida por esquecimento no período</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema, motivo “Inclusão por esquecimento”</span><p>Só as batidas com o motivo de esquecimento, por colaborador, com quantos dias diferentes isso aconteceu. É a lista mais útil para conversar com a pessoa.</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de batidas digitadas, só o motivo “esquecimento”</span><p>Só as batidas digitadas porque a pessoa esqueceu de bater, por colaborador, com em quantos dias diferentes isso aconteceu. É a lista mais útil para uma conversa com a pessoa.</p></div>
               <div class="card-body" id="tableDigEsquecimento"></div>
             </div>
             <div class="card">
               <div class="card-title">Justificativas mais usadas</div>
               <div class="card-hint">O texto que foi escrito ao digitar a batida</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema, coluna Justificativa</span><p>O texto livre da justificativa, agrupado (sem diferenciar maiúscula, acento e ponto final). Textos repetidos por muita gente, como “relógio com horário incorreto”, apontam um problema de equipamento, não da pessoa.</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de batidas digitadas, texto da justificativa</span><p>O texto escrito ao digitar a batida, juntando os textos iguais (sem diferenciar maiúscula, acento ou ponto final). Quando muita gente escreve a mesma coisa, como “relógio com horário errado”, o problema provavelmente é do equipamento, não da pessoa.</p></div>
               <div class="card-body" id="tableDigJust"></div>
             </div>
             <div class="card wide">
               <div class="card-title">Todas as marcações digitadas</div>
               <div class="card-hint" id="digListaHint">Lista completa do filtro atual</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema</span><p>Uma linha por batida digitada. “Ocorrência no dia” = a pessoa também tem uma ocorrência da Tratamento nesse mesmo dia.</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de batidas digitadas</span><p>Uma linha por batida digitada, com dia, hora, motivo e justificativa. “Ocorrência no dia” = a pessoa também teve uma ocorrência de ponto nesse mesmo dia.</p></div>
               <div class="org-toolbar"><input type="text" id="digBusca" placeholder="Buscar por colaborador, gestor, motivo, justificativa..."><span id="digCount" style="font-size:12px;color:var(--c-muted);"></span></div>
               <div class="card-body" id="tableDigLista"></div>
             </div>
@@ -986,7 +996,7 @@
         <h3 class="section-title">Afastamentos</h3>
         <div id="absSemDados" class="card wide" hidden><div class="chart-empty">Este CSV não traz os afastamentos. Formate o relatório Histórico de Afastamentos com a macro FormatarAfastamentos, traga a aba para a planilha de Tratamento e gere o CSV de novo.</div></div>
         <div id="absCorpo">
-          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: relatório Histórico de Afastamentos do sistema (HRCL006)</span><p>Cada linha do relatório é um afastamento registrado no sistema, com início e término. A evolução, o “por gestor” e o mapa mostram <strong>todos os tipos</strong>, cada um com uma cor (atestado em vermelho), agrupados em: atestado, férias, viagem a serviço, reunião/curso/treinamento, saída médica e horas, acidente/doença/falta e outros. Use “Mostrar: Só atestados” para ver só os atestados. Saídas de poucas horas (saída médica, horas faltas) não contam como dia: aparecem no resumo, em horas. As vistas “encostados em folga” e “ranking” são sempre só de atestados. Os dias são <strong>corridos</strong>, do início ao término; cada registro do sistema = <strong>1 atestado</strong> (dois atestados seguidos contam 2). Para saber se o atestado encosta numa folga, o painel olha o Cartão Ponto da pessoa no dia antes e no dia depois. Respeita os filtros de gestor, grupo, cargo e colaborador; o filtro de período não se aplica (use o seletor de ciclo abaixo). Sem o relatório de afastamentos, o painel usa os atestados tirados do Cartão.</p></div>
+          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: o relatório de afastamentos do sistema</span><p>Afastamento é qualquer período em que a pessoa não esteve trabalhando no lugar de sempre e isso foi registrado no sistema: atestado médico, férias, viagem a serviço, reunião, curso, saída para consulta, licença etc. Cada registro tem uma data de início e uma de fim. Os gráficos mostram <strong>todos os tipos</strong>, cada um com uma cor (atestado sempre em vermelho); em “Mostrar” dá para ver só atestados. Saídas de poucas horas (consulta médica, horas de falta) não contam como dia: aparecem no resumo, em horas. Os dias são contados do início ao fim, incluindo fim de semana. O mês aqui é o <strong>ciclo do ponto</strong>, que vai do dia 28 de um mês ao dia 27 do mês seguinte; escolha o ciclo no seletor. Segue os filtros de gestor, grupo, cargo e colaborador; o filtro de período não vale aqui.</p></div>
           <div class="abs-toolbar">
             <label for="absCiclo" style="font-size:11.5px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:.04em;">Ciclo</label>
             <select id="absCiclo"></select>
@@ -998,39 +1008,39 @@
             <div class="card wide">
               <div class="card-title">Evolução mês a mês, por tipo</div>
               <div class="card-hint" id="absEvolHint">Dias de afastamento em cada ciclo (28 a 27)</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Afastamentos do sistema</span><p>Cada dia de atestado conta no ciclo em que caiu (um atestado que atravessa o dia 27/28 é dividido entre os dois ciclos). Com um ciclo escolhido no seletor, o gráfico mostra as semanas desse ciclo e a linha dele fica destacada na tabela. A tabela mostra também quantos atestados começaram no ciclo e quantas pessoas tiveram atestado.</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de afastamentos do sistema</span><p>Quantos dias de afastamento houve em cada ciclo (do dia 28 ao dia 27), separados por tipo. Um afastamento que passa do dia 27 para o 28 tem os dias divididos entre os dois ciclos. Escolhendo um ciclo no seletor, o gráfico mostra semana a semana. A tabela mostra também quantos afastamentos começaram no ciclo e quantas pessoas foram afastadas. <strong>Clique</strong> numa barra (ou num pedaço colorido dela) para ver a lista de pessoas e registros que formam aquele número.</p></div>
               <div class="card-body" id="chartAbsEvolucao"></div>
               <div class="card-body" id="tableAbsEvolucao" style="margin-top:10px"></div>
             </div>
             <div class="card">
               <div class="card-title">Por <select id="absAgrupar" style="width:auto;display:inline-block;padding:3px 8px;font-size:13px;"><option value="gestor">gestor</option><option value="setor">setor</option><option value="cargo">cargo</option></select></div>
               <div class="card-hint">Dias de afastamento no ciclo escolhido, por tipo &middot; 12 maiores</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Afastamentos + relação colaborador × gestor</span><p>Gestor: da Tratamento ou, se a pessoa não aparece lá, do ORG. Setor: a coluna Setor do Cartão Ponto (a área, ex.: Ativ. Trade Marketing A). Cargo: do cadastro RE.</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de afastamentos + a lista de quem é gestor de quem</span><p>Quantos dias de afastamento houve em cada equipe (ou em cada área, ou cargo, conforme o seletor do título), separados por tipo. Ex.: clicando no pedaço vermelho da barra de um gestor, aparecem as pessoas da equipe dele que tiveram atestado e cada atestado.</p></div>
               <div class="card-body" id="chartAbsGrupo"></div>
             </div>
             <div class="card">
               <div class="card-title">Atestados encostados em folga</div>
               <div class="card-hint">O dia logo antes do início ou logo depois do fim do atestado é folga da pessoa (DSR, folga, compensado ou feriado) &middot; a lista abaixo mostra qual dia e qual folga</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Afastamentos do sistema</span><p>Para cada atestado do relatório, olha o Cartão Ponto da própria pessoa no dia anterior ao início e no dia seguinte ao término. Se um deles é DSR, folga, compensado ou feriado, o atestado “encosta” na folga — e emenda o descanso. O gráfico mostra em que dia da semana os atestados começam.</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de afastamentos + o espelho de ponto</span><p>Para cada atestado, o painel olha no espelho de ponto da própria pessoa o dia anterior ao início e o dia seguinte ao fim. Se um desses dias era folga (folga semanal, folga compensada ou feriado), o atestado “encosta” na folga e emenda o descanso. O gráfico mostra em que dia da semana os atestados começam. <strong>Clique</strong> numa barra (ou num pedaço colorido dela) para ver a lista de pessoas e registros que formam aquele número.</p></div>
               <div class="abs-resumo" id="absEmendaResumo"></div>
               <div class="card-body" id="chartAbsDiaSemana"></div>
             </div>
             <div class="card wide">
               <div class="card-title">Ranking dos últimos 3 meses</div>
               <div class="card-hint">Linhas em vermelho: reincidência (atestado em 2 ou mais meses, ou 3 ou mais atestados)</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Afastamentos do sistema</span><p>Soma todos os atestados do relatório (3 meses), sem olhar o seletor de ciclo. “Meses” = em quantos ciclos a pessoa teve atestado; “Encostados em folga” = quantos dos atestados dela emendaram uma folga.</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de afastamentos</span><p>Todos os atestados dos últimos 3 meses, por pessoa. “Meses” = em quantos ciclos diferentes a pessoa teve atestado; “Encostados em folga” = quantos dos atestados dela emendaram uma folga. A linha fica vermelha quando a pessoa teve atestado em 2 ou mais meses, ou 3 ou mais atestados.</p></div>
               <div class="card-body" id="tableAbsRanking"></div>
             </div>
             <div class="card wide">
               <div class="card-title">Atestados encostados em folga — lista</div>
               <div class="card-hint">No ciclo escolhido &middot; “Folga encostada” = o dia de folga que fica colado no atestado (ex.: atestado na segunda com o domingo de DSR antes)</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Afastamentos do sistema + Cartão Ponto</span><p>Cada atestado que encosta numa folga. A coluna “Folga encostada” mostra o dia (data e dia da semana), o que o Cartão Ponto da própria pessoa diz naquele dia (DSR, Compensado, Feriado…) e se ele fica <strong>antes do início</strong> ou <strong>depois do fim</strong> do atestado. Quando as duas pontas encostam em folga, aparecem as duas.</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de afastamentos + o espelho de ponto</span><p>Cada atestado que encosta numa folga. A coluna “Folga encostada” mostra o dia (data e dia da semana), que tipo de folga era (folga semanal, compensada, feriado…) e se ela fica <strong>antes do início</strong> ou <strong>depois do fim</strong> do atestado. Quando as duas pontas encostam em folga, aparecem as duas.</p></div>
               <div class="card-body" id="tableAbsEmendas"></div>
             </div>
             <div class="card wide">
               <div class="card-title">Mapa colaborador × dia</div>
               <div class="card-hint" id="absHeatHint">Dias de afastamento no ciclo</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Afastamentos do sistema</span><p>Uma linha para <strong>cada pessoa que teve atestado em algum momento dos últimos 3 meses</strong> (quem não teve atestado no ciclo mostrado fica com a linha vazia), uma coluna por dia (28 a 27). À direita, os dias de atestado no ciclo e nos 3 meses. Quadrado vermelho = dia de atestado; colunas cinza = sábado e domingo. Com “Últimos 3 meses” no seletor, o mapa mostra o ciclo mais recente.</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de afastamentos</span><p>Uma linha por pessoa e uma coluna por dia do ciclo (do dia 28 ao 27). Cada quadrado colorido é um dia de afastamento, na cor do tipo (atestado em vermelho); colunas cinza são sábado e domingo. Sem filtro, aparece todo mundo que teve afastamento nos últimos 3 meses (linha vazia = nada neste ciclo). Clicando num tipo da legenda, ficam só as pessoas com aquele tipo no ciclo. Passe o mouse num quadrado para ver o tipo; <strong>clique</strong> para ver o afastamento inteiro. À direita, os dias no ciclo e nos 3 meses.</p></div>
               <div class="heat-leg" id="absHeatLeg"><span class="l-fds">Sábado e domingo</span></div>
               <div class="heat-wrap" id="absHeat"></div>
             </div>
@@ -1047,13 +1057,13 @@
             <div class="card-title">Média e maior demora por gestor</div>
             <div class="card-hint">Tempo entre a ocorrência e a tratativa/aprovação no sistema, por gestor &middot; linhas em amarelo: o gestor esteve de férias enquanto as ocorrências esperavam tratativa</div>
             <div class="card-hint" id="hintDemoraFerias" hidden style="color:#7A5A00">Este CSV não traz o relatório de Afastamentos: o aviso de férias do gestor não aparece. Traga a aba Afastamentos para a planilha e gere o CSV de novo.</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório baixado direto do PontoNet</span><p>Mesmo cálculo do card “Demora média no PontoNet” (da data da ocorrência até o “Avaliado em”, só casos INTEGRADOS), agrupado pelo gestor: quantas foram tratadas, a demora média e a maior. <strong>Aviso de férias:</strong> o painel procura o gestor no relatório de Afastamentos do sistema (pelo nome); se ele teve férias entre a primeira ocorrência e a última tratativa da equipe, a linha fica amarela com as datas — nesse tempo ele não tinha como tratar no PontoNet. A demora continua contada do mesmo jeito; o aviso é para não ler esse número como descuido.</p></div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: o PontoNet, onde o gestor aprova as justificativas</span><p>O mesmo cálculo do card “Demora média no PontoNet” (do dia da ocorrência até a aprovação), separado por gestor: quantas foram aprovadas, a demora média e a maior. <strong>Aviso de férias:</strong> se o gestor esteve de férias entre a primeira ocorrência e a última aprovação da equipe, a linha fica amarela com as datas, porque nesse tempo ele não tinha como aprovar. A demora continua contada do mesmo jeito; o aviso é para não ler esse número como descuido.</p></div>
             <div class="card-body" id="tableDemoraGestor"></div>
           </div>
           <div class="card wide">
             <div class="card-title">Média e maior demora por colaborador</div>
             <div class="card-hint">Tempo entre a ocorrência e a tratativa/aprovação no sistema, por colaborador &middot; linhas em amarelo: o gestor (ou o próprio colaborador) esteve de férias nesse meio-tempo</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório baixado direto do PontoNet</span><p>Mesmo cálculo, agrupado pelo colaborador. Ajuda a ver quem tem justificativas que ficam muito tempo paradas. Linha amarela = o gestor da pessoa (ou ela mesma) esteve de férias no meio do caminho, pelo relatório de Afastamentos. Clique no nome para abrir o card do colaborador.</p></div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: o PontoNet, onde o gestor aprova as justificativas</span><p>O mesmo cálculo, separado por pessoa. Ajuda a ver justificativas que ficam muito tempo esperando aprovação. Linha amarela = o gestor da pessoa (ou ela mesma) esteve de férias no meio do caminho. Clique no nome para abrir o resumo da pessoa.</p></div>
             <div class="card-body" id="tableDemoraColaborador"></div>
           </div>
         </section>
@@ -1063,7 +1073,7 @@
       <div class="pagina" data-pagina="org">
         <h3 class="section-title">Lista de colaboradores (ORG)</h3>
         <section class="card wide" id="orgSection">
-          <div class="card-fonte"><span class="fonte-origem">De onde vem: aba ORG (relação colaborador × gestor)</span><p>Todo mundo que está na aba ORG da planilha, com o gestor de cada um. Para cada pessoa, o painel junta as ocorrências do filtro atual, as batidas digitadas e as horas do Cartão do mês. Pessoas do ORG “sem matrícula” são linhas em que a fórmula do ORG deu #N/A. O seletor ao lado da busca serve para achar cadastro a corrigir: sem matrícula, sem gestor, sem cargo ou sem área. Quem tem dados no arquivo mas não está no ORG não aparece nesta lista; o card dessa pessoa mostra “Não está no ORG”. Clique no nome para abrir o card.</p></div>
+          <div class="card-fonte"><span class="fonte-origem">De onde vem: a lista de equipes que o RH mantém (quem é gestor de quem)</span><p>Todas as pessoas da lista de equipes, com o gestor de cada uma. Para cada pessoa, o painel junta as ocorrências do filtro, as batidas digitadas e as horas do mês. O seletor ao lado da busca ajuda a achar cadastros incompletos (sem matrícula, sem gestor, sem cargo ou sem área). Quem aparece no arquivo mas não está na lista de equipes não aparece aqui; o resumo dessa pessoa avisa “Não está na lista de equipes”. Clique no nome para abrir o resumo.</p></div>
           <div class="org-resumo" id="orgResumo"></div>
           <div class="org-toolbar">
             <input type="text" id="orgBusca" placeholder="Buscar por nome, matrícula, gestor, cargo...">
@@ -1084,7 +1094,7 @@
       <div class="pagina" data-pagina="historico">
         <h3 class="section-title">Histórico de ocorrências</h3>
         <section class="card wide" id="historySection">
-          <div class="card-fonte"><span class="fonte-origem">De onde vem: planilha de Tratamento + PontoNet</span><p>Todas as ocorrências do filtro, linha a linha — as mesmas contadas no card “Ocorrências no período”. A situação mostrada é a justificativa do PontoNet quando existe; senão, a situação da Tratamento. Status “Regularizado” = Tratado na planilha; o resto aparece como “Pendente”.</p></div>
+          <div class="card-fonte"><span class="fonte-origem">De onde vem: as ocorrências de ponto do mês + o PontoNet</span><p>Todas as ocorrências do filtro, uma por linha: as mesmas contadas no card “Ocorrências no período”. A coluna de situação mostra a justificativa aprovada no PontoNet quando já existe. Status “Regularizado” = o RH já resolveu; “Pendente” = ainda não.</p></div>
           <div class="history-toolbar">
             <input type="text" id="historySearch" placeholder="Buscar por colaborador, gestor, setor...">
             <span id="historyCount" style="font-size:12px;color:var(--c-muted);"></span>
@@ -1223,6 +1233,23 @@
 
   <!-- Card do colaborador (janela por cima da tela), aberto ao clicar em qualquer
        nome; o conteúdo é montado por abrirCardColaborador. -->
+  <!-- Janela "De onde vem" (abrirOrigem): os registros por trás de uma
+       barra/fatia/ponto clicado. Fica por baixo do card do colaborador. -->
+  <div class="modal-overlay" id="origemOverlay" hidden>
+    <div class="modal-panel origem-panel" role="dialog" aria-modal="true" aria-labelledby="origemTitulo">
+      <div class="modal-header">
+        <div style="flex:1 1 auto;min-width:0;">
+          <h2 class="modal-title" id="origemTitulo"></h2>
+          <div class="modal-hint" id="origemSub"></div>
+        </div>
+        <button class="modal-close" id="origemFechar" type="button" aria-label="Fechar">&times;</button>
+      </div>
+      <div class="modal-body origem-body">
+        <div class="origem-pessoas" id="origemPessoas"></div>
+        <div id="origemTabela"></div>
+      </div>
+    </div>
+  </div>
   <div class="modal-overlay" id="colabModalOverlay" hidden>
     <div class="modal-panel colab-panel" role="dialog" aria-modal="true" aria-labelledby="colabModalTitle">
       <div class="modal-header">
@@ -1320,6 +1347,9 @@
          cores fixas por tipo: prepararCoresSeries/serieDe/corSerie (5 cores + "Outros")
        Selo 📅 de período de cada card ... atualizarPeriodosCards (PERIODO_DOS_CARDS)
        Botão ⛶ (tela cheia) ............ abrirTelaCheia/fecharTelaCheia (.card-cheia)
+       Clique numa barra/fatia/ponto/quadrado ("de onde vem") ... abrirOrigem
+         (registros guardados por empilhar/anexarOrigem/legendaSerie/ocorrenciasPorData,
+         marcarOrigem no contêiner, data-drill no elemento; janela #origemOverlay)
        "geral": por tipo/dia/data/gestor/cargo  renderDonut/BarV/Line/BarH + ocorrenciasPor*
                                                  ................. getFilteredRecords sem Hora Extra
        "destaque": top colaboradores ... topColaboradores ....... idem
@@ -1671,11 +1701,11 @@
   // Legenda completa (todas as séries dos registros, mesmo as desligadas),
   // da maior para a menor, "Outros" por último.
   function legendaSerie(dim, recs, serieFn, corFn){
-    var tot = {};
-    recs.forEach(function(r){ var sr = serieFn(r); if (sr != null) tot[sr] = (tot[sr] || 0) + 1; });
+    var tot = {}, lista = {};
+    recs.forEach(function(r){ var sr = serieFn(r); if (sr != null){ tot[sr] = (tot[sr] || 0) + 1; (lista[sr] = lista[sr] || []).push(r); } });
     return Object.keys(tot).sort(function(a,b){
       return (a === ROTULO_OUTROS) - (b === ROTULO_OUTROS) || tot[b]-tot[a] || a.localeCompare(b,"pt-BR");
-    }).map(function(sr){ return { label:sr, color:corFn(sr), value:tot[sr], dim:dim, off:!serieAtiva(dim, sr) }; });
+    }).map(function(sr){ return { label:sr, color:corFn(sr), value:tot[sr], dim:dim, off:!serieAtiva(dim, sr), recs:lista[sr] }; });
   }
   document.addEventListener("click", function(e){
     var b = e.target.closest && e.target.closest("[data-serie-dim]");
@@ -1981,21 +2011,35 @@
   // cada item a lista item.segs [{label, value, color}] e devolve a legenda
   // (tipos do maior para o menor no total), que vai como opts.legenda para
   // renderBarH/renderBarV desenharem a legendinha em cima do gráfico.
+  // Também guarda os registros de cada barra (it.recs) e de cada pedaço
+  // (seg.recs): é o que aparece ao clicar nela ("de onde vem", abrirOrigem).
   function empilhar(items, records, chaveFn, segFn, corFn){
-    var porChave = {}, total = {};
+    var porChave = {}, total = {}, recsChave = {}, recsSeg = {};
     records.forEach(function(r){
       var k = chaveFn(r), sg = segFn(r);
       if (k == null || sg == null) return;
       porChave[k] = porChave[k] || {};
       porChave[k][sg] = (porChave[k][sg] || 0) + 1;
       total[sg] = (total[sg] || 0) + 1;
+      (recsChave[k] = recsChave[k] || []).push(r);
+      recsSeg[k] = recsSeg[k] || {};
+      (recsSeg[k][sg] = recsSeg[k][sg] || []).push(r);
     });
     var ordem = Object.keys(total).sort(function(a,b){ return total[b]-total[a] || a.localeCompare(b,"pt-BR"); });
     items.forEach(function(it){
       var m = porChave[it.label] || {};
-      it.segs = ordem.filter(function(sg){ return m[sg]; }).map(function(sg){ return { label:sg, value:m[sg], color:corFn(sg) }; });
+      it.recs = recsChave[it.label] || [];
+      it.segs = ordem.filter(function(sg){ return m[sg]; }).map(function(sg){ return { label:sg, value:m[sg], color:corFn(sg), recs:recsSeg[it.label][sg] }; });
     });
     return ordem.map(function(sg){ return { label:sg, color:corFn(sg), value:total[sg] }; });
+  }
+  // Guarda em cada item os registros que formam aquela barra (sem pedaços
+  // por tipo), para o clique "de onde vem" (abrirOrigem).
+  function anexarOrigem(items, records, chaveFn){
+    var m = {};
+    records.forEach(function(r){ var k = chaveFn(r); if (k != null) (m[k] = m[k] || []).push(r); });
+    items.forEach(function(it){ it.recs = m[it.label] || []; });
+    return items;
   }
   // Legendinha (bolinha colorida + nome + total) que fica em cima do gráfico.
   // Itens com .dim (legendaSerie) viram botões: clicar filtra o gráfico.
@@ -2036,7 +2080,8 @@
       svg.appendChild(label);
       var track = svgEl("rect", { x:leftW, y:y, width:plotW, height:rowH, class:"chart-track", rx:3 });
       svg.appendChild(track);
-      var bar = svgEl("rect", { x:leftW, y:y, width:it.segs ? 0 : w, height:rowH, fill: it.color || "var(--c-orange)", class:"chart-bar", rx:3, "data-tooltip": it.label + ": " + formatNum(it.value) + (it.extra ? " (" + it.extra + ")" : "") + (opts.colab ? " · clique para ver o colaborador" : "") });
+      var bar = svgEl("rect", { x:leftW, y:y, width:it.segs ? 0 : w, height:rowH, fill: it.color || "var(--c-orange)", class:"chart-bar" + (it.recs ? " drill" : ""), rx:3, "data-tooltip": it.label + ": " + formatNum(it.value) + (it.extra ? " (" + it.extra + ")" : "") + (opts.colab ? " · clique no nome para ver o colaborador" : "") });
+      if (it.recs) bar.setAttribute("data-drill", idx);
       svg.appendChild(bar);
       // it.segs: barra empilhada (um pedaço por tipo, da esquerda para a direita)
       var segEls = [];
@@ -2045,14 +2090,16 @@
         it.segs.forEach(function(sg){
           if (!sg.value) return;
           var ws = max ? (sg.value/max) * plotW : 0;
-          var r = svgEl("rect", { x:xs, y:y, width:Math.max(ws, 1), height:rowH, fill: sg.color, class:"chart-bar seg",
-            "data-tooltip": it.label + " · " + sg.label + ": " + formatNum(sg.value) + " (" + Math.round(sg.value*100/it.value) + "%)" });
+          var r = svgEl("rect", { x:xs, y:y, width:Math.max(ws, 1), height:rowH, fill: sg.color, class:"chart-bar seg" + (sg.recs ? " drill" : ""),
+            "data-tooltip": it.label + " · " + sg.label + ": " + formatNum(sg.value) + " (" + Math.round(sg.value*100/it.value) + "%)" + (sg.recs ? " · clique para ver quem" : "") });
+          if (sg.recs) r.setAttribute("data-drill", idx + ":" + it.segs.indexOf(sg));
           svg.appendChild(r); segEls.push(r); xs += ws;
         });
       }
       // opts.colab: cada linha é um colaborador — nome, trilho e barra
       // abrem o card do colaborador (ver abrirCardColaborador, seção 9)
-      if (opts.colab){ [label, track, bar].concat(segEls).forEach(function(el){ el.setAttribute("data-colab", it.label); }); }
+      // (a barra e os pedaços, quando têm registros, abrem o "de onde vem")
+      if (opts.colab){ [label, track].concat(it.recs ? [] : [bar].concat(segEls)).forEach(function(el){ el.setAttribute("data-colab", it.label); }); }
       var val = svgEl("text", { x: leftW + w + 8, y: y+rowH/2+4, class:"chart-value" });
       val.textContent = formatNum(it.value);
       svg.appendChild(val);
@@ -2060,6 +2107,7 @@
     if (opts.legenda) container.appendChild(legendaMini(opts.legenda));
     container.appendChild(svg);
     wireTooltips(svg);
+    marcarOrigem(container, items);
   }
 
   // "Banco de horas e hora extra por colaborador": cada barra tem a parte
@@ -2140,18 +2188,24 @@
         // barra empilhada: um pedaço por tipo, de baixo para cima. Atrás
         // deles, um retângulo transparente guarda o total no balão (é o que
         // a ferramenta de conferência lê; o mouse vê os pedaços por cima).
-        svg.appendChild(svgEl("rect", { x:x, y:y, width:w, height:Math.max(h,0), fill:"transparent",
-          "data-tooltip": it.label + ": " + formatNum(it.value) }));
+        var fundo = svgEl("rect", { x:x, y:y, width:w, height:Math.max(h,0), fill:"transparent", class: it.recs ? "drill" : "",
+          "data-tooltip": it.label + ": " + formatNum(it.value) });
+        if (it.recs) fundo.setAttribute("data-drill", idx);
+        svg.appendChild(fundo);
         var yb = padT + plotH;
         it.segs.forEach(function(sg){
           if (!sg.value) return;
           var hs = max ? (sg.value/max)*plotH : 0;
           yb -= hs;
-          svg.appendChild(svgEl("rect", { x:x, y:yb, width:w, height:Math.max(hs, 0.5), fill: sg.color, class:"chart-bar seg",
-            "data-tooltip": it.label + " · " + sg.label + ": " + formatNum(sg.value) + " (" + Math.round(sg.value*100/it.value) + "%)" }));
+          var pd = svgEl("rect", { x:x, y:yb, width:w, height:Math.max(hs, 0.5), fill: sg.color, class:"chart-bar seg" + (sg.recs ? " drill" : ""),
+            "data-tooltip": it.label + " · " + sg.label + ": " + formatNum(sg.value) + " (" + Math.round(sg.value*100/it.value) + "%)" + (sg.recs ? " · clique para ver quem" : "") });
+          if (sg.recs) pd.setAttribute("data-drill", idx + ":" + it.segs.indexOf(sg));
+          svg.appendChild(pd);
         });
       } else {
-        svg.appendChild(svgEl("rect", { x:x, y:y, width:w, height:Math.max(h,0), fill: it.color || "var(--c-navy)", rx:3, class:"chart-bar", "data-tooltip": it.label+": "+formatNum(it.value) }));
+        var bv = svgEl("rect", { x:x, y:y, width:w, height:Math.max(h,0), fill: it.color || "var(--c-navy)", rx:3, class:"chart-bar" + (it.recs ? " drill" : ""), "data-tooltip": it.label+": "+formatNum(it.value) });
+        if (it.recs) bv.setAttribute("data-drill", idx);
+        svg.appendChild(bv);
       }
       var vt = svgEl("text", { x:x+w/2, y:y-6, class:"chart-value-top", "text-anchor":"middle" });
       vt.textContent = formatNum(it.value);
@@ -2163,6 +2217,7 @@
     if (opts.legenda) container.appendChild(legendaMini(opts.legenda));
     container.appendChild(svg);
     wireTooltips(svg);
+    marcarOrigem(container, items);
   }
 
   // Ponto num círculo de raio r e centro (cx,cy) no ângulo dado (radianos).
@@ -2207,7 +2262,9 @@
         var a0 = angle, a1 = angle + frac*Math.PI*2;
         angle = a1;
         var d = donutSegmentPath(cx,cy,rInner,rOuter,a0,a1);
-        svg.appendChild(svgEl("path", { d:d, fill: it.color, class:"chart-seg" + (it.off ? " off" : ""), "data-tooltip": it.label+": "+formatNum(it.value)+" ("+(frac*100).toFixed(1)+"%)" }));
+        var fatia = svgEl("path", { d:d, fill: it.color, class:"chart-seg" + (it.off ? " off" : "") + (it.recs ? " drill" : ""), "data-tooltip": it.label+": "+formatNum(it.value)+" ("+(frac*100).toFixed(1)+"%)" });
+        if (it.recs) fatia.setAttribute("data-drill", items.indexOf(it));
+        svg.appendChild(fatia);
       });
     }
     var centerText = svgEl("text", { x:cx, y:cy+6, "text-anchor":"middle", class:"donut-total" });
@@ -2239,6 +2296,7 @@
     container.className = "card-body donut-wrap";
     container.appendChild(wrap);
     container.appendChild(legend);
+    marcarOrigem(container, items);
   }
 
   // Gráfico de linha com área preenchida embaixo — usado só pro
@@ -2274,7 +2332,9 @@
     // de qualquer dia sempre aparece passando o mouse.
     var labelEveryValor = Math.max(1, Math.round(16/Math.max(stepX,1)));
     coords.forEach(function(c,i){
-      svg.appendChild(svgEl("circle", { cx:c[0], cy:c[1], r:7, class:"chart-hit", "data-tooltip": points[i].label+": "+formatNum(points[i].value) }));
+      var hit = svgEl("circle", { cx:c[0], cy:c[1], r:7, class:"chart-hit" + (points[i].recs ? " drill" : ""), "data-tooltip": points[i].label+": "+formatNum(points[i].value) });
+      if (points[i].recs) hit.setAttribute("data-drill", i);
+      svg.appendChild(hit);
       if (i % labelEveryValor === 0 || i === coords.length-1){
         var vt = svgEl("text", { x:c[0], y:c[1]-9, class:"chart-value-top", "text-anchor":"middle" });
         vt.textContent = formatNum(points[i].value);
@@ -2312,6 +2372,7 @@
     });
     container.appendChild(svg);
     wireTooltips(svg);
+    marcarOrigem(container, points);
   }
 
   /* =========================================================
@@ -2354,11 +2415,11 @@
   }
   // Um ponto por dia que TEM ocorrência (dias sem nenhuma não aparecem no eixo).
   function ocorrenciasPorData(records){
-    var map = {};
-    records.forEach(function(r){ map[r.dateKey] = (map[r.dateKey]||0)+1; });
+    var map = {}, lista = {};
+    records.forEach(function(r){ map[r.dateKey] = (map[r.dateKey]||0)+1; (lista[r.dateKey] = lista[r.dateKey] || []).push(r); });
     return Object.keys(map).sort().map(function(k){
       var d = new Date(k+"T00:00:00");
-      return { label: String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0"), value: map[k] };
+      return { label: String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0"), value: map[k], recs: lista[k] };
     });
   }
   function ocorrenciasPorGestor(records, limit){
@@ -3410,7 +3471,7 @@
     $("absEmendaResumo").innerHTML = iniciados.length
       ? '<b>' + emendas.length + '</b> de <b>' + iniciados.length + '</b> atestados (' + Math.round(emendas.length*100/iniciados.length) + '%) encostam numa folga'
       : 'Nenhum atestado começou neste recorte.';
-    renderBarV($("chartAbsDiaSemana"), ocorrenciasPorDiaSemana(iniciados).map(function(it){ it.color = "var(--c-terracotta)"; return it; }));
+    renderBarV($("chartAbsDiaSemana"), anexarOrigem(ocorrenciasPorDiaSemana(iniciados).map(function(it){ it.color = "var(--c-terracotta)"; return it; }), iniciados, diaSemanaRotulo));
     renderTableSimple($("tableAbsEmendas"),
       [{label:"Colaborador", width:"22%", render:function(r){ return colabLink(r.colaborador); }},
        {label:"Gestor", width:"18%", render:function(r){ return escapeHtml(r.gestor); }},
@@ -3459,6 +3520,7 @@
       diasDoAtestado(r).forEach(function(dd){
         if (cicloDe(dd) !== cicloMapa) return;
         porPessoa[k].dias[dateKey(dd)] = grupoAfast(r); porPessoa[k].desc[dateKey(dd)] = r.situacao;
+        (porPessoa[k].reg = porPessoa[k].reg || {})[dateKey(dd)] = r;
       });
     });
     // com filtro no mapa, quem ficou sem nenhum dia no ciclo some (13/10)
@@ -3480,7 +3542,7 @@
     if (!pessoasMapa.length){
       $("absHeat").innerHTML = ""; $("absHeat").appendChild(emptyMsg("Nenhum " + nomeBase + " nos últimos 3 meses para o filtro atual."));
     } else {
-      var letras = ["D","S","T","Q","Q","S","S"];
+      var letras = ["D","S","T","Q","Q","S","S"], origemMapa = [];
       var html = '<table class="heat"><thead><tr><th class="nome">Colaborador</th>' + diasMapa.map(function(dd){
         var fds = dd.getDay() === 0 || dd.getDay() === 6;
         return '<th' + (fds ? ' class="fds"' : '') + '>' + dd.getDate() + '<br>' + letras[dd.getDay()] + '</th>';
@@ -3489,13 +3551,16 @@
         html += '<tr><td class="nome">' + colabLink(p.colaborador) + '</td>' + diasMapa.map(function(dd){
           var k = dateKey(dd), fds = dd.getDay() === 0 || dd.getDay() === 6;
           // balão ao passar o mouse: pessoa, dia e o tipo de afastamento
-          if (p.dias[k]) return '<td class="aus" style="background:' + corAfast(p.dias[k]) + '" data-tooltip="' +
+          // clique no quadrado: abre o afastamento daquele dia ("de onde vem")
+          if (p.dias[k]){ origemMapa.push({ label: p.colaborador + " · " + formatDateBR(dd), recs:[p.reg[k]] }); }
+          if (p.dias[k]) return '<td class="aus drill" data-drill="' + (origemMapa.length - 1) + '" style="background:' + corAfast(p.dias[k]) + '" data-tooltip="' +
             escapeHtml(p.colaborador + " · " + diaSemanaCurto(dd) + " " + formatDateBR(dd) + " · " + p.desc[k] + (p.desc[k] && stripAccents(p.desc[k].toLowerCase()).indexOf(stripAccents(p.dias[k].split(/[ ,]/)[0].toLowerCase())) === -1 ? " (" + p.dias[k] + ")" : "")) + '"></td>';
           return '<td' + (fds ? ' class="fds"' : '') + '></td>';
         }).join("") + '<td class="tot">' + (Object.keys(p.dias).length || "&ndash;") + '</td><td class="tot">' + p.total3m + '</td></tr>';
       });
       $("absHeat").innerHTML = html + '</tbody></table>';
       wireTooltips($("absHeat"));
+      marcarOrigem($("absHeat"), origemMapa);
     }
   }
   $("absCiclo").addEventListener("change", applyFilters);
@@ -3866,7 +3931,9 @@
   // resumo de Pausas Térmicas deixou de ser modal: fica na própria página.
   document.addEventListener("keydown", function(e){
     if (e.key !== "Escape") return;
-    if (!$("colabModalOverlay").hidden) fecharModalColab();
+    // fecha só a camada de cima (e marca o evento, para a tela cheia não fechar junto)
+    if (!$("colabModalOverlay").hidden){ fecharModalColab(); e._tratado = true; }
+    else if (!$("origemOverlay").hidden){ fecharOrigem(); e._tratado = true; }
     else if (!$("menuSecoes").hidden) fecharMenuSecoes();
   });
 
@@ -3941,7 +4008,7 @@
     var foraOrg = !linhaOrg && state.records.some(function(r){ return r.tipo === TIPO_CADASTRO_ORG; });
     $("colabModalMeta").innerHTML = meta.filter(function(m){ return m[1]; }).map(function(m){
       return "<span>"+m[0]+": <b>"+escapeHtml(m[1])+"</b></span>";
-    }).join("") + (foraOrg ? '<span class="sem-gestor">Não está no ORG</span>' : "");
+    }).join("") + (foraOrg ? '<span class="sem-gestor">Não está na lista de equipes</span>' : "");
 
     function tile(label, valor, sub, cls){
       return '<div class="colab-kpi'+(cls?' '+cls:'')+'"><div class="ck-label">'+label+'</div><div class="ck-value">'+valor+'</div>'+
@@ -4083,6 +4150,105 @@
   aplicarPagina();
 
 
+
+  /* ---------- "De onde vem": clicar numa barra mostra os registros ----------
+     Pedido do RH (13/10): toda barra, pedaço de barra, fatia de rosca, ponto
+     de linha e quadrado do mapa leva à origem da informação. Ex.: no gráfico
+     de afastamentos por gestor, clicar no pedaço vermelho (atestado) da barra
+     de um gestor lista as pessoas da equipe dele e cada atestado.
+     Como funciona: quem desenha o gráfico guarda os registros de cada barra
+     (it.recs / seg.recs, ver empilhar e anexarOrigem) e marca o elemento com
+     data-drill="barra" ou "barra:pedaço"; marcarOrigem guarda a lista no
+     contêiner; o clique (delegado no document) acha a lista e chama
+     abrirOrigem, que monta a janela com uma tabela e o resumo por pessoa. */
+  function marcarOrigem(container, items){
+    container._drill = items;
+    container.setAttribute("data-drill-host", "");
+  }
+  // Título do card de um gráfico (o card "Por <seletor>" vira "Por gestor").
+  function tituloCard(el){
+    var card = el && el.closest(".card"), t = card && card.querySelector(".card-title");
+    if (!t) return "";
+    var sel = t.querySelector("select");
+    if (!sel) return t.textContent.trim();
+    return "Afastamentos por " + sel.options[sel.selectedIndex].text;   // único card com seletor no título
+  }
+  document.addEventListener("click", function(e){
+    var el = e.target.closest && e.target.closest("[data-drill]");
+    if (!el) return;
+    var host = el.closest("[data-drill-host]");
+    if (!host || !host._drill) return;
+    var p = el.getAttribute("data-drill").split(":"), it = host._drill[+p[0]];
+    if (!it) return;
+    var sg = p.length > 1 && it.segs ? it.segs[+p[1]] : null;
+    var recs = sg ? sg.recs : it.recs;
+    if (!recs || !recs.length) return;
+    e.preventDefault(); e.stopPropagation();
+    hideTooltip();
+    abrirOrigem(tituloCard(host), [it.label, sg && sg.label].filter(Boolean).join(" · "), recs);
+  });
+  // Tipo de registro da lista: "pedaco" = um dia de afastamento ({d, grupo, r},
+  // seção de afastamentos), "afast" = um afastamento inteiro, "digitada" =
+  // batida digitada, "ocorrencia" = o resto (ocorrências da Tratamento).
+  function tipoDaOrigem(r){
+    if (r.r && r.d) return "pedaco";
+    if (isTipoAbsenteismo(r.tipo)) return "afast";
+    if (isTipoDigitada(r.tipo)) return "digitada";
+    return "ocorrencia";
+  }
+  function abrirOrigem(titulo, recorte, recs){
+    var tipo = tipoDaOrigem(recs[0]), linhas, colunas;
+    if (tipo === "pedaco" || tipo === "afast"){
+      // junta os dias do mesmo afastamento numa linha só
+      var porReg = [], idx = new Map();
+      recs.forEach(function(x){
+        var r = tipo === "pedaco" ? x.r : x;
+        if (!idx.has(r)){ idx.set(r, porReg.length); porReg.push({ r:r, dias:0 }); }
+        porReg[idx.get(r)].dias += tipo === "pedaco" ? 1 : diasDoAtestado(r).length;
+      });
+      linhas = porReg.sort(function(a,b){ return a.r.data - b.r.data; });
+      colunas = [
+        {label:"Colaborador", width:"24%", render:function(x){ return colabLink(x.r.colaborador); }},
+        {label:"Gestor", width:"20%", render:function(x){ return escapeHtml(x.r.gestor); }},
+        {label:"Tipo", render:function(x){ return escapeHtml(x.r.situacao); }},
+        {label:"Início", width:"96px", render:function(x){ return formatDateBR(x.r.data); }},
+        {label:"Fim", width:"96px", render:function(x){ var d = diasDoAtestado(x.r); return d.length ? formatDateBR(d[d.length-1]) : "&ndash;"; }},
+        {label: tipo === "pedaco" ? "Dias aqui" : "Dias", width:"80px", render:function(x){ return "<strong>" + x.dias + "</strong>"; }}];
+    } else if (tipo === "digitada"){
+      linhas = recs.slice().sort(function(a,b){ return a.data - b.data; });
+      colunas = [
+        {label:"Data e hora", width:"130px", render:function(r){ return formatDateBR(r.data) + " " + String(r.data.getHours()).padStart(2,"0") + ":" + String(r.data.getMinutes()).padStart(2,"0"); }},
+        {label:"Colaborador", width:"24%", render:function(r){ return colabLink(r.colaborador); }},
+        {label:"Gestor", width:"18%", render:function(r){ return escapeHtml(r.gestor); }},
+        {label:"Motivo", render:function(r){ return escapeHtml(r.situacao); }},
+        {label:"Justificativa", render:function(r){ return escapeHtml(r.justificativaMarcacao || ""); }}];
+    } else {
+      linhas = recs.slice().sort(function(a,b){ return a.data - b.data; });
+      colunas = [
+        {label:"Data", width:"96px", render:function(r){ return formatDateBR(r.data); }},
+        {label:"Colaborador", width:"24%", render:function(r){ return colabLink(r.colaborador); }},
+        {label:"Gestor", width:"18%", render:function(r){ return escapeHtml(r.gestor); }},
+        {label:"Tipo", render:function(r){ return escapeHtml(r.tipo); }},
+        {label:"Situação", render:function(r){ return escapeHtml(r.situacao || ""); }},
+        {label:"Status", width:"110px", render:function(r){ return escapeHtml(r.status || ""); }}];
+    }
+    // resumo por pessoa: quem aparece e quantas vezes (do maior para o menor)
+    var porPessoa = {};
+    linhas.forEach(function(x){ var r = x.r || x; porPessoa[r.colaborador] = (porPessoa[r.colaborador] || 0) + 1; });
+    var nomes = Object.keys(porPessoa).sort(function(a,b){ return porPessoa[b]-porPessoa[a] || a.localeCompare(b,"pt-BR"); });
+    var unidade = tipo === "digitada" ? "batida(s) digitada(s)" : (tipo === "ocorrencia" ? "ocorrência(s)" : "afastamento(s)");
+    $("origemTitulo").textContent = titulo + (recorte ? " · " + recorte : "");
+    $("origemSub").textContent = formatNum(linhas.length) + " " + unidade + " de " + formatNum(nomes.length) + " pessoa(s) · clique num nome para abrir o card da pessoa";
+    $("origemPessoas").innerHTML = nomes.map(function(n){
+      return '<span class="origem-chip">' + colabLink(n) + ' <b>' + porPessoa[n] + '</b></span>';
+    }).join("");
+    renderTableSimple($("origemTabela"), colunas, linhas);
+    $("origemOverlay").hidden = false;
+  }
+  function fecharOrigem(){ $("origemOverlay").hidden = true; }
+  $("origemFechar").addEventListener("click", fecharOrigem);
+  $("origemOverlay").addEventListener("click", function(e){ if (e.target === $("origemOverlay")) fecharOrigem(); });
+
   /* ---------- Período de cada card (selo "📅") ----------
      Cada card ganha, embaixo do título, uma linha dizendo QUE PERÍODO aquela
      vista considera (pedido do RH, 13/10), porque nem todo card segue o filtro
@@ -4170,7 +4336,7 @@
   });
   document.addEventListener("keydown", function(e){
     // com o card do colaborador aberto por cima, o Esc fecha só ele
-    if (e.key === "Escape" && $("colabModalOverlay").hidden) fecharTelaCheia();
+    if (e.key === "Escape" && !e._tratado && $("colabModalOverlay").hidden && $("origemOverlay").hidden) fecharTelaCheia();
   });
   document.addEventListener("click", function(e){
     // clique no fundo escuro (fora do card aberto) também fecha

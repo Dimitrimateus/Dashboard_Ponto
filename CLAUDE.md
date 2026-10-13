@@ -512,6 +512,17 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   primeiros (`state.mostrarTodos`/`bancoMostrarTodos` não são mais usados). Mapa colaborador × dia:
   legenda em cima, botão ⛶ (cards com `.heat-wrap` também ganham), e com filtro na legenda quem
   fica sem nenhum dia no ciclo some. Conferência 18/18.
+- 13/10 (depois 2): **"De onde vem"**: clicar em barra, pedaço de barra, fatia, ponto da linha ou
+  quadrado do mapa abre a janela `#origemOverlay` (`abrirOrigem`) com os registros por trás do
+  número (ocorrências, batidas digitadas ou afastamentos, + resumo por pessoa; nomes abrem o card).
+  Os registros vão em `it.recs`/`seg.recs` (`empilhar`, `anexarOrigem`, `legendaSerie`,
+  `ocorrenciasPorData`), o elemento leva `data-drill="barra[:pedaço]"` e o contêiner `marcarOrigem`.
+  Nos gráficos de colaborador, o nome abre o card e a barra abre a origem. Esc fecha só a camada de
+  cima (`e._tratado`). Textos do "Entenda o painel" (34 `.card-fonte`) **reescritos para leigos**
+  (pedido do Dimitri): sem nomes de aba, coluna, macro, código de relatório, "Check", "ORG",
+  "Tratamento", "DSR"; explicam o que é cada coisa (espelho de ponto, ciclo 28→27, batida
+  digitada, pausa térmica, afastamento). Card da pessoa: "Não está na lista de equipes".
+  Ao escrever texto novo para a tela, manter esse tom.
 
 ## 12. Estado atual e como continuar (08/10/2026)
 
