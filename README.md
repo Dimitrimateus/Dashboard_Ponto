@@ -297,6 +297,10 @@ justificativa, ou o RH lançou no sistema.
 - Ao abrir, os filtros sempre aparecem; ao carregar o arquivo, o painel vai para a Visão geral.
 - Cores: 5 cores bem diferentes (conferidas para daltonismo) e cinza para "Outros"; o vermelho
   ficou só para alerta, falta, banco de horas e atestado.
+- Depois (13/10): o filtro da legenda vale só para o gráfico clicado; dá para filtrar em tela
+  cheia sem ela fechar; listas longas (curtas, top de digitadas, banco de horas) aparecem inteiras
+  só em tela cheia ("Ver todos em tela cheia"); no mapa colaborador × dia a legenda fica em cima, há
+  tela cheia, e com filtro some quem não tem nada no ciclo.
 
 ## Ordem de uso no mês
 

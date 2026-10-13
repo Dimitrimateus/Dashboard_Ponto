@@ -220,7 +220,7 @@
   }
   table.heat td.tot{ padding:0 6px; font-weight:700; color:var(--c-navy-dark); }
   table.heat th.tot-h{ padding:0 6px; white-space:nowrap; }
-  .heat-leg{ display:flex; gap:14px; font-size:11.5px; color:var(--c-muted); margin-top:8px; flex-wrap:wrap; }
+  .heat-leg{ display:flex; gap:14px; font-size:11.5px; color:var(--c-muted); margin:0 0 10px; flex-wrap:wrap; align-items:center; }
   .heat-leg span::before, .heat-leg button::before{ content:""; display:inline-block; width:11px; height:11px; margin-right:5px; vertical-align:-1px; border:1px solid var(--c-line); }
   .heat-leg .l-aus::before{ background:var(--cor, var(--c-terracotta)); }
   .heat-leg .l-fds::before{ background:#F1F1F2; }
@@ -791,7 +791,7 @@
             <li><strong>Abra o arquivo aqui.</strong> No bloco “Carregar dados” (à direita; no celular, no alto da tela), clique para escolher o arquivo ou arraste-o para cima do bloco. O arquivo é lido só no seu navegador: nada é enviado para a internet.</li>
             <li><strong>Escolha a seção.</strong> O botão <strong>&#9776;</strong> no canto superior esquerdo troca de seção: Visão geral, Colaboradores em destaque, Pausas térmicas, Marcações digitadas, Afastamentos, Demora no PontoNet, Lista de colaboradores e Histórico. A última opção mostra tudo numa página só.</li>
             <li><strong>Filtre.</strong> Em “Filtros” escolha gestor, cargo, colaborador, tipo de ocorrência ou período. Tudo no painel muda junto. “Limpar filtros” volta ao arquivo inteiro; “Esconder filtros”, no topo, dá mais espaço aos gráficos.</li>
-            <li><strong>Use os gráficos.</strong> Clique num item da legenda (as bolinhas coloridas em cima do gráfico) para ver só aquele tipo; clique em outros para somar e em “Mostrar todos” para voltar. O botão <strong>&#x26F6;</strong> no canto de cada card abre o gráfico em tela cheia (Esc fecha). A etiqueta amarela 📅 embaixo do título diz qual período aquele card considera.</li>
+            <li><strong>Use os gráficos.</strong> Clique num item da legenda (as bolinhas coloridas em cima do gráfico) para ver só aquele tipo; clique em outros para somar e em “Mostrar todos” para voltar; cada gráfico tem o seu filtro. O botão <strong>&#x26F6;</strong> no canto de cada card abre o gráfico em tela cheia (Esc fecha); as listas longas aparecem inteiras só em tela cheia. A etiqueta amarela 📅 embaixo do título diz qual período aquele card considera.</li>
             <li><strong>Veja uma pessoa.</strong> Clique no nome de qualquer colaborador (gráficos e tabelas) para abrir o card dele, com ocorrências, horas, pausas, batidas digitadas e afastamentos.</li>
             <li><strong>Dúvida sobre um número?</strong> Depois de abrir o arquivo, o botão <strong>“Entenda o painel”</strong>, no topo, mostra embaixo de cada gráfico de onde vem a informação e como ela é calculada.</li>
           </ol>
@@ -882,7 +882,7 @@
           </div>
           <div class="card">
             <div class="card-title">Ocorrências curtas (&lt; 15 minutos)</div>
-            <div class="card-hint">Colaboradores com mais faltas/atrasos ou horas extra registrados com menos de 15 minutos &middot; os 20 primeiros (&ldquo;Mostrar todos&rdquo; lista todo mundo)</div>
+            <div class="card-hint">Colaboradores com mais faltas/atrasos ou horas extra registrados com menos de 15 minutos &middot; os 20 primeiros (a lista inteira abre em tela cheia)</div>
             <div class="card-fonte"><span class="fonte-origem">De onde vem: Cartão Ponto do mês atual + fórmula</span><p>Puxamos o cartão ponto e uma fórmula preenche a coluna <strong>Tolerância &lt; 15min</strong> quando o dia teve falta/atraso ou hora extra de menos de 15 minutos. Cada dia marcado conta 1 (“Extra e Falta” conta 1 em cada coluna). Não depende do Check da Tratamento.</p></div>
             <div class="card-body" id="tableCurtas"></div>
             <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="curtas" id="btnCurtasTodos" hidden>Mostrar todos</button></div>
@@ -939,7 +939,7 @@
             </div>
             <div class="card">
               <div class="card-title">Colaboradores com mais marcações digitadas</div>
-              <div class="card-hint">Os 20 primeiros (&ldquo;Mostrar todos&rdquo; lista todo mundo) &middot; clique no nome para ver o colaborador</div>
+              <div class="card-hint">Os 20 primeiros (a lista inteira abre em tela cheia) &middot; clique no nome para ver o colaborador</div>
               <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema</span><p>Conta as batidas digitadas de cada pessoa. Passe o mouse para ver quantas foram por esquecimento.</p></div>
               <div class="card-body" id="chartDigTop"></div>
               <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="digTop" id="btnDigTopTodos" hidden>Mostrar todos</button></div>
@@ -1031,8 +1031,8 @@
               <div class="card-title">Mapa colaborador × dia</div>
               <div class="card-hint" id="absHeatHint">Dias de afastamento no ciclo</div>
               <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Afastamentos do sistema</span><p>Uma linha para <strong>cada pessoa que teve atestado em algum momento dos últimos 3 meses</strong> (quem não teve atestado no ciclo mostrado fica com a linha vazia), uma coluna por dia (28 a 27). À direita, os dias de atestado no ciclo e nos 3 meses. Quadrado vermelho = dia de atestado; colunas cinza = sábado e domingo. Com “Últimos 3 meses” no seletor, o mapa mostra o ciclo mais recente.</p></div>
-              <div class="heat-wrap" id="absHeat"></div>
               <div class="heat-leg" id="absHeatLeg"><span class="l-fds">Sábado e domingo</span></div>
+              <div class="heat-wrap" id="absHeat"></div>
             </div>
           </section>
         </div>
@@ -1561,15 +1561,15 @@
     records: [],
     colorMaps: { gestor:{}, setor:{}, cargo:{}, tipo:{}, status:{}, motivo:{} },
     // series: cor de cada tipo/motivo (prepararCoresSeries). serieSel: o
-    // "filtro dentro do gráfico" de cada dimensão (clique na legenda):
-    // {série: true} = só essas aparecem nos gráficos; vazio = todas.
+    // "filtro dentro do gráfico" (clique na legenda), um por gráfico, pela
+    // chave = id do gráfico: {série: true} = só essas aparecem; vazio = todas.
     series: { tipo:{}, motivo:{} },
-    serieSel: { tipo:{}, motivo:{}, afast:{} },
+    serieSel: {},
     historySort: { key:"data", dir:"desc" },
     historyPage: 1,
     historyPageSize: 25,
     bancoMostrarTodos: false,
-    mostrarTodos: {}   // chave da lista -> true quando o "Mostrar todos" dela está ligado
+    mostrarTodos: {}   // (não usado desde 13/10: a lista inteira só aparece em tela cheia)
   };
 
   /* =========================================================
@@ -1661,10 +1661,10 @@
   function corSerie(dim, s){ return (state.series[dim] && state.series[dim][s]) || COR_OUTROS; }
 
   // ---------- Filtro dentro do gráfico (clique na legenda) ----------
-  // Clicar num item da legenda mostra só aquele tipo/motivo nos gráficos da
-  // seção; clicar em outros soma; "Mostrar todos" volta. Vale para a
-  // dimensão inteira (todos os gráficos da seção que usam aquela legenda),
-  // não mexe nos filtros da lateral nem nos números do topo.
+  // Clicar num item da legenda mostra só aquele tipo/motivo NAQUELE gráfico
+  // (pedido do RH, 13/10: cada gráfico tem o seu filtro; a chave "dim" é o id
+  // do gráfico); clicar em outros soma; "Mostrar todos" volta. Não mexe nos
+  // outros gráficos, nos filtros da lateral nem nos números do topo.
   function temSelecaoSerie(dim){ return !!(state.serieSel[dim] && Object.keys(state.serieSel[dim]).length); }
   function serieAtiva(dim, s){ return !temSelecaoSerie(dim) || !!state.serieSel[dim][s]; }
   function filtrarSerie(dim, recs, serieFn){ return temSelecaoSerie(dim) ? recs.filter(function(r){ return serieAtiva(dim, serieFn(r)); }) : recs; }
@@ -2469,14 +2469,18 @@
       return b.qtd-a.qtd || b.faltas-a.faltas || a.colaborador.localeCompare(b.colaborador,"pt-BR");
     }).slice(0, n || undefined);
   }
-  // Listas de "top" com o botão "Mostrar todos": mostra os LIMITE_LISTA
+  // Listas de "top" com o botão "Ver todos em tela cheia": mostra os LIMITE_LISTA
   // primeiros e, com o botão ligado (state.mostrarTodos[chave]), a lista toda.
   var LIMITE_LISTA = 20;
+  // Lista longa: no card normal, só os primeiros; a lista inteira só em tela
+  // cheia (pedido do RH, 13/10). O botão abre a tela cheia do card; ao
+  // fechar, volta a mostrar só os primeiros.
+  function emTelaCheia(el){ return !!(el && el.closest(".card-cheia")); }
   function limitarLista(lista, chave, limite, btnId){
-    var todos = !!state.mostrarTodos[chave], b = $(btnId);
-    b.hidden = lista.length <= limite;
-    b.textContent = todos ? "Mostrar só os " + limite + " primeiros" : "Mostrar todos (" + lista.length + ")";
-    return todos ? lista : lista.slice(0, limite);
+    var b = $(btnId), cheia = emTelaCheia(b);
+    b.hidden = cheia || lista.length <= limite;
+    b.textContent = "Ver todos (" + lista.length + ") em tela cheia";
+    return cheia ? lista : lista.slice(0, limite);
   }
   // Hora extra e banco de horas do mês por colaborador. Fonte principal:
   // as linhas "Resumo Horas Cartão" (o Cartão Ponto do mês atual inteiro,
@@ -2972,25 +2976,28 @@
     // ocG = as ocorrências que sobram depois desse filtro. Os números do topo
     // (renderKPIs) não mudam com ele.
     var corTipo = function(t){ return corSerie("tipo", t); }, tipoDe = function(r){ return serieDe("tipo", r.tipo); };
-    var legTipo = legendaSerie("tipo", ocorrenciasRecords, tipoDe, corTipo);
-    var ocG = filtrarSerie("tipo", ocorrenciasRecords, tipoDe);
-    renderDonut($("chartTipo"), legTipo);
-    var itDia = ocorrenciasPorDiaSemana(ocG);
-    empilhar(itDia, ocG, diaSemanaRotulo, tipoDe, corTipo);
-    renderBarV($("chartDiaSemana"), itDia, { legenda: legTipo });
-    renderLine($("chartPorData"), ocorrenciasPorData(ocG), { legenda: legTipo });
-    var itGestor = ocorrenciasPorGestor(ocG, 12);
-    empilhar(itGestor, ocG, function(r){ return r.gestor; }, tipoDe, corTipo);
-    renderBarH($("chartPorGestor"), itGestor, { legenda: legTipo });
-    var itCargo = ocorrenciasPorCargo(ocG, 12);
-    empilhar(itCargo, ocG, function(r){ return r.cargo; }, tipoDe, corTipo);
-    renderBarH($("chartPorCargo"), itCargo, { legenda: legTipo });
+    // Filtro dentro do gráfico: cada gráfico tem o seu (a chave é o id do
+    // gráfico). leg(id) = legenda clicável dele; rec(id) = as ocorrências que
+    // sobram depois do filtro dele. Os números do topo (renderKPIs) não mudam.
+    var leg = function(id){ return legendaSerie(id, ocorrenciasRecords, tipoDe, corTipo); };
+    var rec = function(id){ return filtrarSerie(id, ocorrenciasRecords, tipoDe); };
+    renderDonut($("chartTipo"), leg("chartTipo"));
+    var ocDia = rec("chartDiaSemana"), itDia = ocorrenciasPorDiaSemana(ocDia);
+    empilhar(itDia, ocDia, diaSemanaRotulo, tipoDe, corTipo);
+    renderBarV($("chartDiaSemana"), itDia, { legenda: leg("chartDiaSemana") });
+    renderLine($("chartPorData"), ocorrenciasPorData(rec("chartPorData")), { legenda: leg("chartPorData") });
+    var ocGes = rec("chartPorGestor"), itGestor = ocorrenciasPorGestor(ocGes, 12);
+    empilhar(itGestor, ocGes, function(r){ return r.gestor; }, tipoDe, corTipo);
+    renderBarH($("chartPorGestor"), itGestor, { legenda: leg("chartPorGestor") });
+    var ocCar = rec("chartPorCargo"), itCargo = ocorrenciasPorCargo(ocCar, 12);
+    empilhar(itCargo, ocCar, function(r){ return r.cargo; }, tipoDe, corTipo);
+    renderBarH($("chartPorCargo"), itCargo, { legenda: leg("chartPorCargo") });
 
     // Seção "Colaboradores em destaque": top 10 por ocorrências, extra e
     // falta no mesmo dia (auditoria de 3 meses), curtas e banco de horas.
-    var itTop = topColaboradores(ocG, 10);
-    empilhar(itTop, ocG, function(r){ return r.colaborador; }, tipoDe, corTipo);
-    renderBarH($("chartTopColaboradores"), itTop, { colab:true, legenda: legTipo });
+    var ocTop = rec("chartTopColaboradores"), itTop = topColaboradores(ocTop, 10);
+    empilhar(itTop, ocTop, function(r){ return r.colaborador; }, tipoDe, corTipo);
+    renderBarH($("chartTopColaboradores"), itTop, { colab:true, legenda: leg("chartTopColaboradores") });
 
     renderTableSimple($("tableExtraFalta"),
       [{label:"Colaborador", render:function(r){return colabLink(r.colaborador);}},
@@ -3013,9 +3020,10 @@
     // estado em state.bancoMostrarTodos).
     var horas = horasCartaoPorColaborador(records);
     var limiteBanco = 10;
-    renderSaldoH($("chartBancoHoras"), state.bancoMostrarTodos ? horas.lista : horas.lista.slice(0, limiteBanco));
-    $("btnBancoTodos").hidden = horas.lista.length <= limiteBanco;
-    $("btnBancoTodos").textContent = state.bancoMostrarTodos ? "Mostrar só os 10 primeiros" : "Mostrar todos (" + horas.lista.length + ")";
+    var bancoCheio = emTelaCheia($("chartBancoHoras"));
+    renderSaldoH($("chartBancoHoras"), bancoCheio ? horas.lista : horas.lista.slice(0, limiteBanco));
+    $("btnBancoTodos").hidden = bancoCheio || horas.lista.length <= limiteBanco;
+    $("btnBancoTodos").textContent = "Ver todos (" + horas.lista.length + ") em tela cheia";
     $("hintBancoHoras").innerHTML = horas.doCartao
       ? "Mês atual do Cartão Ponto &middot; verde = hora extra, vermelho = banco de horas, à direita o saldo (extra &minus; banco)"
       : "CSV antigo (sem o resumo do Cartão): só os dias que viraram ocorrência na Tratamento &middot; gere o CSV de novo com a macro atual";
@@ -3124,22 +3132,24 @@
       tile("Por esquecimento", formatNum(nEsq), pct(nEsq, dig.length) + " das digitadas");
 
     // Rosca por motivo, barras por dia da semana e linha por data.
-    // Gráficos por motivo: uma cor por motivo; legMot = legenda clicável
-    // (filtro dentro do gráfico, ex.: ver só "Inclusão por esquecimento");
-    // digG = as batidas que sobram depois desse filtro. Os números do topo
+    // Gráficos por motivo: uma cor por motivo; legMot(id) = legenda clicável
+    // do gráfico (filtro dentro dele, ex.: ver só "Inclusão por esquecimento");
+    // digG = as batidas que sobram depois do filtro do gráfico da vez. Os números do topo
     // da seção, o esquecimento repetido, as justificativas e a lista não mudam.
     var corMotivo = function(m){ return corSerie("motivo", m); }, motivoDe = function(r){ return serieDe("motivo", r.situacao || "Sem motivo"); };
-    var legMot = legendaSerie("motivo", dig, motivoDe, corMotivo);
-    var digG = filtrarSerie("motivo", dig, motivoDe);
-    renderDonut($("chartDigMotivo"), legMot);
-    var itDigDia = ocorrenciasPorDiaSemana(digG);
+    // cada gráfico tem o seu filtro (chave = id do gráfico)
+    var legMot = function(id){ return legendaSerie(id, dig, motivoDe, corMotivo); };
+    var digDe = function(id){ return filtrarSerie(id, dig, motivoDe); };
+    renderDonut($("chartDigMotivo"), legMot("chartDigMotivo"));
+    var digG = digDe("chartDigDiaSemana"), itDigDia = ocorrenciasPorDiaSemana(digG);
     empilhar(itDigDia, digG, diaSemanaRotulo, motivoDe, corMotivo);
-    renderBarV($("chartDigDiaSemana"), itDigDia, { legenda: legMot });
-    renderLine($("chartDigData"), ocorrenciasPorData(digG), { legenda: legMot });
+    renderBarV($("chartDigDiaSemana"), itDigDia, { legenda: legMot("chartDigDiaSemana") });
+    renderLine($("chartDigData"), ocorrenciasPorData(digDe("chartDigData")), { legenda: legMot("chartDigData") });
 
-    // Top de colaboradores (20 + "Mostrar todos"), com quantas foram por
+    // Top de colaboradores (20; todos em tela cheia), com quantas foram por
     // esquecimento no balão; e o gráfico por gestor.
     var porColab = {};
+    digG = digDe("chartDigTop");
     digG.forEach(function(r){
       if (!porColab[r.colaborador]) porColab[r.colaborador] = { label:r.colaborador, value:0, esq:0 };
       porColab[r.colaborador].value++; if (isEsquecimento(r)) porColab[r.colaborador].esq++;
@@ -3148,21 +3158,23 @@
       "digTop", LIMITE_LISTA, "btnDigTopTodos");
     topDig.forEach(function(t){ t.color = "var(--c-orange)"; t.extra = t.esq + " por esquecimento"; });
     empilhar(topDig, digG, function(r){ return r.colaborador; }, motivoDe, corMotivo);
-    renderBarH($("chartDigTop"), topDig, { colab:true, legenda: legMot });
+    renderBarH($("chartDigTop"), topDig, { colab:true, legenda: legMot("chartDigTop") });
+    digG = digDe("chartDigGestor");
     var itDigGestor = ocorrenciasPorGestor(digG, 12);
     empilhar(itDigGestor, digG, function(r){ return r.gestor; }, motivoDe, corMotivo);
-    renderBarH($("chartDigGestor"), itDigGestor, { legenda: legMot });
+    renderBarH($("chartDigGestor"), itDigGestor, { legenda: legMot("chartDigGestor") });
 
     // Barras por hora cheia, da menor à maior hora que aparece (horas sem batida
     // entram com zero para o eixo ficar contínuo).
     var porHora = {};
+    digG = digDe("chartDigHora");
     digG.forEach(function(r){ var h = r.data.getHours(); porHora[h] = (porHora[h]||0) + 1; });
     var horas = Object.keys(porHora).map(Number);
     var hMin = horas.length ? Math.min.apply(null, horas) : 0, hMax = horas.length ? Math.max.apply(null, horas) : 0;
     var itensHora = [];
     for (var h = hMin; h <= hMax && horas.length; h++) itensHora.push({ label: h + "h", value: porHora[h] || 0, color:"var(--c-navy)" });
     empilhar(itensHora, digG, function(r){ return r.data.getHours() + "h"; }, motivoDe, corMotivo);
-    renderBarV($("chartDigHora"), itensHora, { legenda: legMot });
+    renderBarV($("chartDigHora"), itensHora, { legenda: legMot("chartDigHora") });
 
     // Esquecimento repetido: por pessoa, quantas batidas e em quantos dias
     // diferentes foram "Inclusão por esquecimento" (top 15).
@@ -3334,10 +3346,11 @@
       diasDoAtestado(r).forEach(function(d){ pedacos.push({ d:d, grupo:g, r:r }); });
     });
     var grupoDe = function(x){ return x.grupo; };
-    // Filtro dentro do gráfico (clique na legenda de tipos): pedG = os dias
-    // dos tipos ligados. Vale para a evolução, o "Por gestor" e o mapa; o
-    // resumo, a tabela da evolução, o encostado em folga e o ranking não mudam.
-    var pedG = filtrarSerie("afast", pedacos, grupoDe);
+    // Filtro dentro do gráfico (clique na legenda de tipos), um por gráfico:
+    // pedG = os dias dos tipos ligados no gráfico da vez (evolução, "Por
+    // gestor", mapa). O resumo, a tabela da evolução, o encostado em folga e
+    // o ranking não mudam.
+    var pedG = filtrarSerie("chartAbsEvolucao", pedacos, grupoDe);
 
     // 2. evolução (sempre os 3 meses)
     var porCiclo = {};
@@ -3358,7 +3371,7 @@
       pedG.forEach(function(x){ var k = cicloDe(x.d); diasG[k] = (diasG[k] || 0) + 1; });
       var itCiclo = ordem.map(function(k){ return { label: cicloLabel(k), value: diasG[k] || 0, color:"var(--c-terracotta)" }; });
       empilhar(itCiclo, pedG, function(x){ return cicloLabel(cicloDe(x.d)); }, grupoDe, corAfast);
-      renderBarV($("chartAbsEvolucao"), itCiclo, { legenda: legendaSerie("afast", pedacos.filter(function(x){ return porCiclo[cicloDe(x.d)]; }), grupoDe, corAfast) });
+      renderBarV($("chartAbsEvolucao"), itCiclo, { legenda: legendaSerie("chartAbsEvolucao", pedacos.filter(function(x){ return porCiclo[cicloDe(x.d)]; }), grupoDe, corAfast) });
     } else {
       // ciclo escolhido: dias de afastamento em cada semana do ciclo (a partir do dia 28)
       var fc = cicloInicioFim(cicloSel), semanas = [];
@@ -3371,7 +3384,7 @@
       $("absEvolHint").textContent = "Ciclo " + cicloLabel(cicloSel) + ": dias de " + nomeBase + " em cada semana · “Últimos 3 meses” no seletor volta para a comparação entre ciclos";
       var itSem = semanas.map(function(sm){ return { label: sm.label, value: sm.dias, color:"var(--c-terracotta)" }; });
       empilhar(itSem, pedG, function(x){ var sm = semanaDe(x.d); return sm ? sm.label : null; }, grupoDe, corAfast);
-      renderBarV($("chartAbsEvolucao"), itSem, { legenda: legendaSerie("afast", pedacos.filter(function(x){ return semanaDe(x.d); }), grupoDe, corAfast) });
+      renderBarV($("chartAbsEvolucao"), itSem, { legenda: legendaSerie("chartAbsEvolucao", pedacos.filter(function(x){ return semanaDe(x.d); }), grupoDe, corAfast) });
     }
     renderTableSimple($("tableAbsEvolucao"),
       [{label:"Ciclo", render:function(k){ var f = cicloInicioFim(k); return cicloLabel(k) + ' <span style="color:var(--c-muted-2)">(' + formatDateBR(f.ini) + ' a ' + formatDateBR(f.fim) + ')</span>'; }},
@@ -3384,11 +3397,12 @@
     // 4. por gestor / setor / cargo (ciclo escolhido, em dias, por tipo)
     var campo = $("absAgrupar").value || "gestor";
     var porGrupo = {};
+    pedG = filtrarSerie("chartAbsGrupo", pedacos, grupoDe);
     pedG.forEach(function(x){ if (noCiclo(x.d)){ var k = x.r[campo] || "Não informado"; porGrupo[k] = (porGrupo[k]||0) + 1; } });
     var itGrupo = Object.keys(porGrupo).sort(function(a,b){ return porGrupo[b]-porGrupo[a]; }).slice(0,12)
       .map(function(k){ return { label:k, value:porGrupo[k], color: colorFor(campo === "cargo" ? "cargo" : (campo === "setor" ? "setor" : "gestor"), k) }; });
     empilhar(itGrupo, pedG.filter(function(x){ return noCiclo(x.d); }), function(x){ return x.r[campo] || "Não informado"; }, grupoDe, corAfast);
-    renderBarH($("chartAbsGrupo"), itGrupo, { legenda: legendaSerie("afast", pedacos.filter(function(x){ return noCiclo(x.d); }), grupoDe, corAfast) });
+    renderBarH($("chartAbsGrupo"), itGrupo, { legenda: legendaSerie("chartAbsGrupo", pedacos.filter(function(x){ return noCiclo(x.d); }), grupoDe, corAfast) });
 
     // 6. encostados em folga + dia da semana do início (ciclo escolhido, pelo início)
     var iniciados = abs.filter(function(r){ return noCiclo(r.data); });
@@ -3438,7 +3452,7 @@
     vis.forEach(function(r){
       // legenda do mapa: todos os tipos que aparecem nos 3 meses (mesmo os desligados)
       if (diasDoAtestado(r).some(function(d){ return ciclos.indexOf(cicloDe(d)) > -1; })) gruposNoMapa[grupoAfast(r)] = (gruposNoMapa[grupoAfast(r)] || 0) + 1;
-      if (!serieAtiva("afast", grupoAfast(r))) return;   // filtro dentro do gráfico
+      if (!serieAtiva("absHeat", grupoAfast(r))) return;   // filtro dentro do mapa
       var k = chavePessoa(r);
       if (!porPessoa[k]) porPessoa[k] = { colaborador:r.colaborador, dias:{}, desc:{}, total3m:0 };
       porPessoa[k].total3m += diasDoAtestado(r).filter(function(d){ return ciclos.indexOf(cicloDe(d)) > -1; }).length;
@@ -3447,17 +3461,21 @@
         porPessoa[k].dias[dateKey(dd)] = grupoAfast(r); porPessoa[k].desc[dateKey(dd)] = r.situacao;
       });
     });
-    var pessoasMapa = Object.values(porPessoa).filter(function(p){ return p.total3m > 0; }).sort(function(a,b){
+    // com filtro no mapa, quem ficou sem nenhum dia no ciclo some (13/10)
+    var mapaFiltrado = temSelecaoSerie("absHeat");
+    var pessoasMapa = Object.values(porPessoa).filter(function(p){ return p.total3m > 0 && (!mapaFiltrado || Object.keys(p.dias).length); }).sort(function(a,b){
       return Object.keys(b.dias).length - Object.keys(a.dias).length || b.total3m - a.total3m || a.colaborador.localeCompare(b.colaborador,"pt-BR");
     });
     $("absHeatHint").textContent = "Dias de " + nomeBase + " no ciclo " + cicloLabel(cicloMapa) + " (" + formatDateBR(f.ini) + " a " + formatDateBR(f.fim) + ")" +
-      " · todas as " + pessoasMapa.length + " pessoas com " + nomeBase + " nos últimos 3 meses (linha vazia = nada neste ciclo) · passe o mouse num quadrado para ver o tipo";
+      (mapaFiltrado ? " · " + pessoasMapa.length + " pessoas com o(s) tipo(s) escolhido(s) neste ciclo"
+                    : " · todas as " + pessoasMapa.length + " pessoas com " + nomeBase + " nos últimos 3 meses (linha vazia = nada neste ciclo)") +
+      " · passe o mouse num quadrado para ver o tipo";
     // legenda do mapa: os tipos dos 3 meses, cada um com a cor dele; clicar
     // mostra só aquele tipo no mapa (mesmo filtro da evolução e do "Por gestor")
     $("absHeatLeg").innerHTML = GRUPOS_AFAST.filter(function(g){ return gruposNoMapa[g.nome]; }).map(function(g){
-      return '<button type="button" class="l-aus leg-item' + (serieAtiva("afast", g.nome) ? '' : ' off') + '" style="--cor:' + g.cor +
-        '" data-serie-dim="afast" data-serie="' + escapeHtml(g.nome) + '" title="Clique para ver só este tipo; clique em outros para somar">' + escapeHtml(g.nome) + '</button>';
-    }).join("") + (temSelecaoSerie("afast") ? '<button type="button" class="leg-limpar" data-serie-dim="afast">Mostrar todos</button>' : '') +
+      return '<button type="button" class="l-aus leg-item' + (serieAtiva("absHeat", g.nome) ? '' : ' off') + '" style="--cor:' + g.cor +
+        '" data-serie-dim="absHeat" data-serie="' + escapeHtml(g.nome) + '" title="Clique para ver só este tipo; clique em outros para somar">' + escapeHtml(g.nome) + '</button>';
+    }).join("") + (temSelecaoSerie("absHeat") ? '<button type="button" class="leg-limpar" data-serie-dim="absHeat">Mostrar todos</button>' : '') +
       '<span class="l-fds">Sábado e domingo</span>';
     if (!pessoasMapa.length){
       $("absHeat").innerHTML = ""; $("absHeat").appendChild(emptyMsg("Nenhum " + nomeBase + " nos últimos 3 meses para o filtro atual."));
@@ -3803,21 +3821,15 @@
     state.historyPage = 1;
     state.bancoMostrarTodos = false;
     state.mostrarTodos = {};
-    state.serieSel = { tipo:{}, motivo:{}, afast:{} };   // filtros dentro dos gráficos
+    state.serieSel = {};   // filtros dentro dos gráficos (um por gráfico)
   }
   $("clearFilters").addEventListener("click", function(){
     limparControlesFiltro();
     applyFilters();
   });
-  document.querySelectorAll(".btn-todos").forEach(function(b){
-    b.addEventListener("click", function(){
-      state.mostrarTodos[b.dataset.todos] = !state.mostrarTodos[b.dataset.todos];
-      applyFilters();
-    });
-  });
-  $("btnBancoTodos").addEventListener("click", function(){
-    state.bancoMostrarTodos = !state.bancoMostrarTodos;
-    applyFilters();
+  // "Ver todos em tela cheia": abre o card em tela cheia (lá a lista vem inteira)
+  document.querySelectorAll(".btn-todos, #btnBancoTodos").forEach(function(b){
+    b.addEventListener("click", function(e){ e.stopPropagation(); abrirTelaCheia(b.closest(".card")); });
   });
 
   // Ponto único que qualquer listener de filtro chama; a guarda evita
@@ -4145,7 +4157,7 @@
     if (state.records.length) renderDashboard();
   }
   document.querySelectorAll(".pagina .card").forEach(function(card){
-    if (!card.querySelector(".card-body") || card.querySelector(":scope > .btn-cheia")) return;
+    if (!card.querySelector(".card-body, .heat-wrap") || card.querySelector(":scope > .btn-cheia")) return;
     var b = document.createElement("button");
     b.type = "button"; b.className = "btn-cheia"; b.innerHTML = "&#x26F6;";
     b.title = "Ver em tela cheia"; b.setAttribute("aria-label", b.title);
@@ -4162,7 +4174,9 @@
   });
   document.addEventListener("click", function(e){
     // clique no fundo escuro (fora do card aberto) também fecha
-    if (document.body.classList.contains("tem-cheia") && !e.target.closest(".card-cheia") && !e.target.closest(".modal-overlay, #chartTooltip, .ms")) fecharTelaCheia();
+    // (e.target.isConnected: o clique na legenda redesenha o card e o botão
+    // clicado sai da página; isso não é clique "fora")
+    if (document.body.classList.contains("tem-cheia") && e.target.isConnected && !e.target.closest(".card-cheia") && !e.target.closest(".modal-overlay, #chartTooltip, .ms")) fecharTelaCheia();
   });
 
   /* ---------- Esconder o painel da direita ----------

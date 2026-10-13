@@ -289,8 +289,8 @@ dias_ausencia, emenda_folga, minutos_trabalhados, minutos_descanso, marcacoes_di
   fica fora da conta de dias e aparece no resumo em horas. Ciclos cortados no fim do arquivo
   (`periodoCompleto`), para férias já programadas não criarem um mês incompleto. Encostados em
   folga e ranking continuam só de atestados. Extrator escolhe "Só atestados" antes de ler.
-- Listas com "Mostrar todos" (`limitarLista`, `state.mostrarTodos`, botões `.btn-todos`): curtas
-  e top de digitadas mostram 20 (`LIMITE_LISTA`).
+- Listas longas (`limitarLista`, botões `.btn-todos` e `#btnBancoTodos`): curtas e top de
+  digitadas mostram 20 (`LIMITE_LISTA`), banco de horas 10; a lista inteira só em tela cheia.
 - Filtro de status: opções só das ocorrências (as linhas-resumo saem do macro como "Pendente");
   com um só status o grupo (`#fStatusGroup`) some.
 - Demora no PontoNet: `feriasPorPessoa` (linhas "Afastamento" com "férias") + `feriasDoNome`
@@ -504,6 +504,14 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   cinza "Outros" a partir do 6º tipo; cor fixa por tipo, decidida ao carregar
   (`prepararCoresSeries`). `GRUPOS_AFAST` recolorido (atestado continua vermelho; antes havia
   laranja×marrom e vermelho×vinho parecidos). Conferência 18/18.
+- 13/10 (depois): o filtro da legenda passou a ser **por gráfico** (`state.serieSel[idDoGráfico]`;
+  cada gráfico chama `legendaSerie(id, …)`/`filtrarSerie(id, …)`). Clique na legenda em tela cheia
+  não fecha mais a tela cheia (o clique-fora ignora alvo desconectado, `e.target.isConnected`).
+  Listas longas (curtas, top de digitadas, banco de horas) só aparecem inteiras em **tela cheia**:
+  o botão virou "Ver todos (N) em tela cheia" (`limitarLista`/`emTelaCheia`); ao fechar volta aos
+  primeiros (`state.mostrarTodos`/`bancoMostrarTodos` não são mais usados). Mapa colaborador × dia:
+  legenda em cima, botão ⛶ (cards com `.heat-wrap` também ganham), e com filtro na legenda quem
+  fica sem nenhum dia no ciclo some. Conferência 18/18.
 
 ## 12. Estado atual e como continuar (08/10/2026)
 
