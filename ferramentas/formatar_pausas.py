@@ -5,6 +5,8 @@ import zipfile, re, sys, pickle, datetime
 # relatório (linha "Período: ... até ..."), que diz de que mês é a aba.
 # Uso: python3 formatar_pausas.py "pausa_termica.xlsx" [saida.pkl]
 #   saida.pkl = (fim_do_periodo, linhas); o adicionar_aba_xlsx.py (layout "pausas") insere as linhas.
+#   batidas(caminho) devolve a 3ª tabela da macro (18/10): uma linha por batida, com matrícula,
+#   nome, data, hora (fração do dia), nº da batida no dia, letra (P/G/F) e exceções do dia.
 # Por que ler o XML na mão: o .xlsx do Senior tem "\" nos caminhos do zip e estilos que o
 # openpyxl não abre (CLAUDE.md, armadilha 8). A macro separa a linha da pessoa (matrícula na
 # coluna A) da linha de dia (data na coluna A) pelo formato da célula: dd/mm/aaaa = dia. Aqui o
@@ -70,6 +72,29 @@ def formatar(caminho):
             v = [g(r + 2, c) for c in (1, 2, 4, 6, 8, 10, 11)]
             saida.append([int(atual[0]), atual[1], atual[2]] + v)
     return fim_periodo, saida
+
+# Batidas de cada dia, como GuardarBatidasDoDia da macro: depois da data (col. A) vêm pares
+# horário + letra; as exceções do dia são o texto entre parênteses no fim da linha.
+def batidas(caminho):
+    L = ler(caminho); atual = None; out = []
+    for r in sorted(L):
+        a, a_data = L[r].get(1, (None, False))
+        b, f = L[r].get(2, (None, False))[0], L[r].get(6, (None, False))[0]
+        if num(a) and a_data:
+            if not atual: continue
+            exc = ''
+            for c in range(2, 46):
+                v = L[r].get(c, (None, False))[0]
+                if isinstance(v, str) and v.strip().startswith('('): exc = v.strip()
+            seq = 0
+            for c in range(2, 45):
+                v = L[r].get(c, (None, False))[0]; l = L[r].get(c + 1, (None, False))[0]
+                if num(v) and isinstance(l, str) and len(l.strip()) == 1:
+                    seq += 1
+                    out.append((atual[0], atual[1], BASE + datetime.timedelta(days=a), v - int(v), seq, l.strip(), exc))
+        elif num(a) and isinstance(b, str) and b and isinstance(f, str) and f:
+            atual = (int(a), b.strip())
+    return out
 
 if __name__ == '__main__':
     fim, linhas = formatar(sys.argv[1])

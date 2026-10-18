@@ -358,6 +358,15 @@ As 15 ideias marcadas na página de ideias que ainda faltavam:
   --substituir` (troca o conteúdo de uma aba sem regravar o resto da planilha).
 - Conferência: 27 itens (o novo confere a tabela da unidade ciclo a ciclo com as abas).
 
+## Pausas térmicas: batidas dia a dia (18/10)
+
+- **FormatarPausasTermicas** agora deixa três tabelas na aba: totais por colaborador (como antes),
+  Total Geral (como antes) e, embaixo, **as batidas** (uma linha por batida: colaborador, data, dia
+  da semana, hora, nº da batida no dia, tipo — entrada/saída, refeição ou pausa térmica — e as
+  exceções do dia), como Tabela do Excel com filtro próprio. A GerarCSVPonto continua lendo só a
+  tabela de totais, então o CSV e o painel não mudam.
+- Letras do relatório: P = entrada/saída da jornada, G = refeição, F = pausa térmica.
+
 ## Ordem de uso no mês
 
 1. Rodar `ConsolidarCartaoPonto` no HRCP102 e colar o resultado numa aba `Cartão <Mês>`.

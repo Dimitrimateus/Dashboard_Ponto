@@ -13,37 +13,35 @@ Option Explicit
 '   arquivo inteiro.
 '
 ' PARA ONDE VAI E O QUE ESTE MACRO FAZ: reescreve essa MESMA aba (in-place),
-'   substituindo o "dump" bruto por apenas DUAS tabelas limpas, uma abaixo
-'   da outra, e NADA MAIS (sem título em cima, sem legenda/rodapé/"Soma dos
-'   itens" embaixo):
+'   substituindo o "dump" bruto por TRÊS tabelas limpas, uma abaixo da outra
+'   (sem título de página, legenda, rodapé nem "Soma dos itens"):
 '     1) Tabela de colaboradores - começa na linha 1 (cabeçalho) e tem uma
 '        linha por colaborador, com os 7 números que o próprio relatório
 '        original já calcula (Pausa corretas/menor/maior 0:20, Trabalho
 '        correto/maior/menor 1:40, Marcações Ímpares).
 '     2) Tabela de total - depois de UMA linha em branco, com o "Total
-'        Geral" desses mesmos 7 números para todos os colaboradores, também
-'        já calculado pelo relatório original.
-'   A linha em branco entre as duas é proposital: é ela que marca o fim da
-'   tabela de colaboradores para quem lê esta aba depois (GerarCSVPonto).
-'   Este macro NÃO recalcula nada: ele só ENCONTRA esses dois blocos dentro
-'   do relatório bruto (que já vêm prontos do sistema de ponto) e os copia
-'   para um layout de tabela normal, descartando o cabeçalho de página, a
-'   legenda, a tabela de marcações dia a dia e o rodapé — nada disso é usado
-'   por quem consome o resultado (a aba "Totais por Colaborador" é lida
-'   depois pelo macro GerarCSVPonto, na função GerarResumoPausasTermicas,
-'   que só precisa dessas duas tabelas).
+'        Geral" desses mesmos 7 números, também já calculado pelo relatório.
+'     3) Marcações do período (18/10, pedido do RH) - depois de duas linhas em
+'        branco: uma linha por batida (matrícula, colaborador, data, dia da
+'        semana, hora, nº da batida no dia, tipo, letra e exceções do dia),
+'        como Tabela do Excel, com filtro próprio. Letras do relatório: P =
+'        entrada/saída da jornada, G = saída/volta da refeição, F = saída/volta
+'        da pausa térmica (conferido: as pausas de 20 min e os períodos acima de
+'        1h40 recontados a partir das batidas batem com o "Total do
+'        Colaborador"). É a base para as vistas de horário, dia e turno.
+'   A linha em branco depois da tabela 1 é proposital: é ela que marca o fim
+'   da tabela de colaboradores para o GerarCSVPonto (GerarResumoPausasTermicas),
+'   que lê só a tabela 1. Os totais NÃO são recalculados: vêm prontos do
+'   relatório (são o número oficial). No fim, a aba é renomeada para
+'   "Pausas Térmicas <mês do fim do período>".
 '
-' POR QUE SÓ ESSAS DUAS TABELAS (e não a tabela detalhada de marcações):
-'   Este macro já teve uma versão que também reconstruía uma tabela com uma
-'   linha por marcação de ponto (classificando cada intervalo em "pausa
-'   correta/curta" e "trabalho correto/curto/longo"), mais a legenda de
-'   classificação e o cabeçalho do relatório. Essa versão foi simplificada a
-'   pedido do RH: o que realmente é consumido no fluxo (GerarCSVPonto) são
-'   só os totais por colaborador e o total geral, então o macro agora entrega
-'   só isso, sem título/legenda/tabela de marcações.
+' HISTÓRICO: uma versão antiga já tinha uma tabela por marcação; foi tirada
+'   (só os totais eram usados) e voltou em 18/10, agora com uma linha por
+'   batida, para o painel poder mostrar em que horário, dia e turno os
+'   problemas acontecem.
 '
-' Rode este macro numa CÓPIA da planilha antes de usar em produção — ele
-' reescreve a aba ativa por completo (Ctrl+Z desfaz se rodar por engano).
+' Rode este macro numa CÓPIA da planilha antes de usar em produção: ele
+' reescreve a aba ativa por completo e o que uma macro faz NÃO volta com Ctrl+Z.
 ' ============================================================================
 ' COMO SE LIGA AO RESTO DO PROJETO
 '   HRES114 (Senior) -> esta macro -> aba "Pausas Térmicas" na planilha de
@@ -76,7 +74,7 @@ Sub FormatarPausasTermicas()
 
     ' Confirmação antes de apagar: o usuário pode desistir.
     If MsgBox("Este macro vai REESCREVER completamente a aba """ & ws.Name & _
-              """, deixando só os totais por colaborador e o total geral." & vbCrLf & vbCrLf & _
+              """, deixando os totais por colaborador, o total geral e as batidas dia a dia." & vbCrLf & vbCrLf & _
               "Recomendado: rode numa CÓPIA do arquivo." & vbCrLf & vbCrLf & _
               "Continuar?", vbYesNo + vbQuestion, "Formatar Pausas Térmicas") = vbNo Then
         Exit Sub
@@ -101,6 +99,11 @@ Sub FormatarPausasTermicas()
     Set totColNome = New Collection
     Set totColCargo = New Collection
     Set totColVals = New Collection
+
+    ' Batidas de cada dia (18/10, pedido do RH): uma linha por batida, para a
+    ' terceira tabela da aba (GuardarBatidasDoDia / EscreverTabelaBatidas).
+    Dim batidas As Collection
+    Set batidas = New Collection
 
     ' Contexto do colaborador "atual" enquanto varremos o relatório de cima a baixo: atualizado
     ' sempre que passamos pela linha de identificação do colaborador, e usado quando encontramos o
@@ -129,12 +132,11 @@ Sub FormatarPausasTermicas()
         If UCase(ws.Cells(r, 1).NumberFormat) = "DD/MM/YYYY" And IsNumeric(a1) And Len(Trim(CStr(a1))) > 0 Then
             ' ---------------- Linha de marcações do dia (uma data + as batidas de ponto daquele
             ' dia, nas colunas B, D, F...) ----------------
-            ' Esses dados alimentavam a antiga tabela detalhada (uma linha por marcação), que não
-            ' faz mais parte da saída deste macro (ver cabeçalho do arquivo). Os números que
-            ' interessam (Pausa corretas/menor/maior, Trabalho correto/maior/menor, Marcações
-            ' Ímpares) não são recalculados a partir dessas marcações: eles já vêm prontos, por
-            ' colaborador, no bloco "Total do Colaborador" mais abaixo no relatório - por isso esta
-            ' linha só precisa ser pulada.
+            ' Os totais (Pausa corretas/menor/maior, Trabalho correto/maior/menor, Marcações
+            ' Ímpares) NÃO são recalculados a partir dessas batidas: vêm prontos no bloco "Total
+            ' do Colaborador". As batidas são guardadas (18/10) só para a terceira tabela da aba,
+            ' a de marcações dia a dia (GuardarBatidasDoDia).
+            If curMatricula <> "" Then GuardarBatidasDoDia ws, r, curMatricula, curNome, batidas
             r = r + 1
 
         ElseIf IsNumeric(a1) And ws.Cells(r, 1).NumberFormat <> "DD/MM/YYYY" _
@@ -310,6 +312,11 @@ Sub FormatarPausasTermicas()
     ' Ajustes finais de layout
     ' ============================================================
     ' Fonte, larguras e alinhamento (só aparência; não afeta quem lê a aba).
+    ' Terceira tabela: as batidas, dia a dia (depois de duas linhas em branco).
+    Dim qtdBatidas As Long
+    qtdBatidas = batidas.Count
+    If qtdBatidas > 0 Then EscreverTabelaBatidas ws, writeRow + 3, batidas
+
     ws.Cells.Font.Name = "Calibri"
     ws.Cells.Font.Size = 10
 
@@ -353,7 +360,8 @@ Sub FormatarPausasTermicas()
 
     MsgBox "Formatação concluída." & vbCrLf & _
            totColMatricula.Count & " colaborador(es) na tabela de colaboradores." & vbCrLf & _
-           IIf(temGeral, "Total Geral incluído.", "Bloco ""Total Geral"" não encontrado no relatório original.") & _
+           IIf(temGeral, "Total Geral incluído.", "Bloco ""Total Geral"" não encontrado no relatório original.") & vbCrLf & _
+           qtdBatidas & " batida(s) na tabela de marcações (embaixo do Total Geral)." & _
            IIf(msgNome <> "", vbCrLf & msgNome, ""), _
            vbInformation, "Formatar Pausas Térmicas"
 
@@ -361,6 +369,94 @@ End Sub
 
 
 ' Visual padrão das linhas de cabeçalho das duas tabelas (negrito, fundo cinza, borda).
+' Lê uma linha de dia do relatório: depois da data (coluna A) vêm pares
+' "horário + letra" (P = entrada/saída da jornada, G = saída/volta da
+' refeição, F = saída/volta da pausa térmica) e, no fim, as exceções do dia
+' entre parênteses ("(1) (3)", ver a legenda do relatório). Guarda uma linha
+' por batida em "batidas": matrícula, nome, data, hora (fração do dia), nº da
+' batida no dia, letra e exceções. Batida depois da meia-noite continua na
+' data da linha (é o mesmo turno).
+Private Sub GuardarBatidasDoDia(ws As Worksheet, ByVal r As Long, ByVal mat As String, ByVal nome As String, batidas As Collection)
+    Dim vals As Variant, c As Long, seq As Long, v As Variant, letra As String, excecoes As String
+    vals = ws.Range(ws.Cells(r, 1), ws.Cells(r, 45)).Value2
+    For c = 2 To 45
+        If VarType(vals(1, c)) = vbString Then
+            If Left$(Trim$(vals(1, c)), 1) = "(" Then excecoes = Trim$(vals(1, c))
+        End If
+    Next c
+    For c = 2 To 44
+        v = vals(1, c)
+        If VarType(v) = vbDouble Then
+            letra = Trim$(CStr(vals(1, c + 1)))
+            If Len(letra) = 1 Then
+                seq = seq + 1
+                batidas.Add Array(mat, nome, vals(1, 1), v, seq, letra, excecoes)
+            End If
+        End If
+    Next c
+End Sub
+
+' Escreve a tabela de batidas a partir da linha "linhaTitulo" (título, depois
+' cabeçalho e dados) e a transforma numa Tabela do Excel, que tem filtro
+' próprio (o filtro da aba continua na tabela de totais). Os dados vão de uma
+' vez, por uma matriz, porque são milhares de linhas.
+Private Sub EscreverTabelaBatidas(ws As Worksheet, ByVal linhaTitulo As Long, batidas As Collection)
+    Dim cab As Variant, n As Long, i As Long, b As Variant, dados() As Variant, linhaCab As Long
+    cab = Array("Matrícula", "Colaborador", "Data", "Dia da semana", "Hora", "Nº da batida no dia", _
+                "Tipo da batida", "Letra no relatório", "Exceções do dia")
+    n = batidas.Count
+    ReDim dados(1 To n, 1 To 9)
+    ' For Each (e não batidas(i)): pegar item de Collection pelo número percorre a
+    ' lista desde o começo a cada vez, o que ficaria lento com milhares de batidas.
+    i = 0
+    For Each b In batidas
+        i = i + 1
+        dados(i, 1) = CLng(b(0))
+        dados(i, 2) = b(1)
+        dados(i, 3) = b(2)
+        dados(i, 4) = Choose(Weekday(b(2)), "Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb")
+        dados(i, 5) = b(3) - Int(b(3))
+        dados(i, 6) = b(4)
+        dados(i, 7) = TipoDaBatida(b(5))
+        dados(i, 8) = b(5)
+        dados(i, 9) = TraduzirExcecoes(b(6))
+    Next b
+
+    ws.Cells(linhaTitulo, 1).Value = "Marcações do período (uma linha por batida)"
+    ws.Cells(linhaTitulo, 1).Font.Bold = True
+    linhaCab = linhaTitulo + 1
+    ws.Range(ws.Cells(linhaCab, 1), ws.Cells(linhaCab, 9)).NumberFormat = "@"
+    ws.Range(ws.Cells(linhaCab, 1), ws.Cells(linhaCab, 9)).Value = cab
+    ws.Range(ws.Cells(linhaCab + 1, 1), ws.Cells(linhaCab + n, 9)).Value = dados
+    ws.Range(ws.Cells(linhaCab + 1, 3), ws.Cells(linhaCab + n, 3)).NumberFormat = "dd/mm/yyyy"
+    ws.Range(ws.Cells(linhaCab + 1, 5), ws.Cells(linhaCab + n, 5)).NumberFormat = "hh:mm"
+
+    Dim lo As ListObject
+    Set lo = ws.ListObjects.Add(xlSrcRange, ws.Range(ws.Cells(linhaCab, 1), ws.Cells(linhaCab + n, 9)), , xlYes)
+    lo.TableStyle = "TableStyleLight1"
+End Sub
+
+' Letra da batida no relatório -> texto (P, G, F; outra letra fica como veio).
+Private Function TipoDaBatida(ByVal letra As String) As String
+    Select Case UCase$(letra)
+        Case "P": TipoDaBatida = "Entrada ou saída da jornada"
+        Case "G": TipoDaBatida = "Saída ou volta da refeição"
+        Case "F": TipoDaBatida = "Saída ou volta da pausa térmica"
+        Case Else: TipoDaBatida = "Outra (" & letra & ")"
+    End Select
+End Function
+
+' "(1) (3)" -> "Pausa menor que 0:20; Trabalho maior que 1:40" (legenda do relatório).
+Private Function TraduzirExcecoes(ByVal codigos As String) As String
+    Dim nomes As Variant, i As Long, t As String
+    nomes = Array("", "Pausa menor que 0:20", "Pausa maior que 0:20", "Trabalho maior que 1:40", _
+                  "Trabalho menor que 1:40", "Marcações ímpares", "Pausa correta")
+    For i = 1 To 6
+        If InStr(1, codigos, "(" & i & ")") > 0 Then t = t & IIf(t = "", "", "; ") & nomes(i)
+    Next i
+    TraduzirExcecoes = t
+End Function
+
 ' Nome do mês por extenso (1 = Janeiro), para o nome da aba.
 Private Function NomeDoMes(ByVal m As Long) As String
     NomeDoMes = Choose(m, "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", _

@@ -104,6 +104,16 @@ conteúdo num módulo.
   para "Pausas Térmicas <Mês>" (`NomeDoMes`, `AbaExiste`; se o nome já existe, avisa e mantém).
   Versão Python: `ferramentas/formatar_pausas.py` (lê o numFmt do styles.xml para separar linha
   de pessoa da linha de dia, como a macro faz com `NumberFormat`).
+- (18/10, depois) **Terceira tabela: as batidas** (`GuardarBatidasDoDia`, `EscreverTabelaBatidas`):
+  duas linhas em branco depois do Total Geral, título "Marcações do período (uma linha por
+  batida)" e uma Tabela do Excel (ListObject, filtro próprio): Matrícula, Colaborador, Data, Dia da
+  semana, Hora, Nº da batida no dia, Tipo da batida, Letra no relatório, Exceções do dia. Linha de dia
+  do relatório = data em A + pares horário/letra (B/C, D/E...) + exceções "(1) (3)" no fim (col. AH).
+  **Letras: P = entrada/saída da jornada, G = refeição, F = pausa térmica** (dedução conferida:
+  pausas F–F de 20 min e blocos > 1h40 recontados batem com o "Total do Colaborador"; "trabalho
+  menor" difere em 1–2 em quem tem dia ímpar). Batida depois da meia-noite fica na data do turno.
+  A GerarCSV continua lendo só a tabela 1 (para na linha em branco). `formatar_pausas.batidas()`
+  é a versão Python. Jul/ago/set: 9.545 / 9.992 / 9.009 batidas.
 
 ### 5.3 PURO_Para_EDITADO
 - Mapeia a aba `PURO` por nome de cabeçalho → `EDITADO_<MES><AA>` com as colunas `Matricula, Nome,
@@ -606,6 +616,14 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   Térmicas" com o conteúdo trocado (`--substituir`) + "Pausas Térmicas Julho" e "Agosto"; CSV
   simulado com 3.082 linhas. Seção "Tendências" + tendências em cada seção e no card (ver seção 6).
   FormatarPausasTermicas renomeia a aba pelo mês. Conferência 27/27 nas duas planilhas.
+
+- 18/10 (depois): FormatarPausasTermicas ganhou a tabela de batidas (ver 5.2); prévia do resultado
+  dos 3 meses enviada ao Dimitri (arquivo à parte, feito com openpyxl, não é a planilha dele).
+  Análise das batidas (3 meses, 3.002 dias-pessoa) para propor vistas B1–B14 (ver conversa):
+  13h tem 22% dos períodos acima de 1h40; turno do dia 7,7% × noite 4,2%; 229 dias com mais de
+  1h40 sem nenhuma pausa; 98% das pausas com exatos 20 min; batida faltando sempre de pausa (F);
+  nenhuma batida de pausa digitada (659 entradas/saídas digitadas). **Nada disso está no CSV nem
+  no painel ainda**: depende de ele escolher as vistas (exigirá a GerarCSV ler a tabela de batidas).
 
 ## 12. Estado atual e como continuar (13/10/2026)
 
