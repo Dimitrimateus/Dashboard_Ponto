@@ -198,6 +198,24 @@ Sub FormatarPausasTermicas()
         End If
     Loop
 
+    ' Fim do período do relatório (linha "Período: dd/mm/aaaa até dd/mm/aaaa", no
+    ' cabeçalho): diz de que mês é a aba. Lido ANTES de apagar o relatório; é a última
+    ' data da linha do "Período:". 0 = não achou (a aba fica com o nome que tem).
+    Dim fimPeriodo As Date, rp As Long, cp As Long, achouPeriodo As Boolean
+    For rp = 1 To 15
+        For cp = 1 To 15
+            If Trim$(CStr(ws.Cells(rp, cp).Value)) = "Período:" Then achouPeriodo = True
+        Next cp
+        If achouPeriodo Then
+            For cp = 1 To 20
+                If IsDate(ws.Cells(rp, cp).Value) And Not IsEmpty(ws.Cells(rp, cp).Value) Then
+                    If VarType(ws.Cells(rp, cp).Value) = vbDate Then fimPeriodo = ws.Cells(rp, cp).Value
+                End If
+            Next cp
+            Exit For
+        End If
+    Next rp
+
     Application.StatusBar = "Reescrevendo a planilha..."
 
     ' Cells.Clear apaga valores/formatos, mas não desfaz o AutoFiltro nem o congelamento de
@@ -315,15 +333,49 @@ Sub FormatarPausasTermicas()
     Application.Calculation = xlCalculationAutomatic
     Application.StatusBar = False
 
+    ' Renomeia a aba com o mês do fim do período ("Pausas Térmicas Setembro"), para o
+    ' GerarCSVPonto saber de que mês ela é e o painel mostrar a evolução mês a mês.
+    ' Se já existe uma aba com esse nome, mantém o nome atual e avisa.
+    Dim msgNome As String, novoNome As String
+    If fimPeriodo > 0 Then
+        novoNome = "Pausas Térmicas " & NomeDoMes(Month(fimPeriodo))
+        If ws.Name <> novoNome Then
+            If AbaExiste(ws.Parent, novoNome) Then
+                msgNome = "Já existe uma aba """ & novoNome & """: esta ficou com o nome """ & ws.Name & """."
+            Else
+                ws.Name = novoNome
+                msgNome = "Aba renomeada para """ & novoNome & """ (período até " & Format$(fimPeriodo, "dd/mm/yyyy") & ")."
+            End If
+        End If
+    Else
+        msgNome = "Período do relatório não encontrado: a aba ficou com o nome """ & ws.Name & """."
+    End If
+
     MsgBox "Formatação concluída." & vbCrLf & _
            totColMatricula.Count & " colaborador(es) na tabela de colaboradores." & vbCrLf & _
-           IIf(temGeral, "Total Geral incluído.", "Bloco ""Total Geral"" não encontrado no relatório original."), _
+           IIf(temGeral, "Total Geral incluído.", "Bloco ""Total Geral"" não encontrado no relatório original.") & _
+           IIf(msgNome <> "", vbCrLf & msgNome, ""), _
            vbInformation, "Formatar Pausas Térmicas"
 
 End Sub
 
 
 ' Visual padrão das linhas de cabeçalho das duas tabelas (negrito, fundo cinza, borda).
+' Nome do mês por extenso (1 = Janeiro), para o nome da aba.
+Private Function NomeDoMes(ByVal m As Long) As String
+    NomeDoMes = Choose(m, "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", _
+                       "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro")
+End Function
+
+' Diz se a pasta já tem uma aba com esse nome (sem ligar para maiúsculas).
+Private Function AbaExiste(wb As Workbook, ByVal nome As String) As Boolean
+    Dim sh As Object
+    For Each sh In wb.Sheets
+        If LCase$(sh.Name) = LCase$(nome) Then AbaExiste = True: Exit Function
+    Next sh
+    AbaExiste = False
+End Function
+
 Private Sub FormatarCabecalho(rng As Range)
     With rng
         .Font.Bold = True

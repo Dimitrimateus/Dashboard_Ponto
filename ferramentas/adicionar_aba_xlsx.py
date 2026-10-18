@@ -6,8 +6,10 @@ from xml.sax.saxutils import escape
 # as partes do zip são copiadas byte a byte; só mudam workbook.xml, workbook.xml.rels,
 # [Content_Types].xml, docProps/app.xml e styles.xml (estilos novos no fim), e entra
 # xl/worksheets/sheetN.xml. Textos vão como inlineStr (não mexe no sharedStrings).
-# Uso: python3 adicionar_aba_xlsx.py entrada.xlsx saida.xlsx linhas.pkl LAYOUT ["Nome da aba"]
-#   LAYOUT = marcacoes | afastamentos | intrajornada | interjornada | intersemanal | excedentes
+# Uso: python3 adicionar_aba_xlsx.py entrada.xlsx saida.xlsx linhas.pkl LAYOUT ["Nome da aba"] [--substituir]
+#   LAYOUT = marcacoes | afastamentos | intrajornada | interjornada | intersemanal | excedentes | pausas
+#   --substituir: em vez de criar a aba, troca o CONTEÚDO de uma aba que já existe com esse nome
+#   (só se ela não tiver fórmulas, tabelas, comentários nem ligações: senão recusa).
 # (linhas.pkl = saída do formatar_marcacoes.py ou do formatar_afastamentos.py)
 
 # Layout de cada aba: cabeçalho, larguras, colunas de texto (códigos com zero à esquerda),
@@ -33,6 +35,12 @@ LAYOUTS = {
         cab=["Matrícula", "Colaborador", "Cargo", "C.C.", "Filial", "Cód. Local", "Local", "Data",
              "Carga horária", "Marcações", "Extras", "Horas trabalhadas", "Conv. noturna", "Total"],
         larg=[11, 36, 28, 7, 7, 18, 28, 11, 10, 30, 10, 10, 10, 10], texto={4, 5, 6}, hora=set(), dur={9, 11, 12, 13, 14}),
+    # Tabela de colaboradores do relatório de pausas térmicas (formatar_pausas.py /
+    # FormatarPausasTermicas.bas); as abas de meses anteriores levam o mês no nome.
+    'pausas': dict(nome='Pausas Térmicas',
+        cab=["Matrícula", "Colaborador", "Cargo", "Pausa corretas", "Pausa menor 0:20", "Pausa maior 0:20",
+             "Trabalho correto 1:40", "Trabalho maior 1:40", "Trabalho menor 1:40", "Marcações Ímpares"],
+        larg=[12, 32, 28, 14, 14, 14, 18, 16, 16, 16], texto=set(), hora=set(), dur=set()),
     'afastamentos': dict(nome='Afastamentos',
         cab=["Matrícula", "Colaborador", "Admissão", "Cód. Situação", "Situação", "Início", "Hora início",
              "Término", "Hora término", "Dias", "Horas", "Prev. Término", "Exame"],
@@ -154,10 +162,45 @@ def adicionar_aba(entrada, saida, linhas, nome_aba, lay):
         zout.writestr(parte, montar_sheet(linhas, ids, lay).encode('utf-8'))
     return parte
 
-# Argumentos: entrada.xlsx saida.xlsx linhas.pkl LAYOUT (ver o topo do arquivo) ["Nome da aba"].
+# Troca o conteúdo de uma aba existente (ex.: digitadas de 1 mês -> 3 meses) sem mexer no resto:
+# acha o arquivo da aba pelo workbook.xml + rels, regrava só ele (e styles.xml, com os estilos
+# novos no fim) e ajusta o intervalo do filtro registrado (_xlnm._FilterDatabase) dessa aba, se
+# houver. Recusa a aba que tem relações próprias (tabelas, comentários, desenhos), fórmulas ou
+# entradas no calcChain, porque essas coisas apontariam para células que deixam de existir.
+def substituir_aba(entrada, saida, linhas, nome_aba, lay):
+    zin = zipfile.ZipFile(entrada)
+    nomes = zin.namelist()
+    wb = zin.read('xl/workbook.xml').decode('utf-8')
+    abas = re.findall(r'<sheet [^>]*name="([^"]*)"[^>]*r:id="([^"]+)"', wb)
+    idx = next((i for i, (n, _) in enumerate(abas) if n == escape(nome_aba, {'"': '&quot;'})), None)
+    if idx is None: raise SystemExit('A pasta não tem a aba "%s".' % nome_aba)
+    rels = zin.read('xl/_rels/workbook.xml.rels').decode('utf-8')
+    alvo = re.search(r'<Relationship [^>]*Id="%s"[^>]*Target="([^"]+)"' % abas[idx][1], rels) or            re.search(r'<Relationship [^>]*Target="([^"]+)"[^>]*Id="%s"' % abas[idx][1], rels)
+    parte = 'xl/' + alvo.group(1).lstrip('/').replace('xl/', '', 1)
+    rel_aba = parte.replace('worksheets/', 'worksheets/_rels/') + '.rels'
+    if rel_aba in nomes: raise SystemExit('A aba "%s" tem tabelas/comentários/desenhos: não troco.' % nome_aba)
+    if '<f>' in zin.read(parte).decode('utf-8') or re.search(r'<f[ >]', zin.read(parte).decode('utf-8')):
+        raise SystemExit('A aba "%s" tem fórmulas: não troco.' % nome_aba)
+    sheet_id = re.search(r'<sheet [^>]*name="%s"[^>]*sheetId="(\d+)"' % re.escape(abas[idx][0]), wb).group(1)
+    if 'xl/calcChain.xml' in nomes and re.search(r'<c [^>]*i="%s"' % sheet_id, zin.read('xl/calcChain.xml').decode('utf-8')):
+        raise SystemExit('A aba "%s" aparece no calcChain: não troco.' % nome_aba)
+    styles, ids = acrescentar_estilos(zin.read('xl/styles.xml').decode('utf-8'))
+    ref = "$A$1:$%s$%d" % (letra(len(lay['cab'])), len(linhas) + 1)
+    wb = re.sub(r'(<definedName name="_xlnm\._FilterDatabase" localSheetId="%d"[^>]*>)([^<]*)!\$[^<]*(</definedName>)' % idx,
+                lambda m: m.group(1) + m.group(2) + '!' + ref + m.group(3), wb)
+    novos = {'xl/workbook.xml': wb, 'xl/styles.xml': styles, parte: montar_sheet(linhas, ids, lay)}
+    with zipfile.ZipFile(saida, 'w', zipfile.ZIP_DEFLATED) as zout:
+        for info in zin.infolist():
+            dados = novos[info.filename].encode('utf-8') if info.filename in novos else zin.read(info.filename)
+            zout.writestr(info, dados)
+    return parte
+
+# Argumentos: entrada.xlsx saida.xlsx linhas.pkl LAYOUT (ver o topo do arquivo) ["Nome da aba"] [--substituir].
 if __name__ == '__main__':
-    linhas = pickle.load(open(sys.argv[3], 'rb'))
-    if isinstance(linhas, tuple): linhas = linhas[1]   # formatar_jornada.py grava (tipo, linhas)
-    lay = LAYOUTS[sys.argv[4]]
-    nome = sys.argv[5] if len(sys.argv) > 5 else lay['nome']
-    print('aba gravada em', adicionar_aba(sys.argv[1], sys.argv[2], linhas, nome, lay))
+    args = [a for a in sys.argv[1:] if a != '--substituir']
+    linhas = pickle.load(open(args[2], 'rb'))
+    if isinstance(linhas, tuple): linhas = linhas[1]   # formatar_jornada.py / formatar_pausas.py gravam (info, linhas)
+    lay = LAYOUTS[args[3]]
+    nome = args[4] if len(args) > 4 else lay['nome']
+    if '--substituir' in sys.argv: print('aba trocada em', substituir_aba(args[0], args[1], linhas, nome, lay))
+    else: print('aba gravada em', adicionar_aba(args[0], args[1], linhas, nome, lay))

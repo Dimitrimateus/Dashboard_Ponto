@@ -564,6 +564,12 @@
   @media (max-width: 980px){ .dig-kpis.kpis4{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
   .resumo-linha{ font-size:13px; color:var(--c-ink); margin:0 0 10px; line-height:1.45; }
   .tend-sobe{ color:#C62828; font-weight:700; } .tend-desce{ color:#2E7D32; font-weight:700; }
+  /* tendências (ciclo a ciclo): mini-barras e o nome clicável do assunto */
+  .tend-rel{ font-weight:400; color:var(--c-muted-2); }
+  svg.mini-barras{ display:block; }
+  #tableTendUnidade .table-scroll{ max-height:none; }
+  .link-tend{ font:inherit; color:var(--c-ink); background:none; border:none; padding:0; cursor:pointer; text-align:left; text-decoration:underline dotted; text-underline-offset:3px; }
+  .link-tend:hover{ color:var(--c-orange-dark, #B35F00); }
   .card-title select.sel-titulo{ width:auto; display:inline-block; padding:3px 8px; font-size:13px; min-height:0; }
   #chartTooltip{
     position:fixed; z-index:200; pointer-events:none;
@@ -805,7 +811,7 @@
        aqui + uma <div class="pagina" data-pagina="..."> no conteúdo. -->
   <nav class="menu-secoes" id="menuSecoes" hidden aria-label="Seções do painel">
     <div class="menu-titulo">Seções do painel</div>
-    <button type="button" data-pagina="geral">Visão geral</button><button type="button" data-pagina="destaque">Colaboradores em destaque</button><button type="button" data-pagina="pausas">Pausas térmicas</button><button type="button" data-pagina="digitadas">Marcações digitadas</button><button type="button" data-pagina="afastamentos">Afastamentos</button><button type="button" data-pagina="jornada">Jornada</button><button type="button" data-pagina="demora">Demora no PontoNet</button><button type="button" data-pagina="org">Lista de colaboradores</button><button type="button" data-pagina="historico">Histórico</button>
+    <button type="button" data-pagina="geral">Visão geral</button><button type="button" data-pagina="tendencias">Tendências</button><button type="button" data-pagina="destaque">Colaboradores em destaque</button><button type="button" data-pagina="pausas">Pausas térmicas</button><button type="button" data-pagina="digitadas">Marcações digitadas</button><button type="button" data-pagina="afastamentos">Afastamentos</button><button type="button" data-pagina="jornada">Jornada</button><button type="button" data-pagina="demora">Demora no PontoNet</button><button type="button" data-pagina="org">Lista de colaboradores</button><button type="button" data-pagina="historico">Histórico</button>
     <button type="button" data-pagina="todas" class="menu-todas">Todas as seções numa página só</button>
   </nav>
 
@@ -912,6 +918,50 @@
         </section>
 
       </div>
+      <!-- Seção "Tendências" (renderTendencias): a unidade (ou a equipe do filtro)
+           ciclo a ciclo em cada assunto que o arquivo traz em mais de um mês, e o
+           assunto escolhido em #tendIndicador por gestor e por pessoa. -->
+      <div class="pagina" data-pagina="tendencias">
+        <h3 class="section-title">Tendências</h3>
+        <div id="tendSemDados" class="card wide" hidden><div class="chart-empty">Este arquivo não traz nenhum assunto com mais de um mês (batidas digitadas, afastamentos, jornada ou pausas de mais de um ciclo). Com os relatórios de 3 meses, esta seção mostra se a unidade, as equipes e as pessoas estão melhorando ou piorando.</div></div>
+        <div id="tendCorpo">
+          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: todos os relatórios que o RH traz com mais de um mês</span><p>Para cada assunto (batidas digitadas, esquecimentos, dias de atestado, jornada e pausas térmicas), o painel soma o que aconteceu em cada um dos 3 últimos ciclos do ponto (dia 28 a 27) e compara o último com o anterior. As ocorrências do mês não entram aqui porque a planilha delas tem um mês só. Segue os filtros de gestor, grupo, cargo e colaborador: com um gestor escolhido, tudo vira a tendência da equipe dele. O filtro de período não vale aqui.</p></div>
+          <section class="grid">
+            <div class="card wide">
+              <div class="card-title">A unidade, ciclo a ciclo</div>
+              <div class="card-hint" id="tendUnidadeHint">Cada linha é um assunto; os números são de cada ciclo (28 a 27)</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: os relatórios de batidas digitadas, afastamentos, jornada e pausas</span><p>Uma linha por assunto. Nos assuntos de quantidade (batidas, dias, ocorrências), o número é o total do ciclo; nos de porcentagem (pausas), é a parte do total. Seta vermelha = piorou do ciclo anterior para o último; verde = melhorou. As barrinhas mostram os 3 ciclos lado a lado (o último em laranja). Clique no nome do assunto para ver, logo abaixo, os gestores e as pessoas.</p></div>
+              <div class="card-body" id="tableTendUnidade"></div>
+            </div>
+          </section>
+          <div class="abs-toolbar" style="margin-top:6px">
+            <label for="tendIndicador" style="font-size:11.5px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:.04em;">Assunto</label>
+            <select id="tendIndicador"></select>
+          </div>
+          <section class="grid">
+            <div class="card wide">
+              <div class="card-title">Por gestor: <span id="tendNomeInd"></span></div>
+              <div class="card-hint">Cada equipe nos 3 ciclos, da pior para a melhor no último ciclo</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: os mesmos relatórios + a lista de quem é gestor de quem</span><p>O assunto escolhido no seletor, somado por equipe em cada ciclo. Seta vermelha = piorou do ciclo anterior para o último; verde = melhorou. As barrinhas mostram os 3 ciclos lado a lado (o último em laranja).</p></div>
+              <div class="card-body" id="tableTendGestor"></div>
+            </div>
+            <div class="card wide">
+              <div class="card-title">Quem mais piorou: <span id="tendNomeInd2"></span></div>
+              <div class="card-hint">Maior aumento do ciclo anterior para o último &middot; os 15 primeiros (a lista inteira abre em tela cheia)</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: os mesmos relatórios, por pessoa</span><p>As pessoas em que o assunto escolhido mais piorou do penúltimo para o último ciclo. Nos assuntos de porcentagem, só entra quem teve pelo menos 10 pausas ou períodos nos dois ciclos, para uma diferença pequena não parecer grande. Clique no nome para ver o resumo da pessoa.</p></div>
+              <div class="card-body" id="tableTendPiorou"></div>
+              <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="tendPiorou" id="btnTendPiorouTodos" hidden>Mostrar todos</button></div>
+            </div>
+            <div class="card wide">
+              <div class="card-title">Quem mais melhorou: <span id="tendNomeInd3"></span></div>
+              <div class="card-hint">Maior melhora do ciclo anterior para o último &middot; os 15 primeiros (a lista inteira abre em tela cheia)</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: os mesmos relatórios, por pessoa</span><p>As pessoas em que o assunto escolhido mais melhorou do penúltimo para o último ciclo. Serve também para reconhecer quem melhorou depois de uma conversa.</p></div>
+              <div class="card-body" id="tableTendMelhorou"></div>
+              <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="tendMelhorou" id="btnTendMelhorouTodos" hidden>Mostrar todos</button></div>
+            </div>
+          </section>
+        </div>
+      </div>
       <!-- Seção "Colaboradores em destaque": top, extra e falta, curtas, horas. -->
       <div class="pagina" data-pagina="destaque">
         <h3 class="section-title">Colaboradores em destaque</h3>
@@ -922,9 +972,9 @@
             <div class="card-fonte"><span class="fonte-origem">De onde vem: as ocorrências de ponto do mês</span><p>As pessoas com mais ocorrências no período, contadas do mesmo jeito que o card “Ocorrências no período”. <strong>Clique no nome</strong> para abrir o resumo completo da pessoa; clique na barra para ver cada ocorrência dela.</p></div>
             <div class="card-body" id="chartTopColaboradores"></div>
           </div>
-          <div class="card">
+          <div class="card wide">
             <div class="card-title">Extra e falta no mesmo dia</div>
-            <div class="card-hint">Este mês e total dos últimos 3 meses &middot; linhas em vermelho atingiram 10+ ocorrências na soma dos 3 meses (pontuação negativa na auditoria)</div>
+            <div class="card-hint">Este mês, total dos últimos 3 meses e a tendência (este mês comparado com a média por mês dos 2 meses anteriores) &middot; linhas em vermelho atingiram 10+ ocorrências na soma dos 3 meses (pontuação negativa na auditoria)</div>
             <div class="card-fonte"><span class="fonte-origem">De onde vem: o espelho de ponto deste mês e dos 2 meses anteriores</span><p>O espelho de ponto é o relatório do sistema com todos os dias de cada pessoa: as batidas, as horas trabalhadas, as horas extras e as horas tiradas do banco de horas. Aqui contamos os dias em que a mesma pessoa, <strong>no mesmo dia</strong>, fez hora extra e também teve horas descontadas do banco (por atraso ou saída antes). Isso costuma indicar horário trocado ou batida no horário errado. <strong>Este mês</strong> = só o mês atual; <strong>3 meses</strong> = a soma dos 3 últimos. Com 10 ou mais na soma, a linha fica vermelha. Não muda com o filtro de período.</p></div>
             <div class="card-body" id="tableExtraFalta"></div>
           </div>
@@ -977,6 +1027,19 @@
             <div class="card-body" id="chartPauEvolucao"></div>
             <div class="card-body" id="tablePauEvolucao" style="margin-top:10px"></div>
           </div>
+            <div class="card wide">
+              <div class="card-title">Tendência por gestor: trabalho acima de 1h40 sem pausa</div>
+              <div class="card-hint">Parte dos períodos de trabalho que passou de 1h40, por equipe, em cada mês</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de pausas térmicas de cada mês</span><p>Para cada equipe, que parte dos períodos de trabalho passou de 1h40 sem a pausa em cada mês, e se melhorou ou piorou. Seta vermelha = piorou do ciclo anterior para o último; verde = melhorou. As barrinhas mostram os 3 ciclos lado a lado (o último em laranja).</p></div>
+              <div class="card-body" id="tablePauTendGestor"></div>
+            </div>
+            <div class="card wide">
+              <div class="card-title">Tendência por pessoa: trabalho acima de 1h40 sem pausa</div>
+              <div class="card-hint">Parte dos períodos de trabalho que passou de 1h40, por pessoa, em cada mês &middot; de quem está pior no último mês para quem está melhor &middot; os 20 primeiros (a lista inteira abre em tela cheia)</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de pausas térmicas de cada mês</span><p>Para cada pessoa do relatório de pausas, que parte dos períodos de trabalho passou de 1h40 em cada mês. Seta vermelha = piorou do ciclo anterior para o último; verde = melhorou. As barrinhas mostram os 3 ciclos lado a lado (o último em laranja).</p></div>
+              <div class="card-body" id="tablePauTend"></div>
+              <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="tablePauTend" id="btnPauTendTodos" hidden>Mostrar todos</button></div>
+            </div>
           <div class="card wide">
             <div class="card-title">Resumo por colaborador</div>
             <div class="card-hint">Pausas e intervalos de trabalho do relatório de Pausas Térmicas do mês atual &middot; linhas em vermelho têm marcações inválidas</div>
@@ -1032,6 +1095,19 @@
               <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de batidas digitadas, hora de cada uma</span><p>As batidas digitadas agrupadas pela hora (7h = de 07:00 a 07:59). Mostra se o que se digita é mais a entrada, a volta do almoço ou a saída. <strong>Clique</strong> numa barra (ou num pedaço colorido dela) para ver a lista de pessoas e registros que formam aquele número.</p></div>
               <div class="card-body" id="chartDigHora"></div>
             </div>
+            <div class="card wide">
+              <div class="card-title">Batidas digitadas ciclo a ciclo, por motivo</div>
+              <div class="card-hint">Todas as batidas digitadas de cada ciclo (28 a 27) do arquivo &middot; não segue o filtro de período</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de batidas digitadas de 3 meses</span><p>Quantas batidas foram digitadas em cada ciclo do ponto, separadas pelo motivo. Mostra se a unidade (ou a equipe do filtro) está digitando mais ou menos batidas com o tempo. <strong>Clique</strong> numa barra para ver quem.</p></div>
+              <div class="card-body" id="chartDigCiclo"></div>
+            </div>
+            <div class="card wide">
+              <div class="card-title">Tendência por pessoa: batidas digitadas</div>
+              <div class="card-hint">Batidas digitadas de cada pessoa nos 3 ciclos, de quem mais digitou no último ciclo para quem menos &middot; os 20 primeiros (a lista inteira abre em tela cheia)</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de batidas digitadas de 3 meses</span><p>Quantas batidas cada pessoa teve digitadas em cada ciclo, e se aumentou ou diminuiu do ciclo anterior para o último. Seta vermelha = piorou do ciclo anterior para o último; verde = melhorou. As barrinhas mostram os 3 ciclos lado a lado (o último em laranja).</p></div>
+              <div class="card-body" id="tableDigTend"></div>
+              <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="tableDigTend" id="btnDigTendTodos" hidden>Mostrar todos</button></div>
+            </div>
             <div class="card">
               <div class="card-title">Esquecimento crônico</div>
               <div class="card-hint" id="digEsqHint">Batidas digitadas por esquecimento, por pessoa, em cada ciclo &middot; linhas em vermelho: 5 ou mais no último ciclo</div>
@@ -1078,6 +1154,12 @@
               <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de afastamentos do sistema</span><p>Quantos dias de afastamento houve em cada ciclo (do dia 28 ao dia 27), separados por tipo. Um afastamento que passa do dia 27 para o 28 tem os dias divididos entre os dois ciclos. Escolhendo um ciclo no seletor, o gráfico mostra semana a semana. A tabela mostra também quantos afastamentos começaram no ciclo e quantas pessoas foram afastadas. <strong>Clique</strong> numa barra (ou num pedaço colorido dela) para ver a lista de pessoas e registros que formam aquele número.</p></div>
               <div class="card-body" id="chartAbsEvolucao"></div>
               <div class="card-body" id="tableAbsEvolucao" style="margin-top:10px"></div>
+            </div>
+            <div class="card wide">
+              <div class="card-title">Tendência por gestor: dias de atestado</div>
+              <div class="card-hint">Dias de atestado de cada equipe em cada ciclo (28 a 27), da equipe com mais dias no último ciclo para a com menos</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de afastamentos, só atestados</span><p>Quantos dias de atestado cada equipe teve em cada ciclo do ponto. Um atestado que atravessa o dia 28 tem os dias divididos entre os dois ciclos. Seta vermelha = piorou do ciclo anterior para o último; verde = melhorou. As barrinhas mostram os 3 ciclos lado a lado (o último em laranja).</p></div>
+              <div class="card-body" id="tableAbsTendGestor"></div>
             </div>
             <div class="card">
               <div class="card-title">Por <select id="absAgrupar" style="width:auto;display:inline-block;padding:3px 8px;font-size:13px;"><option value="gestor">gestor</option><option value="setor">setor</option><option value="cargo">cargo</option></select></div>
@@ -1157,6 +1239,19 @@
               <div class="card-hint">Ocorrências de jornada em cada ciclo (28 a 27) &middot; clique num tipo da legenda para ver só ele; clique numa barra para ver quem</div>
               <div class="card-fonte"><span class="fonte-origem">De onde vem: os relatórios de limites de jornada</span><p>Quantas vezes cada limite foi desrespeitado em cada ciclo do ponto, uma cor por tipo. Serve para ver se o problema está crescendo ou diminuindo. Mostra sempre todos os ciclos do arquivo, mesmo com um ciclo escolhido no seletor.</p></div>
               <div class="card-body" id="chartJorCiclo"></div>
+            </div>
+            <div class="card wide">
+              <div class="card-title">Tendência por gestor: ocorrências de jornada</div>
+              <div class="card-hint">Os 4 tipos somados, por equipe, em cada ciclo (28 a 27)</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: os relatórios de limites de jornada + a lista de quem é gestor de quem</span><p>Quantas vezes os limites de jornada foram desrespeitados em cada equipe, em cada ciclo. Seta vermelha = piorou do ciclo anterior para o último; verde = melhorou. As barrinhas mostram os 3 ciclos lado a lado (o último em laranja).</p></div>
+              <div class="card-body" id="tableJorTendGestor"></div>
+            </div>
+            <div class="card wide">
+              <div class="card-title">Tendência por pessoa: dias com mais de 10h</div>
+              <div class="card-hint">Dias acima de 10h de cada pessoa nos 3 ciclos &middot; os 20 primeiros (a lista inteira abre em tela cheia)</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de horas excedentes</span><p>Em quantos dias cada pessoa passou de 10 horas de trabalho, em cada ciclo. Seta vermelha = piorou do ciclo anterior para o último; verde = melhorou. As barrinhas mostram os 3 ciclos lado a lado (o último em laranja).</p></div>
+              <div class="card-body" id="tableJorTendPessoa"></div>
+              <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="tableJorTendPessoa" id="btnJorTendTodos" hidden>Mostrar todos</button></div>
             </div>
             <div class="card">
               <div class="card-title">Mais de 10h no dia, por pessoa</div>
@@ -1494,6 +1589,8 @@
          marcarOrigem no contêiner, data-drill no elemento; janela #origemOverlay)
        "geral": por tipo/dia/data/gestor/cargo  renderDonut/BarV/Line/BarH + ocorrenciasPor*
                                                  ................. getFilteredRecords sem Hora Extra
+       "tendencias" .................... renderTendencias ........ INDICADORES (ciclosTendencia: 3 ciclos)
+                 tendência dentro das seções  renderTendenciaSecao; no card: tendenciaDoCard
        "destaque": top colaboradores ... topColaboradores ....... idem
                    extra e falta ........ extraFaltaAuditoria ..... linhas "Auditoria Extra e Falta"
                    ocorrências curtas ... curtasPorColaborador .... getCurtasRecords
@@ -3139,8 +3236,12 @@
   // dia do Cartão atual, o fim do ciclo, ex.: 27/09). Fica de fora só o
   // resumo de pausas, cuja data cai em "hoje" quando não há Cartão.
   function periodoCompleto(){
-    // o absenteísmo cobre 3 meses de Cartão: fica fora do período padrão
-    var recs = state.records.filter(function(r){ return r.tipo !== TIPO_RESUMO_PAUSAS_TERMICAS && !isTipoAbsenteismo(r.tipo) && !isTipoJornada(r.tipo); });
+    // o absenteísmo, a jornada, as pausas e as digitadas podem cobrir 3 meses:
+    // ficam fora do período padrão, que é o mês das ocorrências (o mês atual).
+    // Sem nenhuma ocorrência no arquivo, as digitadas voltam a valer (CSV só de digitadas).
+    var fora = function(r){ return r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS || isTipoAbsenteismo(r.tipo) || isTipoJornada(r.tipo); };
+    var recs = state.records.filter(function(r){ return !fora(r) && !isTipoDigitada(r.tipo); });
+    if (!recs.length) recs = state.records.filter(function(r){ return !fora(r); });
     if (!recs.length) return null;
     var dates = recs.map(function(r){ return r.data.getTime(); });
     return { ini: toISODate(new Date(Math.min.apply(null, dates))), fim: toISODate(new Date(Math.max.apply(null, dates))) };
@@ -3285,6 +3386,14 @@
        {label:"Este mês", width:"76px", render:function(r){return r.mesAtual;}},
        {label:"3 meses (total)", width:"96px", render:function(r){
           return '<strong>'+r.total3Meses+'</strong>' + (r.auditoria ? ' &#9888;' : '');
+        }},
+       // tendência: este mês comparado com a média por mês dos 2 meses anteriores
+       // (o arquivo só traz o mês atual e o total dos 3 meses)
+       {label:"Tendência", html:"Tendência<br>(vs. média antes)", width:"118px", render:function(r){
+          var antes = (r.total3Meses - r.mesAtual) / 2, d = r.mesAtual - antes;
+          if (Math.abs(d) < 0.5) return '=';
+          return '<span class="' + (d > 0 ? 'tend-sobe' : 'tend-desce') + '" title="Média antes: ' + formatDec(antes) + ' por mês">' +
+            (d > 0 ? '&#9650; +' : '&#9660; &minus;') + formatDec(Math.abs(d)).replace(',0','') + '</span>';
         }}],
       extraFaltaAuditoria(10),
       {rowClass:function(r){ return r.auditoria ? "row-alert" : ""; }});
@@ -3365,6 +3474,14 @@
     renderAbsenteismo();
     renderJornada();
     renderPausas();
+    renderTendencias();
+    // tendência dentro de cada seção (tabela por pessoa ou por gestor, um assunto fixo)
+    renderTendenciaSecao("tableDigTend", "dig", "pessoa", { btnId:"btnDigTendTodos" });
+    renderTendenciaSecao("tablePauTendGestor", "pauAcima", "gestor");
+    renderTendenciaSecao("tablePauTend", "pauAcima", "pessoa", { btnId:"btnPauTendTodos" });
+    renderTendenciaSecao("tableAbsTendGestor", "atest", "gestor");
+    renderTendenciaSecao("tableJorTendGestor", "jor", "gestor");
+    renderTendenciaSecao("tableJorTendPessoa", "he", "pessoa", { btnId:"btnJorTendTodos" });
     renderListaORG(ocorrenciasRecords);
     renderHistory(ocorrenciasRecords);
     atualizarPeriodoTopo();
@@ -3457,6 +3574,16 @@
     for (var h = hMin; h <= hMax && horas.length; h++) itensHora.push({ label: h + "h", value: porHora[h] || 0, color:"var(--c-navy)" });
     empilhar(itensHora, digG, function(r){ return r.data.getHours() + "h"; }, motivoDe, corMotivo);
     renderBarV($("chartDigHora"), itensHora, { legenda: legMot("chartDigHora"), total: digG.length });
+
+    // Ciclo a ciclo (tendência): todas as batidas dos ciclos do arquivo, sem o
+    // filtro de período, empilhadas por motivo.
+    var ciclosT = ciclosTendencia();
+    var digCic = recsPessoa(function(r){ return isTipoDigitada(r.tipo) && ciclosT.indexOf(cicloDe(r.data)) > -1; });
+    $("chartDigCiclo").closest(".card").hidden = ciclosT.length < 2 || !digCic.length;
+    var digCicG = filtrarSerie("chartDigCiclo", digCic, motivoDe);
+    var itCic = ciclosT.map(function(k){ return { label: cicloLabel(k), value: digCicG.filter(function(r){ return cicloDe(r.data) === k; }).length }; });
+    empilhar(itCic, digCicG, function(r){ return cicloLabel(cicloDe(r.data)); }, motivoDe, corMotivo);
+    renderBarV($("chartDigCiclo"), itCic, { legenda: legendaSerie("chartDigCiclo", digCic, motivoDe, corMotivo), total: digCicG.length });
 
     renderEsquecimentoCronico();
 
@@ -3819,6 +3946,252 @@
   }
   $("absCiclo").addEventListener("change", applyFilters);
   $("gestorMedida").addEventListener("change", applyFilters);
+  /* ---------- Tendências (ciclo a ciclo) ----------
+     Pedido do RH (18/10): ver se a unidade, cada equipe e cada pessoa está
+     melhorando ou piorando. Tudo que o arquivo traz em mais de um ciclo (28 a
+     27) entra aqui: batidas digitadas, atestados, jornada e pausas (a planilha
+     de ocorrências tem um mês só, então as ocorrências não têm tendência).
+     INDICADORES: cada um diz de onde vêm os registros (itens), quanto cada um
+     vale (num; den para os que são porcentagem) e se "subir" é piorar (pior).
+     Seguem os filtros de pessoa (gestor, grupo, cargo, colaborador), nunca o de
+     período: com o filtro de um gestor, a tendência é a da equipe dele. */
+  var CICLOS_TENDENCIA = 3;
+  function somaCiclo(k, n){
+    var p = k.split("-"), y = +p[0], m = +p[1] + n;
+    while (m < 1){ m += 12; y--; } while (m > 12){ m -= 12; y++; }
+    return y + "-" + String(m).padStart(2, "0");
+  }
+  // Os 3 ciclos que terminam no ciclo do fim do arquivo (o mês atual).
+  function ciclosTendencia(){
+    var tot = periodoCompleto();
+    if (!tot) return [];
+    var ult = cicloDe(new Date(tot.fim + "T00:00:00")), out = [];
+    for (var i = CICLOS_TENDENCIA - 1; i >= 0; i--) out.push(somaCiclo(ult, -i));
+    return out;
+  }
+  function recsPessoa(teste){
+    var f = filtroPessoas();
+    return state.records.filter(function(r){ return teste(r) && passaPessoa(r, f); });
+  }
+  // itens(): lista de { r: registro (pessoa e gestor), c: ciclo, num, den }
+  var INDICADORES = [
+    { id:"dig", nome:"Batidas digitadas", secao:"Marcações digitadas", pior:"sobe",
+      itens:function(){ return recsPessoa(function(r){ return isTipoDigitada(r.tipo); }).map(function(r){ return { r:r, c:cicloDe(r.data), num:1 }; }); } },
+    { id:"esq", nome:"Batidas digitadas por esquecimento", secao:"Marcações digitadas", pior:"sobe",
+      itens:function(){ return recsPessoa(function(r){ return isTipoDigitada(r.tipo) && isEsquecimento(r); }).map(function(r){ return { r:r, c:cicloDe(r.data), num:1 }; }); } },
+    { id:"atest", nome:"Dias de atestado", secao:"Afastamentos", pior:"sobe",
+      itens:function(){
+        var out = [];
+        getAtestados(true).forEach(function(r){ diasDoAtestado(r).forEach(function(d){ out.push({ r:r, c:cicloDe(d), num:1 }); }); });
+        return out; } },
+    { id:"he", nome:"Dias com mais de 10h", secao:"Jornada", pior:"sobe",
+      itens:function(){ return recsPessoa(function(r){ return r.tipo === "Horas Excedentes"; }).map(function(r){ return { r:r, c:cicloDe(r.data), num:1 }; }); } },
+    { id:"intra", nome:"Intervalos de almoço curtos", secao:"Jornada", pior:"sobe",
+      itens:function(){ return recsPessoa(function(r){ return r.tipo === "Intrajornada"; }).map(function(r){ return { r:r, c:cicloDe(r.data), num:1 }; }); } },
+    { id:"folga", nome:"Trabalho na folga ou feriado", secao:"Jornada", pior:"sobe",
+      itens:function(){ return recsPessoa(function(r){ return r.tipo === "Interjornada Semanal"; }).map(function(r){ return { r:r, c:cicloDe(r.data), num:1 }; }); } },
+    { id:"inter", nome:"Menos de 11h de descanso", secao:"Jornada", pior:"sobe",
+      itens:function(){ return recsPessoa(function(r){ return r.tipo === "Interjornada"; }).map(function(r){ return { r:r, c:cicloDe(r.data), num:1 }; }); } },
+    { id:"jor", nome:"Ocorrências de jornada (os 4 tipos)", secao:"Jornada", pior:"sobe", soNaSecao:true,
+      itens:function(){ return recsPessoa(function(r){ return isTipoJornada(r.tipo); }).map(function(r){ return { r:r, c:cicloDe(r.data), num:1 }; }); } },
+    { id:"pauCertas", nome:"Pausas certas (20 min)", secao:"Pausas térmicas", pior:"desce", pct:true,
+      itens:function(){ return recsPessoa(function(r){ return r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS; }).map(function(r){ return { r:r, c:cicloDe(r.data), num:r.pausaCorretas || 0, den:pausasTotal(r) }; }); } },
+    { id:"pauAcima", nome:"Trabalho acima de 1h40 sem pausa", secao:"Pausas térmicas", pior:"sobe", pct:true,
+      itens:function(){ return recsPessoa(function(r){ return r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS; }).map(function(r){ return { r:r, c:cicloDe(r.data), num:r.trabalhoMaior140 || 0, den:blocosTrabalho(r) }; }); } },
+    { id:"pauImpar", nome:"Batida de pausa faltando", secao:"Pausas térmicas", pior:"sobe",
+      itens:function(){ return recsPessoa(function(r){ return r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS; }).map(function(r){ return { r:r, c:cicloDe(r.data), num:r.pausasMarcacoesImpares || 0 }; }); } }
+  ];
+  function indicador(id){ for (var i = 0; i < INDICADORES.length; i++) if (INDICADORES[i].id === id) return INDICADORES[i]; return null; }
+  function filtroPessoasVazio(){ var f = filtroPessoas(); return !f.gestor && !f.grupo && !f.cargo && !f.colab; }
+  // Soma os itens por chave (unidade, gestor ou pessoa) e por ciclo.
+  // chaveFn(r) -> chave; devolve [{ chave, label, gestor, c: {ciclo: {num, den}} }]
+  function agregarTendencia(ind, chaveFn, ciclos){
+    var m = {};
+    ind.itens().forEach(function(x){
+      if (ciclos.indexOf(x.c) === -1) return;
+      var k = chaveFn(x.r);
+      var a = m[k] = m[k] || { chave:k, label:x.r.colaborador, gestor:x.r.gestor, c:{} };
+      var v = a.c[x.c] = a.c[x.c] || { num:0, den:0 };
+      v.num += x.num || 0; v.den += x.den || 0;
+    });
+    return Object.keys(m).map(function(k){ return m[k]; });
+  }
+  // Valor do ciclo: quantidade, ou % (num/den) nos indicadores de porcentagem.
+  // null = sem dado naquele ciclo (para %, sem nenhum período/pausa).
+  function valorCiclo(ind, a, c){
+    var v = a.c[c];
+    if (ind.pct) return v && v.den ? v.num * 100 / v.den : null;
+    return v ? v.num : 0;
+  }
+  function fmtValor(ind, v){ return v == null ? "&ndash;" : (ind.pct ? formatDec(v).replace(",0", "") + "%" : formatNum(v)); }
+  // Diferença do penúltimo para o último ciclo, com a cor de melhora/piora.
+  // Devolve { d, html, piorou, melhorou }.
+  function tendenciaDe(ind, a, ciclos){
+    var u = valorCiclo(ind, a, ciclos[ciclos.length-1]), p = valorCiclo(ind, a, ciclos[ciclos.length-2]);
+    if (u == null || p == null) return { d:0, html:"&ndash;", piorou:false, melhorou:false };
+    var d = u - p;
+    if (Math.abs(d) < (ind.pct ? 0.05 : 0.5)) return { d:0, html:"=", piorou:false, melhorou:false };
+    var piorou = ind.pior === "sobe" ? d > 0 : d < 0;
+    var txt = (d > 0 ? "&#9650; +" : "&#9660; &minus;") + (ind.pct ? formatDec(Math.abs(d)).replace(",0", "") + " p.p." : formatNum(Math.abs(d))) +
+      (!ind.pct && p > 0 ? ' <span class="tend-rel">(' + (d > 0 ? "+" : "&minus;") + Math.round(Math.abs(d)*100/p) + '%)</span>' : "");
+    return { d:d, html:'<span class="' + (piorou ? "tend-sobe" : "tend-desce") + '">' + txt + '</span>', piorou:piorou, melhorou:!piorou };
+  }
+  // Três barrinhas (um por ciclo), na mesma escala da linha; a do último ciclo em laranja.
+  function miniBarras(ind, a, ciclos){
+    var vals = ciclos.map(function(c){ return valorCiclo(ind, a, c); });
+    var max = Math.max.apply(null, vals.map(function(v){ return v || 0; }).concat([ind.pct ? 1 : 1]));
+    var W = 54, H = 20, bw = 14, gap = 6;
+    var bars = vals.map(function(v, i){
+      var h = v ? Math.max(2, Math.round((v / max) * (H - 2))) : 0;
+      return '<rect x="' + (i*(bw+gap)) + '" y="' + (H - h) + '" width="' + bw + '" height="' + h + '" rx="2" fill="' +
+        (i === vals.length - 1 ? "var(--c-orange)" : "#C9CBCE") + '"/>';
+    }).join("");
+    var titulo = ciclos.map(function(c, i){ return cicloLabel(c) + ": " + (vals[i] == null ? "sem dado" : (ind.pct ? formatDec(vals[i]) + "%" : formatNum(vals[i]))); }).join(" · ");
+    return '<svg class="mini-barras" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="' + escapeHtml(titulo) + '"><title>' +
+      escapeHtml(titulo) + '</title><line x1="0" y1="' + (H-0.5) + '" x2="' + W + '" y2="' + (H-0.5) + '" stroke="#E2E3E5"/>' + bars + '</svg>';
+  }
+  // Tabela de tendência: nome (pessoa ou gestor), um valor por ciclo, as
+  // barrinhas e a seta. opts: colab (nome abre o card), gestor (coluna de
+  // gestor), limite + btnId + chaveLista (lista inteira em tela cheia).
+  function renderTabelaTendencia(container, ind, linhas, ciclos, opts){
+    opts = opts || {};
+    var cols = [{ label: opts.rotulo || "Nome", width: opts.gestor ? "26%" : "34%",
+                  render:function(a){ return opts.colab ? colabLink(a.label) : escapeHtml(a.label); } }];
+    if (opts.gestor) cols.push({ label:"Gestor", width:"20%", render:function(a){ return '<span title="' + escapeHtml(a.gestor) + '">' + escapeHtml(a.gestor) + '</span>'; } });
+    ciclos.forEach(function(c, i){
+      cols.push({ label: cicloLabel(c), width:"62px", render:function(a){ var v = fmtValor(ind, valorCiclo(ind, a, c)); return i === ciclos.length - 1 ? "<strong>" + v + "</strong>" : v; } });
+    });
+    cols.push({ label:"Evolução", width:"70px", render:function(a){ return miniBarras(ind, a, ciclos); } });
+    cols.push({ label:"Tendência", width:"118px", render:function(a){ return tendenciaDe(ind, a, ciclos).html; } });
+    var lista = opts.btnId ? limitarLista(linhas, opts.chaveLista, opts.limite || LIMITE_LISTA, opts.btnId) : linhas;
+    renderTableSimple(container, cols, lista, { tableClass:"tabela-compacta tabela-tend", rowClass: opts.rowClass });
+    if (!linhas.length){ container.innerHTML = ""; container.appendChild(emptyMsg(opts.vazio || "Nada neste recorte nos últimos ciclos.")); }
+  }
+  // Linhas por pessoa (chavePessoa) ou por gestor, ordenadas pelo último ciclo
+  // (do pior para o melhor). Para %, só entra quem tem base nos dois últimos ciclos.
+  function linhasTendencia(ind, por, ciclos){
+    var chave = por === "gestor" ? function(r){ return r.gestor; } : chavePessoa;
+    var l = agregarTendencia(ind, chave, ciclos);
+    if (por === "gestor") l.forEach(function(a){ a.label = a.chave; });
+    var ult = ciclos[ciclos.length-1];
+    // "sobe" = pior em cima (maior primeiro); "desce" = menor primeiro. Sem dado vai para o fim.
+    var desc = ind.pior === "sobe";
+    var chaveOrd = function(a){ var v = valorCiclo(ind, a, ult); return v == null ? (desc ? -1 : 1e9) : v; };
+    return l.sort(function(a, b){
+      return (desc ? chaveOrd(b) - chaveOrd(a) : chaveOrd(a) - chaveOrd(b)) || a.label.localeCompare(b.label, "pt-BR");
+    });
+  }
+  // Quem mais piorou / melhorou do penúltimo para o último ciclo.
+  function variacoes(ind, linhas, ciclos, quer){
+    return linhas.map(function(a){ a._t = tendenciaDe(ind, a, ciclos); return a; })
+      .filter(function(a){ return quer === "piorou" ? a._t.piorou : a._t.melhorou; })
+      .filter(function(a){
+        if (!ind.pct) return true;   // % de pessoa com base pequena (ex.: 3 pausas) muda à toa
+        var u = a.c[ciclos[ciclos.length-1]], p = a.c[ciclos[ciclos.length-2]];
+        return u && p && u.den >= 10 && p.den >= 10;
+      })
+      .sort(function(a, b){ return Math.abs(b._t.d) - Math.abs(a._t.d) || a.label.localeCompare(b.label, "pt-BR"); });
+  }
+
+  /* Seção "Tendências": a unidade (ou a equipe do filtro) ciclo a ciclo, um
+     indicador por linha; e, para o indicador escolhido no seletor, os
+     gestores e quem mais piorou/melhorou. */
+  function renderTendencias(){
+    var ciclos = ciclosTendencia();
+    var inds = INDICADORES.filter(function(ind){ return !ind.soNaSecao && ind.itens().some(function(x){ return ciclos.indexOf(x.c) > -1; }); });
+    var temDados = ciclos.length >= 2 && inds.length > 0;
+    $("tendSemDados").hidden = temDados;
+    $("tendCorpo").hidden = !temDados;
+    state.tendPeriodo = ciclos.length ? "Ciclos " + ciclos.map(cicloLabel).join(", ") + ": " +
+      intervaloBR(cicloInicioFim(ciclos[0]).ini, cicloInicioFim(ciclos[ciclos.length-1]).fim) + " (não segue o filtro de período)" : null;
+    if (!temDados) return;
+    var eq = equipeDoFiltro();
+    $("tendUnidadeHint").textContent = "Cada linha é um assunto; os números são de cada ciclo (28 a 27) · " +
+      (filtroPessoasVazio() ? "a unidade inteira" : "só o recorte do filtro (" + eq.rotulo + ")") +
+      " · seta vermelha = piorou do ciclo anterior para o último; verde = melhorou · clique no nome para ver os gestores e as pessoas";
+    var unid = inds.map(function(ind){
+      var a = agregarTendencia(ind, function(){ return "u"; }, ciclos)[0] || { c:{} };
+      a.label = ind.nome; a.ind = ind; return a;
+    });
+    var cols = [{ label:"Assunto", width:"28%", render:function(a){
+                   return '<button type="button" class="link-tend" data-tend-ind="' + a.ind.id + '">' + escapeHtml(a.label) + '</button>'; } },
+                { label:"Seção", width:"16%", render:function(a){ return escapeHtml(a.ind.secao); } }];
+    ciclos.forEach(function(c, i){
+      cols.push({ label: cicloLabel(c), width:"70px", render:function(a){ var v = fmtValor(a.ind, valorCiclo(a.ind, a, c)); return i === ciclos.length - 1 ? "<strong>" + v + "</strong>" : v; } });
+    });
+    cols.push({ label:"Evolução", width:"70px", render:function(a){ return miniBarras(a.ind, a, ciclos); } });
+    cols.push({ label:"Tendência", width:"118px", render:function(a){ return tendenciaDe(a.ind, a, ciclos).html; } });
+    renderTableSimple($("tableTendUnidade"), cols, unid, { tableClass:"tabela-compacta tabela-tend", rowClass:function(a){ return a.ind.id === $("tendIndicador").value ? "row-sel" : ""; } });
+
+    // seletor do indicador (mesma lista da tabela de cima)
+    var sel = $("tendIndicador"), atual = sel.value;
+    var opts = inds.map(function(ind){ return '<option value="' + ind.id + '">' + escapeHtml(ind.nome) + '</option>'; }).join("");
+    if (sel.innerHTML !== opts) sel.innerHTML = opts;
+    // depois de "Limpar filtros" (valor vazio) ou de um assunto que sumiu, volta ao primeiro
+    sel.value = inds.some(function(i){ return i.id === atual; }) ? atual : inds[0].id;
+    var ind = indicador(sel.value);
+    $("tendNomeInd").textContent = ind.nome.toLowerCase();
+    $("tendNomeInd2").textContent = ind.nome.toLowerCase();
+    $("tendNomeInd3").textContent = ind.nome.toLowerCase();
+    renderTabelaTendencia($("tableTendGestor"), ind, linhasTendencia(ind, "gestor", ciclos), ciclos, { rotulo:"Gestor" });
+    var pessoas = linhasTendencia(ind, "pessoa", ciclos);
+    renderTabelaTendencia($("tableTendPiorou"), ind, variacoes(ind, pessoas, ciclos, "piorou"), ciclos,
+      { colab:true, gestor:true, rotulo:"Colaborador", limite:15, btnId:"btnTendPiorouTodos", chaveLista:"tendPiorou", vazio:"Ninguém piorou neste assunto do ciclo anterior para o último." });
+    renderTabelaTendencia($("tableTendMelhorou"), ind, variacoes(ind, pessoas, ciclos, "melhorou"), ciclos,
+      { colab:true, gestor:true, rotulo:"Colaborador", limite:15, btnId:"btnTendMelhorouTodos", chaveLista:"tendMelhorou", vazio:"Ninguém melhorou neste assunto do ciclo anterior para o último." });
+  }
+  $("tendIndicador").addEventListener("change", applyFilters);
+  document.addEventListener("click", function(e){
+    var b = e.target.closest && e.target.closest("[data-tend-ind]");
+    if (!b) return;
+    $("tendIndicador").value = b.getAttribute("data-tend-ind");
+    applyFilters();
+    var alvo = $("tableTendGestor").closest(".card");
+    if (alvo && alvo.scrollIntoView) alvo.scrollIntoView({ behavior:"smooth", block:"start" });
+  });
+
+  // Tendência dentro de cada seção: uma tabela por pessoa ou por gestor com
+  // um indicador fixo (renderTendenciaSecao("tableDigTend", "dig", "pessoa", ...)).
+  function renderTendenciaSecao(id, indId, por, opts){
+    var ciclos = ciclosTendencia(), ind = indicador(indId), card = $(id).closest(".card");
+    var tem = ciclos.length >= 2 && ind.itens().some(function(x){ return ciclos.indexOf(x.c) > -1; });
+    if (card) card.hidden = !tem;
+    if (!tem) return;
+    opts = opts || {};
+    var linhas = linhasTendencia(ind, por, ciclos);
+    if (opts.soComUltimo) linhas = linhas.filter(function(a){ var v = valorCiclo(ind, a, ciclos[ciclos.length-1]); return v != null && (ind.pct || v > 0) || tendenciaDe(ind, a, ciclos).d !== 0; });
+    renderTabelaTendencia($(id), ind, linhas, ciclos, {
+      colab: por === "pessoa", gestor: por === "pessoa", rotulo: por === "pessoa" ? "Colaborador" : "Gestor",
+      limite: opts.limite || LIMITE_LISTA, btnId: opts.btnId, chaveLista: id });
+  }
+
+  // Evolução da pessoa no card do colaborador: um indicador por linha, os
+  // ciclos, as barrinhas e a seta (só os assuntos em que ela aparece).
+  function tendenciaDoCard(nome){
+    var ciclos = ciclosTendencia();
+    if (ciclos.length < 2) return "";
+    var linhas = [];
+    INDICADORES.forEach(function(ind){
+      if (ind.soNaSecao) return;
+      var its = ind.itens().filter(function(x){ return x.r.colaborador === nome && ciclos.indexOf(x.c) > -1; });
+      if (!its.length) return;
+      var a = { label: ind.nome, c:{}, ind: ind };
+      its.forEach(function(x){ var v = a.c[x.c] = a.c[x.c] || { num:0, den:0 }; v.num += x.num || 0; v.den += x.den || 0; });
+      if (!ind.pct && !its.some(function(x){ return x.num; })) return;
+      linhas.push(a);
+    });
+    if (!linhas.length) return "";
+    return '<h3 class="colab-section">Evolução da pessoa, ciclo a ciclo (' + ciclos.map(cicloLabel).join(", ") + ')</h3>' +
+      '<div class="table-scroll colab-tab colab-tab-livre"><table class="data-table tabela-tend"><colgroup><col style="width:34%">' +
+      ciclos.map(function(){ return '<col>'; }).join("") + '<col style="width:70px"><col style="width:118px"></colgroup><thead><tr><th>Assunto</th>' +
+      ciclos.map(function(c){ return '<th>' + cicloLabel(c) + '</th>'; }).join("") + '<th>Evolução</th><th>Tendência</th></tr></thead><tbody>' +
+      linhas.map(function(a){
+        return '<tr><td data-label="Assunto">' + escapeHtml(a.label) + '</td>' +
+          ciclos.map(function(c){ return '<td data-label="' + cicloLabel(c) + '">' + fmtValor(a.ind, valorCiclo(a.ind, a, c)) + '</td>'; }).join("") +
+          '<td data-label="Evolução">' + miniBarras(a.ind, a, ciclos) + '</td><td data-label="Tendência">' + tendenciaDe(a.ind, a, ciclos).html + '</td></tr>';
+      }).join("") + '</tbody></table></div>';
+  }
+
   /* ---------- Pausas térmicas: T1, T3, T4, T9 ----------
      Base: as linhas "Resumo Pausas Térmicas" (uma por pessoa por mês). A
      regra é 20 min de pausa a cada 1h40 de trabalho no frio. "Períodos de
@@ -4457,7 +4830,7 @@
     $("historySearch").value = "";
     $("orgBusca").value = ""; $("orgMostrar").value = ""; $("digBusca").value = "";
     $("absCiclo").value = ""; $("absAgrupar").value = "gestor"; $("absMostrar").value = "";
-    $("jorCiclo").value = ""; $("gestorMedida").value = ""; $("pauAgrupar").value = "gestor";
+    $("jorCiclo").value = ""; $("gestorMedida").value = ""; $("pauAgrupar").value = "gestor"; $("tendIndicador").value = "";
     state.historySort = { key:"data", dir:"desc" };
     state.historyPage = 1;
     state.bancoMostrarTodos = false;
@@ -4641,6 +5014,7 @@
            pausa ? "corretas &middot; " + pausa.pausaMenor20 + " curta(s) &middot; " + pausa.pausasMarcacoesImpares + " marcação(ões) ímpar(es)" : "fora do relatório",
            pausa && pausa.pausasMarcacoesImpares > 0 ? "alerta" : "") +
       '</div>';
+    html += tendenciaDoCard(nome);
     html += pausasDoCard(pausa, pausasPessoa);
     if (atestados.length){
       var nAt = atestados.filter(isAtestado), diasAt = nAt.reduce(function(sm, r){ return sm + (r.diasAusencia || 0); }, 0);
@@ -4973,7 +5347,9 @@
     cartao: ["chartBancoHoras"], cartao3: ["tableExtraFalta"], pausas: ["tablePausasTermicas","chartPauAcima","tablePauAcimaGestor","chartPauGrupo"],
     pausasMeses: ["chartPauEvolucao"],
     absEvol: ["chartAbsEvolucao"], absCiclo: ["chartAbsGrupo","chartAbsDiaSemana","tableAbsEmendas"], abs3m: ["tableAbsRanking","tableAbsMesmoDia","tableAbsSegSex","tableAbsFerias"],
-    absMapa: ["absHeat"], cadastro: ["orgSection"], digEsq: ["tableDigEsquecimento"],
+    absMapa: ["absHeat"], cadastro: ["orgSection"],
+    tend: ["tableTendUnidade","tableTendGestor","tableTendPiorou","tableTendMelhorou","chartDigCiclo","tableDigTend",
+           "tablePauTendGestor","tablePauTend","tableAbsTendGestor","tableJorTendGestor","tableJorTendPessoa","tableDigEsquecimento"],
     jorTodos: ["chartJorCiclo"], jorCiclo: ["chartJorDezHoras","chartJorGestor","tableJorGestor","tableJorLista"]
   };
   function intervaloBR(ini, fim){ return formatDateBR(ini) + " a " + formatDateBR(fim); }
@@ -4997,7 +5373,8 @@
       pausasMeses: "Todos os meses de pausas que estão no arquivo",
       absEvol: ab.ciclo, absCiclo: ab.ciclo, abs3m: ab.tres, absMapa: ab.mapa,
       cadastro: "Lista de equipes atual (não depende de período)",
-      digEsq: state.digEsqPeriodo,
+      tend: (function(){ var c = ciclosTendencia(); return c.length ? "Ciclos " + c.map(cicloLabel).join(", ") + ": " +
+        intervaloBR(cicloInicioFim(c[0]).ini, cicloInicioFim(c[c.length-1]).fim) + " (não segue o filtro de período)" : null; })(),
       jorTodos: state.jorPeriodo && state.jorPeriodo.todos, jorCiclo: state.jorPeriodo && state.jorPeriodo.ciclo
     };
     Object.keys(PERIODO_DOS_CARDS).forEach(function(tipo){

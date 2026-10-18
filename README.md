@@ -338,6 +338,26 @@ As 15 ideias marcadas na página de ideias que ainda faltavam:
 - **M7**: porcentagem do total ao lado do número nas barras e na legenda das roscas.
 - Conferência: 26 itens (os 18 de antes + jornada, sinais de atestado, esquecimento e pausas).
 
+## Tendências e 3 meses de digitadas e de pausas (18/10)
+
+- **Seção nova "Tendências"** (logo depois da Visão geral): a unidade ciclo a ciclo (batidas
+  digitadas, esquecimentos, dias de atestado, os 4 limites de jornada e as pausas), com barrinhas
+  dos 3 ciclos e seta vermelha (piorou) ou verde (melhorou); embaixo, o assunto escolhido por
+  gestor e as pessoas que mais pioraram e mais melhoraram. Segue os filtros de gestor, grupo,
+  cargo e colaborador: com um gestor escolhido, é a tendência da equipe dele.
+- **Em cada seção**: digitadas ciclo a ciclo por motivo e por pessoa; pausas (acima de 1h40) por
+  gestor e por pessoa; dias de atestado por gestor; jornada por gestor e mais de 10h por pessoa;
+  "Extra e falta no mesmo dia" com a tendência (este mês x média dos 2 anteriores).
+- **Card do colaborador**: "Evolução da pessoa, ciclo a ciclo".
+- O painel continua abrindo no mês atual: as digitadas dos meses anteriores só entram nas
+  tendências (e quando se aumenta o período no filtro).
+- Texto "pegar no pulo" retirado dos títulos (pedido do Dimitri).
+- **FormatarPausasTermicas**: renomeia a aba com o mês do relatório ("Pausas Térmicas
+  Setembro"), lido da linha "Período" antes de apagar o cabeçalho.
+- Ferramentas: `formatar_pausas.py` (versão Python da macro) e `adicionar_aba_xlsx.py
+  --substituir` (troca o conteúdo de uma aba sem regravar o resto da planilha).
+- Conferência: 27 itens (o novo confere a tabela da unidade ciclo a ciclo com as abas).
+
 ## Ordem de uso no mês
 
 1. Rodar `ConsolidarCartaoPonto` no HRCP102 e colar o resultado numa aba `Cartão <Mês>`.

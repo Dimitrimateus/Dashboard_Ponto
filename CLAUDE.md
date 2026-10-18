@@ -100,6 +100,10 @@ conteúdo num módulo.
 - Não recalcula nada: copia o bloco "Total do Colaborador" (valores 2 linhas abaixo do rótulo, nas
   colunas A, B, D, F, H, J, K) e o "Total Geral".
 - A linha em branco é o que marca o fim da tabela para o GerarCSV.
+- (18/10) Lê o fim do período (linha "Período: ... até ...") antes de apagar e **renomeia a aba**
+  para "Pausas Térmicas <Mês>" (`NomeDoMes`, `AbaExiste`; se o nome já existe, avisa e mantém).
+  Versão Python: `ferramentas/formatar_pausas.py` (lê o numFmt do styles.xml para separar linha
+  de pessoa da linha de dia, como a macro faz com `NumberFormat`).
 
 ### 5.3 PURO_Para_EDITADO
 - Mapeia a aba `PURO` por nome de cabeçalho → `EDITADO_<MES><AA>` com as colunas `Matricula, Nome,
@@ -369,6 +373,18 @@ dias_ausencia, emenda_folga, minutos_trabalhados, minutos_descanso, marcacoes_di
   `aplicarFiltroDoGrafico`; tipos "Outros" não filtram; ponto da linha filtra o dia); **M7** % do
   total (`opts.total`, `pctTxt`, `.legend-pct` na rosca, fora do que o extrator lê).
   `it.texto` (texto à direita da barra) e `it.dica` (balão) sobrescrevem o padrão em renderBarH.
+- **Tendências** (18/10, pedido do Dimitri): `INDICADORES` (dig, esq, atest, he, intra, folga,
+  inter, jor [só nas seções], pauCertas e pauAcima [%, `num/den`], pauImpar), cada um com `itens()`
+  → {r, c: ciclo, num, den} e `pior` ("sobe"/"desce"). `ciclosTendencia()` = os 3 ciclos que
+  terminam no ciclo do fim de `periodoCompleto`. `agregarTendencia`, `valorCiclo`, `tendenciaDe`
+  (penúltimo → último; vermelho = piorou), `miniBarras` (SVG 3 barras), `renderTabelaTendencia`,
+  `linhasTendencia`, `variacoes` (% de pessoa só com base ≥ 10 nos dois ciclos). Seção
+  `data-pagina="tendencias"` (`renderTendencias`, seletor `#tendIndicador`, nome do assunto
+  clicável `data-tend-ind`); cards por seção via `renderTendenciaSecao`; card do colaborador
+  `tendenciaDoCard`; digitadas ciclo a ciclo (`chartDigCiclo`); coluna de tendência na "Extra e
+  falta" (mês atual × média dos 2 anteriores = (3 meses − mês) ÷ 2). Filtros de pessoa sim,
+  período não. **`periodoCompleto` não conta as digitadas** (com 3 meses de digitadas o painel
+  continuaria abrindo no mês atual).
 - Paleta: laranja `#F7931E`, vermelho `#E31E24`, amarelo `#FFC72C`, preto `#1A1A1A`, cinzas.
 
 ## 7. Conferência feita (01/10/2026)
@@ -456,7 +472,9 @@ python3 ferramentas/adicionar_aba_xlsx.py saida2.xlsx saida3.xlsx intra.pkl intr
 python3 ferramentas/carregar_planilha.py "Tratamento Ponto ....xlsx"     # -> planilha.pkl
 python3 ferramentas/simular_gerarcsv.py                                  # -> dados_TODOS.csv (regras da seção 5.4)
 NODE_PATH=$(npm root -g) node ferramentas/extrair_painel.js "$PWD/Dashboard/index.html" "$PWD/dados_TODOS.csv" painel.json
-PYTHONPATH=ferramentas python3 ferramentas/conferir_painel.py painel.json   # OK/FALHA item a item (hoje 26 itens)
+python3 ferramentas/formatar_pausas.py "pausa_termica.xlsx" pausas.pkl       # -> (fim do período, linhas)
+python3 ferramentas/adicionar_aba_xlsx.py in.xlsx out.xlsx dig3.pkl marcacoes "Marcações Digitadas" --substituir  # troca o conteúdo
+PYTHONPATH=ferramentas python3 ferramentas/conferir_painel.py painel.json   # OK/FALHA item a item (hoje 27 itens)
 python3 ferramentas/checar_colisoes_vba.py */*.bas                         # antes de entregar VBA
 ```
 Os scripts foram escritos para a planilha de 28/08 a 27/09 (nomes de aba fixos: "Tratamento",
@@ -581,6 +599,14 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   (salário da RE, só por equipe), atividade externa sem viagem. Perguntas em aberto: reunião é por
   gestor ou com todos? Pode usar salário (só total da equipe)?
 
+- 18/10: texto "pegar no pulo" retirado da tela (decisão). Dimitri mandou digitadas de 3 meses
+  (28/06 a 27/09: 1.664 batidas, 1.642 "D"; o ciclo de setembro tem 428 contra 434 da exportação
+  anterior: o sistema mudou 8/2 batidas) e as pausas de jul/ago/set (52/53/51 pessoas; setembro
+  difere da aba anterior em 4 pessoas). Planilha montada: aba "Marcações Digitadas" e "Pausas
+  Térmicas" com o conteúdo trocado (`--substituir`) + "Pausas Térmicas Julho" e "Agosto"; CSV
+  simulado com 3.082 linhas. Seção "Tendências" + tendências em cada seção e no card (ver seção 6).
+  FormatarPausasTermicas renomeia a aba pelo mês. Conferência 27/27 nas duas planilhas.
+
 ## 12. Estado atual e como continuar (13/10/2026)
 
 **Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`, branch
@@ -595,8 +621,13 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
 - Depois disso recebeu só o `index.html` atualizado (13/10): tela cheia, filtro na legenda por
   gráfico, selo de período, clique "de onde vem" com nomes que filtram, textos para leigos,
   correções da revisão geral; depois, a rolagem e o cabeçalho fixo da janela "de onde vem".
-- Por último (13/10), o pacote com as 15 escolhas construídas: `index.html` + `GerarCSVPonto.txt`
-  (única macro alterada: lê todas as abas de pausas). A planilha não mudou desde 10/10.
+- 13/10: pacote com as 15 escolhas construídas: `index.html` + `GerarCSVPonto.txt` (lê todas as
+  abas de pausas).
+- 18/10: pacote `Teste Ponto 18-10.zip`: `index.html` com as tendências, `FormatarPausasTermicas.txt`
+  (renomeia a aba pelo mês), `GerarCSVPonto.txt` (igual ao de 13/10) e a planilha
+  `... - com 3 meses.xlsx` (digitadas de 3 meses + pausas de jul/ago/set). Números esperados nela:
+  os mesmos de antes nas ocorrências; CSV com 3.082 linhas; 1.642 digitadas (416 no ciclo de
+  setembro); 156 linhas de pausas (52/53/51).
 - Números esperados ao rodar o GerarAbaCSV nessa planilha: 138 ocorrências, 72 colaboradores,
   demora média 5,7 dias (56 tratadas), 422 digitadas, 283 afastamentos (33 atestados, 105 dias),
   210 pessoas no ORG, 163 com horas no Cartão, Intrajornada 21, Interjornada 1, Interjornada
@@ -624,6 +655,8 @@ com todos e se pode usar salário (só o total da equipe).
 - Textos da tela para leigos: sem aba, coluna, macro, código de relatório, Check, ORG,
   Tratamento, DSR. Cores: 5 cores de série + cinza "Outros"; vermelho só para alerta/atestado.
 - Gestores também veem as análises de "pegar no pulo".
+- Relatórios do sistema com 3 meses (digitadas, afastamentos, jornada, Cartão); pausas uma aba por
+  mês; planilha de tratamento e PontoNet só o mês atual (conversa de 14/10 e envio de 18/10).
 - **O texto "pegar no pulo" não aparece na tela** (pedido do Dimitri, 18/10): os cards de sinais
   de atenção ficam só com o título. A expressão pode existir em comentários do código.
 

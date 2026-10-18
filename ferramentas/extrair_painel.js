@@ -53,6 +53,7 @@ const { chromium } = require('playwright');
       absMesmoDia: table('tableAbsMesmoDia'), absSegSex: txt('absSegSexResumo'), absSegSexPessoas: table('tableAbsSegSex'),
       absFerias: table('tableAbsFerias'),
       digEsq: table('tableDigEsquecimento'), digEsqAlerta: [...document.querySelectorAll('#tableDigEsquecimento tr.row-alert')].map(tr=>tr.children[0].textContent.trim()),
+      tendUnidade: table('tableTendUnidade'),
       pauKpis: [...document.querySelectorAll('#pauKpis .colab-kpi')].map(k=>[k.querySelector('.ck-label').textContent, k.querySelector('.ck-value').textContent, k.querySelector('.ck-sub').textContent]),
     };
   });

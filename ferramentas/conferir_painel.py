@@ -161,8 +161,12 @@ if 'ORG' in d and ui.get('orgResumo'):
 abaDig=next((n for n,rw in d.items() if rw and all(k in hdrmap(rw[0]) for k in ('Matrícula','Data','Hora','Motivo','Justificativa'))), None)
 if abaDig and ui.get('digKpis'):
     rw=d[abaDig]; hd=hdrmap(rw[0])
+    # o painel abre no mês das ocorrências (ciclo do Cartão atual): as digitadas de meses
+    # anteriores (relatório de 3 meses) só entram nas vistas de tendência
+    import simular_gerarcsv as _SIM
+    _fim=_SIM.dmax; _ini=(_fim.replace(day=1)-datetime.timedelta(days=1)).replace(day=28) if _fim.day<28 else _fim.replace(day=28)
     linhasD=[r for r in rw[1:] if s(r[hd['Matrícula']]) and isinstance(r[hd['Data']],datetime.datetime)
-             and not ('Origem' in hd and s(r[hd['Origem']]).upper()=='E')]
+             and _ini<=r[hd['Data']]<=_fim and not ('Origem' in hd and s(r[hd['Origem']]).upper()=='E')]
     mot=C(s(r[hd['Motivo']]) for r in linhasD); pes=C(s(r[hd['Colaborador']]) for r in linhasD)
     k=ui['digKpis'].split('\n')
     okk=k[1]==str(len(linhasD)) and k[4]==str(len({s(r[hd['Matrícula']]) for r in linhasD})) and ui['digLinhas']==len(linhasD)
@@ -313,7 +317,7 @@ if MD and ui.get('digEsqAlerta') is not None:
         if s(r[hm['Origem']]).upper()!='D' or not isinstance(r[hm['Data']],datetime.datetime): continue
         if 'esquecimento' in norm(s(r[hm['Motivo']])) and ciclo_de(r[hm['Data']])==ult: cont[s(r[hm['Matrícula']])]+=1
     esp=sorted(v for v in cont.values() if v>=5)
-    got=sorted(int(r[-1]) for r in ui['digEsq'] if r[0] in ui['digEsqAlerta'])
+    got=sorted(int(r[-2] if not r[-1].isdigit() else r[-1]) for r in ui['digEsq'] if r[0] in ui['digEsqAlerta'])   # com 2+ ciclos, a última coluna é a tendência
     chk('Esquecimento crônico (P10)', len(ui['digEsqAlerta'])==len(esp) and got==esp, f"{len(esp)} pessoa(s) com 5+ no último ciclo: {esp}" if got==esp else f"painel {got} / fonte {esp}")
 # T1: quatro números das pausas
 PZ=d.get('Pausas Térmicas')
@@ -332,3 +336,45 @@ if PZ and ui.get('pauKpis'):
     got=[int(k['Pessoas no relatório'][1]), int(k['Pausas certas'][1].rstrip('%')), int(k['Trabalho acima de 1h40'][1].replace('.','')),
          nums(k['Trabalho acima de 1h40'][2])[0], nums(k['Trabalho acima de 1h40'][2])[1], int(k['Batida de pausa faltando'][1])]
     chk('Pausas: números do topo (T1)', got==esp, f"{esp[0]} pessoas, {esp[1]}% certas, {esp[2]} períodos acima de 1h40 ({esp[3]}%), {esp[4]} acima de 30%, {esp[5]} batidas faltando" if got==esp else f"painel {got} / fonte {esp}")
+
+# Tendências: a tabela "A unidade, ciclo a ciclo" contra as abas (3 ciclos que terminam no
+# ciclo do Cartão atual). Digitadas = Origem D; atestados = dias corridos de cada atestado;
+# jornada = uma linha por ocorrência; pausas = soma das abas de pausas de cada mês (o mês vem
+# do nome da aba, como no GerarCSV).
+if ui.get('tendUnidade'):
+    ult=ciclo_de(SIM.dmax); cic=[]
+    y,mo=ult
+    for i in range(3): cic.insert(0,(y,mo)); mo-=1; (y,mo)=(y-1,12) if mo==0 else (y,mo)
+    esp={}
+    if MD:
+        hm=hdrmap(MD[0]); L=[r for r in MD[1:] if s(r[hm['Origem']]).upper()=='D' and isinstance(r[hm['Data']],datetime.datetime)]
+        esp['Batidas digitadas']=[sum(1 for r in L if ciclo_de(r[hm['Data']])==c) for c in cic]
+        esp['Batidas digitadas por esquecimento']=[sum(1 for r in L if ciclo_de(r[hm['Data']])==c and norm(s(r[hm['Motivo']]))=='inclusao por esquecimento') for c in cic]
+    if abaAf:
+        dd=C()
+        for a in at:
+            x=a[1]
+            while x<=a[2]: dd[ciclo_de(datetime.datetime(x.year,x.month,x.day))]+=1; x+=datetime.timedelta(days=1)
+        esp['Dias de atestado']=[dd[c] for c in cic]
+    for aba,nome in (('Horas Excedentes','Dias com mais de 10h'),('Intrajornada','Intervalos de almoço curtos'),('Interjornada Semanal','Trabalho na folga ou feriado'),('Interjornada','Menos de 11h de descanso')):
+        esp[nome]=[sum(1 for x in jr if x[0]==aba and ciclo_de(x[2])==c) for c in cic]
+    pz={}
+    for aba,rw in d.items():
+        if not rw or 'Pausa corretas' not in [s(c) for c in rw[0]]: continue
+        mn=SIM.mes_no_nome(aba); dref=SIM.dmax if mn==0 else SIM.data_do_mes(mn,SIM.dmax)
+        hp=hdrmap(rw[0]); t=[0,0,0,0,0]
+        for r in rw[1:]:
+            if not s(r[hp['Matrícula']]): break
+            g=lambda c: nz(r[hp[c]])
+            t[0]+=g('Pausa corretas'); t[1]+=g('Pausa corretas')+g('Pausa menor 0:20')+g('Pausa maior 0:20')
+            t[2]+=g('Trabalho maior 1:40'); t[3]+=g('Trabalho correto 1:40')+g('Trabalho maior 1:40')+g('Trabalho menor 1:40'); t[4]+=g('Marcações Ímpares')
+        pz[ciclo_de(dref)]=t
+    if pz:
+        f1=lambda v: (f"{v:.1f}".replace('.',',').replace(',0','')+'%')
+        esp['Pausas certas (20 min)']=[f1(pz[c][0]*100/pz[c][1]) if c in pz and pz[c][1] else '–' for c in cic]
+        esp['Trabalho acima de 1h40 sem pausa']=[f1(pz[c][2]*100/pz[c][3]) if c in pz and pz[c][3] else '–' for c in cic]
+        esp['Batida de pausa faltando']=[int(pz[c][4]) if c in pz else 0 for c in cic]
+    got={r[0]:[(int(v.replace('.','')) if v.replace('.','').isdigit() else v) for v in r[2:5]] for r in ui['tendUnidade']}
+    dif={k:(got.get(k),v) for k,v in esp.items() if got.get(k)!=v}
+    chk('Tendências: a unidade ciclo a ciclo', not dif and set(got)==set(esp),
+        f"{len(esp)} assuntos x 3 ciclos conferem; digitadas {esp.get('Batidas digitadas')}; acima de 1h40 {esp.get('Trabalho acima de 1h40 sem pausa')}" if not dif and set(got)==set(esp) else f"diferenças {dif}; só no painel {set(got)-set(esp)}; só na fonte {set(esp)-set(got)}")
