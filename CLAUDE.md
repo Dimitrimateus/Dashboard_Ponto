@@ -357,7 +357,7 @@ dias_ausencia, emenda_folga, minutos_trabalhados, minutos_descanso, marcacoes_di
   sistema usa para o limite; "Horas trabalhadas" (só relógio) daria 28h51 em vez de 66h acima.
 - **Sinais de atestado** (`renderSinaisAtestado`, 3 meses): P1 2+ atestados começando no mesmo dia da
   semana; P2 atestado de 1 dia na seg/sex (resumo, por pessoa, por equipe); P3 atestado a até 3 dias
-  das férias (`DIST_FERIAS_DIAS`, antes/depois/dentro). Selo "pegar no pulo" (`.tag-pulo`).
+  das férias (`DIST_FERIAS_DIAS`, antes/depois/dentro). Sem selo no título (ver decisão de 18/10).
 - **Esquecimento crônico** (P10, `renderEsquecimentoCronico`): por pessoa e ciclo, sem período,
   tendência penúltimo → último ciclo, vermelho com `LIMITE_ESQUECIMENTO` (5)+ no último.
 - **Pausas** (`renderPausas`): T1 4 números; T3 acima de 1h40 por pessoa (vermelho > 30%,
@@ -624,6 +624,8 @@ com todos e se pode usar salário (só o total da equipe).
 - Textos da tela para leigos: sem aba, coluna, macro, código de relatório, Check, ORG,
   Tratamento, DSR. Cores: 5 cores de série + cinza "Outros"; vermelho só para alerta/atestado.
 - Gestores também veem as análises de "pegar no pulo".
+- **O texto "pegar no pulo" não aparece na tela** (pedido do Dimitri, 18/10): os cards de sinais
+  de atenção ficam só com o título. A expressão pode existir em comentários do código.
 
 **Ainda em aberto com ele:** Check "S" nas curtas/auditoria; critério Internos × Externos;
 `destino_horas_extra`; absenteísmo completo (acidente, faltas, taxa); sugestões de 07/10 (horas de

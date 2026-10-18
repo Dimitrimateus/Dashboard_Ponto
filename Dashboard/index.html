@@ -562,8 +562,6 @@
   /* números do topo de uma seção, em 4 colunas (jornada, pausas) */
   .dig-kpis.kpis4{ grid-template-columns:repeat(4, minmax(0,1fr)); }
   @media (max-width: 980px){ .dig-kpis.kpis4{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
-  /* selo "pegar no pulo" no título dos cards de sinais de atenção */
-  .tag-pulo{ display:inline-block; vertical-align:middle; margin-left:6px; font-size:10px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:#B3261E; background:#FDECEC; border-radius:999px; padding:2px 8px; }
   .resumo-linha{ font-size:13px; color:var(--c-ink); margin:0 0 10px; line-height:1.45; }
   .tend-sobe{ color:#C62828; font-weight:700; } .tend-desce{ color:#2E7D32; font-weight:700; }
   .card-title select.sel-titulo{ width:auto; display:inline-block; padding:3px 8px; font-size:13px; min-height:0; }
@@ -1035,7 +1033,7 @@
               <div class="card-body" id="chartDigHora"></div>
             </div>
             <div class="card">
-              <div class="card-title">Esquecimento crônico<span class="tag-pulo">pegar no pulo</span></div>
+              <div class="card-title">Esquecimento crônico</div>
               <div class="card-hint" id="digEsqHint">Batidas digitadas por esquecimento, por pessoa, em cada ciclo &middot; linhas em vermelho: 5 ou mais no último ciclo</div>
               <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de batidas digitadas, só o motivo “esquecimento”</span><p>Só as batidas digitadas porque a pessoa esqueceu de bater o ponto, contadas por pessoa em cada ciclo do ponto (dia 28 a 27). Com mais de um ciclo no arquivo, a coluna “Tendência” mostra se a pessoa esqueceu mais (seta para cima, em vermelho) ou menos (seta para baixo, em verde) que no ciclo anterior. Esquecer de vez em quando é normal; o sinal é esquecer sempre. Vermelho = 5 ou mais esquecimentos no último ciclo. Não segue o filtro de período, para poder comparar os ciclos.</p></div>
               <div class="card-body" id="tableDigEsquecimento"></div>
@@ -1100,15 +1098,15 @@
               <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de afastamentos</span><p>Todos os atestados dos últimos 3 meses, por pessoa. “Meses” = em quantos ciclos diferentes a pessoa teve atestado; “Encostados em folga” = quantos dos atestados dela emendaram uma folga. A linha fica vermelha quando a pessoa teve atestado em 2 ou mais meses, ou 3 ou mais atestados.</p></div>
               <div class="card-body" id="tableAbsRanking"></div>
             </div>
-            <!-- Sinais de "pegar no pulo" dos atestados (P1, P2, P3): últimos 3 meses. -->
+            <!-- Sinais de atenção dos atestados (P1, P2, P3): últimos 3 meses. -->
             <div class="card">
-              <div class="card-title">Atestado sempre no mesmo dia da semana<span class="tag-pulo">pegar no pulo</span></div>
+              <div class="card-title">Atestado sempre no mesmo dia da semana</div>
               <div class="card-hint">Pessoas com 2 ou mais atestados começando no mesmo dia da semana, nos últimos 3 meses</div>
               <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de afastamentos, só atestados</span><p>Para cada pessoa, o painel olha em que dia da semana cada atestado começou. Quando 2 ou mais começam no mesmo dia (ex.: toda sexta), a pessoa aparece aqui, com as datas. Não prova nada sozinho: é um sinal para olhar com atenção e conversar.</p></div>
               <div class="card-body" id="tableAbsMesmoDia"></div>
             </div>
             <div class="card">
-              <div class="card-title">Atestado de 1 dia na segunda ou na sexta<span class="tag-pulo">pegar no pulo</span></div>
+              <div class="card-title">Atestado de 1 dia na segunda ou na sexta</div>
               <div class="card-hint">O fim de semana esticado &middot; últimos 3 meses</div>
               <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de afastamentos, só atestados</span><p>Atestados de um dia só que caem numa segunda ou numa sexta, colados no fim de semana. Em cima, quanto dos atestados começa na segunda ou na sexta; embaixo, as pessoas e, depois, as equipes. Não prova nada sozinho: é um sinal para olhar com atenção.</p></div>
               <p class="resumo-linha" id="absSegSexResumo"></p>
@@ -1116,7 +1114,7 @@
               <div class="card-body" id="tableAbsSegSexGestor" style="margin-top:10px"></div>
             </div>
             <div class="card wide">
-              <div class="card-title">Atestado colado em férias<span class="tag-pulo">pegar no pulo</span></div>
+              <div class="card-title">Atestado colado em férias</div>
               <div class="card-hint">Atestado que termina até 3 dias antes das férias ou começa até 3 dias depois delas (ou cai dentro delas) &middot; últimos 3 meses</div>
               <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de afastamentos (atestados e férias)</span><p>O painel compara as datas de cada atestado com as férias da mesma pessoa. Aparece aqui o atestado que fica a até 3 dias de distância das férias, antes ou depois (ex.: atestado na sexta e férias começando na segunda), o que estica o tempo fora. Soma com o “encostado em folga”, que olha os dias de folga da semana. Não prova nada sozinho.</p></div>
               <div class="card-body" id="tableAbsFerias"></div>
@@ -3914,7 +3912,7 @@
   }
   $("pauAgrupar").addEventListener("change", applyFilters);
 
-  /* ---------- Sinais de "pegar no pulo" dos atestados (P1, P2, P3) ----------
+  /* ---------- Sinais de atenção dos atestados (P1, P2, P3) ----------
      Base: os atestados dos últimos 3 meses que passam nos filtros de pessoa
      (o mesmo "abs" do ranking). Nenhum sinal prova nada sozinho; o texto de
      cada card diz isso. */
