@@ -1020,6 +1020,62 @@
             <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de pausas térmicas</span><p>Todas as pausas das pessoas de cada equipe (ou de cada cargo), separadas em certas (20 minutos), curtas (menos de 20) e longas (mais de 20). À direita, quanto das pausas foi certa. A lista começa pelo grupo com menos pausas certas.</p></div>
             <div class="card-body" id="chartPauGrupo"></div>
           </div>
+          <div class="card wide" id="pauBatSemDados" hidden><div class="chart-empty">Este arquivo não traz as batidas de cada dia das pausas térmicas. Formate o relatório de pausas com a macro FormatarPausasTermicas nova (ela guarda as batidas numa terceira tabela, embaixo dos totais) e gere o arquivo de novo.</div></div>
+          <div class="card wide pau-bat pau-bat-topo" id="pauBatTopo">
+            <div class="card-title">As batidas de cada dia</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: as batidas de cada dia do relatório de pausas térmicas</span><p>Até aqui, os números vêm do total do mês de cada pessoa. Daqui para baixo, o painel olha <strong>cada batida</strong> de cada dia: a entrada e a saída da jornada, a saída e a volta da refeição e a saída e a volta de cada pausa térmica. Com isso dá para ver <strong>em que hora</strong> e <strong>em que dia da semana</strong> o trabalho no frio passa de 1h40, quem ficou o dia inteiro sem pausa, quanto tempo se trabalha até a primeira pausa e qual batida costuma ficar faltando. A refeição também conta como pausa para a conta de 1h40 (o período de trabalho é o tempo entre uma pausa e outra). Como a conta aqui é refeita batida por batida, ela pode diferir em poucos períodos do total que o sistema dá no relatório (por exemplo, em dias com batida faltando). Escolha o mês (ciclo do ponto, dia 28 a 27) no seletor; segue os filtros de gestor, grupo, cargo e colaborador.</p></div>
+            <div class="abs-toolbar">
+              <label for="pauBatCiclo" style="font-size:11.5px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:.04em;">Mês das batidas</label>
+              <select id="pauBatCiclo"></select>
+              <span class="card-hint" id="pauBatResumo" style="margin:0"></span>
+            </div>
+          </div>
+          <div class="card wide pau-bat">
+            <div class="card-title">Horário em que mais se passa de 1h40 sem pausa</div>
+            <div class="card-hint" id="pauHoraHint">Dos períodos de trabalho que começaram em cada hora, quantos passaram de 1h40</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: as batidas de cada dia do relatório de pausas térmicas</span><p>Cada período de trabalho (o tempo entre uma pausa e outra) foi colocado na hora em que começou. A barra mostra que parte dos períodos daquela hora passou de 1h40 sem pausa. Em vermelho, as horas bem acima da média do mês (uma vez e meia ou mais). Horas com poucos períodos (menos de 10) ficam de fora, porque a porcentagem engana. Clique numa barra para ver os dias.</p></div>
+            <div class="card-body" id="chartPauHora"></div>
+          </div>
+          <div class="card pau-bat">
+            <div class="card-title">Dia da semana com mais trabalho acima de 1h40</div>
+            <div class="card-hint">Parte dos dias trabalhados em que algum período passou de 1h40 sem pausa &middot; em cinza: menos de 10 dias trabalhados (a porcentagem engana)</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: as batidas de cada dia do relatório de pausas térmicas</span><p>Para cada dia da semana: de todos os dias trabalhados naquele dia da semana, em quantos algum período de trabalho passou de 1h40 sem pausa. O dia é o do começo do turno (quem entra à noite e sai de madrugada conta no dia em que entrou). Clique numa barra para ver os dias.</p></div>
+            <div class="card-body" id="chartPauDiaSemana"></div>
+          </div>
+          <div class="card pau-bat">
+            <div class="card-title">Tempo de trabalho até a primeira pausa</div>
+            <div class="card-hint" id="pauPrimeiraHint">Quanto tempo se trabalhou no frio antes da primeira pausa térmica do dia</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: as batidas de cada dia do relatório de pausas térmicas</span><p>Do começo do turno até a saída para a primeira pausa térmica, quanto tempo a pessoa trabalhou (o tempo da refeição, se veio antes, não conta). O certo é até 1h40. Em verde, dentro do limite; em laranja e vermelho, a primeira pausa veio tarde. Os dias sem nenhuma pausa térmica ficam de fora desta conta e aparecem no card ao lado.</p></div>
+            <div class="card-body" id="chartPauPrimeira"></div>
+          </div>
+          <div class="card pau-bat">
+            <div class="card-title">Dias com mais de 1h40 de trabalho e nenhuma pausa</div>
+            <div class="card-hint" id="pauSemPausaHint">Dias em que a pessoa trabalhou mais de 1h40 e não fez nenhuma pausa térmica &middot; os 20 primeiros (a lista inteira abre em tela cheia)</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: as batidas de cada dia do relatório de pausas térmicas</span><p>O caso mais grave: o dia inteiro no frio sem nenhuma saída para a pausa térmica (pode ter tido refeição). Cada barra é uma pessoa, com quantos dias assim ela teve no mês. Clique no nome para ver o resumo da pessoa e na barra para ver os dias e as batidas.</p></div>
+            <div class="card-body" id="chartPauSemPausa"></div>
+            <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="pauSemPausa" id="btnPauSemPausaTodos" hidden>Mostrar todos</button></div>
+          </div>
+          <div class="card pau-bat">
+            <div class="card-title">Maior tempo seguido sem pausa, por pessoa</div>
+            <div class="card-hint">O período de trabalho mais longo de cada pessoa no mês, só de quem passou de 1h40 &middot; em vermelho: mais de 3h20 (o dobro) &middot; os 20 primeiros (a lista inteira abre em tela cheia)</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: as batidas de cada dia do relatório de pausas térmicas</span><p>De todos os dias do mês, o maior tempo que a pessoa ficou trabalhando sem nenhuma pausa (nem a térmica, nem a refeição), e em que dia foi. O limite é 1h40; em vermelho, quem passou do dobro. Clique na barra para ver todos os dias em que a pessoa passou de 1h40.</p></div>
+            <div class="card-body" id="chartPauMaior"></div>
+            <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="pauMaior" id="btnPauMaiorTodos" hidden>Mostrar todos</button></div>
+          </div>
+          <div class="card wide pau-bat">
+            <div class="card-title">Qual batida fica faltando</div>
+            <div class="card-hint" id="pauFaltaHint">Dias com número ímpar de batidas: que tipo de batida ficou sem par</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: as batidas de cada dia do relatório de pausas térmicas</span><p>Toda saída precisa de uma volta. Quando o dia tem um número ímpar de batidas, alguma ficou faltando, e o sistema não consegue fazer a conta das pausas daquele dia. Aqui está de que tipo é a batida sem par (pausa térmica, refeição ou entrada e saída da jornada) e quem mais esquece. Clique numa barra para ver os dias e as batidas.</p></div>
+            <div class="card-body" id="chartPauFaltaTipo"></div>
+            <div class="card-body" id="chartPauFaltaPessoa" style="margin-top:10px"></div>
+          </div>
+          <div class="card wide pau-bat">
+            <div class="card-title">Mapa colaborador &times; dia das pausas</div>
+            <div class="card-hint" id="pauHeatHint">Cada quadrado é um dia trabalhado &middot; passe o mouse para ver as batidas; clique para abrir o dia</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: as batidas de cada dia do relatório de pausas térmicas</span><p>Uma linha por pessoa e uma coluna por dia do mês. Verde: o dia foi certo. Laranja: algum período passou de 1h40 sem pausa. Vermelho: mais de 1h40 de trabalho e nenhuma pausa térmica no dia. Roxo: faltou uma batida (as contas do dia ficam incompletas). Em branco, a pessoa não trabalhou ou não está no relatório nesse dia. As pessoas com mais dias com problema vêm primeiro.</p></div>
+            <div class="heat-leg" id="pauHeatLeg"></div>
+            <div class="heat-wrap" id="pauHeat"></div>
+          </div>
           <div class="card wide">
             <div class="card-title">Evolução mês a mês</div>
             <div class="card-hint" id="pauEvolHint">Trabalho acima de 1h40 em cada mês, em % dos períodos de trabalho</div>
@@ -1598,6 +1654,10 @@
        "pausas": tabela ................ pausasTermicasResumo .... "Resumo Pausas Térmicas" do mês mais recente
                  números do topo, acima de 1h40, por gestor/cargo, evolução (T1/T3/T4/T9)
                                          renderPausas ............ getPausasTermicasRecords / getPausasTodosMeses
+                 batidas de cada dia: por hora, dia da semana, 1ª pausa, dias sem pausa,
+                 maior período, batida que falta, mapa (B1/B2/B7/B5/B6/B12/B9)
+                                         renderPausasBatidas ..... "Pausa Térmica Dia" (getPausaDiaRecords, seletor #pauBatCiclo,
+                                                                   analisarDiaPausa lê marcacoes_dia)
        "digitadas" ..................... renderDigitadas ......... getDigitadasRecords
                  esquecimento crônico (P10) renderEsquecimentoCronico (por ciclo, sem período)
        "afastamentos" .................. renderAbsenteismo ....... getAtestados
@@ -1723,6 +1783,12 @@
   // tem a seção própria "Marcações digitadas".
   var TIPO_MARCACAO_DIGITADA = "Marcação Digitada";
   function isTipoDigitada(tipo){ return tipo === TIPO_MARCACAO_DIGITADA; }
+  // Um registro por pessoa por dia do relatório de pausas térmicas (GerarDiasPausas
+  // do macro): marcacoes_dia = as batidas do dia com a letra ("21:02 P 21:30 F ...",
+  // P = entrada/saída, G = refeição, F = pausa térmica), situacao = exceções do dia.
+  // Alimenta as vistas de batidas da seção Pausas Térmicas (B1, B2, B5, B6, B7, B9, B12).
+  var TIPO_PAUSA_DIA = "Pausa Térmica Dia";
+  function isTipoPausaDia(tipo){ return tipo === TIPO_PAUSA_DIA; }
   // Um registro por ATESTADO (dias seguidos de atestado no Cartão), gerado
   // pelo GerarAbsenteismo do macro: data = 1º dia, situacao = descrição do
   // Cartão, colunas dias_ausencia e emenda_folga. Seção própria.
@@ -1818,7 +1884,7 @@
   // Combina os três: nada disso conta como "ocorrência" pros
   // gráficos/KPI de ocorrências/histórico/filtro de Tipo.
   function isTipoNaoOcorrencia(tipo){
-    return isTipoResumo(tipo) || isTipoCurta(tipo) || isTipoHoraExtra(tipo) || isTipoDigitada(tipo) || isTipoAbsenteismo(tipo) || isTipoJornada(tipo);
+    return isTipoResumo(tipo) || isTipoCurta(tipo) || isTipoHoraExtra(tipo) || isTipoDigitada(tipo) || isTipoAbsenteismo(tipo) || isTipoJornada(tipo) || isTipoPausaDia(tipo);
   }
 
   // Estado global do painel inteiro — de propósito, um único objeto
@@ -2458,7 +2524,7 @@
           svg.appendChild(pd);
         });
       } else {
-        var bv = svgEl("rect", { x:x, y:y, width:w, height:Math.max(h,0), fill: it.color || "var(--c-navy)", rx:3, class:"chart-bar" + (it.recs ? " drill" : ""), "data-tooltip": it.label+": "+formatNum(it.value) });
+        var bv = svgEl("rect", { x:x, y:y, width:w, height:Math.max(h,0), fill: it.color || "var(--c-navy)", rx:3, class:"chart-bar" + (it.recs ? " drill" : ""), "data-tooltip": it.dica || (it.label+": "+formatNum(it.value)) });
         if (it.recs) bv.setAttribute("data-drill", idx);
         svg.appendChild(bv);
       }
@@ -3050,7 +3116,7 @@
     return state.records.filter(function(r){
       // linhas-resumo, curtas, digitadas, afastamentos e jornada não contam
       // como ocorrência normal: têm suas próprias vistas dedicadas.
-      if (isTipoResumo(r.tipo) || isTipoCurta(r.tipo) || isTipoDigitada(r.tipo) || isTipoAbsenteismo(r.tipo) || isTipoJornada(r.tipo)) return false;
+      if (isTipoResumo(r.tipo) || isTipoCurta(r.tipo) || isTipoDigitada(r.tipo) || isTipoAbsenteismo(r.tipo) || isTipoJornada(r.tipo) || isTipoPausaDia(r.tipo)) return false;
       if (!passaPessoa(r, f)) return false;
       if (tipoSet && !tipoSet[r.tipo]) return false;
       if (statusSet && !statusSet[r.status]) return false;
@@ -3239,7 +3305,7 @@
     // o absenteísmo, a jornada, as pausas e as digitadas podem cobrir 3 meses:
     // ficam fora do período padrão, que é o mês das ocorrências (o mês atual).
     // Sem nenhuma ocorrência no arquivo, as digitadas voltam a valer (CSV só de digitadas).
-    var fora = function(r){ return r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS || isTipoAbsenteismo(r.tipo) || isTipoJornada(r.tipo); };
+    var fora = function(r){ return r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS || isTipoPausaDia(r.tipo) || isTipoAbsenteismo(r.tipo) || isTipoJornada(r.tipo); };
     var recs = state.records.filter(function(r){ return !fora(r) && !isTipoDigitada(r.tipo); });
     if (!recs.length) recs = state.records.filter(function(r){ return !fora(r); });
     if (!recs.length) return null;
@@ -3474,6 +3540,7 @@
     renderAbsenteismo();
     renderJornada();
     renderPausas();
+    renderPausasBatidas();
     renderTendencias();
     // tendência dentro de cada seção (tabela por pessoa ou por gestor, um assunto fixo)
     renderTendenciaSecao("tableDigTend", "dig", "pessoa", { btnId:"btnDigTendTodos" });
@@ -4284,6 +4351,236 @@
       linhasMes.slice().reverse());
   }
   $("pauAgrupar").addEventListener("change", applyFilters);
+  /* ---------- Pausas térmicas: as batidas de cada dia (B1, B2, B5, B6, B7, B9, B12) ----------
+     Base: as linhas "Pausa Térmica Dia" (uma por pessoa por dia), com as
+     batidas do dia em marcacoesDia ("21:02 P 21:30 F 21:50 F ..."). A conta é a
+     mesma do sistema: as batidas em ordem formam, alternando, um período de
+     trabalho e uma pausa (1ª→2ª trabalho, 2ª→3ª pausa, 3ª→4ª trabalho...).
+     Pausa com as duas letras F = pausa térmica; G = refeição; P = entrada ou
+     saída da jornada. Período de trabalho acima de 100 min = acima de 1h40.
+     Quando a hora volta (turno que passa da meia-noite), soma 24h. */
+  var LIMITE_TRABALHO_MIN = 100;
+  var COR_DIA_PAUSA = { ok:"#1baf7a", acima:"#F7931E", sem:"#E31E24", impar:"#7B4FB0" };
+  var NOME_DIA_PAUSA = { ok:"Dia certo", acima:"Passou de 1h40 sem pausa", sem:"Mais de 1h40 e nenhuma pausa térmica", impar:"Faltou uma batida" };
+  var NOME_LETRA = { P:"Entrada ou saída da jornada", G:"Refeição", F:"Pausa térmica" };
+  function getPausaDiaRecords(){
+    var f = filtroPessoas();
+    return state.records.filter(function(r){ return isTipoPausaDia(r.tipo) && passaPessoa(r, f); });
+  }
+  function hm(min){ min = Math.round(min); return Math.floor(min/60) + "h" + ("0" + (min % 60)).slice(-2); }
+  // Lê as batidas do dia e faz as contas (guardadas no próprio registro).
+  function analisarDiaPausa(r){
+    if (r._pd) return r._pd;
+    var tk = String(r.marcacoesDia || "").trim().split(/\s+/), t = [], base = 0, ant = null;
+    for (var i = 0; i < tk.length; i++){
+      var m = /^(\d{1,2}):(\d{2})$/.exec(tk[i]);
+      if (!m) continue;
+      var l = (tk[i+1] && /^[A-Za-z]$/.test(tk[i+1])) ? tk[i+1].toUpperCase() : "";
+      var v = (+m[1])*60 + (+m[2]);
+      if (ant !== null && v + base < ant) base += 1440;
+      t.push({ m: v + base, l: l }); ant = v + base;
+    }
+    var trab = [], pausas = [];
+    for (var j = 0; j < t.length - 1; j++){
+      var d = t[j+1].m - t[j].m;
+      if (j % 2 === 0) trab.push({ ini: t[j].m, dur: d, fimIdx: j+1 });
+      else pausas.push({ ini: t[j].m, dur: d, tipo: t[j].l + t[j+1].l });
+    }
+    var ff = pausas.filter(function(p){ return p.tipo === "FF"; }).length;
+    var total = trab.reduce(function(s, b){ return s + b.dur; }, 0);
+    var maior = trab.reduce(function(a, b){ return !a || b.dur > a.dur ? b : a; }, null);
+    var acima = trab.filter(function(b){ return b.dur > LIMITE_TRABALHO_MIN; });
+    // trabalho até a 1ª batida F (saída para a 1ª pausa térmica), sem contar as pausas antes dela
+    var iF = -1;
+    for (var k = 1; k < t.length; k++) if (t[k].l === "F"){ iF = k; break; }
+    var primeira = iF < 0 ? null : trab.filter(function(b){ return b.fimIdx <= iF; }).reduce(function(s, b){ return s + b.dur; }, 0);
+    // dia ímpar: o tipo de batida que ficou sem par (letra com contagem ímpar)
+    var impar = t.length % 2 === 1, falta = [];
+    if (impar){
+      var cont = {};
+      t.forEach(function(b){ cont[b.l] = (cont[b.l] || 0) + 1; });
+      falta = Object.keys(cont).filter(function(l){ return cont[l] % 2 === 1; });
+    }
+    var sem = total > LIMITE_TRABALHO_MIN && !ff;
+    r._pd = { batidas:t, trab:trab, pausas:pausas, ff:ff, total:total, maior:maior, acima:acima, primeira:primeira, impar:impar, falta:falta, sem:sem,
+              status: sem ? "sem" : (acima.length ? "acima" : (impar ? "impar" : "ok")) };
+    return r._pd;
+  }
+  // Texto curto do que houve no dia (janela "de onde vem" e balão do mapa).
+  function resumoDiaPausa(r){
+    var a = analisarDiaPausa(r), p = [];
+    if (a.sem) p.push(hm(a.total) + " de trabalho e nenhuma pausa térmica");
+    if (a.acima.length) p.push(a.acima.length + " período(s) acima de 1h40 (maior: " + hm(a.maior.dur) + ")");
+    if (a.impar) p.push("faltou batida: " + a.falta.map(function(l){ return (NOME_LETRA[l] || "outra").toLowerCase(); }).join(", "));
+    if (!p.length) p.push(a.ff + " pausa(s) térmica(s), tudo dentro de 1h40");
+    return p.join(" · ");
+  }
+  // "21:02 entrada · 21:30 pausa · ..." (as letras do relatório em palavras)
+  function batidasDiaTexto(r){
+    var nome = { P:"jornada", G:"refeição", F:"pausa" };
+    return analisarDiaPausa(r).batidas.map(function(b){
+      var h = b.m % 1440;
+      return Math.floor(h/60) + ":" + ("0" + (h % 60)).slice(-2) + " " + (nome[b.l] || b.l);
+    }).join(" · ");
+  }
+  function renderPausasBatidas(){
+    state.pauBatPeriodo = null;
+    var temDia = state.records.some(function(r){ return isTipoPausaDia(r.tipo); });
+    $("pauBatSemDados").hidden = temDia;
+    document.querySelectorAll(".pau-bat").forEach(function(c){ c.hidden = !temDia; });
+    if (!temDia) return;
+    // ciclos do arquivo (sem filtro de pessoa, para o seletor não mudar a cada filtro)
+    var ciclosSet = {};
+    state.records.forEach(function(r){ if (isTipoPausaDia(r.tipo)) ciclosSet[cicloDe(r.data)] = true; });
+    var ciclos = Object.keys(ciclosSet).sort().reverse();
+    var sel = $("pauBatCiclo"), atual = sel.value;
+    var opts = ciclos.map(function(k){
+      var f = cicloInicioFim(k);
+      return '<option value="'+k+'">'+cicloLabel(k)+' ('+formatDateBR(f.ini).slice(0,5)+' a '+formatDateBR(f.fim).slice(0,5)+')</option>';
+    }).join("");
+    if (sel.innerHTML !== opts) sel.innerHTML = opts;
+    sel.value = ciclos.indexOf(atual) > -1 ? atual : ciclos[0];
+    var ciclo = sel.value, fc = cicloInicioFim(ciclo);
+    state.pauBatPeriodo = "Batidas do ciclo " + cicloLabel(ciclo) + ": " + intervaloBR(fc.ini, fc.fim) + " (não segue o filtro de período)";
+    var dias = getPausaDiaRecords().filter(function(r){ return cicloDe(r.data) === ciclo; })
+      .sort(function(a,b){ return a.data - b.data || a.colaborador.localeCompare(b.colaborador,"pt-BR"); });
+    var pessoas = {};
+    dias.forEach(function(r){ analisarDiaPausa(r); pessoas[chavePessoa(r)] = true; });
+    var nAcima = dias.filter(function(r){ return r._pd.acima.length; }).length;
+    $("pauBatResumo").textContent = formatNum(dias.length) + " dias trabalhados de " + Object.keys(pessoas).length + " pessoa(s) · " +
+      formatNum(nAcima) + " dia(s) com algum período acima de 1h40 (" + pctTxt(nAcima, dias.length) + ")";
+
+    // B1: por hora de começo do período de trabalho
+    var horas = {}, totB = 0, totA = 0;
+    dias.forEach(function(r){
+      r._pd.trab.forEach(function(b){
+        var h = Math.floor((b.ini % 1440) / 60), x = horas[h] = horas[h] || { n:0, a:0, recs:[] };
+        x.n++; totB++;
+        if (b.dur > LIMITE_TRABALHO_MIN){ x.a++; totA++; if (x.recs[x.recs.length-1] !== r) x.recs.push(r); }
+      });
+    });
+    var media = totB ? totA / totB : 0;
+    var itH = Object.keys(horas).map(Number).sort(function(a,b){ return a - b; }).filter(function(h){ return horas[h].n >= 10; }).map(function(h){
+      var x = horas[h], pc = x.a / x.n;
+      return { label: h + "h", value: Math.round(pc*1000)/10, texto: pctTxt(x.a, x.n), recs: x.recs.length ? x.recs : null,
+               color: media && pc >= media*1.5 ? "#E31E24" : "var(--c-orange)",
+               dica: h + "h: " + formatNum(x.a) + " de " + formatNum(x.n) + " períodos que começaram nessa hora passaram de 1h40 (" + pctTxt(x.a, x.n) + ")" + (x.recs.length ? " · clique para ver os dias" : "") };
+    });
+    $("pauHoraHint").textContent = "Dos períodos de trabalho que começaram em cada hora, quantos passaram de 1h40 · média do mês: " + pctTxt(totA, totB) +
+      " (" + formatNum(totA) + " de " + formatNum(totB) + ") · em vermelho: uma vez e meia a média ou mais";
+    renderBarV($("chartPauHora"), itH, {});
+
+    // B2: por dia da semana (dia do começo do turno)
+    var porDia = DIAS_ORDER.map(function(){ return { n:0, recs:[] }; });
+    dias.forEach(function(r){ var x = porDia[DIAS_ORDER.indexOf(r.data.getDay())]; x.n++; if (r._pd.acima.length) x.recs.push(r); });
+    renderBarV($("chartPauDiaSemana"), porDia.map(function(x, i){
+      // dia da semana com menos de 10 dias trabalhados: cinza (a % engana com tão poucos dias)
+      return { label: DIAS_LABELS[i], value: x.n ? Math.round(x.recs.length*1000/x.n)/10 : 0, texto: x.n ? pctTxt(x.recs.length, x.n) : "–",
+               recs: x.recs.length ? x.recs : null, color: x.n < 10 ? "#C9CACC" : "var(--c-orange)",
+               dica: DIAS_LABELS[i] + ": " + formatNum(x.recs.length) + " de " + formatNum(x.n) + " dias trabalhados com algum período acima de 1h40 (" + pctTxt(x.recs.length, x.n) + ")" +
+                 (x.n < 10 ? " · poucos dias, a porcentagem engana" : "") };
+    }), {});
+
+    // B7: tempo de trabalho até a 1ª pausa térmica
+    var faixas = [
+      { label:"Até 1h30", max:90, color:"#1baf7a" }, { label:"1h31 a 1h40", max:100, color:"#1baf7a" },
+      { label:"1h41 a 2h", max:120, color:"var(--c-orange)" }, { label:"2h01 a 3h", max:180, color:"#E31E24" }, { label:"Mais de 3h", max:Infinity, color:"#E31E24" }];
+    faixas.forEach(function(f){ f.recs = []; });
+    var comPausa = dias.filter(function(r){ return r._pd.primeira !== null; });
+    comPausa.forEach(function(r){ for (var i = 0; i < faixas.length; i++) if (r._pd.primeira <= faixas[i].max){ faixas[i].recs.push(r); break; } });
+    var tard = comPausa.filter(function(r){ return r._pd.primeira > LIMITE_TRABALHO_MIN; }).length;
+    var ord = comPausa.map(function(r){ return r._pd.primeira; }).sort(function(a,b){ return a - b; });
+    $("pauPrimeiraHint").textContent = comPausa.length ? "Metade dos dias teve a 1ª pausa com até " + hm(ord[Math.floor((ord.length-1)/2)]) + " de trabalho · " +
+      formatNum(tard) + " de " + formatNum(comPausa.length) + " dias (" + pctTxt(tard, comPausa.length) + ") passaram de 1h40" : "Nenhum dia com pausa térmica no recorte";
+    renderBarV($("chartPauPrimeira"), comPausa.length ? faixas.map(function(f){
+      return { label:f.label, value:f.recs.length, recs: f.recs.length ? f.recs : null, color:f.color,
+               dica: f.label + " de trabalho até a 1ª pausa: " + formatNum(f.recs.length) + " dia(s) (" + pctTxt(f.recs.length, comPausa.length) + ")" };
+    }) : [], { total: comPausa.length });
+
+    // B5: dias com mais de 1h40 de trabalho e nenhuma pausa térmica, por pessoa
+    var porP = {}, nDiasP = {}, totSem = 0;
+    dias.forEach(function(r){
+      var k = chavePessoa(r); nDiasP[k] = (nDiasP[k] || 0) + 1;
+      if (!r._pd.sem) return;
+      totSem++;
+      (porP[k] = porP[k] || { label:r.colaborador, k:k, recs:[] }).recs.push(r);
+    });
+    $("pauSemPausaHint").textContent = formatNum(totSem) + " dia(s) de " + formatNum(dias.length) + " (" + pctTxt(totSem, dias.length) + ") com mais de 1h40 de trabalho e nenhuma pausa térmica · os 20 primeiros (a lista inteira abre em tela cheia)";
+    var itSem = Object.values(porP).map(function(x){
+      return { label:x.label, value:x.recs.length, recs:x.recs, color:"#E31E24",
+               texto: x.recs.length + " de " + nDiasP[x.k] + " dias",
+               dica: x.label + ": " + x.recs.length + " de " + nDiasP[x.k] + " dias trabalhados sem nenhuma pausa térmica · clique na barra para ver os dias" };
+    }).sort(function(a,b){ return b.value - a.value || a.label.localeCompare(b.label,"pt-BR"); });
+    renderBarH($("chartPauSemPausa"), limitarLista(itSem, "pauSemPausa", LIMITE_LISTA, "btnPauSemPausaTodos"), { colab:true, rightW:104, filtro:"colab" });
+
+    // B6: maior período seguido sem pausa, por pessoa
+    var maiorP = {};
+    dias.forEach(function(r){
+      var a = r._pd; if (!a.maior || a.maior.dur <= LIMITE_TRABALHO_MIN) return;
+      var k = chavePessoa(r), x = maiorP[k] = maiorP[k] || { label:r.colaborador, max:0, dia:null, recs:[] };
+      x.recs.push(r);
+      if (a.maior.dur > x.max){ x.max = a.maior.dur; x.dia = r.data; }
+    });
+    var itMaior = Object.values(maiorP).map(function(x){
+      return { label:x.label, value:x.max, recs:x.recs, color: x.max > LIMITE_TRABALHO_MIN*2 ? "#E31E24" : "var(--c-orange)",
+               texto: hm(x.max) + " · " + formatDateBR(x.dia).slice(0,5),
+               dica: x.label + ": maior período sem pausa de " + hm(x.max) + " em " + formatDateBR(x.dia) + " · " + x.recs.length + " dia(s) acima de 1h40 · clique na barra para ver os dias" };
+    }).sort(function(a,b){ return b.value - a.value || a.label.localeCompare(b.label,"pt-BR"); });
+    renderBarH($("chartPauMaior"), limitarLista(itMaior, "pauMaior", LIMITE_LISTA, "btnPauMaiorTodos"), { colab:true, rightW:104, filtro:"colab" });
+
+    // B12: qual batida fica faltando (dias com número ímpar de batidas)
+    var impares = dias.filter(function(r){ return r._pd.impar; }), porTipo = {}, porPes = {};
+    impares.forEach(function(r){
+      (r._pd.falta.length ? r._pd.falta : ["?"]).forEach(function(l){ (porTipo[l] = porTipo[l] || []).push(r); });
+      var k = chavePessoa(r); (porPes[k] = porPes[k] || { label:r.colaborador, recs:[] }).recs.push(r);
+    });
+    $("pauFaltaHint").textContent = impares.length ? formatNum(impares.length) + " dia(s) com número ímpar de batidas, de " + Object.keys(porPes).length + " pessoa(s) · em cima: o tipo da batida sem par; embaixo: quem" : "Nenhum dia com batida faltando no recorte";
+    renderBarH($("chartPauFaltaTipo"), Object.keys(porTipo).map(function(l){
+      return { label: NOME_LETRA[l] || "Outra", value: porTipo[l].length, recs: porTipo[l], color:COR_DIA_PAUSA.impar };
+    }).sort(function(a,b){ return b.value - a.value; }), { total: impares.length, leftW:150 });
+    renderBarH($("chartPauFaltaPessoa"), Object.values(porPes).map(function(x){
+      return { label:x.label, value:x.recs.length, recs:x.recs, color:COR_DIA_PAUSA.impar, texto: x.recs.length + " dia(s)" };
+    }).sort(function(a,b){ return b.value - a.value || a.label.localeCompare(b.label,"pt-BR"); }).slice(0, 10), { colab:true, filtro:"colab" });
+    if (impares.length) $("chartPauFaltaPessoa").hidden = false; else { $("chartPauFaltaPessoa").hidden = true; }
+
+    // B9: mapa colaborador x dia
+    var diasMapa = [];
+    for (var d = new Date(fc.ini); d <= fc.fim; d = new Date(d.getFullYear(), d.getMonth(), d.getDate()+1)) diasMapa.push(d);
+    var mapa = {};
+    dias.forEach(function(r){
+      var k = chavePessoa(r), x = mapa[k] = mapa[k] || { colaborador:r.colaborador, dias:{}, prob:0, n:0 };
+      x.dias[dateKey(r.data)] = r; x.n++;
+      if (r._pd.status !== "ok") x.prob++;
+    });
+    var linhasMapa = Object.values(mapa).sort(function(a,b){ return b.prob - a.prob || a.colaborador.localeCompare(b.colaborador,"pt-BR"); });
+    $("pauHeatHint").textContent = "Ciclo " + cicloLabel(ciclo) + " (" + intervaloBR(fc.ini, fc.fim) + ") · " + linhasMapa.length + " pessoa(s), das com mais dias com problema para as com menos · passe o mouse para ver as batidas; clique para abrir o dia";
+    $("pauHeatLeg").innerHTML = ["ok","acima","sem","impar"].map(function(s){
+      return '<span class="l-aus" style="--cor:' + COR_DIA_PAUSA[s] + '">' + NOME_DIA_PAUSA[s] + '</span>';
+    }).join("") + '<span class="l-fds">Sábado e domingo</span>';
+    if (!linhasMapa.length){
+      $("pauHeat").innerHTML = ""; $("pauHeat").appendChild(emptyMsg("Nenhum dia de pausas para o filtro atual."));
+    } else {
+      var letras = ["D","S","T","Q","Q","S","S"], origemMapa = [];
+      var html = '<table class="heat"><thead><tr><th class="nome">Colaborador</th>' + diasMapa.map(function(dd){
+        var fds = dd.getDay() === 0 || dd.getDay() === 6;
+        return '<th' + (fds ? ' class="fds"' : '') + '>' + dd.getDate() + '<br>' + letras[dd.getDay()] + '</th>';
+      }).join("") + '<th class="tot-h">Dias com<br>problema</th><th class="tot-h">Dias no<br>relatório</th></tr></thead><tbody>';
+      linhasMapa.forEach(function(p){
+        html += '<tr><td class="nome">' + colabLink(p.colaborador) + '</td>' + diasMapa.map(function(dd){
+          var r = p.dias[dateKey(dd)], fds = dd.getDay() === 0 || dd.getDay() === 6;
+          if (!r) return '<td' + (fds ? ' class="fds"' : '') + '></td>';
+          origemMapa.push({ label: p.colaborador + " · " + formatDateBR(dd), recs:[r] });
+          return '<td class="aus drill" data-drill="' + (origemMapa.length - 1) + '" style="background:' + COR_DIA_PAUSA[r._pd.status] + '" data-tooltip="' +
+            escapeHtml(p.colaborador + " · " + diaSemanaCurto(dd) + " " + formatDateBR(dd) + " · " + resumoDiaPausa(r) + " · batidas: " + batidasDiaTexto(r)) + '"></td>';
+        }).join("") + '<td class="tot">' + (p.prob || "&ndash;") + '</td><td class="tot">' + p.n + '</td></tr>';
+      });
+      $("pauHeat").innerHTML = html + '</tbody></table>';
+      wireTooltips($("pauHeat"));
+      marcarOrigem($("pauHeat"), origemMapa);
+    }
+  }
+  $("pauBatCiclo").addEventListener("change", applyFilters);
+
 
   /* ---------- Sinais de atenção dos atestados (P1, P2, P3) ----------
      Base: os atestados dos últimos 3 meses que passam nos filtros de pessoa
@@ -5223,6 +5520,7 @@
     if (isTipoDigitada(r.tipo)) return "digitada";
     if (isTipoJornada(r.tipo)) return "jornada";
     if (r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS) return "pausa";
+    if (isTipoPausaDia(r.tipo)) return "pausaDia";
     return "ocorrencia";
   }
   function abrirOrigem(titulo, recorte, recs, filtros){
@@ -5261,6 +5559,14 @@
         {label:"Tipo", width:"16%", render:function(r){ return escapeHtml(nomeJornada(r.tipo)); }},
         {label:"O que houve", render:function(r){ return escapeHtml(detalheJornada(r)); }},
         {label:"Batidas", render:function(r){ return escapeHtml(r.marcacoesDia || ""); }}];
+    } else if (tipo === "pausaDia"){
+      linhas = recs.slice().sort(function(a,b){ return a.data - b.data || a.colaborador.localeCompare(b.colaborador,"pt-BR"); });
+      colunas = [
+        {label:"Data", width:"96px", render:function(r){ return diaSemanaCurto(r.data) + " " + formatDateBR(r.data); }},
+        {label:"Colaborador", width:"20%", render:function(r){ return colabLink(r.colaborador); }},
+        {label:"Gestor", width:"16%", render:function(r){ return escapeHtml(r.gestor); }},
+        {label:"O que houve", width:"26%", render:function(r){ return escapeHtml(resumoDiaPausa(r)); }},
+        {label:"Batidas", render:function(r){ return escapeHtml(batidasDiaTexto(r)); }}];
     } else if (tipo === "pausa"){
       linhas = recs.slice().sort(function(a,b){ return pctAcima(b) - pctAcima(a) || a.colaborador.localeCompare(b.colaborador,"pt-BR"); });
       colunas = [
@@ -5293,7 +5599,7 @@
     var porPessoa = {};
     linhas.forEach(function(x){ var r = x.r || x; porPessoa[r.colaborador] = (porPessoa[r.colaborador] || 0) + 1; });
     var nomes = Object.keys(porPessoa).sort(function(a,b){ return porPessoa[b]-porPessoa[a] || a.localeCompare(b,"pt-BR"); });
-    var unidade = { digitada:"batida(s) digitada(s)", ocorrencia:"ocorrência(s)", jornada:"ocorrência(s) de jornada", pausa:"pessoa(s) no relatório de pausas" }[tipo] || "afastamento(s)";
+    var unidade = { digitada:"batida(s) digitada(s)", ocorrencia:"ocorrência(s)", jornada:"ocorrência(s) de jornada", pausa:"pessoa(s) no relatório de pausas", pausaDia:"dia(s) de batidas de pausa" }[tipo] || "afastamento(s)";
     $("origemTitulo").textContent = titulo + (recorte ? " · " + recorte : "");
     state.origem = { linhas:linhas, colunas:colunas, nomes:nomes, porPessoa:porPessoa, unidade:unidade, sel:{} };
     desenharOrigem();
@@ -5346,6 +5652,7 @@
              "tableDigJust","tableDigLista","tableDemoraGestor","tableDemoraColaborador","historySection"],
     cartao: ["chartBancoHoras"], cartao3: ["tableExtraFalta"], pausas: ["tablePausasTermicas","chartPauAcima","tablePauAcimaGestor","chartPauGrupo"],
     pausasMeses: ["chartPauEvolucao"],
+    pauBat: ["chartPauHora","chartPauDiaSemana","chartPauPrimeira","chartPauSemPausa","chartPauMaior","chartPauFaltaTipo","pauHeat"],
     absEvol: ["chartAbsEvolucao"], absCiclo: ["chartAbsGrupo","chartAbsDiaSemana","tableAbsEmendas"], abs3m: ["tableAbsRanking","tableAbsMesmoDia","tableAbsSegSex","tableAbsFerias"],
     absMapa: ["absHeat"], cadastro: ["orgSection"],
     tend: ["tableTendUnidade","tableTendGestor","tableTendPiorou","tableTendMelhorou","chartDigCiclo","tableDigTend",
@@ -5371,6 +5678,7 @@
       cartao3: cart ? "Mês do espelho de ponto: " + intervaloBR(cart.ini, cart.fim) + " + os 2 meses anteriores (não segue o filtro de período)" : "Mês atual do espelho de ponto e os 2 anteriores",
       pausas: paus ? "Relatório de pausas do mês: " + intervaloBR(paus.ini, paus.fim) + " (não segue o filtro de período)" : "Relatório de pausas do mês",
       pausasMeses: "Todos os meses de pausas que estão no arquivo",
+      pauBat: state.pauBatPeriodo,
       absEvol: ab.ciclo, absCiclo: ab.ciclo, abs3m: ab.tres, absMapa: ab.mapa,
       cadastro: "Lista de equipes atual (não depende de período)",
       tend: (function(){ var c = ciclosTendencia(); return c.length ? "Ciclos " + c.map(cicloLabel).join(", ") + ": " +

@@ -112,8 +112,10 @@ conteúdo num módulo.
   **Letras: P = entrada/saída da jornada, G = refeição, F = pausa térmica** (dedução conferida:
   pausas F–F de 20 min e blocos > 1h40 recontados batem com o "Total do Colaborador"; "trabalho
   menor" difere em 1–2 em quem tem dia ímpar). Batida depois da meia-noite fica na data do turno.
-  A GerarCSV continua lendo só a tabela 1 (para na linha em branco). `formatar_pausas.batidas()`
-  é a versão Python. Jul/ago/set: 9.545 / 9.992 / 9.009 batidas.
+  A tabela 1 é lida pelo resumo (para na linha em branco); a de batidas, pelo `GerarDiasPausas`
+  (acha a linha com "Matrícula" + "Letra no relatório"). `formatar_pausas.batidas()` é a versão
+  Python (o .pkl do script é um dict {fim, linhas, geral, batidas}; `adicionar_aba_xlsx.py`
+  layout "pausas" monta as 3 tabelas). Jul/ago/set: 9.545 / 9.992 / 9.009 batidas.
 
 ### 5.3 PURO_Para_EDITADO
 - Mapeia a aba `PURO` por nome de cabeçalho → `EDITADO_<MES><AA>` com as colunas `Matricula, Nome,
@@ -217,6 +219,9 @@ conteúdo num módulo.
      anteriores têm o mês por extenso no nome ("Pausas Térmicas Agosto") e saem com a data 27
      daquele mês (`CabecalhoPausasNaAba`, `MesNoNomeDaAba`, `DataDoMesDaAba`); mês repetido é
      ignorado com aviso. O painel usa só o mês mais recente, menos na evolução e no card.
+   - "Pausa Térmica Dia" (18/10, `GerarDiasPausas`/`EscreverDiaPausa`): uma por pessoa e dia da
+     tabela de batidas de cada aba de pausas; situacao = exceções do dia; coluna 32
+     `marcacoes_dia` = "H:MM L" separados por espaço (L = P/G/F). 3 meses: 3.002 linhas.
    - "Resumo Horas Cartão" (06/10): uma por matrícula do Cartão atual com o total do mês de
      hora extra (50% + 100%) e de banco de horas (BH). Sem Tratamento, sem Check, sem período.
      No Cartão, BH é sempre positivo e é **débito** (dias de "Falta (Banco Horas)" e minutos de
@@ -259,7 +264,7 @@ minutos_hora_extra_cartao, minutos_banco_horas_cartao, justificativa_marcacao, o
 dias_ausencia, emenda_folga, minutos_trabalhados, minutos_descanso, marcacoes_dia
 ```
 (24/25 só na "Resumo Horas Cartão"; 26/27 só na "Marcação Digitada"; 28/29 na "Absenteísmo" e na
-"Afastamento"; 30/31/32 nas 4 de jornada)
+"Afastamento"; 30/31/32 nas 4 de jornada; 32 também na "Pausa Térmica Dia")
 - Separador **vírgula**; campo com vírgula/aspas/quebra vai entre aspas (RFC 4180); UTF-8 com BOM
   (`ADODB.Stream`); datas `dd/mm/aaaa` (`dd/mm/aaaa hh:mm` quando tem hora); duração em minutos
   inteiros (negativo = falta); `grupo` = Interno/Externo pelo nome da aba (vazio na planilha antiga).
@@ -378,6 +383,15 @@ dias_ausencia, emenda_folga, minutos_trabalhados, minutos_descanso, marcacoes_di
   `LIMITE_ACIMA_PCT`) e por gestor; T4 certas/curtas/longas por gestor ou cargo (`#pauAgrupar`);
   T9 evolução por mês (`getPausasTodosMeses`); T8 no card (`pausasDoCard`, pessoa × média da equipe).
   `getPausasTermicasRecords` = só o mês mais recente (`mesPausasAtual`).
+- **Batidas das pausas** (18/10, `renderPausasBatidas`, `getPausaDiaRecords`, seletor
+  `#pauBatCiclo`, cards `.pau-bat`): `analisarDiaPausa` lê `marcacoesDia` (soma 24h quando a hora
+  volta; trabalho e pausa alternando; FF = pausa térmica; > `LIMITE_TRABALHO_MIN` 100 = acima).
+  B1 por hora de começo do período (só horas com 10+ períodos; vermelho ≥ 1,5× a média), B2 por
+  dia da semana do turno (cinza com < 10 dias), B7 trabalho até a 1ª batida F em faixas, B5 dias
+  com total > 1h40 e nenhuma FF (por pessoa), B6 maior período por pessoa (vermelho > 3h20), B12
+  letra com contagem ímpar nos dias ímpares, B9 mapa (`COR_DIA_PAUSA`: ok/acima/sem/impar).
+  Origem `pausaDia` (`resumoDiaPausa`, `batidasDiaTexto`). Tipo fora das vistas gerais e do
+  `periodoCompleto` (`isTipoPausaDia`). Setembro: 2 pessoas sem nenhuma pausa no mês inteiro.
 - **M3** `renderPorGestor` (seletor `#gestorMedida`: total × por pessoa da equipe); **M4** botões
   "Filtrar o painel: ..." na janela de origem (`opts.filtro`/`filtroSeg` → `marcarOrigem` →
   `aplicarFiltroDoGrafico`; tipos "Outros" não filtram; ponto da linha filtra o dia); **M7** % do
@@ -484,7 +498,7 @@ python3 ferramentas/simular_gerarcsv.py                                  # -> da
 NODE_PATH=$(npm root -g) node ferramentas/extrair_painel.js "$PWD/Dashboard/index.html" "$PWD/dados_TODOS.csv" painel.json
 python3 ferramentas/formatar_pausas.py "pausa_termica.xlsx" pausas.pkl       # -> (fim do período, linhas)
 python3 ferramentas/adicionar_aba_xlsx.py in.xlsx out.xlsx dig3.pkl marcacoes "Marcações Digitadas" --substituir  # troca o conteúdo
-PYTHONPATH=ferramentas python3 ferramentas/conferir_painel.py painel.json   # OK/FALHA item a item (hoje 27 itens)
+PYTHONPATH=ferramentas python3 ferramentas/conferir_painel.py painel.json   # OK/FALHA item a item (hoje 32 itens)
 python3 ferramentas/checar_colisoes_vba.py */*.bas                         # antes de entregar VBA
 ```
 Os scripts foram escritos para a planilha de 28/08 a 27/09 (nomes de aba fixos: "Tratamento",
@@ -622,8 +636,13 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   Análise das batidas (3 meses, 3.002 dias-pessoa) para propor vistas B1–B14 (ver conversa):
   13h tem 22% dos períodos acima de 1h40; turno do dia 7,7% × noite 4,2%; 229 dias com mais de
   1h40 sem nenhuma pausa; 98% das pausas com exatos 20 min; batida faltando sempre de pausa (F);
-  nenhuma batida de pausa digitada (659 entradas/saídas digitadas). **Nada disso está no CSV nem
-  no painel ainda**: depende de ele escolher as vistas (exigirá a GerarCSV ler a tabela de batidas).
+  nenhuma batida de pausa digitada (659 entradas/saídas digitadas). Ele escolheu B1, B2, B5,
+  B6, B7, B9, B12 (ver abaixo).
+
+- 18/10 (depois 2): **B1, B2, B5, B6, B7, B9, B12 construídas** (seção 6, "Batidas das pausas").
+  GerarCSV com "Pausa Térmica Dia"; planilha de 3 meses refeita com as batidas nas 3 abas de
+  pausas (`adicionar_aba_xlsx.py --substituir`, layout pausas com o dict); CSV simulado com 6.084
+  linhas; conferência 32/32; varredura sem erros. Pacote `Teste Ponto 18-10 (batidas).zip`.
 
 ## 12. Estado atual e como continuar (13/10/2026)
 
@@ -646,6 +665,9 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   `... - com 3 meses.xlsx` (digitadas de 3 meses + pausas de jul/ago/set). Números esperados nela:
   os mesmos de antes nas ocorrências; CSV com 3.082 linhas; 1.642 digitadas (416 no ciclo de
   setembro); 156 linhas de pausas (52/53/51).
+- 18/10 (depois): pacote `Teste Ponto 18-10 (batidas).zip` com TUDO (7 macros `.txt`, `index.html`,
+  planilha `... - com 3 meses e batidas.xlsx`, CSV de referência, LEIA-ME): GerarCSV com as linhas
+  "Pausa Térmica Dia" (CSV de 6.084 linhas, 3.002 dias de batidas: 958/1.105/939) e as visões B.
 - Números esperados ao rodar o GerarAbaCSV nessa planilha: 138 ocorrências, 72 colaboradores,
   demora média 5,7 dias (56 tratadas), 422 digitadas, 283 afastamentos (33 atestados, 105 dias),
   210 pessoas no ORG, 163 com horas no Cartão, Intrajornada 21, Interjornada 1, Interjornada

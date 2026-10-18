@@ -367,6 +367,21 @@ As 15 ideias marcadas na página de ideias que ainda faltavam:
   tabela de totais, então o CSV e o painel não mudam.
 - Letras do relatório: P = entrada/saída da jornada, G = refeição, F = pausa térmica.
 
+### Depois: as visões das batidas no painel (B1, B2, B5, B6, B7, B9, B12)
+
+- **GerarCSVPonto** lê também a tabela de batidas de cada aba de pausas (`GerarDiasPausas`) e grava
+  uma linha **"Pausa Térmica Dia"** por pessoa e dia: `situacao` = exceções do dia,
+  `marcacoes_dia` = as batidas com a letra ("21:02 P 21:30 F 21:50 F ..."). Na planilha de 3 meses:
+  3.002 dias (958 / 1.105 / 939 por ciclo); CSV com 6.084 linhas.
+- **Painel, seção Pausas Térmicas**, bloco "As batidas de cada dia" com seletor do mês:
+  horário em que mais se passa de 1h40 (B1), dia da semana (B2), tempo até a 1ª pausa (B7), dias
+  com mais de 1h40 e nenhuma pausa (B5), maior tempo seguido sem pausa por pessoa (B6), qual
+  batida fica faltando (B12) e o mapa colaborador × dia (B9). Clique em barra ou quadrado abre o
+  "de onde vem" com as batidas do dia em palavras.
+- A conta é refeita batida a batida (trabalho e pausa alternando; acima de 100 min = acima de
+  1h40) e pode diferir em poucos períodos do total do sistema (setembro: 284 × 288).
+- Conferência: 32/32 (5 itens novos, recalculados da tabela de batidas da aba).
+
 ## Ordem de uso no mês
 
 1. Rodar `ConsolidarCartaoPonto` no HRCP102 e colar o resultado numa aba `Cartão <Mês>`.

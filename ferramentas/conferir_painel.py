@@ -378,3 +378,51 @@ if ui.get('tendUnidade'):
     dif={k:(got.get(k),v) for k,v in esp.items() if got.get(k)!=v}
     chk('Tendências: a unidade ciclo a ciclo', not dif and set(got)==set(esp),
         f"{len(esp)} assuntos x 3 ciclos conferem; digitadas {esp.get('Batidas digitadas')}; acima de 1h40 {esp.get('Trabalho acima de 1h40 sem pausa')}" if not dif and set(got)==set(esp) else f"diferenças {dif}; só no painel {set(got)-set(esp)}; só na fonte {set(esp)-set(got)}")
+
+# Batidas de cada dia das pausas (B1, B2, B5, B7, B9, B12): recalcula da 3ª tabela da aba de
+# pausas do mês atual (a aba sem mês no nome), com a regra do sistema: as batidas em ordem
+# alternam trabalho e pausa; FF = pausa térmica; trabalho > 100 min = acima de 1h40.
+pb=ui.get('pauBat')
+abaP=next((a for a,rw in d.items() if rw and 'Pausa corretas' in [s(c) for c in rw[0]] and SIM.mes_no_nome(a)==0), None)
+if pb and abaP:
+    rw=d[abaP]; hb=next((i for i,r in enumerate(rw) if r and s(r[0])=='Matrícula' and 'Letra no relatório' in [s(c) for c in r]), None)
+    if hb is not None:
+        hp=hdrmap(rw[hb]); dias=collections.OrderedDict()
+        for r in rw[hb+1:]:
+            if not s(r[hp['Matrícula']]): break
+            h=r[hp['Hora']]; m=(h.hour*60+h.minute+(1 if h.second>=30 else 0)) if isinstance(h,datetime.time) else round(float(h)*1440)%1440
+            dias.setdefault((s(r[hp['Matrícula']]),r[hp['Data']]),[]).append((m,s(r[hp['Letra no relatório']])))
+        horas=collections.defaultdict(lambda:[0,0]); sem=[0,0,0,0,0,0,0]; semn=[0,0,0,0,0,0,0]; prim=[0]*5; nsem=0; nimp=0; st=C()
+        for (mat,dt),b in dias.items():
+            t=[];base=0;ant=None
+            for m,l in b:
+                if ant is not None and m+base<ant: base+=1440
+                t.append((m+base,l)); ant=m+base
+            trab=[(t[i][0],t[i+1][0]-t[i][0],i+1) for i in range(0,len(t)-1,2)]
+            ff=sum(1 for i in range(1,len(t)-1,2) if t[i][1]+t[i+1][1]=='FF')
+            ac=[x for x in trab if x[1]>100]
+            for x in trab:
+                horas[(x[0]%1440)//60][1]+=1
+                if x[1]>100: horas[(x[0]%1440)//60][0]+=1
+            wd=dt.weekday(); semn[wd]+=1; sem[wd]+=1 if ac else 0
+            iF=next((i for i in range(1,len(t)) if t[i][1]=='F'),None)
+            if iF is not None:
+                w=sum(x[1] for x in trab if x[2]<=iF)
+                prim[0 if w<=90 else 1 if w<=100 else 2 if w<=120 else 3 if w<=180 else 4]+=1
+            semp=sum(x[1] for x in trab)>100 and not ff; nsem+=semp; imp=len(t)%2==1; nimp+=imp
+            st['sem' if semp else 'acima' if ac else 'impar' if imp else 'ok']+=1
+        num=lambda x:int(x.replace('.',''))
+        exp_h={'%dh'%h:(a,n) for h,(a,n) in horas.items() if n>=10}
+        got_h={t.split(':')[0]:(num(t.split(': ')[1].split(' de ')[0]),num(t.split(' de ')[1].split(' ')[0])) for t in pb['hora']}
+        chk('Pausas B1: períodos acima de 1h40 por hora', got_h==exp_h, f"{len(exp_h)} horas; {sum(a for a,n in exp_h.values())} de {sum(n for a,n in exp_h.values())} períodos acima" if got_h==exp_h else f"painel {got_h} / fonte {exp_h}")
+        lab=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom']
+        exp_d={lab[i]:(sem[i],semn[i]) for i in range(7)}
+        got_d={t.split(':')[0]:(num(t.split(': ')[1].split(' de ')[0]),num(t.split(' de ')[1].split(' ')[0])) for t in pb['dia']}
+        chk('Pausas B2: dias com período acima de 1h40 por dia da semana', got_d==exp_d, str(exp_d))
+        got_p=[num(t.split(': ')[1].split(' ')[0]) for t in pb['primeira']]
+        chk('Pausas B7: tempo até a 1ª pausa (faixas)', got_p==prim, f"painel {got_p} / fonte {prim}")
+        got_s=num(pb['semPausa'].split(' ')[0]); got_i=num(pb['falta'].split(' ')[0]) if pb['falta'][0].isdigit() else 0
+        chk('Pausas B5/B12: dias sem nenhuma pausa e dias com batida faltando', (got_s,got_i)==(nsem,nimp), f"painel {(got_s,got_i)} / fonte {(nsem,nimp)}; {len(dias)} dias de {len({k[0] for k in dias})} pessoas")
+        cor={'rgb(27, 175, 122)':'ok','rgb(247, 147, 30)':'acima','rgb(227, 30, 36)':'sem','rgb(123, 79, 176)':'impar'}
+        got_m={cor.get(k,k):v for k,v in pb['mapa'].items()}
+        chk('Pausas B9: mapa colaborador x dia (dias por cor)', got_m==dict(st), f"painel {got_m} / fonte {dict(st)}")

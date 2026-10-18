@@ -238,6 +238,8 @@ Option Explicit
 '   |- GerarResumoHorasCartao ................ -> "Resumo Horas Cartão"
 '   |- CabecalhoPausasNaAba + GerarResumoPausasTermicas -> "Resumo Pausas Térmicas"
 '   |     (uma vez por aba de pausas: mês atual + meses anteriores, MesNoNomeDaAba)
+'   |- GerarDiasPausas ....................... -> "Pausa Térmica Dia" (uma por pessoa e dia,
+'   |     batidas do dia em marcacoes_dia: "21:02 P 21:30 F 21:50 F ...", exceções em situacao)
 '   |- EncontrarAbaAfastamentos + GerarAfastamentos -> "Afastamento"
 '   |     (ou, sem a aba, GerarAbsenteismo -> "Absenteísmo")
 '   |     ambos usam MontarDiasCartao + CalcularEmendaFolga (folga encostada)
@@ -739,7 +741,7 @@ ProximaAbaTratamento:
     ' por colaborador. A aba é achada pelo cabeçalho da tabela, não pelo
     ' nome (ver CabecalhoPausasNaAba).
     ' =====================================================================
-    Dim qtdResumoPausas As Long
+    Dim qtdResumoPausas As Long, qtdDiasPausas As Long
     qtdResumoPausas = 0
     ' Uma aba de pausas por mês (para a evolução mês a mês do painel). A aba
     ' sem mês no nome é a do mês atual e usa a data de fim do Cartão atual
@@ -763,6 +765,9 @@ ProximaAbaTratamento:
                 mesesPausasVistos.Add chaveMesPausas, wsP.Name
                 GerarResumoPausasTermicas wsP, linhaCabecalhoPausas, dictRE, dictGestorPorMatricula, _
                     dictGrupoPorMatricula, wsCSV, linhaSaida, dataMesPausas, qtdResumoPausas
+                ' batidas dia a dia (tabela de baixo da aba, se a macro de pausas já a criou)
+                GerarDiasPausas wsP, dictRE, dictGestorPorMatricula, dictGrupoPorMatricula, _
+                    wsCSV, linhaSaida, qtdDiasPausas
                 If wsPausas Is Nothing Then Set wsPausas = wsP
                 qtdAbasPausas = qtdAbasPausas + 1
             End If
@@ -873,7 +878,8 @@ ProximaAbaTratamento:
     End If
     msgAuditoria = msgAuditoria & vbCrLf & IIf(wsPausas Is Nothing, _
         "Nenhuma aba de Pausas Térmicas (já formatada) encontrada; resumo de pausas térmicas não gerado.", _
-        qtdResumoPausas & " linha(s) no resumo de Pausas Térmicas (" & qtdAbasPausas & " mês(es))." & msgPausas)
+        qtdResumoPausas & " linha(s) no resumo de Pausas Térmicas (" & qtdAbasPausas & " mês(es)); " & _
+        qtdDiasPausas & " dia(s) de batidas de pausa." & msgPausas)
 
     If abasComFiltro <> "" Then
         msgAuditoria = msgAuditoria & vbCrLf & vbCrLf & "Filtros removidos antes da leitura (reaplique se precisar):" & abasComFiltro
@@ -1949,6 +1955,84 @@ Private Sub GerarLinhasORG(listaORG As Collection, dictRE As Object, dictGrupoPo
         linhaSaida = linhaSaida + 1
         qtdGerada = qtdGerada + 1
     Next itemLista
+End Sub
+
+' Batidas das pausas térmicas, dia a dia (18/10, pedido do RH: horário, dia da
+' semana e pessoa com trabalho acima de 1h40, dias sem pausa, maior tempo sem
+' pausa, tempo até a 1ª pausa, mapa e batida faltando). Lê a 3ª tabela que a
+' macro FormatarPausasTermicas deixa na aba (cabeçalho com "Matrícula" e "Letra
+' no relatório", uma linha por batida, em ordem) e escreve UMA linha "Pausa
+' Térmica Dia" por pessoa e dia: data = o dia; situacao = exceções do dia;
+' marcacoes_dia = as batidas do dia em ordem, "hora letra" separados por espaço
+' (ex.: "21:02 P 21:30 F 21:50 F 23:30 G 0:42 G 6:00 P"). O painel recalcula os
+' períodos de trabalho e de pausa a partir disso. Aba sem essa tabela (formatada
+' com a macro antiga) não gera nada.
+Private Sub GerarDiasPausas(ws As Worksheet, dictRE As Object, dictGestorPorMatricula As Object, _
+    dictGrupoPorMatricula As Object, wsCSV As Worksheet, ByRef linhaSaida As Long, ByRef qtdGerada As Long)
+
+    Dim r As Long, ultima As Long, linhaCab As Long
+    ultima = UltimaLinhaPreenchida(ws, 1)
+    For r = 1 To ultima
+        If TextoLimpo(ws.Cells(r, 1).Value) = "Matrícula" Then
+            If ColunaPorCabecalho(ws, "Letra no relatório", r) > 0 Then
+                linhaCab = r
+                Exit For
+            End If
+        End If
+    Next r
+    If linhaCab = 0 Or ultima <= linhaCab Then Exit Sub
+
+    Dim cMat As Long, cNome As Long, cData As Long, cHora As Long, cLetra As Long, cExc As Long, cMax As Long
+    cMat = ColunaPorCabecalho(ws, "Matrícula", linhaCab)
+    cNome = ColunaPorCabecalho(ws, "Colaborador", linhaCab)
+    cData = ColunaPorCabecalho(ws, "Data", linhaCab)
+    cHora = ColunaPorCabecalho(ws, "Hora", linhaCab)
+    cLetra = ColunaPorCabecalho(ws, "Letra no relatório", linhaCab)
+    cExc = ColunaPorCabecalho(ws, "Exceções do dia", linhaCab)
+    If cMat = 0 Or cData = 0 Or cHora = 0 Or cLetra = 0 Then Exit Sub
+    cMax = Application.WorksheetFunction.Max(cMat, cNome, cData, cHora, cLetra, cExc)
+
+    ' Lê a tabela inteira de uma vez (milhares de linhas) e junta as batidas de
+    ' cada pessoa/dia; quando a pessoa ou o dia muda, grava o dia anterior.
+    Dim v As Variant, i As Long, n As Long
+    v = ws.Range(ws.Cells(linhaCab + 1, 1), ws.Cells(ultima, cMax)).Value2
+    n = UBound(v, 1)
+    Dim chaveDia As String, chaveAtual As String, matDia As String, nomeDia As String
+    Dim excDia As String, batidasDia As String, dataDia As Double, minutoBatida As Long
+    For i = 1 To n + 1
+        chaveAtual = ""
+        If i <= n Then
+            If TextoLimpo(v(i, cMat)) <> "" And IsNumeric(v(i, cData)) Then chaveAtual = TextoLimpo(v(i, cMat)) & "|" & CStr(v(i, cData))
+        End If
+        If chaveAtual <> chaveDia Then
+            If chaveDia <> "" Then
+                EscreverDiaPausa wsCSV, linhaSaida, dataDia, nomeDia, matDia, excDia, batidasDia, _
+                    dictRE, dictGestorPorMatricula, dictGrupoPorMatricula
+                qtdGerada = qtdGerada + 1
+            End If
+            If chaveAtual = "" Then Exit For   ' fim da tabela (linha em branco)
+            chaveDia = chaveAtual
+            matDia = TextoLimpo(v(i, cMat))
+            nomeDia = IIf(cNome > 0, TextoLimpo(v(i, IIf(cNome > 0, cNome, 1))), "")
+            dataDia = Int(CDbl(v(i, cData)))
+            excDia = IIf(cExc > 0, TextoLimpo(v(i, IIf(cExc > 0, cExc, 1))), "")
+            batidasDia = ""
+        End If
+        minutoBatida = CLng(CDbl(v(i, cHora)) * 1440) Mod 1440
+        batidasDia = batidasDia & IIf(batidasDia = "", "", " ") & HorasMinutosTexto(minutoBatida) & " " & TextoLimpo(v(i, cLetra))
+    Next i
+End Sub
+
+' Grava uma linha "Pausa Térmica Dia" (ver GerarDiasPausas).
+Private Sub EscreverDiaPausa(wsCSV As Worksheet, ByRef linhaSaida As Long, ByVal dataDia As Double, _
+    ByVal nome As String, ByVal mat As String, ByVal excecoes As String, ByVal batidasDia As String, _
+    dictRE As Object, dictGestorPorMatricula As Object, dictGrupoPorMatricula As Object)
+    Dim setorNome As String, cargoRE As String
+    ObterSetorCargo dictRE, mat, setorNome, cargoRE
+    EscreverLinhaCSV wsCSV, linhaSaida, CDate(dataDia), nome, mat, TextoDoDicionario(dictGestorPorMatricula, mat), _
+        setorNome, cargoRE, "Pausa Térmica Dia", excecoes, "Pendente", 0, "", Empty, _
+        grupo:=TextoDoDicionario(dictGrupoPorMatricula, mat), marcacoesDia:=batidasDia
+    linhaSaida = linhaSaida + 1
 End Sub
 
 ' Diz se a aba tem a tabela de colaboradores que o macro

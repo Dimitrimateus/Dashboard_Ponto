@@ -4,7 +4,7 @@ import zipfile, re, sys, pickle, datetime
 # (uma linha por pessoa, com o bloco "Total do Colaborador"). Também devolve o período do
 # relatório (linha "Período: ... até ..."), que diz de que mês é a aba.
 # Uso: python3 formatar_pausas.py "pausa_termica.xlsx" [saida.pkl]
-#   saida.pkl = (fim_do_periodo, linhas); o adicionar_aba_xlsx.py (layout "pausas") insere as linhas.
+#   saida.pkl = {fim, linhas, geral, batidas}; o adicionar_aba_xlsx.py (layout "pausas") monta a aba.
 #   batidas(caminho) devolve a 3ª tabela da macro (18/10): uma linha por batida, com matrícula,
 #   nome, data, hora (fração do dia), nº da batida no dia, letra (P/G/F) e exceções do dia.
 # Por que ler o XML na mão: o .xlsx do Senior tem "\" nos caminhos do zip e estilos que o
@@ -96,7 +96,19 @@ def batidas(caminho):
             atual = (int(a), b.strip())
     return out
 
+# Total Geral do relatório (7 números, 2 linhas abaixo de "Total | Geral"), como a macro copia.
+def total_geral(caminho):
+    L = ler(caminho)
+    for r in sorted(L):
+        if L[r].get(1, (None, 0))[0] == 'Total' and L[r].get(2, (None, 0))[0] == 'Geral':
+            return [L.get(r + 2, {}).get(c, (0, 0))[0] for c in (1, 2, 4, 6, 8, 10, 11)]
+    return None
+
+# Saída: um dict com tudo o que a macro deixa na aba (fim do período, tabela de colaboradores,
+# Total Geral e batidas); o adicionar_aba_xlsx.py (layout "pausas") monta as 3 tabelas com ele.
 if __name__ == '__main__':
     fim, linhas = formatar(sys.argv[1])
-    print('%d colaboradores; período até %s' % (len(linhas), fim.strftime('%d/%m/%Y') if fim else '?'))
-    pickle.dump((fim, linhas), open(sys.argv[2] if len(sys.argv) > 2 else 'pausas.pkl', 'wb'))
+    b = batidas(sys.argv[1])
+    print('%d colaboradores, %d batidas; período até %s' % (len(linhas), len(b), fim.strftime('%d/%m/%Y') if fim else '?'))
+    pickle.dump({'fim': fim, 'linhas': linhas, 'geral': total_geral(sys.argv[1]), 'batidas': b},
+                open(sys.argv[2] if len(sys.argv) > 2 else 'pausas.pkl', 'wb'))

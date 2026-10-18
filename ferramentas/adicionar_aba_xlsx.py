@@ -123,6 +123,59 @@ def montar_sheet(linhas, ids, lay):
             '<sheetFormatPr defaultRowHeight="15"/><cols>%s</cols><sheetData>%s</sheetData>'
             '<autoFilter ref="%s"/></worksheet>') % (ref, cols, ''.join(rows), ref)
 
+# Aba de pausas completa, como a macro FormatarPausasTermicas deixa (18/10): tabela de
+# colaboradores (linha 1), uma linha em branco, Total Geral (2 linhas), duas linhas em branco,
+# o título e a tabela de batidas (uma linha por batida). "dados" = dict do formatar_pausas.py.
+# A macro transforma as batidas numa Tabela do Excel; aqui fica uma faixa simples (mesmos dados).
+CAB_BATIDAS = ["Matrícula", "Colaborador", "Data", "Dia da semana", "Hora", "Nº da batida no dia",
+               "Tipo da batida", "Letra no relatório", "Exceções do dia"]
+TIPO_BATIDA = {'P': 'Entrada ou saída da jornada', 'G': 'Saída ou volta da refeição', 'F': 'Saída ou volta da pausa térmica'}
+EXC_PAUSA = ["", "Pausa menor que 0:20", "Pausa maior que 0:20", "Trabalho maior que 1:40",
+             "Trabalho menor que 1:40", "Marcações ímpares", "Pausa correta"]
+def montar_sheet_pausas(dados, ids):
+    lay = LAYOUTS['pausas']; base = datetime.datetime(1899, 12, 30)
+    rows, merges = [], []
+    def cel(ref, v, estilo):
+        if v is None or v == '': return '<c r="%s" s="%d"/>' % (ref, ids[estilo])
+        if estilo in ('data',): return '<c r="%s" s="%d"><v>%d</v></c>' % (ref, ids['data'], (v - base).days)
+        if estilo in ('hora',) or (estilo == 'num' and isinstance(v, (int, float))):
+            return '<c r="%s" s="%d"><v>%r</v></c>' % (ref, ids[estilo], v)
+        return '<c r="%s" t="inlineStr" s="%d"><is><t xml:space="preserve">%s</t></is></c>' % (ref, ids['cab' if estilo == 'cab' else 'txt'], escape(str(v)))
+    def linha(n, vals):
+        rows.append('<row r="%d">%s</row>' % (n, ''.join(cel('%s%d' % (letra(i + 1), n), v, e) for i, (v, e) in enumerate(vals) if e)))
+    n = 1
+    linha(n, [(h, 'cab') for h in lay['cab']])
+    for l in dados['linhas']:
+        n += 1; linha(n, [(v, 'num') for v in l])
+    fim_tab1 = n
+    if dados.get('geral'):
+        n += 2
+        linha(n, [('Total Geral', 'cab'), ('', 'cab'), ('', 'cab')] + [(h, 'cab') for h in lay['cab'][3:]])
+        merges.append('A%d:C%d' % (n, n))
+        n += 1
+        linha(n, [('Todos os colaboradores', 'txt'), ('', 'txt'), ('', 'txt')] + [(v, 'num') for v in dados['geral']])
+        merges.append('A%d:C%d' % (n, n))
+    if dados.get('batidas'):
+        n += 3; linha(n, [('Marcações do período (uma linha por batida)', 'txt')])
+        n += 1; linha(n, [(h, 'cab') for h in CAB_BATIDAS])
+        dias = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+        for b in dados['batidas']:
+            n += 1
+            exc = '; '.join(EXC_PAUSA[i] for i in range(1, 7) if '(%d)' % i in (b[6] or ''))
+            linha(n, [(b[0], 'num'), (b[1], 'txt'), (b[2], 'data'), (dias[b[2].weekday()], 'txt'), (b[3], 'hora'),
+                      (b[4], 'num'), (TIPO_BATIDA.get(b[5], 'Outra (%s)' % b[5]), 'txt'), (b[5], 'txt'), (exc, 'txt')])
+    cols = ''.join('<col min="%d" max="%d" width="%d" customWidth="1"/>' % (i, i, w) for i, w in enumerate(lay['larg'], start=1))
+    ref1 = 'A1:J%d' % fim_tab1
+    mc = ('<mergeCells count="%d">%s</mergeCells>' % (len(merges), ''.join('<mergeCell ref="%s"/>' % m for m in merges))) if merges else ''
+    return ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+            '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+            'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            '<dimension ref="A1:J%d"/>'
+            '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>'
+            '<selection pane="bottomLeft" activeCell="A2" sqref="A2"/></sheetView></sheetViews>'
+            '<sheetFormatPr defaultRowHeight="15"/><cols>%s</cols><sheetData>%s</sheetData>'
+            '<autoFilter ref="%s"/>%s</worksheet>') % (n, cols, ''.join(rows), ref1, mc)
+
 # Copia o .xlsx de entrada para o de saída parte por parte, trocando só:
 #   workbook.xml (registra a aba), workbook.xml.rels (aponta para o arquivo da aba),
 #   [Content_Types].xml (declara o tipo), styles.xml (estilos novos no fim) e
@@ -159,7 +212,7 @@ def adicionar_aba(entrada, saida, linhas, nome_aba, lay):
         for info in zin.infolist():
             dados = novos[info.filename].encode('utf-8') if info.filename in novos else zin.read(info.filename)
             zout.writestr(info, dados)
-        zout.writestr(parte, montar_sheet(linhas, ids, lay).encode('utf-8'))
+        zout.writestr(parte, (montar_sheet_pausas(linhas, ids) if isinstance(linhas, dict) else montar_sheet(linhas, ids, lay)).encode('utf-8'))
     return parte
 
 # Troca o conteúdo de uma aba existente (ex.: digitadas de 1 mês -> 3 meses) sem mexer no resto:
@@ -185,10 +238,11 @@ def substituir_aba(entrada, saida, linhas, nome_aba, lay):
     if 'xl/calcChain.xml' in nomes and re.search(r'<c [^>]*i="%s"' % sheet_id, zin.read('xl/calcChain.xml').decode('utf-8')):
         raise SystemExit('A aba "%s" aparece no calcChain: não troco.' % nome_aba)
     styles, ids = acrescentar_estilos(zin.read('xl/styles.xml').decode('utf-8'))
-    ref = "$A$1:$%s$%d" % (letra(len(lay['cab'])), len(linhas) + 1)
+    ref = "$A$1:$%s$%d" % (letra(len(lay['cab'])), len(linhas['linhas'] if isinstance(linhas, dict) else linhas) + 1)
     wb = re.sub(r'(<definedName name="_xlnm\._FilterDatabase" localSheetId="%d"[^>]*>)([^<]*)!\$[^<]*(</definedName>)' % idx,
                 lambda m: m.group(1) + m.group(2) + '!' + ref + m.group(3), wb)
-    novos = {'xl/workbook.xml': wb, 'xl/styles.xml': styles, parte: montar_sheet(linhas, ids, lay)}
+    novos = {'xl/workbook.xml': wb, 'xl/styles.xml': styles,
+             parte: montar_sheet_pausas(linhas, ids) if isinstance(linhas, dict) else montar_sheet(linhas, ids, lay)}
     with zipfile.ZipFile(saida, 'w', zipfile.ZIP_DEFLATED) as zout:
         for info in zin.infolist():
             dados = novos[info.filename].encode('utf-8') if info.filename in novos else zin.read(info.filename)
@@ -199,7 +253,7 @@ def substituir_aba(entrada, saida, linhas, nome_aba, lay):
 if __name__ == '__main__':
     args = [a for a in sys.argv[1:] if a != '--substituir']
     linhas = pickle.load(open(args[2], 'rb'))
-    if isinstance(linhas, tuple): linhas = linhas[1]   # formatar_jornada.py / formatar_pausas.py gravam (info, linhas)
+    if isinstance(linhas, tuple): linhas = linhas[1]   # formatar_jornada.py grava (tipo, linhas); formatar_pausas.py, um dict
     lay = LAYOUTS[args[3]]
     nome = args[4] if len(args) > 4 else lay['nome']
     if '--substituir' in sys.argv: print('aba trocada em', substituir_aba(args[0], args[1], linhas, nome, lay))

@@ -55,6 +55,16 @@ const { chromium } = require('playwright');
       digEsq: table('tableDigEsquecimento'), digEsqAlerta: [...document.querySelectorAll('#tableDigEsquecimento tr.row-alert')].map(tr=>tr.children[0].textContent.trim()),
       tendUnidade: table('tableTendUnidade'),
       pauKpis: [...document.querySelectorAll('#pauKpis .colab-kpi')].map(k=>[k.querySelector('.ck-label').textContent, k.querySelector('.ck-value').textContent, k.querySelector('.ck-sub').textContent]),
+      // batidas de cada dia das pausas (B1, B2, B5, B7, B9, B12), do mês mais recente
+      pauBat: $('pauHeat') ? {
+        resumo: txt('pauBatResumo'),
+        hora: [...document.querySelectorAll('#chartPauHora .chart-bar[data-tooltip]')].map(e=>e.getAttribute('data-tooltip')),
+        dia: [...document.querySelectorAll('#chartPauDiaSemana .chart-bar[data-tooltip]')].map(e=>e.getAttribute('data-tooltip')),
+        primeira: [...document.querySelectorAll('#chartPauPrimeira .chart-bar[data-tooltip]')].map(e=>e.getAttribute('data-tooltip')),
+        semPausa: txt('pauSemPausaHint'), falta: txt('pauFaltaHint'),
+        faltaTipo: [...document.querySelectorAll('#chartPauFaltaTipo .chart-bar[data-tooltip]')].map(e=>e.getAttribute('data-tooltip')),
+        mapa: [...document.querySelectorAll('#pauHeat td.aus')].reduce((m, td)=>{ const c = td.style.background; m[c] = (m[c]||0) + 1; return m; }, {}),
+      } : null,
     };
   });
   // ranking de mais de 10h e esquecimento crônico: lista inteira (só em tela cheia)

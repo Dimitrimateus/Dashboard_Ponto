@@ -197,6 +197,26 @@ for aba,Pz in d.items():
         se,ca=setorcargo(m)
         W(dref,s(r[pz['Colaborador']]),m,gestorPor.get(m,''),se,s(r[pz['Cargo']]) or ca,'Resumo Pausas Térmicas','','Pendente',0,
           pc=nz(r[pz['Pausa corretas']]),pm=nz(r[pz['Pausa menor 0:20']]),pM=nz(r[pz['Pausa maior 0:20']]),tc=nz(r[pz['Trabalho correto 1:40']]),tM=nz(r[pz['Trabalho maior 1:40']]),tm=nz(r[pz['Trabalho menor 1:40']]),imp=nz(r[pz['Marcações Ímpares']]))
+    # batidas dia a dia (3ª tabela da aba, GerarDiasPausas): uma linha "Pausa Térmica Dia" por
+    # pessoa e dia, batidas em marcacoes_dia ("21:02 P 21:30 F ..."), exceções em situacao
+    hb=next((i for i,r in enumerate(Pz) if r and s(r[0])=='Matrícula' and 'Letra no relatório' in [s(c) for c in r]), None)
+    if hb is not None:
+        hh=hdrmap(Pz[hb]); dia=None
+        def fecha(dia):
+            se,ca=setorcargo(dia['m'])
+            W(dia['d'],dia['n'],dia['m'],gestorPor.get(dia['m'],''),se,ca,'Pausa Térmica Dia',dia['e'],'Pendente',0,marc=' '.join(dia['b']))
+        for r in Pz[hb+1:]:
+            m=s(r[hh['Matrícula']]); dd=r[hh['Data']]
+            if not m or not isinstance(dd,datetime.datetime):
+                break
+            if dia is None or (m,dd)!=(dia['m'],dia['d']):
+                if dia: fecha(dia)
+                dia=dict(m=m,d=dd,n=s(r[hh['Colaborador']]),e=s(r[hh['Exceções do dia']]) if 'Exceções do dia' in hh else '',b=[])
+            h=r[hh['Hora']]
+            mi=(h.hour*60+h.minute+(1 if h.second>=30 else 0)) if isinstance(h,datetime.time) else round(float(h)*1440)
+            mi%=1440
+            dia['b'].append('%d:%02d %s'%(mi//60,mi%60,s(r[hh['Letra no relatório']])))
+        if dia: fecha(dia)
 # absenteísmo (GerarAbsenteismo): só atestados; dias seguidos = 1 atestado; emenda = dia antes/depois é folga
 ABS=('atest',); FOLGA=('dsr','compensado','folga','feriado')
 def contem(t,lista): t=semac(t).lower(); return any(x in t for x in lista)
