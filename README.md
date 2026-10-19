@@ -382,6 +382,18 @@ As 15 ideias marcadas na página de ideias que ainda faltavam:
   1h40) e pode diferir em poucos períodos do total do sistema (setembro: 284 × 288).
 - Conferência: 32/32 (5 itens novos, recalculados da tabela de batidas da aba).
 
+## Ajustes pedidos em 19/10
+
+- Tendências: o minigráfico "Evolução (mês a mês)" mostra o mês embaixo de cada barra, o número
+  ao passar o mouse e abre os registros daquele mês ao clicar. A coluna "Comparado ao mês
+  anterior" diz em palavras o que mudou ("17 a menos que em Ago/26"; "subiu de 3,7% para 9,2%").
+- "Extra e falta no mesmo dia" sem a coluna de tendência, ao lado de "Colaboradores com mais
+  ocorrências".
+- Afastamentos: "Doação de sangue" virou um tipo próprio, e o seletor "Mostrar" tem "Só <tipo>"
+  para cada tipo do arquivo.
+- Legenda clicável (filtro) no mapa das pausas, no "Pausas por gestor/cargo" e na lista de jornada.
+- Textos da tela revistos para quem não é da área (sem "DSR", "ORG", "#N/A", nomes de macro/aba).
+
 ## Ordem de uso no mês
 
 1. Rodar `ConsolidarCartaoPonto` no HRCP102 e colar o resultado numa aba `Cartão <Mês>`.

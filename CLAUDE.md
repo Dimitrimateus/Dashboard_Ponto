@@ -644,6 +644,23 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   pausas (`adicionar_aba_xlsx.py --substituir`, layout pausas com o dict); CSV simulado com 6.084
   linhas; conferência 32/32; varredura sem erros. Pacote `Teste Ponto 18-10 (batidas).zip`.
 
+- 19/10: pedidos do Dimitri (foto + texto). (1) **Minigráfico "Evolução (mês a mês)"** em toda
+  tabela de tendência (`miniBarras`): uma barra por ciclo com o mês embaixo, balão do painel com o
+  número (delegação em `document`, `svg.mini-barras [data-tooltip]`) e clique que abre o "de onde
+  vem" do mês (`MINI_ORIGEM`, registros guardados em `a.c[ciclo].recs` por `agregarTendencia`).
+  (2) Coluna "Tendência" virou **"Comparado ao mês anterior"** com texto em palavras
+  (`textoMudanca`): "▼ 17 a menos / que em Ago/26 (−25%)"; porcentagem: "▲ subiu / de 3,7% para
+  9,2%" (**nada de "p.p."**); "igual" quando não muda. Esquecimento crônico usa o mesmo texto.
+  (3) "Extra e falta no mesmo dia" sem a coluna de tendência e de volta ao lado de "Colaboradores
+  com mais ocorrências" (card normal). (4) Afastamentos: grupo **"Doação de sangue"** em
+  `GRUPOS_AFAST` e o seletor "Mostrar" com "Só <tipo>" para cada grupo do arquivo (`g:<grupo>`).
+  (5) Filtros que faltavam: legenda clicável no **mapa das pausas** (`pauHeat`, por tipo de dia),
+  no "Pausas por gestor/cargo" (certas/curtas/longas) e na lista de jornada (`#jorListaLeg`).
+  (6) Linguagem: folga "DSR" → "folga da semana" (`nomeFolga`), "ORG"/"#N/A" fora da lista de
+  equipes, mensagens de "arquivo não traz" sem macro/aba ("O RH inclui esse relatório..."),
+  "marcação ímpar" → "esqueceram de bater...", "pess." por extenso, % com vírgula na rosca,
+  mapas renomeados ("Mapa das pausas: cada pessoa, dia a dia"). Conferência 32/32.
+
 ## 12. Estado atual e como continuar (13/10/2026)
 
 **Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`, branch
@@ -697,6 +714,8 @@ com todos e se pode usar salário (só o total da equipe).
 - Gestores também veem as análises de "pegar no pulo".
 - Relatórios do sistema com 3 meses (digitadas, afastamentos, jornada, Cartão); pausas uma aba por
   mês; planilha de tratamento e PontoNet só o mês atual (conversa de 14/10 e envio de 18/10).
+- Mudança entre ciclos sempre em palavras ("17 a menos que em Ago/26", "de 3,7% para 9,2%"),
+  nunca "p.p." nem número solto (19/10). Minigráficos de evolução com balão e clique.
 - **O texto "pegar no pulo" não aparece na tela** (pedido do Dimitri, 18/10): os cards de sinais
   de atenção ficam só com o título. A expressão pode existir em comentários do código.
 
