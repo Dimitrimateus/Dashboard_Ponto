@@ -394,6 +394,17 @@ As 15 ideias marcadas na página de ideias que ainda faltavam:
 - Legenda clicável (filtro) no mapa das pausas, no "Pausas por gestor/cargo" e na lista de jornada.
 - Textos da tela revistos para quem não é da área (sem "DSR", "ORG", "#N/A", nomes de macro/aba).
 
+## Ajustes pedidos em 26/10
+
+- Seções na ordem: Ocorrências, Marcações digitadas, Afastamentos, Jornada, Colaboradores em
+  destaque, Tendências, Pausas térmicas, PontoNet, Lista de colaboradores, Histórico.
+- Botão "?" em cada gráfico: mostra a explicação só daquele gráfico.
+- "Demora média no PontoNet" foi para a seção PontoNet.
+- Tendências e Pausas: o seletor ("Assunto", "Mês das batidas") fica numa caixa com os gráficos que
+  dependem dele.
+- Sem nome do arquivo no topo; sem menu de seções antes de carregar o arquivo; sem status
+  (Regularizado/Pendente); sem a visão "Qual batida fica faltando".
+
 ## Ordem de uso no mês
 
 1. Rodar `ConsolidarCartaoPonto` no HRCP102 e colar o resultado numa aba `Cartão <Mês>`.

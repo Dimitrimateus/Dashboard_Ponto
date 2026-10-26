@@ -661,6 +661,20 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   "marcação ímpar" → "esqueceram de bater...", "pess." por extenso, % com vírgula na rosca,
   mapas renomeados ("Mapa das pausas: cada pessoa, dia a dia"). Conferência 32/32.
 
+- 26/10: pedidos do Dimitri (foto). (1) **Ordem das seções** (menu e conteúdo): Ocorrências
+  (era "Visão geral", `data-pagina="geral"`), Marcações digitadas, Afastamentos, Jornada,
+  Colaboradores em destaque, Tendências, Pausas térmicas, **PontoNet** (era "Demora no PontoNet",
+  `data-pagina="demora"`), Lista de colaboradores, Histórico, Todas. (2) Botão **"?" em cada
+  card** (`.btn-explica-card`, classe `explica-card` no card): mostra só a explicação daquele card;
+  o "Entenda o painel" do topo continua mostrando todas. (3) Card "Demora média no PontoNet" saiu
+  do topo das Ocorrências e foi para a seção PontoNet (`.kpis.kpis-demora`; o extrator lê os dois).
+  (4) **Quadros de seletor** (`.grupo-sel`): em Tendências, o seletor "Assunto" fica numa caixa
+  laranja com os 3 cards que dependem dele; em Pausas, "Mês das batidas" idem (`#pauBatTopo`).
+  (5) Topo sem o nome do arquivo (`#fileStatus` escondido). (6) Sem arquivo, o botão ☰ das seções
+  some (`#btnMenu`). (7) **Sem status**: o painel é feito depois do fim do mês e tudo já foi
+  regularizado; filtro de status sempre escondido, coluna Status fora do histórico, do card e da
+  origem. (8) **B12 "Qual batida fica faltando" retirada** (a conta dos dias ímpares segue no mapa).
+
 ## 12. Estado atual e como continuar (13/10/2026)
 
 **Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`, branch
@@ -716,6 +730,8 @@ com todos e se pode usar salário (só o total da equipe).
   mês; planilha de tratamento e PontoNet só o mês atual (conversa de 14/10 e envio de 18/10).
 - Mudança entre ciclos sempre em palavras ("17 a menos que em Ago/26", "de 3,7% para 9,2%"),
   nunca "p.p." nem número solto (19/10). Minigráficos de evolução com balão e clique.
+- Sem status (Regularizado/Pendente) no painel: ele é feito depois do fim do mês (26/10).
+- Ordem das seções e nomes "Ocorrências"/"PontoNet" (26/10); "?" por card; sem B12.
 - **O texto "pegar no pulo" não aparece na tela** (pedido do Dimitri, 18/10): os cards de sinais
   de atenção ficam só com o título. A expressão pode existir em comentários do código.
 

@@ -421,8 +421,8 @@ if pb and abaP:
         chk('Pausas B2: dias com período acima de 1h40 por dia da semana', got_d==exp_d, str(exp_d))
         got_p=[num(t.split(': ')[1].split(' ')[0]) for t in pb['primeira']]
         chk('Pausas B7: tempo até a 1ª pausa (faixas)', got_p==prim, f"painel {got_p} / fonte {prim}")
-        got_s=num(pb['semPausa'].split(' ')[0]); got_i=num(pb['falta'].split(' ')[0]) if pb['falta'][0].isdigit() else 0
-        chk('Pausas B5/B12: dias sem nenhuma pausa e dias com batida faltando', (got_s,got_i)==(nsem,nimp), f"painel {(got_s,got_i)} / fonte {(nsem,nimp)}; {len(dias)} dias de {len({k[0] for k in dias})} pessoas")
+        got_s=num(pb['semPausa'].split(' ')[0])
+        chk('Pausas B5: dias sem nenhuma pausa', got_s==nsem, f"painel {got_s} / fonte {nsem}; {len(dias)} dias de {len({k[0] for k in dias})} pessoas")
         cor={'rgb(27, 175, 122)':'ok','rgb(247, 147, 30)':'acima','rgb(227, 30, 36)':'sem','rgb(123, 79, 176)':'impar'}
         got_m={cor.get(k,k):v for k,v in pb['mapa'].items()}
         chk('Pausas B9: mapa colaborador x dia (dias por cor)', got_m==dict(st), f"painel {got_m} / fonte {dict(st)}")
