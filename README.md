@@ -417,6 +417,13 @@ As 15 ideias marcadas na página de ideias que ainda faltavam:
 - Mesma ordem dos gráficos em todas as seções: números do topo, mês a mês, o quê, quando, por
   gestor, por pessoa, mapa, sinais de atenção, tendências e lista completa.
 
+## Ajustes pedidos em 28/10
+
+- PontoNet: só os pedidos aprovados (cancelados e batidas achadas no relógio não entram).
+- A demora (do dia da batida que faltou até a aprovação) agora segue o mês escolhido na seção.
+- Topo: seções e logo à esquerda, período no meio, nome do painel e "Esconder filtros" à direita.
+- Menu: Tendências depois de PontoNet.
+
 ## Ordem de uso no mês
 
 1. Rodar `ConsolidarCartaoPonto` no HRCP102 e colar o resultado numa aba `Cartão <Mês>`.

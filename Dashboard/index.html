@@ -69,7 +69,7 @@
   .topbar{
     position:sticky; top:0; z-index:50;
     height:var(--header-h);
-    display:flex; align-items:center; justify-content:flex-start;
+    display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center;
     gap:16px;
     padding:0 20px;
     background:var(--c-navy-dark);
@@ -125,7 +125,10 @@
   }
   .topbar-period .tp-label{ font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--c-orange); }
   .topbar-period .tp-value{ font-size:17px; font-weight:800; color:#FFFFFF; white-space:nowrap; font-variant-numeric:tabular-nums; }
-  .topbar-right{ display:flex; align-items:center; gap:10px; min-width:0; margin-left:auto; }
+  .topbar-right{ grid-column:3; display:flex; align-items:center; justify-content:space-between; gap:16px; min-width:0; }
+  .topbar > .brand{ grid-column:1; gap:18px; }
+  .topbar > .topbar-period{ grid-column:2; }
+  .topbar-right > .btn-explica:last-child, .topbar-right > #btnLateral{ margin-left:auto; }
   .btn-explica{
     display:inline-flex; align-items:center; gap:6px; flex:none;
     background:transparent; color:#FFFFFF; border:1px solid rgba(255,255,255,.35);
@@ -699,6 +702,13 @@
     .grid{ grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); }
     .topbar-status{ display:none; }
   }
+  @media (max-width: 1180px){
+    /* em tela menor não cabe o topo em 3 partes iguais: volta a ser uma fila,
+       com o período ainda entre o logo e o botão, sem o nome do painel (28/10) */
+    .topbar{ display:flex; justify-content:space-between; }
+    .topbar-right{ flex:none; }
+    .brand-text{ display:none; }
+  }
   @media (max-width: 760px){
     .brand-sub{ display:none; }
     .topbar{ padding:0 10px; gap:8px; }
@@ -712,7 +722,7 @@
     /* no celular estreito o topo não pode passar da tela (13/10: sobravam 6px
        e a página inteira rolava para o lado) */
     .topbar{ padding:0 6px; gap:5px; }
-    .brand{ gap:6px; }
+    .brand, .topbar > .brand{ gap:6px; }
     .topbar-right{ gap:5px; }
     .topbar-period{ padding:3px 7px; }
     .btn-explica{ padding:5px 6px; }
@@ -826,11 +836,12 @@
       <span class="tp-label" id="topbarPeriodLabel">Período</span>
       <span class="tp-value" id="topbarPeriodValue"></span>
     </div>
-    <!-- topo, da esquerda para a direita (26/10): seções, logo, período, nome do painel -->
+    <!-- topo em 3 partes iguais (28/10): à esquerda seções + logo; no meio o período;
+         à direita o nome do painel e o "Esconder filtros" -->
+    <div class="topbar-right">
       <div class="brand-text">
         <span class="brand-sub">Painel de Ponto &middot; Ocorrências dos Colaboradores</span>
       </div>
-    <div class="topbar-right">
       <div class="topbar-status" id="fileStatus" hidden></div>
       <button type="button" class="btn-explica" id="btnLateral" aria-pressed="false" title="Esconde o painel da direita (Carregar dados e Filtros) para os gráficos ocuparem a tela toda">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg><span class="txt" id="btnLateralTxt">Esconder filtros</span>
@@ -846,7 +857,7 @@
        aqui + uma <div class="pagina" data-pagina="..."> no conteúdo. -->
   <nav class="menu-secoes" id="menuSecoes" hidden aria-label="Seções do painel">
     <div class="menu-titulo">Seções do painel</div>
-    <button type="button" data-pagina="geral">Ocorrências</button><button type="button" data-pagina="digitadas">Marcações digitadas</button><button type="button" data-pagina="afastamentos">Afastamentos</button><button type="button" data-pagina="jornada">Jornada</button><button type="button" data-pagina="destaque">Colaboradores em destaque</button><button type="button" data-pagina="tendencias">Tendências</button><button type="button" data-pagina="pausas">Pausas térmicas</button><button type="button" data-pagina="demora">PontoNet</button><button type="button" data-pagina="org">Lista de colaboradores</button><button type="button" data-pagina="historico">Histórico</button>
+    <button type="button" data-pagina="geral">Ocorrências</button><button type="button" data-pagina="digitadas">Marcações digitadas</button><button type="button" data-pagina="afastamentos">Afastamentos</button><button type="button" data-pagina="jornada">Jornada</button><button type="button" data-pagina="destaque">Colaboradores em destaque</button><button type="button" data-pagina="pausas">Pausas térmicas</button><button type="button" data-pagina="demora">PontoNet</button><button type="button" data-pagina="tendencias">Tendências</button><button type="button" data-pagina="org">Lista de colaboradores</button><button type="button" data-pagina="historico">Histórico</button>
     <button type="button" data-pagina="todas" class="menu-todas">Todas as seções numa página só</button>
   </nav>
 
@@ -878,7 +889,7 @@
           <ol>
             <li><strong>Pegue o arquivo do mês.</strong> O RH envia um arquivo <code>dados_&lt;seu nome&gt;.csv</code> (só a sua equipe) ou <code>dados_TODOS.csv</code> (todas as equipes). Salve no computador ou no celular; não precisa abrir no Excel.</li>
             <li><strong>Abra o arquivo aqui.</strong> No bloco “Carregar dados” (à direita; no celular, no alto da tela), clique para escolher o arquivo ou arraste-o para cima do bloco. O arquivo é lido só no seu navegador: nada é enviado para a internet.</li>
-            <li><strong>Escolha a seção.</strong> O botão <strong>&#9776;</strong> no canto superior esquerdo troca de seção: Ocorrências, Marcações digitadas, Afastamentos, Jornada, Colaboradores em destaque, Tendências, Pausas térmicas, PontoNet, Lista de colaboradores e Histórico. A última opção mostra tudo numa página só.</li>
+            <li><strong>Escolha a seção.</strong> O botão <strong>&#9776;</strong> no canto superior esquerdo troca de seção: Ocorrências, Marcações digitadas, Afastamentos, Jornada, Colaboradores em destaque, Pausas térmicas, PontoNet, Tendências, Lista de colaboradores e Histórico. A última opção mostra tudo numa página só.</li>
             <li><strong>Filtre.</strong> Em “Filtros” escolha gestor, cargo, colaborador, tipo de ocorrência ou período. Tudo no painel muda junto. “Limpar filtros” volta ao arquivo inteiro; “Esconder filtros”, no topo, dá mais espaço aos gráficos.</li>
             <li><strong>Use os gráficos.</strong> Clique num item da legenda (as bolinhas coloridas em cima do gráfico) para ver só aquele tipo; clique em outros para somar e em “Mostrar todos” para voltar; cada gráfico tem o seu filtro. O botão <strong>&#x26F6;</strong> no canto de cada card abre o gráfico em tela cheia (Esc fecha); as listas longas aparecem inteiras só em tela cheia. A etiqueta amarela 📅 embaixo do título diz qual período aquele card considera.</li>
             <li><strong>Veja uma pessoa.</strong> Clique no nome de qualquer colaborador (gráficos e tabelas) para abrir o card dele, com ocorrências, horas, pausas, batidas digitadas e afastamentos.</li>
@@ -1240,54 +1251,7 @@
         </section>
 
       </div>
-      <!-- Seção "Tendências" (renderTendencias): a unidade (ou a equipe do filtro)
-           ciclo a ciclo em cada assunto que o arquivo traz em mais de um mês, e o
-           assunto escolhido em #tendIndicador por gestor e por pessoa. -->
-      <div class="pagina" data-pagina="tendencias">
-        <h3 class="section-title">Tendências</h3>
-        <div id="tendSemDados" class="card wide" hidden><div class="chart-empty">Este arquivo não traz nenhum assunto com mais de um mês (batidas digitadas, afastamentos, jornada ou pausas de mais de um ciclo). Com os relatórios de 3 meses, esta seção mostra se a unidade, as equipes e as pessoas estão melhorando ou piorando.</div></div>
-        <div id="tendCorpo">
-          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: todos os relatórios que o RH traz com mais de um mês</span><p>Para cada assunto (batidas digitadas, esquecimentos, dias de atestado, jornada e pausas térmicas), o painel soma o que aconteceu em cada um dos 3 últimos ciclos do ponto (dia 28 a 27) e compara o último com o anterior. As ocorrências do mês não entram aqui porque a planilha delas tem um mês só. Segue os filtros de gestor, grupo, cargo e colaborador: com um gestor escolhido, tudo vira a tendência da equipe dele. O filtro de período não vale aqui.</p></div>
-          <section class="grid">
-            <div class="card wide">
-              <div class="card-title">A unidade, ciclo a ciclo</div>
-              <div class="card-hint" id="tendUnidadeHint">Cada linha é um assunto; os números são de cada ciclo (28 a 27)</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: os relatórios de batidas digitadas, afastamentos, jornada e pausas</span><p>Uma linha por assunto. Nos assuntos de quantidade (batidas, dias, ocorrências), o número é o total do ciclo; nos de porcentagem (pausas), é a parte do total. A coluna “Comparado ao mês anterior” diz em palavras quanto mudou do penúltimo para o último mês (por exemplo, “17 a menos que em Ago/26”): vermelho = piorou, verde = melhorou. No minigráfico “Evolução”, cada barra é um mês (o último em laranja): passe o mouse para ver o número e clique para ver de onde vem. Clique no nome do assunto para ver, logo abaixo, os gestores e as pessoas.</p></div>
-              <div class="card-body" id="tableTendUnidade"></div>
-            </div>
-          </section>
-          <!-- quadro do seletor "Assunto": os 3 cards de dentro seguem a escolha -->
-          <div class="grupo-sel">
-          <div class="grupo-sel-topo">
-            <label for="tendIndicador">Assunto</label>
-            <select id="tendIndicador"></select>
-            <span class="grupo-sel-aviso">Os <b>três quadros desta caixa</b> (por gestor, quem mais piorou e quem mais melhorou) mostram o assunto escolhido aqui. Troque o assunto para ver outro; a tabela de cima não muda.</span>
-          </div>
-          <section class="grid">
-            <div class="card wide">
-              <div class="card-title">Por gestor: <span id="tendNomeInd"></span></div>
-              <div class="card-hint">Cada equipe nos 3 ciclos, da pior para a melhor no último ciclo</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: os mesmos relatórios + a lista de quem é gestor de quem</span><p>O assunto escolhido no seletor, somado por equipe em cada ciclo. A coluna “Comparado ao mês anterior” diz em palavras quanto mudou do penúltimo para o último mês (por exemplo, “17 a menos que em Ago/26”): vermelho = piorou, verde = melhorou. No minigráfico “Evolução”, cada barra é um mês (o último em laranja): passe o mouse para ver o número e clique para ver de onde vem.</p></div>
-              <div class="card-body" id="tableTendGestor"></div>
-            </div>
-            <div class="card wide">
-              <div class="card-title">Quem mais piorou: <span id="tendNomeInd2"></span></div>
-              <div class="card-hint">Maior aumento do ciclo anterior para o último &middot; os 15 primeiros (a lista inteira abre em tela cheia)</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: os mesmos relatórios, por pessoa</span><p>As pessoas em que o assunto escolhido mais piorou do penúltimo para o último ciclo. Nos assuntos de porcentagem, só entra quem teve pelo menos 10 pausas ou períodos nos dois ciclos, para uma diferença pequena não parecer grande. Clique no nome para ver o resumo da pessoa.</p></div>
-              <div class="card-body" id="tableTendPiorou"></div>
-              <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="tendPiorou" id="btnTendPiorouTodos" hidden>Mostrar todos</button></div>
-            </div>
-            <div class="card wide">
-              <div class="card-title">Quem mais melhorou: <span id="tendNomeInd3"></span></div>
-              <div class="card-hint">Maior melhora do ciclo anterior para o último &middot; os 15 primeiros (a lista inteira abre em tela cheia)</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: os mesmos relatórios, por pessoa</span><p>As pessoas em que o assunto escolhido mais melhorou do penúltimo para o último ciclo. Serve também para reconhecer quem melhorou depois de uma conversa.</p></div>
-              <div class="card-body" id="tableTendMelhorou"></div>
-              <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="tendMelhorou" id="btnTendMelhorouTodos" hidden>Mostrar todos</button></div>
-            </div>
-          </section>
-          </div>
-        </div>
-      </div>
+
       <!-- Seção "Pausas térmicas": tabela de renderDashboard (pausasTermicasResumo). -->
       <div class="pagina" data-pagina="pausas">
         <h3 class="section-title">Pausas Térmicas</h3>
@@ -1405,7 +1369,7 @@
            aviso de férias. -->
       <div class="pagina" data-pagina="demora">
         <h3 class="section-title">PontoNet</h3>
-        <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: o relatório de justificativas do PontoNet</span><p>Quando falta uma batida no ponto, o PontoNet abre um <strong>pedido de justificativa</strong>. O colaborador escreve o motivo, o <strong>gestor avalia</strong> e o RH confere. Cada pedido termina de um destes jeitos: <strong>aprovado</strong> (a justificativa foi aceita e entrou no ponto), <strong>cancelado</strong> (o pedido foi desfeito) ou <strong>batida achada no relógio</strong> (o próprio sistema encontrou a batida que estava guardada no relógio de ponto, e não precisou de justificativa). Os tempos são os que o PontoNet conta, em dias: do pedido aberto até o colaborador justificar, e da justificativa até o gestor avaliar. Escolha o mês (ciclo do ponto, dia 28 a 27) no seletor; segue os filtros de gestor, grupo, cargo e colaborador.</p></div>
+        <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: o relatório de justificativas do PontoNet</span><p>Quando falta uma batida no ponto, o PontoNet abre um <strong>pedido de justificativa</strong>: o colaborador escreve o motivo, o <strong>gestor avalia</strong> e o RH confere. Aqui entram só os pedidos <strong>aprovados</strong> (os cancelados e os que o próprio sistema resolveu, achando a batida guardada no relógio de ponto, ficam de fora). Os tempos são os que o PontoNet conta, em dias: do pedido aberto até o colaborador justificar, e da justificativa até o gestor avaliar. A demora, embaixo, conta do dia da batida que faltou até a aprovação. Escolha o mês (ciclo do ponto, dia 28 a 27) no seletor; tudo nesta seção segue esse mês e os filtros de gestor, grupo, cargo e colaborador.</p></div>
         <div id="pnSemDados" class="card wide" hidden><div class="chart-empty">Este arquivo não traz as justificativas do PontoNet. O RH inclui esse relatório quando gera o arquivo do painel.</div></div>
         <div id="pnCorpo">
           <div class="abs-toolbar">
@@ -1416,8 +1380,8 @@
           <section class="grid">
             <div class="card wide">
               <div class="card-title">Justificativas mês a mês</div>
-              <div class="card-hint">Pedidos de justificativa de cada ciclo (28 a 27), pelo jeito que terminaram &middot; clique num item da legenda para ver só ele; clique numa barra para ver os pedidos</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de justificativas do PontoNet</span><p>Quantos pedidos de justificativa houve em cada ciclo e como cada um terminou: aprovado, cancelado ou batida achada no relógio. Embaixo, os tempos médios de cada etapa nos pedidos aprovados: quanto o colaborador levou para justificar e quanto o gestor levou para avaliar. Mostra sempre todos os ciclos do arquivo, mesmo com um ciclo escolhido no seletor.</p></div>
+              <div class="card-hint">Justificativas aprovadas em cada ciclo (28 a 27), por motivo &middot; clique num item da legenda para ver só ele; clique numa barra para ver as justificativas</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de justificativas do PontoNet</span><p>Quantas justificativas foram aprovadas em cada ciclo, separadas pelo motivo. Embaixo, os tempos médios de cada etapa: quanto o colaborador levou para justificar e quanto o gestor levou para avaliar. Mostra sempre todos os ciclos do arquivo, mesmo com um ciclo escolhido no seletor.</p></div>
               <div class="card-body" id="chartPnCiclo"></div>
               <div class="card-body" id="tablePnTempos" style="margin-top:10px"></div>
             </div>
@@ -1440,42 +1404,90 @@
               <div class="card-body" id="tablePnTendGestor"></div>
             </div>
             <div class="card wide">
-              <div class="card-title">Todos os pedidos do ciclo</div>
+              <div class="card-title">Todas as justificativas aprovadas do ciclo</div>
               <div class="card-hint" id="pnListaHint">Do mais recente para o mais antigo</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de justificativas do PontoNet</span><p>Um pedido por linha: o dia e a hora da batida que faltou, a pessoa, o gestor, como terminou, o motivo, o texto que o colaborador escreveu e os dias de cada etapa. Clique num item da legenda para ver só aquele jeito de terminar.</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de justificativas do PontoNet</span><p>Uma justificativa aprovada por linha: o dia e a hora da batida que faltou, a pessoa, o gestor, o motivo, o texto que o colaborador escreveu e os dias de cada etapa. Clique num motivo da legenda para ver só ele.</p></div>
               <div id="pnListaLeg"></div>
               <div class="card-body" id="tablePnLista"></div>
               <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="pnLista" id="btnPnListaTodos" hidden>Mostrar todos</button></div>
             </div>
           </section>
         </div>
-        <h3 class="section-title" style="margin-top:22px">Ocorrências do mês: do dia da ocorrência até a aprovação</h3>
+        <h3 class="section-title" style="margin-top:22px">Demora: do dia da batida que faltou até a aprovação</h3>
         <!-- card de número da demora (renderKPIs preenche #kpiDemora); veio da
              Visão geral para cá a pedido do RH (26/10) -->
         <section class="kpis kpis-demora">
         <div class="kpi-tile k-slate">
           <div class="kpi-label">Demora média no PontoNet</div>
           <div class="kpi-value" id="kpiDemora">&ndash;</div>
-          <div class="kpi-sub" id="kpiDemoraSub">Da ocorrência até a tratativa</div>
+          <div class="kpi-sub" id="kpiDemoraSub">Do dia da batida que faltou até a aprovação</div>
           <div class="card-fonte"><span class="fonte-origem">De onde vem: o PontoNet, onde o gestor aprova as justificativas</span><p>Quando há uma ocorrência, a justificativa precisa ser aprovada no PontoNet. Este número é o tempo médio entre o dia da ocorrência e o dia em que ela foi aprovada. Só entram as que já foram aprovadas; as que ainda estão esperando não entram, porque ainda não têm data de aprovação.</p></div>
         </div>
         </section>
         <section class="grid">
           <div class="card wide">
             <div class="card-title">Média e maior demora por gestor</div>
-            <div class="card-hint">Tempo entre a ocorrência e a tratativa/aprovação no sistema, por gestor &middot; linhas em amarelo: o gestor esteve de férias enquanto as ocorrências esperavam tratativa</div>
+            <div class="card-hint">Tempo entre o dia da batida que faltou e a aprovação, por gestor, no ciclo escolhido lá em cima &middot; linhas em amarelo: o gestor esteve de férias enquanto as ocorrências esperavam tratativa</div>
             <div class="card-hint" id="hintDemoraFerias" hidden style="color:#7A5A00">Este arquivo não traz os afastamentos, então o aviso de férias do gestor não aparece. O RH inclui esse relatório quando gera o arquivo do painel.</div>
             <div class="card-fonte"><span class="fonte-origem">De onde vem: o PontoNet, onde o gestor aprova as justificativas</span><p>O mesmo cálculo do card “Demora média no PontoNet” (do dia da ocorrência até a aprovação), separado por gestor: quantas foram aprovadas, a demora média e a maior. <strong>Aviso de férias:</strong> se o gestor esteve de férias entre a primeira ocorrência e a última aprovação da equipe, a linha fica amarela com as datas, porque nesse tempo ele não tinha como aprovar. A demora continua contada do mesmo jeito; o aviso é para não ler esse número como descuido.</p></div>
             <div class="card-body" id="tableDemoraGestor"></div>
           </div>
           <div class="card wide">
             <div class="card-title">Média e maior demora por colaborador</div>
-            <div class="card-hint">Tempo entre a ocorrência e a tratativa/aprovação no sistema, por colaborador &middot; linhas em amarelo: o gestor (ou o próprio colaborador) esteve de férias nesse meio-tempo</div>
+            <div class="card-hint">Tempo entre o dia da batida que faltou e a aprovação, por colaborador, no ciclo escolhido lá em cima &middot; linhas em amarelo: o gestor (ou o próprio colaborador) esteve de férias nesse meio-tempo</div>
             <div class="card-fonte"><span class="fonte-origem">De onde vem: o PontoNet, onde o gestor aprova as justificativas</span><p>O mesmo cálculo, separado por pessoa. Ajuda a ver justificativas que ficam muito tempo esperando aprovação. Linha amarela = o gestor da pessoa (ou ela mesma) esteve de férias no meio do caminho. Clique no nome para abrir o resumo da pessoa.</p></div>
             <div class="card-body" id="tableDemoraColaborador"></div>
           </div>
         </section>
 
+      </div>
+      <!-- Seção "Tendências" (renderTendencias): a unidade (ou a equipe do filtro)
+           ciclo a ciclo em cada assunto que o arquivo traz em mais de um mês, e o
+           assunto escolhido em #tendIndicador por gestor e por pessoa. -->
+      <div class="pagina" data-pagina="tendencias">
+        <h3 class="section-title">Tendências</h3>
+        <div id="tendSemDados" class="card wide" hidden><div class="chart-empty">Este arquivo não traz nenhum assunto com mais de um mês (batidas digitadas, afastamentos, jornada ou pausas de mais de um ciclo). Com os relatórios de 3 meses, esta seção mostra se a unidade, as equipes e as pessoas estão melhorando ou piorando.</div></div>
+        <div id="tendCorpo">
+          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: todos os relatórios que o RH traz com mais de um mês</span><p>Para cada assunto (batidas digitadas, esquecimentos, dias de atestado, jornada e pausas térmicas), o painel soma o que aconteceu em cada um dos 3 últimos ciclos do ponto (dia 28 a 27) e compara o último com o anterior. As ocorrências do mês não entram aqui porque a planilha delas tem um mês só. Segue os filtros de gestor, grupo, cargo e colaborador: com um gestor escolhido, tudo vira a tendência da equipe dele. O filtro de período não vale aqui.</p></div>
+          <section class="grid">
+            <div class="card wide">
+              <div class="card-title">A unidade, ciclo a ciclo</div>
+              <div class="card-hint" id="tendUnidadeHint">Cada linha é um assunto; os números são de cada ciclo (28 a 27)</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: os relatórios de batidas digitadas, afastamentos, jornada e pausas</span><p>Uma linha por assunto. Nos assuntos de quantidade (batidas, dias, ocorrências), o número é o total do ciclo; nos de porcentagem (pausas), é a parte do total. A coluna “Comparado ao mês anterior” diz em palavras quanto mudou do penúltimo para o último mês (por exemplo, “17 a menos que em Ago/26”): vermelho = piorou, verde = melhorou. No minigráfico “Evolução”, cada barra é um mês (o último em laranja): passe o mouse para ver o número e clique para ver de onde vem. Clique no nome do assunto para ver, logo abaixo, os gestores e as pessoas.</p></div>
+              <div class="card-body" id="tableTendUnidade"></div>
+            </div>
+          </section>
+          <!-- quadro do seletor "Assunto": os 3 cards de dentro seguem a escolha -->
+          <div class="grupo-sel">
+          <div class="grupo-sel-topo">
+            <label for="tendIndicador">Assunto</label>
+            <select id="tendIndicador"></select>
+            <span class="grupo-sel-aviso">Os <b>três quadros desta caixa</b> (por gestor, quem mais piorou e quem mais melhorou) mostram o assunto escolhido aqui. Troque o assunto para ver outro; a tabela de cima não muda.</span>
+          </div>
+          <section class="grid">
+            <div class="card wide">
+              <div class="card-title">Por gestor: <span id="tendNomeInd"></span></div>
+              <div class="card-hint">Cada equipe nos 3 ciclos, da pior para a melhor no último ciclo</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: os mesmos relatórios + a lista de quem é gestor de quem</span><p>O assunto escolhido no seletor, somado por equipe em cada ciclo. A coluna “Comparado ao mês anterior” diz em palavras quanto mudou do penúltimo para o último mês (por exemplo, “17 a menos que em Ago/26”): vermelho = piorou, verde = melhorou. No minigráfico “Evolução”, cada barra é um mês (o último em laranja): passe o mouse para ver o número e clique para ver de onde vem.</p></div>
+              <div class="card-body" id="tableTendGestor"></div>
+            </div>
+            <div class="card wide">
+              <div class="card-title">Quem mais piorou: <span id="tendNomeInd2"></span></div>
+              <div class="card-hint">Maior aumento do ciclo anterior para o último &middot; os 15 primeiros (a lista inteira abre em tela cheia)</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: os mesmos relatórios, por pessoa</span><p>As pessoas em que o assunto escolhido mais piorou do penúltimo para o último ciclo. Nos assuntos de porcentagem, só entra quem teve pelo menos 10 pausas ou períodos nos dois ciclos, para uma diferença pequena não parecer grande. Clique no nome para ver o resumo da pessoa.</p></div>
+              <div class="card-body" id="tableTendPiorou"></div>
+              <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="tendPiorou" id="btnTendPiorouTodos" hidden>Mostrar todos</button></div>
+            </div>
+            <div class="card wide">
+              <div class="card-title">Quem mais melhorou: <span id="tendNomeInd3"></span></div>
+              <div class="card-hint">Maior melhora do ciclo anterior para o último &middot; os 15 primeiros (a lista inteira abre em tela cheia)</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: os mesmos relatórios, por pessoa</span><p>As pessoas em que o assunto escolhido mais melhorou do penúltimo para o último ciclo. Serve também para reconhecer quem melhorou depois de uma conversa.</p></div>
+              <div class="card-body" id="tableTendMelhorou"></div>
+              <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="tendMelhorou" id="btnTendMelhorouTodos" hidden>Mostrar todos</button></div>
+            </div>
+          </section>
+          </div>
+        </div>
       </div>
       <!-- Seção "Lista de colaboradores (ORG)" (renderListaORG). -->
       <div class="pagina" data-pagina="org">
@@ -3420,7 +3432,7 @@
     $("kpiOcorrenciasSub").textContent = ocorrenciasRecords.length ? (formatDateSpan(ocorrenciasRecords)) : "";
 
     var demoras = [];
-    records.forEach(function(r){
+    baseDemora(records).forEach(function(r){
       if (r.tratativa && r.data){
         var h = (r.tratativa.getTime()-r.data.getTime())/3600000;
         if (h >= 0) demoras.push(h);
@@ -3429,7 +3441,8 @@
     if (demoras.length){
       var media = demoras.reduce(function(s,v){ return s+v; },0)/demoras.length;
       $("kpiDemora").innerHTML = formatDelay(media);
-      $("kpiDemoraSub").textContent = formatNum(demoras.length) + " ocorrências tratadas";
+      $("kpiDemoraSub").textContent = formatNum(demoras.length) + (state.records.some(function(r){ return isTipoPontoNet(r.tipo); })
+        ? " justificativa(s) aprovada(s) · do dia da batida que faltou até a aprovação" : " ocorrências tratadas");
     } else {
       $("kpiDemora").innerHTML = "&ndash;";
       $("kpiDemoraSub").textContent = "Nenhuma tratativa registrada";
@@ -3641,12 +3654,13 @@
     // tratativa. Os avisos ficam em l.avisos (lista de textos) e viram HTML em
     // avisoFeriasHtml.
     var fer = feriasPorPessoa();
-    var linhasDemoraGestor = demoraStats(records, function(r){ return r.gestor; });
+    var baseDem = baseDemora(records);
+    var linhasDemoraGestor = demoraStats(baseDem, function(r){ return r.gestor; });
     linhasDemoraGestor.forEach(function(l){
       var f = feriasNaJanela(feriasDoNome(fer, l.label), l.ini, l.fim);
       l.avisos = f.length ? ["Esteve de férias " + f.join(" e ") + " — a demora da equipe pode ter vindo daí"] : [];
     });
-    var linhasDemoraColab = demoraStats(records, function(r){ return r.colaborador; });
+    var linhasDemoraColab = demoraStats(baseDem, function(r){ return r.colaborador; });
     linhasDemoraColab.forEach(function(l){
       var avisos = [];
       var fg = feriasNaJanela(feriasDoNome(fer, l.gestor), l.ini, l.fim);
@@ -3659,14 +3673,14 @@
 
     renderTableSimple($("tableDemoraGestor"),
       [{label:"Gestor", render:function(r){return escapeHtml(r.label) + avisoFeriasHtml(r.avisos);}},
-       {label:"Ocorrências tratadas", width:"140px", render:function(r){return formatNum(r.qtd);}},
+       {label:"Aprovadas", width:"110px", render:function(r){return formatNum(r.qtd);}},
        {label:"Demora média", width:"110px", render:function(r){return formatDelay(r.media);}},
        {label:"Maior demora", width:"110px", render:function(r){return formatDelay(r.maior);}}],
       linhasDemoraGestor, {rowClass:function(r){ return r.avisos.length ? "row-ferias" : ""; }});
 
     renderTableSimple($("tableDemoraColaborador"),
       [{label:"Colaborador", render:function(r){return colabLink(r.label) + avisoFeriasHtml(r.avisos);}},
-       {label:"Ocorrências tratadas", width:"140px", render:function(r){return formatNum(r.qtd);}},
+       {label:"Aprovadas", width:"110px", render:function(r){return formatNum(r.qtd);}},
        {label:"Demora média", width:"110px", render:function(r){return formatDelay(r.media);}},
        {label:"Maior demora", width:"110px", render:function(r){return formatDelay(r.maior);}}],
       linhasDemoraColab, {rowClass:function(r){ return r.avisos.length ? "row-ferias" : ""; }});
@@ -4803,6 +4817,8 @@
     return SIT_PN[s] || (s ? s.charAt(0) + s.slice(1).toLowerCase() : "Sem situação");
   }
   function corSitPN(n){ return COR_SIT_PN[n] || "#E8840C"; }
+  var COR_MOTIVO_PN = { "Problema no relógio de ponto":"#2a78d6", "Atividade externa":"#1baf7a", "Esquecimento":"#E8840C", "Exclusão de batida errada":"#e87ba4" };
+  function corMotivoPN(n){ return COR_MOTIVO_PN[n] || "#B9BBBE"; }
   function isAprovadoPN(r){ return String(r.situacao || "").toUpperCase() === "INTEGRADO"; }
   function nomeTipoPN(t){
     var n = stripAccents(String(t || "")).toLowerCase();
@@ -4818,9 +4834,29 @@
     return v.length ? v.reduce(function(sm, r){ return sm + r[campo]; }, 0) / v.length : null;
   }
   function diasTxt(v){ return v == null ? "&ndash;" : formatDec(v).replace(",0", "") + (Math.abs(v - 1) < 0.05 ? " dia" : " dias"); }
+  // Só os pedidos aprovados (pedido do RH, 28/10): cancelados e batidas achadas
+  // no relógio não entram em nada da seção.
   function getPontoNetRecords(){
     var f = filtroPessoas();
-    return state.records.filter(function(r){ return isTipoPontoNet(r.tipo) && passaPessoa(r, f); });
+    return state.records.filter(function(r){ return isTipoPontoNet(r.tipo) && isAprovadoPN(r) && passaPessoa(r, f); });
+  }
+  // Ciclo escolhido no seletor da seção (o mais recente enquanto o seletor não
+  // foi montado); null = todos os ciclos. Usado também pela demora (embaixo).
+  function cicloPontoNet(){
+    var v = $("pnCiclo").value;
+    if (v === "todos") return null;
+    if (v) return v;
+    var max = null;
+    state.records.forEach(function(r){ if (isTipoPontoNet(r.tipo)){ var c = cicloDe(r.data); if (!max || c > max) max = c; } });
+    return max;
+  }
+  // Base da demora (do dia da batida que faltou até a aprovação): com o
+  // relatório do PontoNet no arquivo, os pedidos aprovados do ciclo escolhido
+  // (os 3 meses funcionam); sem ele, as ocorrências do mês, como antes.
+  function baseDemora(ocorrencias){
+    if (!state.records.some(function(r){ return isTipoPontoNet(r.tipo); })) return ocorrencias;
+    var c = cicloPontoNet();
+    return getPontoNetRecords().filter(function(r){ return !c || cicloDe(r.data) === c; });
   }
   function renderPontoNet(){
     state.pnPeriodo = null;
@@ -4845,38 +4881,36 @@
     var txtTodos = fTodos ? "Todos os ciclos do arquivo: " + intervaloBR(fTodos.ini, fTodos.fim) : "Todos os ciclos do arquivo";
     state.pnPeriodo = { todos: txtTodos, ciclo: cicloSel ? "Ciclo " + cicloLabel(cicloSel) + ": " + intervaloBR(cicloInicioFim(cicloSel).ini, cicloInicioFim(cicloSel).fim) + " (não segue o filtro de período)" : txtTodos };
     var rec = cicloSel ? todos.filter(function(r){ return cicloDe(r.data) === cicloSel; }) : todos;
-    var aprov = rec.filter(isAprovadoPN);
+    var aprov = rec;   // só há aprovados aqui (getPontoNetRecords)
 
     // números do topo
     function tile(label, valor, sub, cls){
       return '<div class="colab-kpi'+(cls?' '+cls:'')+'"><div class="ck-label">'+label+'</div><div class="ck-value">'+valor+'</div><div class="ck-sub">'+sub+'</div></div>';
     }
-    var canc = rec.filter(function(r){ return situacaoPN(r) === "Cancelado"; }).length;
-    var relogio = rec.filter(function(r){ return situacaoPN(r) === "Batida achada no relógio"; }).length;
     var pessoas = {}; aprov.forEach(function(r){ pessoas[chavePessoa(r)] = true; });
     var mCol = mediaDias(aprov, "diasColaborador"), mGes = mediaDias(aprov, "diasGestor");
     $("pnKpis").innerHTML =
-      tile("Justificativas aprovadas", formatNum(aprov.length), "de " + formatNum(rec.length) + " pedidos · " + formatNum(canc) + " cancelado(s) · " + formatNum(relogio) + " batida(s) achada(s) no relógio") +
+      tile("Justificativas aprovadas", formatNum(aprov.length), cicloSel ? "no ciclo " + cicloLabel(cicloSel) : "nos ciclos do arquivo") +
       tile("Pessoas com justificativa aprovada", formatNum(Object.keys(pessoas).length), "pessoas diferentes no recorte") +
       tile("Tempo do colaborador para justificar", diasTxt(mCol), "média, do pedido aberto até a justificativa") +
       tile("Tempo do gestor para avaliar", diasTxt(mGes), "média, da justificativa até a avaliação", mGes != null && mGes > LIMITE_DIAS_GESTOR ? "alerta" : "");
 
     // mês a mês (sempre todos os ciclos), empilhado pelo jeito que terminou
-    var recEvol = filtrarSerie("chartPnCiclo", todos, situacaoPN);
+    var motivoPN = function(r){ return nomeTipoPN(r.tipoJustificativa); };
+    var recEvol = filtrarSerie("chartPnCiclo", todos, motivoPN);
     var itCiclo = ciclos.slice().reverse().map(function(k){
       return { label: cicloLabel(k), value: recEvol.filter(function(r){ return cicloDe(r.data) === k; }).length };
     });
-    empilhar(itCiclo, recEvol, function(r){ return cicloLabel(cicloDe(r.data)); }, situacaoPN, corSitPN);
-    renderBarV($("chartPnCiclo"), itCiclo, { legenda: legendaSerie("chartPnCiclo", todos, situacaoPN, corSitPN), total: recEvol.length });
+    empilhar(itCiclo, recEvol, function(r){ return cicloLabel(cicloDe(r.data)); }, motivoPN, corMotivoPN);
+    renderBarV($("chartPnCiclo"), itCiclo, { legenda: legendaSerie("chartPnCiclo", todos, motivoPN, corMotivoPN), total: recEvol.length });
     renderTableSimple($("tablePnTempos"),
       [{label:"Ciclo", render:function(l){ return "<strong>" + l.rot + "</strong>"; }},
-       {label:"Pedidos", width:"90px", render:function(l){ return formatNum(l.n); }},
        {label:"Aprovados", width:"100px", render:function(l){ return formatNum(l.a.length); }},
        {label:"Tempo do colaborador", html:"Tempo do<br>colaborador", width:"120px", render:function(l){ return diasTxt(mediaDias(l.a, "diasColaborador")); }},
        {label:"Tempo do gestor", html:"Tempo do<br>gestor", width:"120px", render:function(l){ return diasTxt(mediaDias(l.a, "diasGestor")); }}],
       ciclos.map(function(k){
         var l = todos.filter(function(r){ return cicloDe(r.data) === k; });
-        return { rot: cicloLabel(k), n: l.length, a: l.filter(isAprovadoPN) };
+        return { rot: cicloLabel(k), a: l };
       }), { tableClass:"tabela-compacta" });
 
     // motivo das aprovadas
@@ -4898,17 +4932,16 @@
     renderBarH($("chartPnGestor"), itG, { rightW:150, filtro:"gestor" });
 
     // lista do ciclo, com filtro na legenda
-    var recLista = filtrarSerie("tablePnLista", rec, situacaoPN);
+    var recLista = filtrarSerie("tablePnLista", rec, motivoPN);
     var legPn = $("pnListaLeg"); legPn.innerHTML = "";
-    legPn.appendChild(legendaMini(legendaSerie("tablePnLista", rec, situacaoPN, corSitPN)));
-    $("pnListaHint").textContent = formatNum(recLista.length) + " pedido(s) · do mais recente para o mais antigo · os 20 primeiros (a lista inteira abre em tela cheia)";
+    legPn.appendChild(legendaMini(legendaSerie("tablePnLista", rec, motivoPN, corMotivoPN)));
+    $("pnListaHint").textContent = formatNum(recLista.length) + " justificativa(s) aprovada(s) · da mais recente para a mais antiga · os 20 primeiras (a lista inteira abre em tela cheia)";
     var dn = function(v){ return v == null ? "&ndash;" : formatNum(v); };
     renderTableSimple($("tablePnLista"),
       [{label:"Batida que faltou", width:"118px", render:function(r){ return formatDateBR(r.data) + (horaMin(r.data) !== "00:00" ? " " + horaMin(r.data) : ""); }},
        {label:"Colaborador", width:"20%", render:function(r){ return colabLink(r.colaborador); }},
        {label:"Gestor", width:"16%", render:function(r){ return escapeHtml(r.gestor); }},
-       {label:"Como terminou", width:"13%", render:function(r){ return escapeHtml(situacaoPN(r)); }},
-       {label:"Motivo", width:"14%", render:function(r){ return escapeHtml(isAprovadoPN(r) ? nomeTipoPN(r.tipoJustificativa) : "–"); }},
+       {label:"Motivo", width:"16%", render:function(r){ return escapeHtml(nomeTipoPN(r.tipoJustificativa)); }},
        {label:"Texto do colaborador", render:function(r){ return '<span title="' + escapeHtml(r.justificativaMarcacao) + '">' + escapeHtml(r.justificativaMarcacao) + '</span>'; }},
        {label:"Dias do colaborador", html:"Dias do<br>colaborador", width:"78px", render:function(r){ return dn(r.diasColaborador); }},
        {label:"Dias do gestor", html:"Dias do<br>gestor", width:"64px", render:function(r){ return isAprovadoPN(r) ? dn(r.diasGestor) : "&ndash;"; }}],
@@ -5906,7 +5939,7 @@
         {label:"Batida que faltou", width:"118px", render:function(r){ return formatDateBR(r.data) + (horaMin(r.data) !== "00:00" ? " " + horaMin(r.data) : ""); }},
         {label:"Colaborador", width:"22%", render:function(r){ return colabLink(r.colaborador); }},
         {label:"Gestor", width:"18%", render:function(r){ return escapeHtml(r.gestor); }},
-        {label:"Como terminou", width:"14%", render:function(r){ return escapeHtml(situacaoPN(r)); }},
+        {label:"Motivo", width:"14%", render:function(r){ return escapeHtml(nomeTipoPN(r.tipoJustificativa)); }},
         {label:"Texto do colaborador", render:function(r){ return escapeHtml(r.justificativaMarcacao || ""); }},
         {label:"Dias do gestor", width:"80px", render:function(r){ return isAprovadoPN(r) && r.diasGestor != null ? formatNum(r.diasGestor) : "&ndash;"; }}];
     } else if (tipo === "pausaDia"){
@@ -5948,7 +5981,7 @@
     var porPessoa = {};
     linhas.forEach(function(x){ var r = x.r || x; porPessoa[r.colaborador] = (porPessoa[r.colaborador] || 0) + 1; });
     var nomes = Object.keys(porPessoa).sort(function(a,b){ return porPessoa[b]-porPessoa[a] || a.localeCompare(b,"pt-BR"); });
-    var unidade = { digitada:"batida(s) digitada(s)", ocorrencia:"ocorrência(s)", jornada:"ocorrência(s) de jornada", pausa:"pessoa(s) no relatório de pausas", pausaDia:"dia(s) de batidas de pausa", pontonet:"pedido(s) de justificativa" }[tipo] || "afastamento(s)";
+    var unidade = { digitada:"batida(s) digitada(s)", ocorrencia:"ocorrência(s)", jornada:"ocorrência(s) de jornada", pausa:"pessoa(s) no relatório de pausas", pausaDia:"dia(s) de batidas de pausa", pontonet:"justificativa(s) aprovada(s)" }[tipo] || "afastamento(s)";
     $("origemTitulo").textContent = titulo + (recorte ? " · " + recorte : "");
     state.origem = { linhas:linhas, colunas:colunas, nomes:nomes, porPessoa:porPessoa, unidade:unidade, sel:{} };
     desenharOrigem();
@@ -5998,7 +6031,7 @@
   var PERIODO_DOS_CARDS = {
     filtro: ["chartTipo","chartDiaSemana","chartPorData","chartPorGestor","chartPorCargo","chartTopColaboradores","tableCurtas",
              "chartDigMotivo","chartDigDiaSemana","chartDigData","chartDigTop","chartDigGestor","chartDigHora",
-             "tableDigJust","tableDigLista","tableDemoraGestor","tableDemoraColaborador","historySection"],
+             "tableDigJust","tableDigLista","historySection"],
     cartao: ["chartBancoHoras"], cartao3: ["tableExtraFalta"], pausas: ["tablePausasTermicas","chartPauAcima","tablePauAcimaGestor","chartPauGrupo"],
     pausasMeses: ["chartPauEvolucao"],
     pauBat: ["chartPauHora","chartPauDiaSemana","chartPauPrimeira","chartPauSemPausa","chartPauMaior","pauHeat"],
@@ -6006,7 +6039,7 @@
     absMapa: ["absHeat"], cadastro: ["orgSection"],
     tend: ["tableTendUnidade","tableTendGestor","tableTendPiorou","tableTendMelhorou","chartDigCiclo","tableDigTend",
            "tablePauTendGestor","tablePauTend","tableAbsTendGestor","tableJorTendGestor","tableJorTendPessoa","tableDigEsquecimento","tablePnTendGestor"],
-    pnTodos: ["chartPnCiclo"], pnCiclo: ["chartPnTipo","chartPnGestor","tablePnLista"],
+    pnTodos: ["chartPnCiclo"], pnCiclo: ["chartPnTipo","chartPnGestor","tablePnLista","tableDemoraGestor","tableDemoraColaborador"],
     jorTodos: ["chartJorCiclo"], jorCiclo: ["chartJorDezHoras","chartJorGestor","tableJorGestor","tableJorLista"]
   };
   function intervaloBR(ini, fim){ return formatDateBR(ini) + " a " + formatDateBR(fim); }

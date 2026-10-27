@@ -134,7 +134,26 @@ for r in Pn[1:]:
         if (m,dt.date()) in aus and aus[(m,dt.date())][1] and not integ: continue   # a integrada vale (27/10)
         aus[(m,dt.date())]=(r[pnh['Avaliado em:']], integ)
 g=collections.defaultdict(list)
-for e in E:
+# Desde 28/10, com o relatório do PontoNet no arquivo a demora usa os pedidos APROVADOS do
+# ciclo mais recente (do dia e hora da batida que faltou até "Avaliado em:"); o gestor é o
+# mesmo que o GerarCSV põe na linha (Tratamento/ORG, senão o do relatório).
+if 'Hora justificada' in pnh:
+    import simular_gerarcsv as _S2
+    gpn={o['matricula']:o['gestor'] for o in _S2.out if o['tipo']=='Justificativa PontoNet'}
+    def _cic(x): m=x.month+(1 if x.day>=28 else 0); return (x.year+(1 if m==13 else 0),(m-1)%12+1)
+    aprov=[r for r in Pn[1:] if s(r[pnh['Matrícula']]) and isinstance(r[pnh['Data falta']],datetime.datetime) and s(r[pnh['Situação atual']]).upper()=='INTEGRADO']
+    ult=max(_cic(r[pnh['Data falta']]) for r in aprov)
+    for r in aprov:
+        dt=r[pnh['Data falta']]
+        if _cic(dt)!=ult: continue
+        hj=r[pnh['Hora justificada']]
+        if isinstance(hj,datetime.time): dt=dt.replace(hour=hj.hour,minute=hj.minute)
+        av=r[pnh['Avaliado em:']]
+        if not isinstance(av,datetime.datetime): continue
+        h=(av-dt).total_seconds()/3600
+        if h>=0: g[gpn.get(s(r[pnh['Matrícula']]),'') or 'Sem gestor'].append(h)
+else:
+  for e in E:
     av,integ=aus.get((e['mat'],e['data'].date()),(None,False))
     if integ and isinstance(av,datetime.datetime):
         h=(av-e['data']).total_seconds()/3600
@@ -145,7 +164,7 @@ for row in ui['demoraG']:
     l=g.get(row[0].split('⚠')[0].strip(),[]); exp=[str(len(l)), fd(sum(l)/len(l)) if l else '-', fd(max(l)) if l else '-']
     if row[1:]!=exp: ok=False; bad.append((row,exp))
 n=sum(len(v) for v in g.values())
-chk('Demora no PontoNet por gestor', ok and len(ui['demoraG'])==len(g), f"{n} ocorrências tratadas; KPI diz {kp['Demora média no PontoNet'][2]}" + (f"; {bad[:3]}" if bad else ''))
+chk('Demora no PontoNet por gestor', ok and len(ui['demoraG'])==len(g), f"{n} aprovadas; KPI diz {kp['Demora média no PontoNet'][2]}" + (f"; {bad[:3]}" if bad else ''))
 allh=[h for v in g.values() for h in v]
 chk('KPI Demora média', kp['Demora média no PontoNet'][1]==fd(sum(allh)/len(allh)), f"painel {kp['Demora média no PontoNet'][1]} / fonte {fd(sum(allh)/len(allh))}")
 # lista do ORG: pessoas únicas do ORG (o aviso de "fora do ORG" saiu do painel a pedido do RH)
@@ -461,6 +480,7 @@ if ui.get('pnTempos'):
         if not l: return '–'
         m=sum(l)/len(l); t=f"{m:.1f}".replace('.',',').replace(',0','')
         return t+(' dia' if abs(m-1)<0.05 else ' dias')
-    esp={f"{MES[k[1]-1]}/{str(k[0])[2:]}":[str(v[0]),str(len(v[1])),dt_(v[1]),dt_(v[2])] for k,v in cic.items()}
-    got={r[0]:[x.replace('.','') for x in r[1:5]] for r in ui['pnTempos']}
-    chk('PontoNet: pedidos, aprovados e tempos por ciclo', got==esp, str(esp) if got==esp else f"painel {got} / fonte {esp}")
+    # desde 28/10 a seção só mostra os aprovados (sem a coluna de pedidos)
+    esp={f"{MES[k[1]-1]}/{str(k[0])[2:]}":[str(len(v[1])),dt_(v[1]),dt_(v[2])] for k,v in cic.items()}
+    got={r[0]:[x.replace('.','') for x in r[1:4]] for r in ui['pnTempos']}
+    chk('PontoNet: aprovados e tempos por ciclo', got==esp, str(esp) if got==esp else f"painel {got} / fonte {esp}")

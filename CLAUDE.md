@@ -701,6 +701,18 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   por gestor/cargo → por pessoa → mapa → sinais de atenção → tendências → lista completa.
   Conferência 33/33 (item novo: pedidos/aprovados/tempos do PontoNet por ciclo).
 
+- 28/10: (1) PontoNet **só com os aprovados** (INTEGRADO): `getPontoNetRecords` filtra
+  `isAprovadoPN`; mês a mês empilhado por **motivo** (`corMotivoPN`), lista com legenda por motivo,
+  sem cancelados nem "batida achada no relógio" (o CSV continua trazendo tudo). (2) A **demora**
+  (KPI `#kpiDemora` + tabelas por gestor/colaborador) **segue o seletor de ciclo do PontoNet**
+  (`baseDemora`, `cicloPontoNet`): do dia e hora da batida que faltou até "Avaliado em", nos
+  aprovados do ciclo; sem PontoNet no arquivo, volta às ocorrências do mês. Antes ela só via o mês
+  atual (relato do Dimitri: "a média dos outros meses não funciona"). Set 4,2 dias (300), Ago 3,8
+  (239), Jul 3,8 (230). (3) Topo em grade de 3 partes (`grid-template-columns: 1fr auto 1fr`):
+  ☰ + logo à esquerda, **período no meio**, nome do painel + "Esconder filtros" à direita; abaixo
+  de 1180 px volta a ser uma fila sem o nome. (4) Menu e páginas: **Tendências depois de PontoNet**.
+  Conferência 33/33 (a demora agora conferida com os aprovados do PontoNet do último ciclo).
+
 ## 12. Estado atual e como continuar (13/10/2026)
 
 **Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`, branch
@@ -758,7 +770,10 @@ com todos e se pode usar salário (só o total da equipe).
   nunca "p.p." nem número solto (19/10). Minigráficos de evolução com balão e clique.
 - Sem status (Regularizado/Pendente) no painel: ele é feito depois do fim do mês (26/10).
 - Ordem das seções e nomes "Ocorrências"/"PontoNet" (26/10); "?" por card; sem B12.
-- Sem "Entenda o painel" no topo; topo = ☰, logo, período, nome (27/10). PontoNet com 3 meses.
+- Sem "Entenda o painel" no topo; topo = ☰ + logo | período no meio | nome + Esconder filtros
+  (27-28/10). PontoNet com 3 meses, **só aprovados**; a demora segue o ciclo escolhido (28/10).
+- Ordem do menu (28/10): Ocorrências, Digitadas, Afastamentos, Jornada, Destaque, Pausas,
+  PontoNet, Tendências, Lista de colaboradores, Histórico, Todas.
 - Ordem base dos gráficos em toda seção (27/10): topo → mês a mês → o quê → quando → gestor →
   pessoa → mapa → sinais → tendências → lista. Card novo segue essa ordem.
 - **O texto "pegar no pulo" não aparece na tela** (pedido do Dimitri, 18/10): os cards de sinais
