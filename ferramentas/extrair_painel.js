@@ -55,6 +55,8 @@ const { chromium } = require('playwright');
       digEsq: table('tableDigEsquecimento'), digEsqAlerta: [...document.querySelectorAll('#tableDigEsquecimento tr.row-alert')].map(tr=>tr.children[0].textContent.trim()),
       tendUnidade: table('tableTendUnidade'),
       pauKpis: [...document.querySelectorAll('#pauKpis .colab-kpi')].map(k=>[k.querySelector('.ck-label').textContent, k.querySelector('.ck-value').textContent, k.querySelector('.ck-sub').textContent]),
+      // PontoNet (27/10): pedidos e tempos por ciclo
+      pnTempos: $('tablePnTempos') ? table('tablePnTempos') : null,
       // batidas de cada dia das pausas (B1, B2, B5, B7, B9, B12), do mês mais recente
       pauBat: $('pauHeat') ? {
         resumo: txt('pauBatResumo'),

@@ -405,6 +405,18 @@ As 15 ideias marcadas na página de ideias que ainda faltavam:
 - Sem nome do arquivo no topo; sem menu de seções antes de carregar o arquivo; sem status
   (Regularizado/Pendente); sem a visão "Qual batida fica faltando".
 
+## Ajustes pedidos em 27/10
+
+- Topo: ☰ seções, logo, período e o nome do painel; o botão "Entenda o painel" saiu (cada gráfico
+  tem o seu "?" e cada seção tem "Entenda esta seção").
+- PontoNet com 3 meses: a aba "Pontonet" pode ter o relatório "Ausência de marcação" de 3 meses.
+  O GerarCSVPonto gera uma linha "Justificativa PontoNet" por pedido (CSV com 37 colunas) e a seção
+  PontoNet mostra os pedidos mês a mês, como terminaram, o motivo, o tempo do colaborador e do
+  gestor (os dias que o PontoNet conta) e a tendência por gestor. Corrigido: um pedido cancelado
+  não apaga mais a justificativa aprovada do mesmo dia.
+- Mesma ordem dos gráficos em todas as seções: números do topo, mês a mês, o quê, quando, por
+  gestor, por pessoa, mapa, sinais de atenção, tendências e lista completa.
+
 ## Ordem de uso no mês
 
 1. Rodar `ConsolidarCartaoPonto` no HRCP102 e colar o resultado numa aba `Cartão <Mês>`.

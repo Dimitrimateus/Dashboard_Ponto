@@ -129,7 +129,10 @@ chk('Pausas Térmicas (tabela)', ok and not mism, f"{len(ui['pausas'])} colabora
 Pn=d['Pontonet']; pnh=hdrmap(Pn[0]); aus={}
 for r in Pn[1:]:
     m=s(r[pnh['Matrícula']]); dt=r[pnh['Data falta']]
-    if m and isinstance(dt,datetime.datetime): aus[(m,dt.date())]=(r[pnh['Avaliado em:']], s(r[pnh['Situação atual']]).upper()=='INTEGRADO')
+    if m and isinstance(dt,datetime.datetime):
+        integ=s(r[pnh['Situação atual']]).upper()=='INTEGRADO'
+        if (m,dt.date()) in aus and aus[(m,dt.date())][1] and not integ: continue   # a integrada vale (27/10)
+        aus[(m,dt.date())]=(r[pnh['Avaliado em:']], integ)
 g=collections.defaultdict(list)
 for e in E:
     av,integ=aus.get((e['mat'],e['data'].date()),(None,False))
@@ -374,6 +377,19 @@ if ui.get('tendUnidade'):
         esp['Pausas certas (20 min)']=[f1(pz[c][0]*100/pz[c][1]) if c in pz and pz[c][1] else '–' for c in cic]
         esp['Trabalho acima de 1h40 sem pausa']=[f1(pz[c][2]*100/pz[c][3]) if c in pz and pz[c][3] else '–' for c in cic]
         esp['Batida de pausa faltando']=[int(pz[c][4]) if c in pz else 0 for c in cic]
+    # PontoNet (27/10): aprovados e média de dias do gestor por ciclo
+    if 'Pontonet' in d:
+        Pn2=d['Pontonet']; h2=hdrmap(Pn2[0]); ap=collections.defaultdict(list)
+        for r in Pn2[1:]:
+            dt=r[h2['Data falta']]
+            if s(r[h2['Matrícula']]) and isinstance(dt,datetime.datetime) and s(r[h2['Situação atual']]).upper()=='INTEGRADO':
+                ap[ciclo_de(dt)].append(r[h2['Dias gestor']])
+        def md(l):
+            l=[v for v in l if isinstance(v,(int,float))]
+            if not l: return '–'
+            m=sum(l)/len(l); t=f"{m:.1f}".replace('.',',').replace(',0',''); return t+(' dia' if abs(m-1)<0.05 else ' dias')
+        esp['Justificativas aprovadas no PontoNet']=[len(ap[c]) for c in cic]
+        esp['Dias para o gestor avaliar (média)']=[md(ap[c]) if ap[c] else '–' for c in cic]
     got={r[0]:[(int(v.replace('.','')) if v.replace('.','').isdigit() else v) for v in r[2:5]] for r in ui['tendUnidade']}
     dif={k:(got.get(k),v) for k,v in esp.items() if got.get(k)!=v}
     chk('Tendências: a unidade ciclo a ciclo', not dif and set(got)==set(esp),
@@ -426,3 +442,25 @@ if pb and abaP:
         cor={'rgb(27, 175, 122)':'ok','rgb(247, 147, 30)':'acima','rgb(227, 30, 36)':'sem','rgb(123, 79, 176)':'impar'}
         got_m={cor.get(k,k):v for k,v in pb['mapa'].items()}
         chk('Pausas B9: mapa colaborador x dia (dias por cor)', got_m==dict(st), f"painel {got_m} / fonte {dict(st)}")
+
+# PontoNet (27/10): pedidos, aprovados e tempos médios (colaborador, gestor) de cada ciclo,
+# recalculados da aba do PontoNet. Tempos = média dos dias que o próprio PontoNet conta, só
+# nos pedidos aprovados (INTEGRADO).
+if ui.get('pnTempos'):
+    Pn=d['Pontonet']; h=hdrmap(Pn[0]); cic=collections.defaultdict(lambda:[0,[],[]])
+    def ciclo_pn(x): m=x.month+(1 if x.day>=28 else 0); y=x.year+(1 if m==13 else 0); return (y,(m-1)%12+1)
+    for r in Pn[1:]:
+        dt=r[h['Data falta']]
+        if not s(r[h['Matrícula']]) or not isinstance(dt,datetime.datetime): continue
+        c=cic[ciclo_pn(dt)]; c[0]+=1
+        if s(r[h['Situação atual']]).upper()=='INTEGRADO':
+            c[1].append(r[h['Dias colaborador']]); c[2].append(r[h['Dias gestor']])
+    MES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+    def dt_(l):
+        l=[v for v in l if isinstance(v,(int,float))]
+        if not l: return '–'
+        m=sum(l)/len(l); t=f"{m:.1f}".replace('.',',').replace(',0','')
+        return t+(' dia' if abs(m-1)<0.05 else ' dias')
+    esp={f"{MES[k[1]-1]}/{str(k[0])[2:]}":[str(v[0]),str(len(v[1])),dt_(v[1]),dt_(v[2])] for k,v in cic.items()}
+    got={r[0]:[x.replace('.','') for x in r[1:5]] for r in ui['pnTempos']}
+    chk('PontoNet: pedidos, aprovados e tempos por ciclo', got==esp, str(esp) if got==esp else f"painel {got} / fonte {esp}")

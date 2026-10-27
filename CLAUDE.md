@@ -253,7 +253,7 @@ conteúdo num módulo.
    `UltimaLinhaPreenchida` (não usa `End(xlUp)`).
 10. `TextoLimpo`: erro do Excel (`#N/A`) vira "", quebras de linha viram espaço.
 
-**Saída: contrato do CSV (32 colunas, nesta ordem):**
+**Saída: contrato do CSV (37 colunas, nesta ordem):**
 ```
 data, colaborador, matricula, gestor, setor, cargo, tipo_ocorrencia, situacao, status,
 duracao_minutos, destino_horas_extra, data_tratativa_pontonet, horas_excedentes,
@@ -261,10 +261,12 @@ ocorrencias_extra_falta_mes_atual, ocorrencias_extra_falta_3_meses, pausas_corre
 pausas_menor_20min, pausas_maior_20min, trabalho_correto_140, trabalho_maior_140,
 trabalho_menor_140, pausas_marcacoes_impares, grupo,
 minutos_hora_extra_cartao, minutos_banco_horas_cartao, justificativa_marcacao, origem_marcacao,
-dias_ausencia, emenda_folga, minutos_trabalhados, minutos_descanso, marcacoes_dia
+dias_ausencia, emenda_folga, minutos_trabalhados, minutos_descanso, marcacoes_dia,
+tipo_justificativa, avaliacao_pontonet, dias_colaborador, dias_gestor, dias_rh   (33-37 desde 27/10)
 ```
-(24/25 só na "Resumo Horas Cartão"; 26/27 só na "Marcação Digitada"; 28/29 na "Absenteísmo" e na
-"Afastamento"; 30/31/32 nas 4 de jornada; 32 também na "Pausa Térmica Dia")
+(24/25 só na "Resumo Horas Cartão"; 26/27 só na "Marcação Digitada" (26 também na "Justificativa
+PontoNet"); 28/29 na "Absenteísmo" e na "Afastamento"; 30/31/32 nas 4 de jornada; 32 também na
+"Pausa Térmica Dia"; 33 a 37 só na "Justificativa PontoNet")
 - Separador **vírgula**; campo com vírgula/aspas/quebra vai entre aspas (RFC 4180); UTF-8 com BOM
   (`ADODB.Stream`); datas `dd/mm/aaaa` (`dd/mm/aaaa hh:mm` quando tem hora); duração em minutos
   inteiros (negativo = falta); `grupo` = Interno/Externo pelo nome da aba (vazio na planilha antiga).
@@ -498,7 +500,7 @@ python3 ferramentas/simular_gerarcsv.py                                  # -> da
 NODE_PATH=$(npm root -g) node ferramentas/extrair_painel.js "$PWD/Dashboard/index.html" "$PWD/dados_TODOS.csv" painel.json
 python3 ferramentas/formatar_pausas.py "pausa_termica.xlsx" pausas.pkl       # -> (fim do período, linhas)
 python3 ferramentas/adicionar_aba_xlsx.py in.xlsx out.xlsx dig3.pkl marcacoes "Marcações Digitadas" --substituir  # troca o conteúdo
-PYTHONPATH=ferramentas python3 ferramentas/conferir_painel.py painel.json   # OK/FALHA item a item (hoje 32 itens)
+PYTHONPATH=ferramentas python3 ferramentas/conferir_painel.py painel.json   # OK/FALHA item a item (hoje 33 itens)
 python3 ferramentas/checar_colisoes_vba.py */*.bas                         # antes de entregar VBA
 ```
 Os scripts foram escritos para a planilha de 28/08 a 27/09 (nomes de aba fixos: "Tratamento",
@@ -675,6 +677,30 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   regularizado; filtro de status sempre escondido, coluna Status fora do histórico, do card e da
   origem. (8) **B12 "Qual batida fica faltando" retirada** (a conta dos dias ímpares segue no mapa).
 
+- 27/10: (1) Topo: **sem "Entenda o painel"** (botão escondido, `display:none`; o modo explicação
+  continua no código) e na ordem ☰, logo, período, "Painel de Ponto · ..." (`margin-left:auto` no
+  "Esconder filtros"). Cada seção com explicação geral ganhou **"? Entenda esta seção"**
+  (`.btn-explica-secao`, `.fonte-secao`, classe `explica-secao` na `.pagina`); Ocorrências e
+  Destaque ganharam texto de explicação. (2) **PontoNet de 3 meses** (relatório "Ausência de
+  marcação", 1.894 pedidos de 28/06 a 27/09): GerarCSV `GerarLinhasPontoNet` → linhas
+  **"Justificativa PontoNet"** (situacao = Situação atual; justificativa_marcacao = texto;
+  data_tratativa_pontonet = Avaliado em) e **CSV com 37 colunas** (33 tipo_justificativa, 34
+  avaliacao_pontonet, 35 dias_colaborador, 36 dias_gestor, 37 dias_rh = "Dias GP"). Situações:
+  INTEGRADO (aprovado) 769, CANCELADO 696, ANALISADO 429 (= "Data possui registro de ponto
+  offline": o sistema achou a batida no relógio). Dias = contagem do próprio PontoNet a partir da
+  inclusão do pedido; **tempos médios só dos aprovados** (nos outros os dias continuam correndo).
+  `MontarDicionarioAusencia` agora **não deixa um cancelado/analisado apagar um INTEGRADO** do
+  mesmo dia (bug antigo: 4 tratativas a mais na planilha de setembro; demora 5,7 → 6,2 dias, 56 →
+  60 tratadas). Painel: seção PontoNet com seletor `#pnCiclo`, 4 números, mês a mês por situação
+  + tempos por ciclo, motivo, tempo do gestor por gestor (vermelho > `LIMITE_DIAS_GESTOR` 3),
+  tendência por gestor e lista; a demora antiga (ocorrência → aprovação, mês atual) continua
+  embaixo. Indicadores de tendência `pnAprov` e `pnGestor` (`media:true`: valor = num/den, texto
+  "de 0,9 para 1,6 dias"). `ferramentas/ler_pontonet_csv.py` + layout "pontonet" no
+  `adicionar_aba_xlsx.py`. (3) **Ordem base dos gráficos** em todas as seções (`reordena`
+  aplicado à mão): números do topo → mês a mês → o quê (tipo/motivo) → quando (dia, data, hora) →
+  por gestor/cargo → por pessoa → mapa → sinais de atenção → tendências → lista completa.
+  Conferência 33/33 (item novo: pedidos/aprovados/tempos do PontoNet por ciclo).
+
 ## 12. Estado atual e como continuar (13/10/2026)
 
 **Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`, branch
@@ -732,6 +758,9 @@ com todos e se pode usar salário (só o total da equipe).
   nunca "p.p." nem número solto (19/10). Minigráficos de evolução com balão e clique.
 - Sem status (Regularizado/Pendente) no painel: ele é feito depois do fim do mês (26/10).
 - Ordem das seções e nomes "Ocorrências"/"PontoNet" (26/10); "?" por card; sem B12.
+- Sem "Entenda o painel" no topo; topo = ☰, logo, período, nome (27/10). PontoNet com 3 meses.
+- Ordem base dos gráficos em toda seção (27/10): topo → mês a mês → o quê → quando → gestor →
+  pessoa → mapa → sinais → tendências → lista. Card novo segue essa ordem.
 - **O texto "pegar no pulo" não aparece na tela** (pedido do Dimitri, 18/10): os cards de sinais
   de atenção ficam só com o título. A expressão pode existir em comentários do código.
 

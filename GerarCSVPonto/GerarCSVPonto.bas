@@ -97,7 +97,7 @@ Option Explicit
 ' -----------------------------------------------------------------
 ' PRA ONDE CADA COISA VAI: A ABA "CSV" (formato de saída)
 '
-' Uma linha = um evento. O cabeçalho tem 32 colunas (ver
+' Uma linha = um evento. O cabeçalho tem 37 colunas (ver
 ' PrepararAbaCSV); a maioria das linhas só preenche as primeiras 13
 ' (ocorrência normal — extra, falta, hora extra 100%, curta etc.) e a
 ' 23ª ("grupo" = Interno/Externo, preenchida em toda linha cujo
@@ -130,6 +130,12 @@ Option Explicit
 '     jornada (formatadas pelo FormatarJornada); colunas 30 a 32 =
 '     minutos_trabalhados, minutos_descanso, marcacoes_dia. Ver
 '     GerarLinhasJornada.
+'   - tipo_ocorrencia = "Justificativa PontoNet" → uma por linha do
+'     relatório do PontoNet (até 3 meses; 27/10): situacao = situação atual
+'     (INTEGRADO, CANCELADO, ANALISADO), justificativa_marcacao = texto,
+'     data_tratativa_pontonet = "Avaliado em:", colunas 33 a 37 = tipo da
+'     justificativa, avaliação, dias do colaborador, do gestor e do RH (GP).
+'     Ver GerarLinhasPontoNet.
 '   - tipo_ocorrencia = "Resumo Horas Cartão" → preenche
 '     minutos_hora_extra_cartao / minutos_banco_horas_cartao (total do
 '     mês atual, direto do Cartão Ponto, ver GerarResumoHorasCartao).
@@ -244,6 +250,7 @@ Option Explicit
 '   |     (ou, sem a aba, GerarAbsenteismo -> "Absenteísmo")
 '   |     ambos usam MontarDiasCartao + CalcularEmendaFolga (folga encostada)
 '   |- EncontrarAbaDigitadas + GerarLinhasDigitadas -> "Marcação Digitada"
+'   |- GerarLinhasPontoNet (aba PontoNet, 3 meses) -> "Justificativa PontoNet"
 '   |- EncontrarAbaJornada + GerarLinhasJornada (MinutosDaCelula,
 '   |     HorasMinutosTexto) -> "Intrajornada", "Interjornada",
 '   |     "Interjornada Semanal", "Horas Excedentes"
@@ -813,6 +820,19 @@ ProximaAbaTratamento:
     End If
 
     ' =====================================================================
+    ' Justificativas do PontoNet (27/10): uma linha "Justificativa PontoNet"
+    ' por linha do relatório "Ausência de marcação" (pode ter 3 meses), com a
+    ' situação (INTEGRADO, CANCELADO, ANALISADO), o tipo e o texto da
+    ' justificativa e os dias que cada etapa levou (colaborador, gestor, RH).
+    ' Alimenta a seção PontoNet do painel mês a mês. Ver GerarLinhasPontoNet.
+    ' =====================================================================
+    Dim qtdPontoNet As Long
+    qtdPontoNet = 0
+    If Not wsAus Is Nothing Then
+        GerarLinhasPontoNet wsAus, dictRE, dictGestorPorMatricula, dictGrupoPorMatricula, wsCSV, linhaSaida, qtdPontoNet
+    End If
+
+    ' =====================================================================
     ' Limites de jornada (abas formatadas pelo FormatarJornada, achadas pelo
     ' cabeçalho): uma linha por ocorrência de cada relatório, com o tipo
     ' "Intrajornada", "Interjornada", "Interjornada Semanal" ou "Horas
@@ -862,6 +882,8 @@ ProximaAbaTratamento:
         msgAuditoria = msgAuditoria & vbCrLf & "Aba de Afastamentos não encontrada: " & qtdAbsAtestados & _
             " atestado(s), somando " & qtdAbsDias & " dia(s), tirados dos Cartões."
     End If
+    msgAuditoria = msgAuditoria & vbCrLf & IIf(wsAus Is Nothing, "PontoNet não encontrado: sem justificativas no painel.", _
+        qtdPontoNet & " justificativa(s) do PontoNet.")
     If wsDigitadas Is Nothing Then
         msgAuditoria = msgAuditoria & vbCrLf & "Aba de Marcações Digitadas não encontrada; essa parte do painel fica vazia."
     Else
@@ -1818,6 +1840,91 @@ ProximaDigitada:
     Next r
 End Sub
 
+' Uma linha "Justificativa PontoNet" por linha do relatório "Ausência de
+' marcação" (27/10). O relatório pode trazer 3 meses. Colunas usadas (pelo
+' nome do cabeçalho): Data falta, Hora justificada, Matrícula, Nome, Função,
+' Gestor, Situação atual, Tipo justificativa, Justificativa, Avaliação,
+' Avaliado em:, Dias colaborador, Dias gestor, Dias GP. Os dias são os que o
+' próprio PontoNet conta: colaborador = da pendência aberta até justificar;
+' gestor = da justificativa até a avaliação; GP (RH) = da avaliação até o RH.
+' Dia em branco (ex.: RH numa justificativa cancelada) fica em branco.
+' Gestor: o da Tratamento/ORG; sem ele, o do próprio relatório.
+Private Sub GerarLinhasPontoNet(ws As Worksheet, dictRE As Object, dictGestorPorMatricula As Object, _
+    dictGrupoPorMatricula As Object, wsCSV As Worksheet, ByRef linhaSaida As Long, ByRef qtdGerada As Long)
+
+    Dim colMat As Long, colData As Long, colHora As Long, colNome As Long, colFuncao As Long, colGestor As Long
+    Dim colSit As Long, colTipo As Long, colJust As Long, colAval As Long, colAvaliado As Long
+    Dim colDiasColab As Long, colDiasGestor As Long, colDiasGP As Long
+    colMat = ColunaPorCabecalho(ws, "Matrícula")
+    colData = ColunaPorCabecalho(ws, "Data falta")
+    colHora = ColunaPorCabecalho(ws, "Hora justificada")
+    colNome = ColunaPorCabecalho(ws, "Nome")
+    colFuncao = ColunaPorCabecalho(ws, "Função")
+    colGestor = ColunaPorCabecalho(ws, "Gestor")
+    colSit = ColunaPorCabecalho(ws, "Situação atual")
+    colTipo = ColunaPorCabecalho(ws, "Tipo justificativa")
+    colJust = ColunaPorCabecalho(ws, "Justificativa")
+    colAval = ColunaPorCabecalho(ws, "Avaliação")
+    colAvaliado = ColunaPorCabecalho(ws, "Avaliado em:")
+    colDiasColab = ColunaPorCabecalho(ws, "Dias colaborador")
+    colDiasGestor = ColunaPorCabecalho(ws, "Dias gestor")
+    colDiasGP = ColunaPorCabecalho(ws, "Dias GP")
+    If colMat = 0 Or colData = 0 Then Exit Sub
+
+    Dim ultimaLinha As Long, r As Long
+    Dim mat As String, nomePN As String, vData As Variant, vHora As Variant, dataHora As Date
+    Dim setorNome As String, cargoNome As String, gestorPN As String, vAvaliado As Variant
+    ultimaLinha = UltimaLinhaPreenchida(ws, colMat)
+    For r = 2 To ultimaLinha
+        mat = TextoLimpo(ws.Cells(r, colMat).Value)
+        vData = ws.Cells(r, colData).Value
+        If mat = "" Or Not IsDate(vData) Then GoTo ProximaPontoNet
+
+        ' data da falta + a hora que precisou de justificativa (ao minuto)
+        dataHora = DateSerial(Year(CDate(vData)), Month(CDate(vData)), Day(CDate(vData)))
+        If colHora > 0 Then
+            vHora = ws.Cells(r, colHora).Value
+            If IsDate(vHora) Then
+                dataHora = dataHora + TimeSerial(Hour(CDate(vHora)), Minute(CDate(vHora)), 0)
+            ElseIf IsNumeric(vHora) And Not IsEmpty(vHora) Then
+                dataHora = dataHora + CDate(Round((CDbl(vHora) - Int(CDbl(vHora))) * 1440, 0) / 1440)
+            End If
+        End If
+
+        nomePN = TextoDaCelula(ws, r, colNome)
+        If nomePN = "" Then nomePN = "Matrícula " & mat
+        ObterSetorCargo dictRE, mat, setorNome, cargoNome
+        If cargoNome = "" Then cargoNome = TextoDaCelula(ws, r, colFuncao)
+        gestorPN = TextoDoDicionario(dictGestorPorMatricula, mat)
+        If gestorPN = "" Then gestorPN = TextoDaCelula(ws, r, colGestor)
+        vAvaliado = Empty
+        If colAvaliado > 0 Then
+            If IsDate(ws.Cells(r, colAvaliado).Value) Then vAvaliado = ws.Cells(r, colAvaliado).Value
+        End If
+
+        EscreverLinhaCSV wsCSV, linhaSaida, dataHora, nomePN, mat, gestorPN, setorNome, cargoNome, _
+            "Justificativa PontoNet", TextoDaCelula(ws, r, colSit), "Pendente", 0, "", vAvaliado, _
+            grupo:=TextoDoDicionario(dictGrupoPorMatricula, mat), _
+            justificativaMarcacao:=TextoDaCelula(ws, r, colJust), _
+            tipoJustificativa:=TextoDaCelula(ws, r, colTipo), avaliacaoPontoNet:=TextoDaCelula(ws, r, colAval), _
+            diasColaborador:=DiasDaCelula(ws, r, colDiasColab), diasGestor:=DiasDaCelula(ws, r, colDiasGestor), _
+            diasRH:=DiasDaCelula(ws, r, colDiasGP)
+        linhaSaida = linhaSaida + 1
+        qtdGerada = qtdGerada + 1
+ProximaPontoNet:
+    Next r
+End Sub
+
+' Número de dias de uma célula do PontoNet; Empty se a coluna não existe ou a
+' célula está vazia (para a linha do CSV ficar em branco, e não com zero).
+Private Function DiasDaCelula(ws As Worksheet, r As Long, col As Long) As Variant
+    DiasDaCelula = Empty
+    If col = 0 Then Exit Function
+    Dim v As Variant
+    v = ws.Cells(r, col).Value
+    If IsNumeric(v) And Not IsEmpty(v) And TextoLimpo(v) <> "" Then DiasDaCelula = CLng(v)
+End Function
+
 ' Aba ORG (relação colaborador x gestor): a que começa com "ORG" e tem as
 ' colunas Matricula, COLABORADOR e GESTOR na linha 1; se nenhuma começar
 ' com "ORG", vale a primeira aba que tiver essas três colunas.
@@ -2358,7 +2465,9 @@ Private Function MontarDicionarioAusencia(ws As Worksheet) As Object
 
     ultimaLinha = UltimaLinhaPreenchida(ws, colMat)
     ' Uma entrada por matrícula+data da falta. Se a mesma chave aparecer duas
-    ' vezes, vale a ÚLTIMA (atribuição direta dict(chave) = ...).
+    ' vezes, vale a ÚLTIMA, menos quando a que já está guardada é INTEGRADO e
+    ' a nova não é (27/10: com 3 meses, o mesmo dia pode ter uma justificativa
+    ' integrada e outra cancelada; a integrada é a que vale).
     For r = 2 To ultimaLinha
         mat = TextoLimpo(ws.Cells(r, colMat).Value)
         dt = ws.Cells(r, colData).Value
@@ -2366,11 +2475,15 @@ Private Function MontarDicionarioAusencia(ws As Worksheet) As Object
             chave = mat & "|" & Format(CDate(dt), "yyyy-mm-dd")
             situacaoAtual = TextoLimpo(ws.Cells(r, colSituacao).Value)
             integrado = (UCase$(situacaoAtual) = "INTEGRADO")
+            If dict.Exists(chave) And Not integrado Then
+                If dict(chave)(2) = True Then GoTo ProximaAusencia
+            End If
             dict(chave) = Array( _
                 IIf(colJustificativa > 0, TextoLimpo(ws.Cells(r, colJustificativa).Value), ""), _
                 IIf(colAvaliado > 0, ws.Cells(r, colAvaliado).Value, Empty), _
                 integrado)
         End If
+ProximaAusencia:
     Next r
     Set MontarDicionarioAusencia = dict
 End Function
@@ -2519,7 +2632,7 @@ Private Function PrepararAbaCSV(wb As Workbook) As Worksheet
         ws.Cells.Clear
     End If
 
-    ' O CONTRATO COM O PAINEL: 32 colunas, nesta ordem. O index.html acha cada
+    ' O CONTRATO COM O PAINEL: 37 colunas, nesta ordem (33 a 37 desde 27/10, PontoNet). O index.html acha cada
     ' coluna pelo nome (HEADER_ALIASES), mas o ExportarCSVPorGestor usa a posição 4
     ' para o gestor. Coluna nova: acrescente no FIM, aqui e em EscreverLinhaCSV.
     Dim cabecalhos As Variant, i As Long
@@ -2531,7 +2644,8 @@ Private Function PrepararAbaCSV(wb As Workbook) As Worksheet
                         "minutos_hora_extra_cartao", "minutos_banco_horas_cartao", _
                         "justificativa_marcacao", "origem_marcacao", _
                         "dias_ausencia", "emenda_folga", _
-                        "minutos_trabalhados", "minutos_descanso", "marcacoes_dia")
+                        "minutos_trabalhados", "minutos_descanso", "marcacoes_dia", _
+                        "tipo_justificativa", "avaliacao_pontonet", "dias_colaborador", "dias_gestor", "dias_rh")
     For i = LBound(cabecalhos) To UBound(cabecalhos)
         ws.Cells(1, i + 1).Value = cabecalhos(i)
     Next i
@@ -2560,11 +2674,15 @@ Private Sub EscreverLinhaCSV(ws As Worksheet, linha As Long, dataOcorrencia As V
     Optional minBancoHorasCartao As Variant = Empty, Optional justificativaMarcacao As String = "", _
     Optional origemMarcacao As String = "", Optional diasAusencia As Variant = Empty, _
     Optional emendaFolga As String = "", Optional minutosTrabalhados As Variant = Empty, _
-    Optional minutosDescanso As Variant = Empty, Optional marcacoesDia As String = "")
+    Optional minutosDescanso As Variant = Empty, Optional marcacoesDia As String = "", _
+    Optional tipoJustificativa As String = "", Optional avaliacaoPontoNet As String = "", _
+    Optional diasColaborador As Variant = Empty, Optional diasGestor As Variant = Empty, _
+    Optional diasRH As Variant = Empty)
 
     ' Colunas 1 a 13: presentes em toda linha. 14/15: auditoria. 16 a 22: pausas.
     ' 23: grupo. 24/25: resumo de horas. 26/27: marcação digitada. 28/29:
     ' afastamento/absenteísmo. 30 a 32: jornada (trabalhado, descanso, batidas).
+    ' 33 a 37: justificativa do PontoNet (tipo, avaliação, dias de cada etapa).
     ' Opcional não informado = célula vazia.
     ws.Cells(linha, 1).Value = CDate(dataOcorrencia)
     ws.Cells(linha, 2).Value = nome
@@ -2602,6 +2720,11 @@ Private Sub EscreverLinhaCSV(ws As Worksheet, linha As Long, dataOcorrencia As V
     If Not IsEmpty(minutosTrabalhados) Then ws.Cells(linha, 30).Value = minutosTrabalhados
     If Not IsEmpty(minutosDescanso) Then ws.Cells(linha, 31).Value = minutosDescanso
     If marcacoesDia <> "" Then ws.Cells(linha, 32).Value = marcacoesDia
+    If tipoJustificativa <> "" Then ws.Cells(linha, 33).Value = tipoJustificativa
+    If avaliacaoPontoNet <> "" Then ws.Cells(linha, 34).Value = avaliacaoPontoNet
+    If Not IsEmpty(diasColaborador) Then ws.Cells(linha, 35).Value = diasColaborador
+    If Not IsEmpty(diasGestor) Then ws.Cells(linha, 36).Value = diasGestor
+    If Not IsEmpty(diasRH) Then ws.Cells(linha, 37).Value = diasRH
 End Sub
 
 ' Pede ao usuário a pasta de destino dos CSVs exportados por
