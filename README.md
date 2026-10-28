@@ -423,6 +423,8 @@ As 15 ideias marcadas na página de ideias que ainda faltavam:
 - A demora (do dia da batida que faltou até a aprovação) agora segue o mês escolhido na seção.
 - Topo: seções e logo à esquerda, período no meio, nome do painel e "Esconder filtros" à direita.
 - Menu: Tendências depois de PontoNet.
+- Dá para abrir vários arquivos juntos (ex.: o de dois gestores) e juntar mais um depois; o filtro de
+  gestor mostra todos. Linhas repetidas entre os arquivos (ex.: TODOS + um gestor) contam uma vez.
 
 ## Ordem de uso no mês
 

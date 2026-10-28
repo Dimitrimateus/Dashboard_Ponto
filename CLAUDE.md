@@ -713,6 +713,14 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   de 1180 px volta a ser uma fila sem o nome. (4) Menu e páginas: **Tendências depois de PontoNet**.
   Conferência 33/33 (a demora agora conferida com os aprovados do PontoNet do último ciclo).
 
+- 28/10 (depois): **vários arquivos de uma vez** (`handleFiles`, `lerArquivo`, `abrirDados`,
+  `state.arquivos`, `#fileInput multiple`; "+ Juntar mais um arquivo" = `#addBtn`/`#fileInputAdd`,
+  ou arrastar para cima do resumo). Junta as linhas e ignora só as **repetidas entre arquivos
+  diferentes** (`rec._linha` = a linha crua; dentro do mesmo arquivo, linhas iguais continuam
+  valendo — há duplicatas legítimas). Ex.: Poliana + Gesiel → filtro de gestor com os dois;
+  + dados_TODOS → 7.978 linhas, iguais ao TODOS sozinho. Arquivo inválido no meio: aviso e os
+  outros abrem. Conferência 33/33.
+
 ## 12. Estado atual e como continuar (13/10/2026)
 
 **Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`, branch
@@ -774,6 +782,7 @@ com todos e se pode usar salário (só o total da equipe).
   (27-28/10). PontoNet com 3 meses, **só aprovados**; a demora segue o ciclo escolhido (28/10).
 - Ordem do menu (28/10): Ocorrências, Digitadas, Afastamentos, Jornada, Destaque, Pausas,
   PontoNet, Tendências, Lista de colaboradores, Histórico, Todas.
+- Painel abre um ou vários CSVs juntos (28/10); repetidas entre arquivos contam uma vez.
 - Ordem base dos gráficos em toda seção (27/10): topo → mês a mês → o quê → quando → gestor →
   pessoa → mapa → sinais → tendências → lista. Card novo segue essa ordem.
 - **O texto "pegar no pulo" não aparece na tela** (pedido do Dimitri, 18/10): os cards de sinais

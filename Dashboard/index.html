@@ -333,6 +333,10 @@
     padding:10px 12px; font-size:12.5px; color:#1A1A1A;
   }
   .file-summary strong{ display:block; color:#000000; margin-bottom:2px; }
+  .file-summary ul{ margin:2px 0 4px; padding-left:16px; }
+  .file-summary li{ word-break:break-all; }
+  #addBtn{ display:flex; justify-content:center; align-items:center; width:100%; box-sizing:border-box; margin:10px 0 8px; cursor:pointer; }
+  .file-summary.dragover{ border-color:var(--c-orange); background:#FFF3E6; }
 
   .btn{
     display:inline-flex; align-items:center; justify-content:center; gap:6px;
@@ -888,7 +892,7 @@
           <h3>Como usar o painel</h3>
           <ol>
             <li><strong>Pegue o arquivo do mês.</strong> O RH envia um arquivo <code>dados_&lt;seu nome&gt;.csv</code> (só a sua equipe) ou <code>dados_TODOS.csv</code> (todas as equipes). Salve no computador ou no celular; não precisa abrir no Excel.</li>
-            <li><strong>Abra o arquivo aqui.</strong> No bloco “Carregar dados” (à direita; no celular, no alto da tela), clique para escolher o arquivo ou arraste-o para cima do bloco. O arquivo é lido só no seu navegador: nada é enviado para a internet.</li>
+            <li><strong>Abra o arquivo aqui.</strong> No bloco “Carregar dados” (à direita; no celular, no alto da tela), clique para escolher o arquivo ou arraste-o para cima do bloco. Dá para abrir <strong>mais de um arquivo de uma vez</strong> (por exemplo, o de dois gestores): o painel junta os dois, e o filtro de gestor mostra os dois para você escolher um ou ambos. Depois de aberto, “Juntar mais um arquivo” acrescenta outro. O arquivo é lido só no seu navegador: nada é enviado para a internet.</li>
             <li><strong>Escolha a seção.</strong> O botão <strong>&#9776;</strong> no canto superior esquerdo troca de seção: Ocorrências, Marcações digitadas, Afastamentos, Jornada, Colaboradores em destaque, Pausas térmicas, PontoNet, Tendências, Lista de colaboradores e Histórico. A última opção mostra tudo numa página só.</li>
             <li><strong>Filtre.</strong> Em “Filtros” escolha gestor, cargo, colaborador, tipo de ocorrência ou período. Tudo no painel muda junto. “Limpar filtros” volta ao arquivo inteiro; “Esconder filtros”, no topo, dá mais espaço aos gráficos.</li>
             <li><strong>Use os gráficos.</strong> Clique num item da legenda (as bolinhas coloridas em cima do gráfico) para ver só aquele tipo; clique em outros para somar e em “Mostrar todos” para voltar; cada gráfico tem o seu filtro. O botão <strong>&#x26F6;</strong> no canto de cada card abre o gráfico em tela cheia (Esc fecha); as listas longas aparecem inteiras só em tela cheia. A etiqueta amarela 📅 embaixo do título diz qual período aquele card considera.</li>
@@ -1554,9 +1558,9 @@
           <h3>1. Carregar dados</h3>
           <label class="upload-drop" id="dropZone" for="fileInput">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 15V3m0 0 4 4m-4-4-4 4M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span class="drop-title" id="dropTitle">Clique ou arraste o CSV aqui</span>
-            <span class="drop-sub" id="dropSub">Arquivo fornecido pelo RH</span>
-            <input type="file" id="fileInput" accept=".csv,text/csv" hidden>
+            <span class="drop-title" id="dropTitle">Clique ou arraste os arquivos CSV aqui</span>
+            <span class="drop-sub" id="dropSub">Um ou mais arquivos fornecidos pelo RH</span>
+            <input type="file" id="fileInput" accept=".csv,text/csv" multiple hidden>
           </label>
           <div class="upload-status" id="uploadStatus" hidden>
             <span class="spinner" aria-hidden="true"></span>
@@ -1568,7 +1572,10 @@
               <span id="fileSummaryMeta"></span>
             </div>
           </div>
-          <button class="btn-ghost btn-block" id="resetBtn" hidden>Carregar outro arquivo</button>
+          <!-- mais arquivos depois do primeiro (28/10): juntam-se aos que já estão abertos -->
+          <label class="btn-ghost btn-block" id="addBtn" for="fileInputAdd" hidden>+ Juntar mais um arquivo</label>
+          <input type="file" id="fileInputAdd" accept=".csv,text/csv" multiple hidden>
+          <button class="btn-ghost btn-block" id="resetBtn" hidden>Fechar e escolher outros arquivos</button>
         </div>
 
         <!-- Filtros: as opções são preenchidas por populateFilterOptions a partir do
@@ -2382,6 +2389,7 @@
         diasGestor: idx.diasGestor != null && textoCampo(r[idx.diasGestor]) !== "" ? parseNumber(r[idx.diasGestor]) : null,
         diasRH: idx.diasRH != null && textoCampo(r[idx.diasRH]) !== "" ? parseNumber(r[idx.diasRH]) : null
       };
+      rec._linha = r.join("\u0001");   // a linha inteira: tira repetidas ao juntar vários arquivos
       out.push(rec);
     }
     return { records: out, error: null };
@@ -5383,32 +5391,70 @@
   // de um arquivo carregado anteriormente. Em caso de erro, mantém a
   // tela no estado anterior (dropZone visível de novo) em vez de deixar
   // o painel num estado inconsistente.
-  function handleFile(file){
+  // Vários arquivos de uma vez (28/10): por exemplo, o de dois gestores. Lê
+  // todos, junta as linhas e tira as repetidas (a mesma linha que vem em dois
+  // arquivos, como no dados_TODOS + o de um gestor, conta uma vez só).
+  // adicionar = true: junta aos arquivos já abertos ("Juntar mais um arquivo").
+  state.arquivos = [];
+  function lerArquivo(file){
+    return new Promise(function(ok){
+      var reader = new FileReader();
+      reader.onload = function(e){ ok({ nome:file.name, res: recordsFromCSV(String(e.target.result)) }); };
+      reader.onerror = function(){ ok({ nome:file.name, res:{ records:[], error:"Erro ao ler o arquivo." } }); };
+      reader.readAsText(file, "UTF-8");
+    });
+  }
+  function handleFiles(files, adicionar){
+    files = [].slice.call(files || []);
+    if (!files.length) return;
     $("dropZone").hidden = true;
     $("uploadStatus").hidden = false;
-
-    var reader = new FileReader();
-    reader.onload = function(e){
+    Promise.all(files.map(lerArquivo)).then(function(lidos){
       $("uploadStatus").hidden = true;
-      var result = recordsFromCSV(String(e.target.result));
-      if (result.error || !result.records.length){
-        alert("Não foi possível ler este CSV.\n" + (result.error || "Nenhuma linha válida encontrada.") +
-              "\n\nVerifique se o arquivo segue o modelo (modelo-dados.csv) fornecido pelo RH.");
-        $("dropZone").hidden = false;
-        return;
+      var erros = lidos.filter(function(l){ return l.res.error || !l.res.records.length; });
+      var bons = lidos.filter(function(l){ return !l.res.error && l.res.records.length; });
+      if (erros.length){
+        alert("Não foi possível ler " + (erros.length > 1 ? "estes arquivos" : "este arquivo") + ":\n" +
+          erros.map(function(l){ return "• " + l.nome + ": " + (l.res.error || "Nenhuma linha válida encontrada."); }).join("\n") +
+          "\n\nVerifique se o arquivo segue o modelo fornecido pelo RH." + (bons.length ? "\nOs outros arquivos foram abertos normalmente." : ""));
       }
-      state.records = result.records;
+      if (!bons.length){ if (!state.records.length) $("dropZone").hidden = false; return; }
+      // junta (aos já abertos, se for "adicionar") e tira as linhas repetidas
+      // Só conta como repetida a linha que já veio de OUTRO arquivo: dentro do
+      // mesmo arquivo, duas linhas iguais são dois registros de verdade (ex.:
+      // duas batidas digitadas no mesmo minuto) e ficam as duas.
+      var base = adicionar ? state.records.slice() : [];
+      var vistas = new Set(base.map(function(r){ return r._linha; }));
+      var repetidas = 0;
+      bons.forEach(function(l){
+        var desteArquivo = [];
+        l.res.records.forEach(function(r){
+          if (vistas.has(r._linha)){ repetidas++; return; }
+          desteArquivo.push(r);
+        });
+        desteArquivo.forEach(function(r){ vistas.add(r._linha); base.push(r); });
+      });
+      state.arquivos = (adicionar ? state.arquivos : []).concat(bons.map(function(l){ return { nome:l.nome, linhas:l.res.records.length }; }));
+      state.repetidas = (adicionar ? (state.repetidas || 0) : 0) + repetidas;
+      abrirDados(base);
+    });
+  }
+  function abrirDados(records){
+      state.records = records;
       state.colorMaps = { gestor:{}, setor:{}, cargo:{}, tipo:{}, status:{}, motivo:{} };
       prepararCoresSeries();
       limparControlesFiltro();
 
       // state.records inclui linhas que não são ocorrência (resumos, curtas,
       // hora extra), por isso aqui é "linhas", não "ocorrências".
-      // o nome do arquivo já aparece em "Carregar dados"; o topo não repete (26/10)
-      $("fileSummaryName").textContent = file.name;
-      $("fileSummaryMeta").textContent = formatNum(state.records.length) + " linhas carregadas";
+      var arqs = state.arquivos;
+      $("fileSummaryName").innerHTML = arqs.length === 1 ? escapeHtml(arqs[0].nome)
+        : arqs.length + " arquivos abertos juntos:<ul>" + arqs.map(function(a){ return "<li>" + escapeHtml(a.nome) + "</li>"; }).join("") + "</ul>";
+      $("fileSummaryMeta").textContent = formatNum(state.records.length) + " linhas carregadas" +
+        (state.repetidas ? " · " + formatNum(state.repetidas) + " linha(s) repetida(s) entre os arquivos contada(s) uma vez só" : "");
       $("fileSummary").hidden = false;
       $("resetBtn").hidden = false;
+      $("addBtn").hidden = false;
       $("filtersBlock").hidden = false;
       $("filtersDetails").open = window.innerWidth > 768;
       $("mobileBar").hidden = false;
@@ -5426,20 +5472,21 @@
       aplicarPagina();
       window.scrollTo({ top:0 });
       renderDashboard();
-    };
-    reader.onerror = function(){
-      $("uploadStatus").hidden = true;
-      $("dropZone").hidden = false;
-      alert("Erro ao ler o arquivo. Tente novamente.");
-    };
-    reader.readAsText(file, "UTF-8");
   }
 
   // Duas formas de abrir o arquivo: clicar e escolher (fileInput) ou arrastar
   // para o bloco "Carregar dados" (dropZone). As duas chamam handleFile.
-  $("fileInput").addEventListener("change", function(e){
-    if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+  $("fileInput").addEventListener("change", function(e){ handleFiles(e.target.files, false); });
+  $("fileInputAdd").addEventListener("change", function(e){ handleFiles(e.target.files, true); e.target.value = ""; });
+  // arrastar arquivos para cima do resumo (depois de aberto) também junta
+  var resumoArq = $("fileSummary");
+  ["dragenter","dragover"].forEach(function(evt){
+    resumoArq.addEventListener(evt, function(e){ e.preventDefault(); resumoArq.classList.add("dragover"); });
   });
+  ["dragleave","drop"].forEach(function(evt){
+    resumoArq.addEventListener(evt, function(e){ e.preventDefault(); resumoArq.classList.remove("dragover"); });
+  });
+  resumoArq.addEventListener("drop", function(e){ handleFiles(e.dataTransfer.files, true); });
 
   var dropZone = $("dropZone");
   ["dragenter","dragover"].forEach(function(evt){
@@ -5448,10 +5495,7 @@
   ["dragleave","drop"].forEach(function(evt){
     dropZone.addEventListener(evt, function(e){ e.preventDefault(); dropZone.classList.remove("dragover"); });
   });
-  dropZone.addEventListener("drop", function(e){
-    var f = e.dataTransfer.files && e.dataTransfer.files[0];
-    if (f) handleFile(f);
-  });
+  dropZone.addEventListener("drop", function(e){ handleFiles(e.dataTransfer.files, false); });
 
   // "Carregar outro arquivo": esquece os dados e volta a tela ao estado
   // inicial (sem arquivo, com o guia "Como usar o painel").
@@ -5468,6 +5512,8 @@
     $("fileSummary").hidden = true;
     $("dropZone").hidden = false;
     $("resetBtn").hidden = true;
+    $("addBtn").hidden = true;
+    state.arquivos = []; state.repetidas = 0;
     $("filtersBlock").hidden = true;
     $("emptyState").hidden = false;
     $("kpiRow").hidden = true;
@@ -6208,7 +6254,7 @@
 
   // em telas de toque, "arrastar" não é um gesto natural: troca o texto do upload
   if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches){
-    $("dropTitle").textContent = "Toque para selecionar o arquivo CSV";
+    $("dropTitle").textContent = "Toque para selecionar os arquivos CSV";
   }
 
 })();
