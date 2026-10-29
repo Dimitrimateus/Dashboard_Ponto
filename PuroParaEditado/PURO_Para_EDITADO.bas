@@ -74,10 +74,13 @@ Option Explicit
 '       PROCX no ORG), a fórmula é estendida para as linhas novas; se não tem,
 '       o valor vem do ORG (Tipo de trabalho, Cargo, GESTOR);
 '     Check -> fica em branco (o RH marca).
-'   Se a aba de destino já tem linhas, a macro pergunta: apagar e colar de novo,
-'   colar embaixo, ou não colar. Quem não está no ORG (ou está sem "Tipo de
-'   trabalho") não é colado: a linha fica AMARELA na EDITADO e o nome aparece
-'   na mensagem final. Para refazer só esta parte, rode
+'   A macro é usada TODO DIA: ela nunca apaga nada das abas de tratamento. Se a
+'   aba já tem linhas, pergunta: OK = colar embaixo das que existem, Cancelar =
+'   não colar. Quem não está no ORG (ou está sem "Tipo de trabalho") não é
+'   colado: a linha fica AMARELA na EDITADO. Toda pessoa com informação faltando
+'   no ORG (não está lá, sem Tipo de trabalho, Cargo ou Gestor) aparece na aba
+'   "Avisos ORG", refeita a cada execução (EscreverAbaAvisos), e a mensagem
+'   final avisa. Para refazer só esta parte, rode
 '   DistribuirEditadoNasAbasTratamento com a aba EDITADO aberta.
 ' ================================================================================
 
@@ -512,7 +515,7 @@ Private Function DistribuirNasAbasTratamento(wb As Workbook, wsEd As Worksheet) 
     Dim colEd As Object, colOrg As Object
     Dim orgPorMat As Object, orgPorNome As Object
     Dim linhasInt As Collection, linhasExt As Collection
-    Dim semTipo As String, qtdSemTipo As Long
+    Dim qtdSemTipo As Long, jaInt As Long, jaExt As Long
     Dim ultEd As Long, r As Long, k As String, tipoTxt As String
     Dim dadosOrg As Variant
     Dim resumo As String
@@ -578,23 +581,28 @@ Private Function DistribuirNasAbasTratamento(wb As Workbook, wsEd As Worksheet) 
     Set linhasInt = New Collection
     Set linhasExt = New Collection
     ultEd = UltimaLinhaDaAba(wsEd)
-    Dim infoOrg As Variant, achou As Boolean
+    ' avisos: uma linha por pessoa com o que falta no ORG (aba "Avisos ORG", 29/10)
+    Dim avisos As Object, faltaTxt As String, matTxt As String, nomeTxt As String, chavePes As String
+    Set avisos = CreateObject("Scripting.Dictionary")
+    Dim infoOrg As Variant, achou As Boolean, achouPeloNome As Boolean, vaiColar As Boolean
     For r = 2 To ultEd
-        achou = False
-        If colEd.Exists("MATRICULA") Then
-            k = ChaveDaMatricula(wsEd.Cells(r, colEd("MATRICULA")).Value)
-            If k <> "" Then
-                If orgPorMat.Exists(k) Then infoOrg = orgPorMat(k): achou = True
-            End If
+        achou = False: achouPeloNome = False
+        matTxt = "": nomeTxt = ""
+        If colEd.Exists("MATRICULA") Then matTxt = TextoDaCelula(wsEd.Cells(r, colEd("MATRICULA")).Value)
+        If colEd.Exists("NOME") Then nomeTxt = TextoDaCelula(wsEd.Cells(r, colEd("NOME")).Value)
+        k = ChaveDaMatricula(matTxt)
+        If k <> "" Then
+            If orgPorMat.Exists(k) Then infoOrg = orgPorMat(k): achou = True
         End If
-        If Not achou And colEd.Exists("NOME") Then
-            k = NormTexto(TextoDaCelula(wsEd.Cells(r, colEd("NOME")).Value))
+        If Not achou Then
+            k = NormTexto(nomeTxt)
             If k <> "" Then
-                If orgPorNome.Exists(k) Then infoOrg = orgPorNome(k): achou = True
+                If orgPorNome.Exists(k) Then infoOrg = orgPorNome(k): achou = True: achouPeloNome = True
             End If
         End If
         tipoTxt = ""
         If achou Then tipoTxt = NormTexto(CStr(infoOrg(0)))
+        vaiColar = achou And (InStr(tipoTxt, "EXTERN") > 0 Or InStr(tipoTxt, "INTERN") > 0)
         If achou And InStr(tipoTxt, "EXTERN") > 0 Then
             linhasExt.Add Array(r, infoOrg)
         ElseIf achou And InStr(tipoTxt, "INTERN") > 0 Then
@@ -603,16 +611,35 @@ Private Function DistribuirNasAbasTratamento(wb As Workbook, wsEd As Worksheet) 
             ' fora do ORG ou sem "Tipo de trabalho": não cola, pinta de amarelo
             wsEd.Rows(r).Interior.Color = RGB(255, 235, 156)
             qtdSemTipo = qtdSemTipo + 1
-            If qtdSemTipo <= 15 And colEd.Exists("NOME") Then
-                semTipo = semTipo & vbCrLf & "   - " & TextoDaCelula(wsEd.Cells(r, colEd("NOME")).Value) & _
-                    IIf(achou, " (sem ""Tipo de trabalho"" no ORG)", " (não está no ORG)")
+        End If
+
+        ' o que falta para esta pessoa
+        faltaTxt = ""
+        If Not achou Then
+            faltaTxt = "Não está no ORG (nem pela matrícula nem pelo nome)"
+        Else
+            If achouPeloNome And matTxt <> "" Then faltaTxt = "Matrícula " & matTxt & " não está no ORG (achado só pelo nome)"
+            If tipoTxt = "" Then
+                faltaTxt = faltaTxt & IIf(faltaTxt = "", "", "; ") & "Falta o Tipo de trabalho"
+            ElseIf Not vaiColar Then
+                faltaTxt = faltaTxt & IIf(faltaTxt = "", "", "; ") & "Tipo de trabalho """ & infoOrg(0) & """ não é Interno nem Externo"
+            End If
+            If CStr(infoOrg(1)) = "" Then faltaTxt = faltaTxt & IIf(faltaTxt = "", "", "; ") & "Falta o Cargo"
+            If CStr(infoOrg(2)) = "" Then faltaTxt = faltaTxt & IIf(faltaTxt = "", "", "; ") & "Falta o Gestor"
+        End If
+        If faltaTxt <> "" Then
+            chavePes = IIf(ChaveDaMatricula(matTxt) <> "", "M" & ChaveDaMatricula(matTxt), "N" & NormTexto(nomeTxt))
+            If Not avisos.Exists(chavePes) Then
+                avisos.Add chavePes, Array(matTxt, nomeTxt, faltaTxt, IIf(vaiColar, "Sim", "Não (está em amarelo na " & wsEd.Name & ")"))
             End If
         End If
     Next r
+    EscreverAbaAvisos wb, avisos
 
-    ' --- se alguma aba de destino já tem linhas, pergunta uma vez só
+    ' --- se alguma aba de destino já tem linhas, pergunta uma vez só. A macro é
+    '     usada todo dia (29/10): ela NUNCA apaga nada das abas de tratamento;
+    '     só cola embaixo (OK) ou não cola (Cancelar).
     Dim modo As VbMsgBoxResult
-    modo = vbYes
     Dim jaTem As Boolean
     If Not wsInt Is Nothing Then
         If UltimaLinhaDados(wsInt) > 1 Then jaTem = True
@@ -623,13 +650,13 @@ Private Function DistribuirNasAbasTratamento(wb As Workbook, wsEd As Worksheet) 
     If jaTem Then
         Application.ScreenUpdating = True
         modo = MsgBox("As abas de tratamento já têm linhas preenchidas." & vbCrLf & vbCrLf & _
-                      "Sim = APAGAR as linhas que estão lá e colar as deste mês" & vbCrLf & _
-                      "Não = colar EMBAIXO das linhas que já existem" & vbCrLf & _
-                      "Cancelar = não mexer nas abas de tratamento", _
-                      vbYesNoCancel + vbQuestion, "Colar nas abas de tratamento")
+                      "OK = colar as linhas novas EMBAIXO das que já existem (nada é apagado)" & vbCrLf & _
+                      "Cancelar = não colar nada nas abas de tratamento", _
+                      vbOKCancel + vbQuestion, "Colar nas abas de tratamento")
         Application.ScreenUpdating = False
         If modo = vbCancel Then
-            DistribuirNasAbasTratamento = "Abas de tratamento: nada foi colado (você escolheu Cancelar)."
+            DistribuirNasAbasTratamento = "Abas de tratamento: nada foi colado (você escolheu Cancelar)." & _
+                TextoAvisos(avisos)
             Exit Function
         End If
     End If
@@ -638,35 +665,39 @@ Private Function DistribuirNasAbasTratamento(wb As Workbook, wsEd As Worksheet) 
     If wsInt Is Nothing Then
         resumo = "Não achei a aba ""Tratamento - Internos"": " & linhasInt.Count & " interno(s) não foram colados."
     Else
-        ColarLinhasNaAba wsEd, colEd, linhasInt, wsInt, (modo = vbYes)
-        resumo = linhasInt.Count & " interno(s) colado(s) na aba '" & wsInt.Name & "'."
+        jaInt = ColarLinhasNaAba(wsEd, colEd, linhasInt, wsInt)
+        resumo = (linhasInt.Count - jaInt) & " interno(s) colado(s) na aba '" & wsInt.Name & "'." & _
+            IIf(jaInt > 0, " " & jaInt & " já estava(m) lá e não foi(ram) colado(s) de novo.", "")
     End If
     If wsExt Is Nothing Then
         resumo = resumo & vbCrLf & "Não achei a aba ""Tratamento - Externos"": " & linhasExt.Count & " externo(s) não foram colados."
     Else
-        ColarLinhasNaAba wsEd, colEd, linhasExt, wsExt, (modo = vbYes)
-        resumo = resumo & vbCrLf & linhasExt.Count & " externo(s) colado(s) na aba '" & wsExt.Name & "'."
+        jaExt = ColarLinhasNaAba(wsEd, colEd, linhasExt, wsExt)
+        resumo = resumo & vbCrLf & (linhasExt.Count - jaExt) & " externo(s) colado(s) na aba '" & wsExt.Name & "'." & _
+            IIf(jaExt > 0, " " & jaExt & " já estava(m) lá e não foi(ram) colado(s) de novo.", "")
     End If
     If qtdSemTipo > 0 Then
         resumo = resumo & vbCrLf & vbCrLf & qtdSemTipo & " linha(s) NÃO foram coladas (em amarelo na aba '" & _
-            wsEd.Name & "'): a pessoa não está no ORG ou está sem ""Tipo de trabalho"". Corrija o ORG e rode " & _
-            "DistribuirEditadoNasAbasTratamento, ou cole à mão." & semTipo
-        If qtdSemTipo > 15 Then resumo = resumo & vbCrLf & "   ... e mais " & (qtdSemTipo - 15)
+            wsEd.Name & "'): a pessoa não está no ORG ou está sem ""Tipo de trabalho""."
     End If
-    DistribuirNasAbasTratamento = resumo
+    DistribuirNasAbasTratamento = resumo & TextoAvisos(avisos)
 End Function
 
-' Cola as linhas escolhidas da EDITADO numa aba de tratamento, coluna por
-' coluna pelo nome do cabeçalho da aba de destino (linha 1).
-'   apagarAntes = True: tira as linhas que já estavam lá (Sim na pergunta).
-' Funciona com a aba em formato de Tabela do Excel (ListObject) ou sem tabela.
-Private Sub ColarLinhasNaAba(wsEd As Worksheet, colEd As Object, linhas As Collection, _
-                             wsDest As Worksheet, ByVal apagarAntes As Boolean)
+' Cola as linhas escolhidas da EDITADO numa aba de tratamento, EMBAIXO das que
+' já existem (nunca apaga nada), coluna por coluna pelo nome do cabeçalho da
+' aba de destino (linha 1). Funciona com a aba em formato de Tabela do Excel
+' (ListObject) ou sem tabela.
+' Linha que JÁ ESTÁ na aba (mesma matrícula + data + marcações) não é colada de
+' novo: assim rodar duas vezes no mesmo dia, ou rodar
+' DistribuirEditadoNasAbasTratamento depois de corrigir o ORG, não duplica nada.
+' Devolve quantas linhas foram puladas por já estarem lá.
+Private Function ColarLinhasNaAba(wsEd As Worksheet, colEd As Object, linhas As Collection, _
+                                  wsDest As Worksheet) As Long
     Dim colDest As Object, lo As ListObject
     Dim ultCol As Long, c As Long, i As Long, linhaIni As Long, lin As Long
     Dim nomeCol As String, origemCol As String
     Dim formulas() As String
-    Dim parLinha As Variant, rEd As Long, infoOrg As Variant, ultDados As Long
+    Dim parLinha As Variant, rEd As Long, infoOrg As Variant
 
     LimparFiltroDaAba wsDest
     Set colDest = MapaCabecalhoNorm(wsDest)
@@ -687,26 +718,22 @@ Private Sub ColarLinhasNaAba(wsEd As Worksheet, colEd As Object, linhas As Colle
         End If
     Next c
 
-    ' Apaga as linhas antigas (Sim na pergunta)
-    If apagarAntes Then
-        If Not lo Is Nothing Then
-            If Not lo.DataBodyRange Is Nothing Then lo.DataBodyRange.Delete
-        Else
-            ultDados = UltimaLinhaDados(wsDest)
-            If ultDados > 1 Then wsDest.Rows("2:" & ultDados).Delete
-        End If
-    End If
+    If linhas.Count = 0 Then Exit Function
 
-    If linhas.Count = 0 Then Exit Sub
+    ' linhas que já estão na aba (matrícula|data|marcações)
+    Dim jaNaAba As Object, ultDados As Long, rr As Long, chaveLin As String
+    Set jaNaAba = CreateObject("Scripting.Dictionary")
+    ultDados = UltimaLinhaDados(wsDest)
+    For rr = 2 To ultDados
+        chaveLin = ChaveDaLinha(wsDest, rr, colDest, "MATRICULA", "DATA", "MARCACOES")
+        If Not jaNaAba.Exists(chaveLin) Then jaNaAba.Add chaveLin, True
+    Next rr
+
+    ' primeira linha livre: logo depois da última com Matricula/Nome preenchido
+    ' (se a Tabela do Excel já tem linhas vazias no fim, elas são aproveitadas)
+    linhaIni = UltimaLinhaDados(wsDest) + 1
     If Not lo Is Nothing Then
-        linhaIni = lo.HeaderRowRange.Row + 1
-        If Not lo.DataBodyRange Is Nothing Then
-            linhaIni = lo.DataBodyRange.Row + lo.DataBodyRange.Rows.Count
-            ' tabela com só a linha vazia do fim: escreve nela
-            If lo.ListRows.Count = 1 And Application.WorksheetFunction.CountA(lo.DataBodyRange) = 0 Then linhaIni = lo.DataBodyRange.Row
-        End If
-    Else
-        linhaIni = UltimaLinhaDados(wsDest) + 1
+        If linhaIni < lo.HeaderRowRange.Row + 1 Then linhaIni = lo.HeaderRowRange.Row + 1
     End If
 
     lin = linhaIni
@@ -714,6 +741,12 @@ Private Sub ColarLinhasNaAba(wsEd As Worksheet, colEd As Object, linhas As Colle
         parLinha = linhas(i)
         rEd = parLinha(0)
         infoOrg = parLinha(1)
+        chaveLin = ChaveDaLinha(wsEd, rEd, colEd, "MATRICULA", "DT.APURAC.", "MARCACOES")
+        If jaNaAba.Exists(chaveLin) Then
+            ColarLinhasNaAba = ColarLinhasNaAba + 1
+            GoTo ProximaLinhaColar
+        End If
+        jaNaAba.Add chaveLin, True
         For c = 1 To ultCol
             nomeCol = NormTexto(TextoDaCelula(wsDest.Cells(1, c).Value))
             origemCol = ColunaDaEditado(nomeCol, colEd)
@@ -731,6 +764,7 @@ Private Sub ColarLinhasNaAba(wsEd As Worksheet, colEd As Object, linhas As Colle
             End If
         Next c
         lin = lin + 1
+ProximaLinhaColar:
     Next i
 
     ' Tabela do Excel: estica a tabela até a última linha colada
@@ -740,7 +774,69 @@ Private Sub ColarLinhasNaAba(wsEd As Worksheet, colEd As Object, linhas As Colle
                 wsDest.Cells(lin - 1, lo.HeaderRowRange.Column + lo.HeaderRowRange.Columns.Count - 1))
         End If
     End If
+End Function
+
+' "matrícula|data|marcações" de uma linha, para saber se ela já foi colada.
+' Data como número (sem a hora), marcações sem espaços sobrando.
+Private Function ChaveDaLinha(ws As Worksheet, ByVal r As Long, cols As Object, _
+                              ByVal cMat As String, ByVal cData As String, ByVal cMarc As String) As String
+    Dim m As String, d As String, mc As String, v As Variant
+    If cols.Exists(cMat) Then m = ChaveDaMatricula(ws.Cells(r, cols(cMat)).Value)
+    If cols.Exists(cData) Then
+        v = ws.Cells(r, cols(cData)).Value
+        If IsDate(v) Then
+            d = CStr(CLng(Int(CDbl(CDate(v)))))
+        Else
+            d = TextoDaCelula(v)
+        End If
+    End If
+    If cols.Exists(cMarc) Then mc = NormTexto(TextoDaCelula(ws.Cells(r, cols(cMarc)).Value))
+    ChaveDaLinha = m & "|" & d & "|" & mc
+End Function
+
+' Aba "Avisos ORG": uma linha por pessoa da EDITADO com informação faltando no
+' ORG (não está lá, sem Tipo de trabalho, sem Cargo, sem Gestor, matrícula
+' diferente). É refeita a cada execução: mostra só os avisos da última vez.
+' Sem nenhum aviso, a aba fica com a frase "Nenhum aviso".
+Private Sub EscreverAbaAvisos(wb As Workbook, avisos As Object)
+    Dim ws As Worksheet, k As Variant, lin As Long, aviso As Variant, abaAntes As Object
+    Set abaAntes = wb.ActiveSheet
+    On Error Resume Next
+    Set ws = wb.Worksheets("Avisos ORG")
+    On Error GoTo 0
+    If ws Is Nothing Then
+        Set ws = wb.Worksheets.Add(After:=wb.Worksheets(wb.Worksheets.Count))
+        ws.Name = "Avisos ORG"
+    End If
+    ws.Cells.Clear
+    ws.Range("A1:D1").Value = Array("Matrícula", "Nome", "O que está faltando no ORG", "Foi colado na aba de tratamento?")
+    ws.Rows(1).Font.Bold = True
+    lin = 2
+    If avisos.Count = 0 Then
+        ws.Cells(2, 1).Value = "Nenhum aviso: todas as pessoas da última execução estão completas no ORG (" & Format(Now, "dd/mm/yyyy hh:nn") & ")."
+    Else
+        For Each k In avisos.Keys
+            aviso = avisos(k)
+            ws.Cells(lin, 1).NumberFormat = "@"
+            ws.Cells(lin, 1).Value = aviso(0)
+            ws.Cells(lin, 2).Value = aviso(1)
+            ws.Cells(lin, 3).Value = aviso(2)
+            ws.Cells(lin, 4).Value = aviso(3)
+            lin = lin + 1
+        Next k
+    End If
+    ws.Columns("A:D").AutoFit
+    ' com aviso, a aba de avisos fica aberta na frente; sem aviso, volta para onde estava
+    If avisos.Count > 0 Then ws.Activate Else abaAntes.Activate
 End Sub
+
+' Trecho da mensagem final sobre a aba "Avisos ORG".
+Private Function TextoAvisos(avisos As Object) As String
+    If avisos.Count = 0 Then Exit Function
+    TextoAvisos = vbCrLf & vbCrLf & "ATENÇÃO: " & avisos.Count & " pessoa(s) com informação faltando no ORG. " & _
+        "Veja a aba 'Avisos ORG' (pessoa e o que falta). Depois de corrigir o ORG, as linhas que não " & _
+        "foram coladas podem ser coladas rodando DistribuirEditadoNasAbasTratamento."
+End Function
 
 ' De qual coluna da EDITADO (nome normalizado) vem a coluna da aba de
 ' tratamento. "" = não vem da EDITADO (Check, Trabalho, Cargo, Gestor...).
