@@ -175,6 +175,12 @@
   .card.tem-btn-explica > .card-title, .kpi-tile.tem-btn-explica > .kpi-label{ padding-right:36px; }
   .card.tem-btn-explica.tem-btn-cheia > .card-title{ padding-right:72px; }
   .kpi-tile .card-fonte{ margin-top:10px !important; margin-bottom:0 !important; }
+  /* números do topo das seções (.colab-kpi): "?" próprio e a linha do período (29/10) */
+  .colab-kpi.kpi-explica{ position:relative; }
+  .colab-kpi.kpi-explica > .ck-label{ padding-right:30px; }
+  .colab-kpi > .btn-explica-card{ top:6px; right:6px; width:24px; height:24px; font-size:12.5px; }
+  .colab-kpi .card-fonte{ margin:8px 0 0 !important; font-size:12px !important; }
+  .ck-periodo, .kpi-periodo{ font-size:10.5px; font-weight:700; color:#7A5A00; margin-top:5px; }
   .explica-banner{ display:none; }
   body.modo-explicacao .explica-banner{
     display:flex; align-items:center; gap:14px; flex-wrap:wrap;
@@ -229,6 +235,12 @@
   .abs-toolbar select{ max-width:280px; }
   .abs-resumo{ font-size:12.5px; color:var(--c-muted); margin-bottom:10px; }
   .abs-resumo b{ color:var(--c-navy-dark); }
+  .abs-resumo-caixa{ background:var(--c-card); border:1px solid var(--c-line); border-left:4px solid var(--c-orange); border-radius:var(--radius-card);
+    padding:10px 14px; margin-bottom:14px; font-size:13px; line-height:1.5; }
+  .abs-resumo-caixa .arc-titulo{ font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#8A4B12; margin-bottom:4px; }
+  .abs-resumo-caixa ul{ margin:0; padding-left:18px; }
+  .abs-resumo-caixa li{ margin:2px 0; }
+  .abs-resumo-caixa b{ color:var(--c-navy-dark); }
   .heat-wrap{ overflow-x:auto; border:1px solid var(--c-line); border-radius:var(--radius-card); }
   table.heat{ border-collapse:collapse; font-size:11px; }
   table.heat th, table.heat td{ border:1px solid var(--c-line); padding:0; text-align:center; }
@@ -368,6 +380,31 @@
   select:focus, input:focus{ outline:2px solid var(--c-slate); outline-offset:1px; }
   .date-range{ display:flex; gap:6px; }
   .date-range input{ flex:1 1 0; min-width:0; }
+  /* Botões "De"/"Até" do período e o calendário que abre embaixo (29/10):
+     dias sem informação ficam apagados e não podem ser clicados. */
+  .data-btn{ flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:1px; text-align:left;
+    padding:6px 10px; border:1px solid var(--c-line-strong); border-radius:8px; background:#fff; color:var(--c-ink); cursor:pointer; font-family:inherit; }
+  .data-btn:hover, .data-btn.aberto{ border-color:var(--c-orange); }
+  .data-btn-rot{ font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--c-muted); }
+  .data-btn-val{ font-size:13.5px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .filter-group{ position:relative; }
+  .cal-pop{ position:absolute; z-index:60; left:0; right:0; top:100%; margin-top:6px; background:#fff; border:1px solid var(--c-line-strong);
+    border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.18); padding:10px; }
+  .cal-topo{ display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom:6px; }
+  .cal-topo b{ font-size:13.5px; }
+  .cal-nav{ border:1px solid var(--c-line); background:#fff; border-radius:6px; width:30px; height:28px; cursor:pointer; font-size:15px; }
+  .cal-nav:disabled{ opacity:.3; cursor:default; }
+  .cal-grade{ display:grid; grid-template-columns:repeat(7, 1fr); gap:3px; }
+  .cal-grade .cal-sem{ font-size:10px; font-weight:800; color:var(--c-muted); text-align:center; padding:2px 0; }
+  .cal-dia{ border:1px solid transparent; background:#FFF3E6; color:var(--c-ink); border-radius:6px; padding:6px 0; font-size:12.5px; font-weight:700; cursor:pointer; font-variant-numeric:tabular-nums; }
+  .cal-dia:hover{ border-color:var(--c-orange); }
+  .cal-dia.vazio{ background:transparent; color:#C9CACC; font-weight:400; cursor:not-allowed; text-decoration:line-through; }
+  .cal-dia.no-periodo{ background:#FFE0BD; }
+  .cal-dia.escolhido{ background:var(--c-orange); color:#fff; }
+  .cal-dia.fora-mes{ visibility:hidden; }
+  .cal-nota{ font-size:11px; color:var(--c-muted); margin-top:8px; line-height:1.35; }
+  .cal-atalhos{ display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+  .cal-atalhos button{ flex:1 1 auto; font-size:11.5px; padding:5px 8px; border:1px solid var(--c-line-strong); border-radius:6px; background:#fff; cursor:pointer; }
 
   .chip-group{ display:flex; flex-wrap:wrap; gap:6px; }
   /* ---------- Filtro de marcar vários (componente "ms") ----------
@@ -429,7 +466,6 @@
 
   /* ---------- KPIs ---------- */
   .kpis{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; margin-bottom:22px; }
-  .kpis.kpis-demora{ grid-template-columns:minmax(0,1fr); max-width:420px; }
   .kpi-tile{
     background:var(--c-card); border:1px solid var(--c-line); border-radius:var(--radius-tile);
     padding:14px 14px 12px; border-top:3px solid var(--c-orange);
@@ -841,11 +877,9 @@
       <span class="tp-value" id="topbarPeriodValue"></span>
     </div>
     <!-- topo em 3 partes iguais (28/10): à esquerda seções + logo; no meio o período;
-         à direita o nome do painel e o "Esconder filtros" -->
+         à direita o "Esconder filtros" (o nome "Painel de Ponto · Ocorrências dos
+         Colaboradores" saiu a pedido do RH, 29/10) -->
     <div class="topbar-right">
-      <div class="brand-text">
-        <span class="brand-sub">Painel de Ponto &middot; Ocorrências dos Colaboradores</span>
-      </div>
       <div class="topbar-status" id="fileStatus" hidden></div>
       <button type="button" class="btn-explica" id="btnLateral" aria-pressed="false" title="Esconde o painel da direita (Carregar dados e Filtros) para os gráficos ocuparem a tela toda">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg><span class="txt" id="btnLateralTxt">Esconder filtros</span>
@@ -1069,8 +1103,10 @@
             <select id="absCiclo"></select>
             <label for="absMostrar" style="font-size:11.5px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:.04em;">Mostrar</label>
             <select id="absMostrar"><option value="">Todos os afastamentos</option><option value="atestados">Só atestados</option></select>
-            <span class="abs-resumo" id="absResumo" style="margin:0"></span>
           </div>
+          <!-- resumo do ciclo em frases (29/10: o RH pediu um texto que quem não é do
+               ponto entenda; antes era uma linha só com "·" entre os números) -->
+          <div class="abs-resumo-caixa" id="absResumo"></div>
           <section class="grid">
             <div class="card wide">
               <div class="card-title">Evolução mês a mês, por tipo</div>
@@ -1088,7 +1124,7 @@
           <div class="card">
               <div class="card-title">Atestados encostados em folga</div>
               <div class="card-hint">O dia logo antes do início ou logo depois do fim do atestado é folga da pessoa (folga semanal, folga compensada ou feriado) &middot; a lista abaixo mostra qual dia e qual folga</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de afastamentos + o espelho de ponto</span><p>Para cada atestado, o painel olha no espelho de ponto da própria pessoa o dia anterior ao início e o dia seguinte ao fim. Se um desses dias era folga (folga semanal, folga compensada ou feriado), o atestado “encosta” na folga e emenda o descanso. O gráfico mostra em que dia da semana os atestados começam. <strong>Clique</strong> numa barra (ou num pedaço colorido dela) para ver a lista de pessoas e registros que formam aquele número.</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de afastamentos + o espelho de ponto</span><p>Para cada atestado, o painel olha no espelho de ponto da própria pessoa o dia anterior ao início e o dia seguinte ao fim. Se um desses dias era folga (folga semanal, folga compensada ou feriado), o atestado “encosta” na folga e emenda o descanso. O gráfico mostra em que dia da semana começaram os atestados do ciclo escolhido: o pedaço <strong>vermelho</strong> são os que encostam numa folga e o <strong>cinza</strong>, os que não encostam. <strong>Clique</strong> numa barra (ou num pedaço colorido dela) para ver a lista de pessoas e registros que formam aquele número.</p></div>
               <div class="abs-resumo" id="absEmendaResumo"></div>
               <div class="card-body" id="chartAbsDiaSemana"></div>
             </div>
@@ -1249,8 +1285,27 @@
             <div class="card-title">Banco de horas e hora extra por colaborador</div>
             <div class="card-hint" id="hintBancoHoras">Mês atual do espelho de ponto &middot; verde = hora extra, vermelho = banco de horas, à direita o saldo (extra &minus; banco)</div>
             <div class="card-fonte"><span class="fonte-origem">De onde vem: o espelho de ponto deste mês, somado por pessoa</span><p>O total do mês de cada pessoa. <strong>Verde</strong> = horas extras. <strong>Vermelho</strong> = horas descontadas do banco de horas (por falta, atraso ou saída antes do horário). <strong>À direita</strong>, o saldo: verde com “+” quando a pessoa fez mais hora extra do que teve desconto; vermelho com “&minus;” quando teve mais desconto. Vale o mês inteiro, sem depender do filtro de período. Ordem: quem tem mais horas somadas. Clique no nome para ver a pessoa.</p></div>
+            <!-- busca por nome (pedido do RH, 29/10): com texto, aparecem todas as pessoas que batem -->
+            <div class="org-toolbar"><input type="text" id="bancoBusca" placeholder="Buscar colaborador pelo nome..." aria-label="Buscar colaborador no banco de horas"><span id="bancoBuscaCount" style="font-size:12px;color:var(--c-muted);"></span></div>
             <div class="card-body" id="chartBancoHoras"></div>
             <div class="card-toolbar"><button type="button" class="btn-ghost" id="btnBancoTodos" hidden>Mostrar todos</button></div>
+          </div>
+          <!-- Saldo do mês (hora extra − banco de horas), pedido do RH em 29/10: quem
+               ficou mais no positivo e quem ficou mais no negativo. Mesma fonte do card
+               acima (horasCartaoPorColaborador). -->
+          <div class="card">
+            <div class="card-title">Quem ficou mais no positivo (saldo do mês)</div>
+            <div class="card-hint">Pessoas que fizeram mais hora extra do que tiveram descontado do banco de horas &middot; os 10 maiores saldos (a lista inteira abre em tela cheia)</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: o espelho de ponto deste mês, somado por pessoa</span><p>Para cada pessoa, o painel faz a conta <strong>horas extras do mês − horas descontadas do banco de horas</strong> (por falta, atraso ou saída antes do horário). Aqui estão as pessoas com o saldo <strong>positivo</strong> mais alto: as que mais trabalharam além do horário depois de descontar o que ficaram devendo. O número à direita é o saldo; passe o mouse na barra para ver a hora extra e o desconto que o formam. Vale o mês inteiro do espelho de ponto, sem depender do filtro de período. Clique no nome para ver a pessoa.</p></div>
+            <div class="card-body" id="chartSaldoPositivo"></div>
+            <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="saldoPos" id="btnSaldoPosTodos" hidden>Mostrar todos</button></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Quem ficou mais no negativo (saldo do mês)</div>
+            <div class="card-hint">Pessoas que tiveram mais horas descontadas do banco do que fizeram de hora extra &middot; os 10 maiores (a lista inteira abre em tela cheia)</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: o espelho de ponto deste mês, somado por pessoa</span><p>A mesma conta do card ao lado (<strong>horas extras − horas descontadas do banco</strong>), mostrando as pessoas com o saldo <strong>negativo</strong> mais alto: as que mais ficaram devendo horas no mês, mesmo depois de contar a hora extra que fizeram. Vale o mês inteiro do espelho de ponto, sem depender do filtro de período. Clique no nome para ver a pessoa.</p></div>
+            <div class="card-body" id="chartSaldoNegativo"></div>
+            <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="saldoNeg" id="btnSaldoNegTodos" hidden>Mostrar todos</button></div>
           </div>
         </section>
 
@@ -1259,13 +1314,13 @@
       <!-- Seção "Pausas térmicas": tabela de renderDashboard (pausasTermicasResumo). -->
       <div class="pagina" data-pagina="pausas">
         <h3 class="section-title">Pausas Térmicas</h3>
-        <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: o relatório de pausas térmicas do sistema de ponto</span><p>Quem trabalha em ambiente frio precisa fazer uma pausa de <strong>20 minutos</strong> a cada <strong>1 hora e 40 minutos</strong> de trabalho. O sistema de ponto confere isso pelas batidas de saída e volta da pausa. Os quatro números do topo resumem o mês: quantas pessoas estão no relatório, quanto das pausas teve os 20 minutos certos, quantos períodos de trabalho passaram de 1h40 sem pausa (o ponto de maior risco para a saúde) e quantas vezes ficou faltando uma batida de pausa. Tudo é do relatório do mês mais recente, menos a evolução, que compara os meses que estiverem no arquivo.</p></div>
+        <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: o relatório de pausas térmicas do sistema de ponto</span><p>Quem trabalha em ambiente frio precisa fazer uma pausa de <strong>20 minutos</strong> a cada <strong>1 hora e 40 minutos</strong> de trabalho. O sistema de ponto confere isso pelas batidas de saída e volta da pausa. Os quatro números do topo resumem o mês: quantas pessoas estão no relatório, quanto das pausas teve os 20 minutos certos, quantos trechos de trabalho passaram de 1h40 sem pausa (<strong>trecho de trabalho</strong> = o tempo trabalhado entre uma pausa e a próxima; não é o dia: um dia de trabalho tem vários trechos) (o ponto de maior risco para a saúde) e quantas vezes ficou faltando uma batida de pausa. Tudo é do relatório do mês mais recente, menos a evolução, que compara os meses que estiverem no arquivo.</p></div>
         <section class="dig-kpis kpis4" id="pauKpis"></section>
         <section class="grid">
           <div class="card wide">
             <div class="card-title">Evolução mês a mês</div>
-            <div class="card-hint" id="pauEvolHint">Trabalho acima de 1h40 em cada mês, em % dos períodos de trabalho</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de pausas térmicas de cada mês</span><p>Compara os meses que estão no arquivo: quanto das pausas foi certa, quanto dos períodos de trabalho passou de 1h40 e quantas batidas de pausa ficaram faltando. Para aparecer mais de um mês, o arquivo precisa trazer o relatório de pausas de cada mês (o RH guarda um por mês).</p></div>
+            <div class="card-hint" id="pauEvolHint">Trabalho acima de 1h40 em cada mês, em % dos trechos de trabalho</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de pausas térmicas de cada mês</span><p>Compara os meses que estão no arquivo: quanto das pausas foi certa, quanto dos trechos de trabalho passou de 1h40 e quantas batidas de pausa ficaram faltando. Para aparecer mais de um mês, o arquivo precisa trazer o relatório de pausas de cada mês (o RH guarda um por mês).</p></div>
             <div class="card-body" id="chartPauEvolucao"></div>
             <div class="card-body" id="tablePauEvolucao" style="margin-top:10px"></div>
           </div>
@@ -1277,14 +1332,14 @@
           </div>
           <div class="card">
             <div class="card-title">Trabalho acima de 1h40 sem pausa, por gestor</div>
-            <div class="card-hint">Equipes com mais períodos de trabalho acima do limite</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de pausas térmicas + a lista de quem é gestor de quem</span><p>A mesma conta, somada por equipe: quantas pessoas da equipe estão no relatório de pausas, quantos períodos passaram de 1h40, que parte isso é de todos os períodos da equipe e quantas pessoas passaram do limite em mais de 30% dos seus períodos.</p></div>
+            <div class="card-hint">Equipes com mais trechos de trabalho acima do limite</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de pausas térmicas + a lista de quem é gestor de quem</span><p>A mesma conta, somada por equipe: quantas pessoas da equipe estão no relatório de pausas, quantos trechos passaram de 1h40, que parte isso é de todos os trechos da equipe e quantas pessoas passaram do limite em mais de 30% dos seus trechos.</p></div>
             <div class="card-body" id="tablePauAcimaGestor"></div>
           </div>
           <div class="card">
             <div class="card-title">Trabalho acima de 1h40 sem pausa, por pessoa</div>
-            <div class="card-hint">Períodos de trabalho que passaram de 1h40 sem a pausa &middot; em vermelho: mais de 30% dos períodos da pessoa &middot; os 20 primeiros (a lista inteira abre em tela cheia)</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de pausas térmicas</span><p>Cada período de trabalho entre duas pausas deveria ter no máximo 1h40. Aqui está quantos períodos de cada pessoa passaram disso no mês e que parte isso é de todos os períodos dela. Ficar mais tempo no frio sem pausar é o maior risco para a saúde; em vermelho, quem passou do limite em mais de 30% dos períodos.</p></div>
+            <div class="card-hint">Trechos de trabalho que passaram de 1h40 sem a pausa &middot; em vermelho: mais de 30% dos trechos da pessoa &middot; os 20 primeiros (a lista inteira abre em tela cheia)</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de pausas térmicas</span><p>Um <strong>trecho de trabalho</strong> é o tempo trabalhado entre uma pausa e a próxima (o dia de trabalho tem vários trechos: do início do turno até a 1ª pausa, da volta da 1ª pausa até a 2ª, e assim por diante). Cada trecho deveria ter no máximo 1h40. Aqui está quantos trechos de cada pessoa passaram disso no mês e que parte isso é de todos os trechos dela. Ficar mais tempo no frio sem pausar é o maior risco para a saúde; em vermelho, quem passou do limite em mais de 30% dos trechos.</p></div>
             <div class="card-body" id="chartPauAcima"></div>
             <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="pauAcima" id="btnPauAcimaTodos" hidden>Mostrar todos</button></div>
           </div>
@@ -1295,18 +1350,18 @@
               <select id="pauBatCiclo"></select>
               <span class="grupo-sel-aviso"><b>Tudo dentro desta caixa</b> olha as batidas de cada dia do mês escolhido aqui: horário, dia da semana, primeira pausa, dias sem pausa, maior tempo sem pausa e o mapa. <span id="pauBatResumo"></span></span>
             </div>
-            <div class="card-fonte" style="margin-bottom:12px"><span class="fonte-origem">De onde vem: as batidas de cada dia do relatório de pausas térmicas</span><p>Até aqui, os números vêm do total do mês de cada pessoa. Daqui para baixo, o painel olha <strong>cada batida</strong> de cada dia: a entrada e a saída da jornada, a saída e a volta da refeição e a saída e a volta de cada pausa térmica. Com isso dá para ver <strong>em que hora</strong> e <strong>em que dia da semana</strong> o trabalho no frio passa de 1h40, quem ficou o dia inteiro sem pausa, quanto tempo se trabalha até a primeira pausa e quem passou mais tempo sem pausa. A refeição também conta como pausa para a conta de 1h40 (o período de trabalho é o tempo entre uma pausa e outra). Como a conta aqui é refeita batida por batida, ela pode diferir em poucos períodos do total que o sistema dá no relatório (por exemplo, em dias com batida faltando). Escolha o mês (ciclo do ponto, dia 28 a 27) no seletor; segue os filtros de gestor, grupo, cargo e colaborador.</p></div>
+            <div class="card-fonte" style="margin-bottom:12px"><span class="fonte-origem">De onde vem: as batidas de cada dia do relatório de pausas térmicas</span><p>Até aqui, os números vêm do total do mês de cada pessoa. Daqui para baixo, o painel olha <strong>cada batida</strong> de cada dia: a entrada e a saída da jornada, a saída e a volta da refeição e a saída e a volta de cada pausa térmica. Com isso dá para ver <strong>em que hora</strong> e <strong>em que dia da semana</strong> o trabalho no frio passa de 1h40, quem ficou o dia inteiro sem pausa, quanto tempo se trabalha até a primeira pausa e quem passou mais tempo sem pausa. A refeição também conta como pausa para a conta de 1h40 (o trecho de trabalho é o tempo entre uma pausa e outra). Como a conta aqui é refeita batida por batida, ela pode diferir em poucos trechos do total que o sistema dá no relatório (por exemplo, em dias com batida faltando). Escolha o mês (ciclo do ponto, dia 28 a 27) no seletor; segue os filtros de gestor, grupo, cargo e colaborador.</p></div>
             <section class="grid">
           <div class="card wide">
             <div class="card-title">Horário em que mais se passa de 1h40 sem pausa</div>
-            <div class="card-hint" id="pauHoraHint">Dos períodos de trabalho que começaram em cada hora, quantos passaram de 1h40</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: as batidas de cada dia do relatório de pausas térmicas</span><p>Cada período de trabalho (o tempo entre uma pausa e outra) foi colocado na hora em que começou. A barra mostra que parte dos períodos daquela hora passou de 1h40 sem pausa. Em vermelho, as horas bem acima da média do mês (uma vez e meia ou mais). Horas com poucos períodos (menos de 10) ficam de fora, porque a porcentagem engana. Clique numa barra para ver os dias.</p></div>
+            <div class="card-hint" id="pauHoraHint">Dos trechos de trabalho que começaram em cada hora, quantos passaram de 1h40</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: as batidas de cada dia do relatório de pausas térmicas</span><p>Cada trecho de trabalho (o tempo entre uma pausa e outra) foi colocado na hora em que começou. A barra mostra que parte dos trechos daquela hora passou de 1h40 sem pausa. Em vermelho, as horas bem acima da média do mês (uma vez e meia ou mais). Horas com poucos trechos (menos de 10) ficam de fora, porque a porcentagem engana. Clique numa barra para ver os dias.</p></div>
             <div class="card-body" id="chartPauHora"></div>
           </div>
           <div class="card">
             <div class="card-title">Dia da semana com mais trabalho acima de 1h40</div>
-            <div class="card-hint">Parte dos dias trabalhados em que algum período passou de 1h40 sem pausa &middot; em cinza: menos de 10 dias trabalhados (a porcentagem engana)</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: as batidas de cada dia do relatório de pausas térmicas</span><p>Para cada dia da semana: de todos os dias trabalhados naquele dia da semana, em quantos algum período de trabalho passou de 1h40 sem pausa. O dia é o do começo do turno (quem entra à noite e sai de madrugada conta no dia em que entrou). Clique numa barra para ver os dias.</p></div>
+            <div class="card-hint">Parte dos dias trabalhados em que algum trecho passou de 1h40 sem pausa &middot; em cinza: menos de 10 dias trabalhados (a porcentagem engana)</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: as batidas de cada dia do relatório de pausas térmicas</span><p>Para cada dia da semana: de todos os dias trabalhados naquele dia da semana, em quantos algum trecho de trabalho passou de 1h40 sem pausa. O dia é o do começo do turno (quem entra à noite e sai de madrugada conta no dia em que entrou). Clique numa barra para ver os dias.</p></div>
             <div class="card-body" id="chartPauDiaSemana"></div>
           </div>
           <div class="card">
@@ -1324,7 +1379,7 @@
           </div>
           <div class="card">
             <div class="card-title">Maior tempo seguido sem pausa, por pessoa</div>
-            <div class="card-hint">O período de trabalho mais longo de cada pessoa no mês, só de quem passou de 1h40 &middot; em vermelho: mais de 3h20 (o dobro) &middot; os 20 primeiros (a lista inteira abre em tela cheia)</div>
+            <div class="card-hint">O trecho de trabalho mais longo de cada pessoa no mês, só de quem passou de 1h40 &middot; em vermelho: mais de 3h20 (o dobro) &middot; os 20 primeiros (a lista inteira abre em tela cheia)</div>
             <div class="card-fonte"><span class="fonte-origem">De onde vem: as batidas de cada dia do relatório de pausas térmicas</span><p>De todos os dias do mês, o maior tempo que a pessoa ficou trabalhando sem nenhuma pausa (nem a térmica, nem a refeição), e em que dia foi. O limite é 1h40; em vermelho, quem passou do dobro. Clique na barra para ver todos os dias em que a pessoa passou de 1h40.</p></div>
             <div class="card-body" id="chartPauMaior"></div>
             <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="pauMaior" id="btnPauMaiorTodos" hidden>Mostrar todos</button></div>
@@ -1332,7 +1387,7 @@
           <div class="card wide">
             <div class="card-title">Mapa das pausas: cada pessoa, dia a dia</div>
             <div class="card-hint" id="pauHeatHint">Cada quadrado é um dia trabalhado &middot; passe o mouse para ver as batidas; clique para abrir o dia</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: as batidas de cada dia do relatório de pausas térmicas</span><p>Uma linha por pessoa e uma coluna por dia do mês. Verde: o dia foi certo. Laranja: algum período passou de 1h40 sem pausa. Vermelho: mais de 1h40 de trabalho e nenhuma pausa térmica no dia. Roxo: faltou uma batida (as contas do dia ficam incompletas). Em branco, a pessoa não trabalhou ou não está no relatório nesse dia. As pessoas com mais dias com problema vêm primeiro.</p></div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: as batidas de cada dia do relatório de pausas térmicas</span><p>Uma linha por pessoa e uma coluna por dia do mês. Verde: o dia foi certo. Laranja: algum trecho passou de 1h40 sem pausa. Vermelho: mais de 1h40 de trabalho e nenhuma pausa térmica no dia. Roxo: faltou uma batida (as contas do dia ficam incompletas). Em branco, a pessoa não trabalhou ou não está no relatório nesse dia. As pessoas com mais dias com problema vêm primeiro.</p></div>
             <div class="heat-leg" id="pauHeatLeg"></div>
             <div class="heat-wrap" id="pauHeat"></div>
           </div>
@@ -1340,21 +1395,21 @@
           </div>
           <div class="card wide">
               <div class="card-title">Tendência por gestor: trabalho acima de 1h40 sem pausa</div>
-              <div class="card-hint">Parte dos períodos de trabalho que passou de 1h40, por equipe, em cada mês</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de pausas térmicas de cada mês</span><p>Para cada equipe, que parte dos períodos de trabalho passou de 1h40 sem a pausa em cada mês, e se melhorou ou piorou. A coluna “Comparado ao mês anterior” diz em palavras quanto mudou do penúltimo para o último mês (por exemplo, “17 a menos que em Ago/26”): vermelho = piorou, verde = melhorou. No minigráfico “Evolução”, cada barra é um mês (o último em laranja): passe o mouse para ver o número e clique para ver de onde vem.</p></div>
+              <div class="card-hint">Parte dos trechos de trabalho que passou de 1h40, por equipe, em cada mês</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de pausas térmicas de cada mês</span><p>Para cada equipe, que parte dos trechos de trabalho passou de 1h40 sem a pausa em cada mês, e se melhorou ou piorou. A coluna “Comparado ao mês anterior” diz em palavras quanto mudou do penúltimo para o último mês (por exemplo, “17 a menos que em Ago/26”): vermelho = piorou, verde = melhorou. No minigráfico “Evolução”, cada barra é um mês (o último em laranja): passe o mouse para ver o número e clique para ver de onde vem.</p></div>
               <div class="card-body" id="tablePauTendGestor"></div>
             </div>
           <div class="card wide">
               <div class="card-title">Tendência por pessoa: trabalho acima de 1h40 sem pausa</div>
-              <div class="card-hint">Parte dos períodos de trabalho que passou de 1h40, por pessoa, em cada mês &middot; de quem está pior no último mês para quem está melhor &middot; os 20 primeiros (a lista inteira abre em tela cheia)</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de pausas térmicas de cada mês</span><p>Para cada pessoa do relatório de pausas, que parte dos períodos de trabalho passou de 1h40 em cada mês. A coluna “Comparado ao mês anterior” diz em palavras quanto mudou do penúltimo para o último mês (por exemplo, “17 a menos que em Ago/26”): vermelho = piorou, verde = melhorou. No minigráfico “Evolução”, cada barra é um mês (o último em laranja): passe o mouse para ver o número e clique para ver de onde vem.</p></div>
+              <div class="card-hint">Parte dos trechos de trabalho que passou de 1h40, por pessoa, em cada mês &middot; de quem está pior no último mês para quem está melhor &middot; os 20 primeiros (a lista inteira abre em tela cheia)</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de pausas térmicas de cada mês</span><p>Para cada pessoa do relatório de pausas, que parte dos trechos de trabalho passou de 1h40 em cada mês. A coluna “Comparado ao mês anterior” diz em palavras quanto mudou do penúltimo para o último mês (por exemplo, “17 a menos que em Ago/26”): vermelho = piorou, verde = melhorou. No minigráfico “Evolução”, cada barra é um mês (o último em laranja): passe o mouse para ver o número e clique para ver de onde vem.</p></div>
               <div class="card-body" id="tablePauTend"></div>
               <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="tablePauTend" id="btnPauTendTodos" hidden>Mostrar todos</button></div>
             </div>
           <div class="card wide">
             <div class="card-title">Resumo por colaborador</div>
-            <div class="card-hint">Pausas e intervalos de trabalho do relatório de Pausas Térmicas do mês atual &middot; linhas em vermelho têm marcações inválidas</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de pausas térmicas do sistema de ponto</span><p>Quem trabalha em ambiente frio precisa fazer uma pausa de <strong>20 minutos</strong> a cada <strong>1 hora e 40 minutos</strong> de trabalho. O sistema de ponto confere isso pelas batidas de saída e volta da pausa. Para cada pessoa: quantas pausas foram certas (20 minutos), quantas foram mais curtas ou mais longas, quantos períodos de trabalho tiveram 1h40 certinho, mais ou menos, e quantas vezes ficou faltando uma batida (o sistema chama de “marcação ímpar”: a pessoa bateu a saída e não bateu a volta, por exemplo). O painel só mostra os números do relatório, sem recalcular.</p></div>
+            <div class="card-hint">Pausas e trechos de trabalho de cada pessoa, no relatório de pausas térmicas do mês mais recente &middot; linhas em vermelho: ficou faltando alguma batida de pausa &middot; “trecho” = o tempo trabalhado entre uma pausa e a próxima</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de pausas térmicas do sistema de ponto</span><p>Quem trabalha em ambiente frio precisa fazer uma pausa de <strong>20 minutos</strong> a cada <strong>1 hora e 40 minutos</strong> de trabalho. O sistema de ponto confere isso pelas batidas de saída e volta da pausa. Para cada pessoa: quantas pausas foram certas (20 minutos), quantas foram mais curtas ou mais longas, quantos trechos de trabalho tiveram 1h40 certinho, mais ou menos, e quantas vezes ficou faltando uma batida (o sistema chama de “marcação ímpar”: a pessoa bateu a saída e não bateu a volta, por exemplo). O painel só mostra os números do relatório, sem recalcular.</p></div>
             <div class="card-body" id="tablePausasTermicas"></div>
           </div>
           
@@ -1417,29 +1472,22 @@
             </div>
           </section>
         </div>
-        <h3 class="section-title" style="margin-top:22px">Demora: do dia da batida que faltou até a aprovação</h3>
-        <!-- card de número da demora (renderKPIs preenche #kpiDemora); veio da
-             Visão geral para cá a pedido do RH (26/10) -->
-        <section class="kpis kpis-demora">
-        <div class="kpi-tile k-slate">
-          <div class="kpi-label">Demora média no PontoNet</div>
-          <div class="kpi-value" id="kpiDemora">&ndash;</div>
-          <div class="kpi-sub" id="kpiDemoraSub">Do dia da batida que faltou até a aprovação</div>
-          <div class="card-fonte"><span class="fonte-origem">De onde vem: o PontoNet, onde o gestor aprova as justificativas</span><p>Quando há uma ocorrência, a justificativa precisa ser aprovada no PontoNet. Este número é o tempo médio entre o dia da ocorrência e o dia em que ela foi aprovada. Só entram as que já foram aprovadas; as que ainda estão esperando não entram, porque ainda não têm data de aprovação.</p></div>
-        </div>
-        </section>
+        <!-- Demora (do dia da batida que faltou até a aprovação), logo depois da lista de
+             justificativas aprovadas (pedido do RH, 29/10). O card "Demora média no
+             PontoNet" saiu: a média de todos aparece na linha #demoraGeral do card por gestor. -->
         <section class="grid">
           <div class="card wide">
             <div class="card-title">Média e maior demora por gestor</div>
             <div class="card-hint">Tempo entre o dia da batida que faltou e a aprovação, por gestor, no ciclo escolhido lá em cima &middot; linhas em amarelo: o gestor esteve de férias enquanto as ocorrências esperavam tratativa</div>
+            <p class="resumo-linha" id="demoraGeral">Média de todos: <b id="kpiDemora">&ndash;</b> <span id="kpiDemoraSub"></span></p>
             <div class="card-hint" id="hintDemoraFerias" hidden style="color:#7A5A00">Este arquivo não traz os afastamentos, então o aviso de férias do gestor não aparece. O RH inclui esse relatório quando gera o arquivo do painel.</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: o PontoNet, onde o gestor aprova as justificativas</span><p>O mesmo cálculo do card “Demora média no PontoNet” (do dia da ocorrência até a aprovação), separado por gestor: quantas foram aprovadas, a demora média e a maior. <strong>Aviso de férias:</strong> se o gestor esteve de férias entre a primeira ocorrência e a última aprovação da equipe, a linha fica amarela com as datas, porque nesse tempo ele não tinha como aprovar. A demora continua contada do mesmo jeito; o aviso é para não ler esse número como descuido.</p></div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: o PontoNet, onde o gestor aprova as justificativas</span><p>Para cada justificativa aprovada no ciclo escolhido, o painel conta o tempo entre o dia (e a hora) da batida que faltou e o momento em que ela foi aprovada. Aqui esse tempo é separado por gestor: quantas foram aprovadas, a demora média e a maior. A linha “Média de todos”, em cima, é a média de todas as aprovadas do ciclo (respeitando os filtros de gestor, grupo, cargo e colaborador). <strong>Aviso de férias:</strong> se o gestor esteve de férias entre a primeira ocorrência e a última aprovação da equipe, a linha fica amarela com as datas, porque nesse tempo ele não tinha como aprovar. A demora continua contada do mesmo jeito; o aviso é para não ler esse número como descuido.</p></div>
             <div class="card-body" id="tableDemoraGestor"></div>
           </div>
           <div class="card wide">
             <div class="card-title">Média e maior demora por colaborador</div>
             <div class="card-hint">Tempo entre o dia da batida que faltou e a aprovação, por colaborador, no ciclo escolhido lá em cima &middot; linhas em amarelo: o gestor (ou o próprio colaborador) esteve de férias nesse meio-tempo</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: o PontoNet, onde o gestor aprova as justificativas</span><p>O mesmo cálculo, separado por pessoa. Ajuda a ver justificativas que ficam muito tempo esperando aprovação. Linha amarela = o gestor da pessoa (ou ela mesma) esteve de férias no meio do caminho. Clique no nome para abrir o resumo da pessoa.</p></div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: o PontoNet, onde o gestor aprova as justificativas</span><p>O mesmo cálculo do card ao lado (do dia da batida que faltou até a aprovação), separado por pessoa. Ajuda a ver justificativas que ficam muito tempo esperando aprovação. Linha amarela = o gestor da pessoa (ou ela mesma) esteve de férias no meio do caminho. Clique no nome para abrir o resumo da pessoa.</p></div>
             <div class="card-body" id="tableDemoraColaborador"></div>
           </div>
         </section>
@@ -1478,7 +1526,7 @@
             <div class="card wide">
               <div class="card-title">Quem mais piorou: <span id="tendNomeInd2"></span></div>
               <div class="card-hint">Maior aumento do ciclo anterior para o último &middot; os 15 primeiros (a lista inteira abre em tela cheia)</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: os mesmos relatórios, por pessoa</span><p>As pessoas em que o assunto escolhido mais piorou do penúltimo para o último ciclo. Nos assuntos de porcentagem, só entra quem teve pelo menos 10 pausas ou períodos nos dois ciclos, para uma diferença pequena não parecer grande. Clique no nome para ver o resumo da pessoa.</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: os mesmos relatórios, por pessoa</span><p>As pessoas em que o assunto escolhido mais piorou do penúltimo para o último ciclo. Nos assuntos de porcentagem, só entra quem teve pelo menos 10 pausas ou trechos nos dois ciclos, para uma diferença pequena não parecer grande. Clique no nome para ver o resumo da pessoa.</p></div>
               <div class="card-body" id="tableTendPiorou"></div>
               <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="tendPiorou" id="btnTendPiorouTodos" hidden>Mostrar todos</button></div>
             </div>
@@ -1620,11 +1668,18 @@
                 <div class="ms" id="fStatus" data-todos="Todos os status" data-unidade="status" aria-labelledby="lblStatus"></div>
               </div>
               <div class="filter-group">
+                <!-- Período (29/10): em vez do calendário do navegador, um calendário
+                     próprio (abrirCalendario) em que só os dias com alguma informação
+                     podem ser clicados. Os valores ficam nos campos escondidos
+                     fDataIni/fDataFim ("aaaa-mm-dd"), lidos por periodoFiltro. -->
                 <label>Período</label>
                 <div class="date-range">
-                  <input type="date" id="fDataIni">
-                  <input type="date" id="fDataFim">
+                  <input type="hidden" id="fDataIni">
+                  <input type="hidden" id="fDataFim">
+                  <button type="button" class="data-btn" id="btnDataIni" data-alvo="fDataIni" aria-haspopup="dialog"><span class="data-btn-rot">De</span><span class="data-btn-val" id="btnDataIniVal">&ndash;</span></button>
+                  <button type="button" class="data-btn" id="btnDataFim" data-alvo="fDataFim" aria-haspopup="dialog"><span class="data-btn-rot">Até</span><span class="data-btn-val" id="btnDataFimVal">&ndash;</span></button>
                 </div>
+                <div class="cal-pop" id="calPop" hidden role="dialog" aria-label="Escolher o dia"></div>
               </div>
               <button class="btn-ghost btn-block" id="clearFilters">Limpar filtros</button>
               <p class="side-note">Os filtros afetam todos os gráficos, tabelas e o histórico abaixo. O filtro de gestor é o mais usado quando este mesmo arquivo é enviado ao supervisor geral com a base completa.</p>
@@ -1771,10 +1826,19 @@
      O QUE APARECE NA TELA -> QUEM DESENHA -> DE ONDE VÊM OS DADOS
        (cada .pagina[data-pagina] do HTML é uma seção do menu ☰)
        Cards do topo (#kpiRow) ......... renderKPIs ............. getFilteredRecords
-         (só na seção "Ocorrências"; o de demora fica na seção "PontoNet", .kpis-demora)
+         (só na seção "Ocorrências"; a demora média virou a linha #demoraGeral da seção
+          "PontoNet", no card "Média e maior demora por gestor", 29/10)
        Ordem das seções (26/10): Ocorrências, digitadas, afastamentos, jornada, destaque,
          tendências, pausas, PontoNet, lista de colaboradores, histórico. Sem status.
        "?" em cada card (.btn-explica-card): mostra só a explicação daquele card.
+         Os números do topo das seções (kpiTile) também têm "?" (EXPLICA_KPI) e uma linha 📅
+         com o período (atualizarPeriodosCards, KPI_PERIODO) desde 29/10.
+       Período da lateral: calendário próprio (abrirCalendario/desenharCalendario, #calPop):
+         só os dias de state.diasDados podem ser clicados (29/10).
+       "destaque": saldo do mês (extra − banco): chartSaldoPositivo/chartSaldoNegativo e a
+         busca #bancoBusca no banco de horas (29/10).
+       "de onde vem" das pausas: recsMedida/MEDIDAS_PAUSA (cada pedaço abre só quem teve
+         aquilo, com a coluna em destaque); dias de afastamento contados em dias (29/10).
        Legenda clicável (filtro dentro do gráfico) ... legendaSerie/filtrarSerie,
          state.serieSel (tipo na "geral", motivo nas digitadas, afast nos afastamentos);
          cores fixas por tipo: prepararCoresSeries/serieDe/corSerie (5 cores + "Outros")
@@ -3171,6 +3235,15 @@
     // periodoCompleto: do primeiro dia com ocorrência ao fim do Cartão)
     var total = periodoCompleto();
     if (total){ $("fDataIni").value = total.ini; $("fDataFim").value = total.fim; }
+    // dias que podem ser escolhidos no calendário do período (29/10): os que
+    // têm alguma linha que o filtro de período corta (ocorrências, hora extra,
+    // diferenças de menos de 15 min e batidas digitadas), mais o começo e o fim
+    // do período padrão.
+    state.diasDados = {};
+    state.records.forEach(function(r){
+      if (!isTipoNaoOcorrencia(r.tipo) || isTipoHoraExtra(r.tipo) || isTipoCurta(r.tipo) || isTipoDigitada(r.tipo)) state.diasDados[r.dateKey] = true;
+    });
+    if (total){ state.diasDados[total.ini] = true; state.diasDados[total.fim] = true; }
   }
   function toISODate(d){
     return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
@@ -3422,6 +3495,43 @@
     else rotulo = temOrg ? "pessoas na lista de equipes" : "no arquivo carregado";
     return { n: n, rotulo: rotulo, temOrg: temOrg };
   }
+  // Números do topo das seções (digitadas, jornada, pausas, PontoNet): cada um
+  // ganha um "?" com a explicação em palavras simples (EXPLICA_KPI, pelo rótulo;
+  // pedido do RH, 29/10) e, embaixo, o período a que o número se refere
+  // (.ck-periodo, escrito por atualizarPeriodosCards). O "?" aberto continua
+  // aberto quando o painel redesenha (state.kpiAberto).
+  var EXPLICA_KPI = {
+    "Marcações digitadas": "Quantas batidas foram lançadas à mão no sistema, em vez de feitas no relógio de ponto, nos dias do período. Cada batida conta 1: quem esqueceu a entrada e a saída no mesmo dia conta 2.",
+    "Colaboradores": "Quantas pessoas diferentes tiveram pelo menos uma batida digitada no período. A porcentagem compara com o total de pessoas da equipe do filtro (sem filtro, todas as pessoas da lista de equipes).",
+    "Por esquecimento": "Das batidas digitadas do período, quantas foram lançadas porque a pessoa esqueceu de bater o ponto. É o motivo que mais depende da própria pessoa; os outros são problema no relógio ou trabalho fora da unidade.",
+    "Mais de 10h no dia": "Dias em que a pessoa trabalhou mais de 10 horas (8 normais + 2 extras, o máximo que a lei permite). Embaixo: quantas pessoas diferentes e quanto tempo passou de 10h, somando todos esses dias.",
+    "Intervalo de almoço curto": "Dias em que a pausa para refeição foi menor que o mínimo exigido, ou não houve pausa nenhuma. Embaixo: quantas pessoas e em quantos dias não houve intervalo nenhum.",
+    "Trabalho na folga ou feriado": "Dias de folga da semana ou feriado em que a pessoa trabalhou (bateu ponto).",
+    "Menos de 11h de descanso": "Vezes em que, entre a saída de um dia e a entrada do dia seguinte, a pessoa descansou menos de 11 horas, o mínimo da lei.",
+    "Pessoas no relatório": "Quantas pessoas aparecem no relatório de pausas térmicas do mês: são as que trabalham em ambiente frio e precisam fazer as pausas.",
+    "Pausas certas": "De todas as pausas térmicas feitas no mês, quantas duraram os 20 minutos certos. As outras foram mais curtas ou mais longas que 20 minutos.",
+    "Trabalho acima de 1h40": "Quantas vezes alguém trabalhou mais de 1h40 seguidas no frio sem fazer a pausa. Cada trecho de trabalho (o tempo entre uma pausa e a próxima) conta 1; um mesmo dia tem vários trechos. Embaixo: que parte de todos os trechos do mês isso representa e quantas pessoas passaram do limite em mais de 30% dos seus trechos.",
+    "Batida de pausa faltando": "Quantas vezes ficou faltando uma batida de pausa (a pessoa bateu a saída e não bateu a volta, ou o contrário). Sem as duas batidas o sistema não consegue medir a pausa.",
+    "Justificativas aprovadas": "Quantos pedidos de justificativa do PontoNet foram aprovados no ciclo escolhido. Quando falta uma batida, o colaborador explica o motivo no PontoNet e o gestor avalia. Os cancelados e os que o próprio sistema resolveu (achando a batida no relógio) ficam de fora.",
+    "Pessoas com justificativa aprovada": "Quantas pessoas diferentes tiveram pelo menos um pedido aprovado no ciclo escolhido.",
+    "Tempo do colaborador para justificar": "Em média, quantos dias o colaborador levou entre o pedido ser aberto e ele escrever a justificativa (contagem do próprio PontoNet, nos pedidos aprovados).",
+    "Tempo do gestor para avaliar": "Em média, quantos dias o gestor levou entre a justificativa do colaborador e a avaliação dele (contagem do próprio PontoNet, nos pedidos aprovados). Fica vermelho acima de 3 dias."
+  };
+  function kpiTile(label, valor, sub, cls){
+    var ex = EXPLICA_KPI[label], aberto = ex && state.kpiAberto && state.kpiAberto[label];
+    return '<div class="colab-kpi' + (cls ? ' ' + cls : '') + (ex ? ' kpi-explica' : '') + (aberto ? ' explica-card' : '') + '">' +
+      (ex ? '<button type="button" class="btn-explica-card" data-kpi="' + escapeHtml(label) + '" title="Entenda este número" aria-label="Entenda este número">?</button>' : '') +
+      '<div class="ck-label">' + label + '</div><div class="ck-value">' + valor + '</div><div class="ck-sub">' + sub + '</div>' +
+      (ex ? '<div class="card-fonte"><p>' + ex + '</p></div>' : '') + '</div>';
+  }
+  document.addEventListener("click", function(e){
+    var b = e.target.closest(".colab-kpi > .btn-explica-card[data-kpi]");
+    if (!b) return;
+    e.stopPropagation();
+    state.kpiAberto = state.kpiAberto || {};
+    var tile = b.parentNode, lig = tile.classList.toggle("explica-card");
+    state.kpiAberto[b.dataset.kpi] = lig;
+  });
   function renderKPIs(records, ocorrenciasRecords){
     var colaboradoresSet = {};
     records.forEach(function(r){ colaboradoresSet[r.colaborador] = true; });
@@ -3437,7 +3547,8 @@
     $("kpiColaboradoresSub").textContent = "de " + formatNum(eq.n) + " " + eq.rotulo;
 
     $("kpiOcorrencias").textContent = formatNum(ocorrenciasRecords.length);
-    $("kpiOcorrenciasSub").textContent = ocorrenciasRecords.length ? (formatDateSpan(ocorrenciasRecords)) : "";
+    // o período fica na linha 📅 do card (atualizarPeriodosCards); aqui, a 1ª e a última data com ocorrência
+    $("kpiOcorrenciasSub").textContent = ocorrenciasRecords.length ? "1ª e última ocorrência: " + formatDateSpan(ocorrenciasRecords) : "nenhuma ocorrência no recorte";
 
     var demoras = [];
     baseDemora(records).forEach(function(r){
@@ -3449,11 +3560,11 @@
     if (demoras.length){
       var media = demoras.reduce(function(s,v){ return s+v; },0)/demoras.length;
       $("kpiDemora").innerHTML = formatDelay(media);
-      $("kpiDemoraSub").textContent = formatNum(demoras.length) + (state.records.some(function(r){ return isTipoPontoNet(r.tipo); })
-        ? " justificativa(s) aprovada(s) · do dia da batida que faltou até a aprovação" : " ocorrências tratadas");
+      $("kpiDemoraSub").textContent = "(" + formatNum(demoras.length) + (state.records.some(function(r){ return isTipoPontoNet(r.tipo); })
+        ? " justificativa(s) aprovada(s), do dia da batida que faltou até a aprovação)" : " ocorrências tratadas)");
     } else {
       $("kpiDemora").innerHTML = "&ndash;";
-      $("kpiDemoraSub").textContent = "Nenhuma tratativa registrada";
+      $("kpiDemoraSub").textContent = "(nenhuma aprovação no recorte)";
     }
   }
   // Período em destaque na faixa preta do topo: é o período do filtro
@@ -3571,7 +3682,7 @@
   // depende do que o miolo calculou (ex.: o ciclo dos afastamentos).
   function renderDashboard(){
     if (MINI_ORIGEM.length > 20000) MINI_ORIGEM.length = 0;   // não deixa a lista dos minigráficos crescer sem fim
-    renderDashboardMiolo(); atualizarPeriodosCards();
+    renderDashboardMiolo(); atualizarPeriodosCards(); atualizarBotoesData();
   }
   function renderDashboardMiolo(){
     var records = getFilteredRecords();
@@ -3634,9 +3745,27 @@
     var horas = horasCartaoPorColaborador(records);
     var limiteBanco = 10;
     var bancoCheio = emTelaCheia($("chartBancoHoras"));
-    renderSaldoH($("chartBancoHoras"), bancoCheio ? horas.lista : horas.lista.slice(0, limiteBanco));
-    $("btnBancoTodos").hidden = bancoCheio || horas.lista.length <= limiteBanco;
-    $("btnBancoTodos").textContent = "Ver todos (" + horas.lista.length + ") em tela cheia";
+    // busca por nome (29/10): com texto, mostra todas as pessoas que batem
+    var buscaBanco = chaveNome($("bancoBusca").value);
+    var listaBanco = buscaBanco ? horas.lista.filter(function(x){ return chaveNome(x.label).indexOf(buscaBanco) > -1; }) : horas.lista;
+    renderSaldoH($("chartBancoHoras"), (bancoCheio || buscaBanco) ? listaBanco : listaBanco.slice(0, limiteBanco));
+    $("btnBancoTodos").hidden = bancoCheio || buscaBanco || listaBanco.length <= limiteBanco;
+    $("btnBancoTodos").textContent = "Ver todos (" + listaBanco.length + ") em tela cheia";
+    $("bancoBuscaCount").textContent = buscaBanco ? formatNum(listaBanco.length) + " pessoa(s) com esse nome" : "";
+
+    // Quem ficou mais no positivo / no negativo (29/10): saldo = extra − banco
+    function itemSaldo(x){
+      var sd = x.extra - x.banco;
+      return { label:x.label, value:Math.abs(sd), color: sd > 0 ? COR_EXTRA : COR_BANCO,
+               texto: formatSaldo(sd),
+               dica: x.label + ": " + formatHoras(x.extra) + " de hora extra − " + formatHoras(x.banco) + " descontadas do banco = saldo " + formatSaldo(sd) };
+    }
+    var positivos = horas.lista.filter(function(x){ return x.extra > x.banco; }).map(itemSaldo)
+      .sort(function(a,b){ return b.value - a.value || a.label.localeCompare(b.label,"pt-BR"); });
+    var negativos = horas.lista.filter(function(x){ return x.banco > x.extra; }).map(itemSaldo)
+      .sort(function(a,b){ return b.value - a.value || a.label.localeCompare(b.label,"pt-BR"); });
+    renderBarH($("chartSaldoPositivo"), limitarLista(positivos, "saldoPos", limiteBanco, "btnSaldoPosTodos"), { colab:true, rightW:100 });
+    renderBarH($("chartSaldoNegativo"), limitarLista(negativos, "saldoNeg", limiteBanco, "btnSaldoNegTodos"), { colab:true, rightW:100 });
     $("hintBancoHoras").innerHTML = horas.doCartao
       ? "Mês atual do espelho de ponto &middot; verde = hora extra, vermelho = banco de horas, à direita o saldo (extra &minus; banco)"
       : "Arquivo antigo, sem o total do mês do espelho de ponto: aqui aparecem só os dias que viraram ocorrência";
@@ -3646,13 +3775,13 @@
     renderTableSimple($("tablePausasTermicas"),
       [{label:"Colaborador", width:"21%", render:function(r){return colabLink(r.colaborador);}},
        {label:"Cargo", width:"16%", render:function(r){return '<span title="'+escapeHtml(r.cargo)+'">'+escapeHtml(r.cargo)+'</span>';}},
-       {label:"Pausa correta", html:"Pausa<br>correta", width:"9%", render:function(r){return r.pausaCorretas;}},
-       {label:"Pausa curta (<0:20)", html:"Pausa curta<br>(&lt;0:20)", width:"9%", render:function(r){return r.pausaMenor20;}},
-       {label:"Pausa longa (>0:20)", html:"Pausa longa<br>(&gt;0:20)", width:"9%", render:function(r){return r.pausaMaior20;}},
-       {label:"Trabalho correto", html:"Trabalho<br>correto", width:"9%", render:function(r){return r.trabalhoCorreto140;}},
-       {label:"Trabalho longo (>1:40)", html:"Trabalho longo<br>(&gt;1:40)", width:"9%", render:function(r){return r.trabalhoMaior140;}},
-       {label:"Trabalho curto (<1:40)", html:"Trabalho curto<br>(&lt;1:40)", width:"9%", render:function(r){return r.trabalhoMenor140;}},
-       {label:"Marcações inválidas", html:"Marcações<br>inválidas", width:"9%", render:function(r){return r.pausasMarcacoesImpares;}}],
+       {label:"Pausas de 20 min (certas)", html:"Pausas de<br>20 min", width:"9%", render:function(r){return r.pausaCorretas;}},
+       {label:"Pausas com menos de 20 min", html:"Pausas<br>&lt; 20 min", width:"9%", render:function(r){return r.pausaMenor20;}},
+       {label:"Pausas com mais de 20 min", html:"Pausas<br>&gt; 20 min", width:"9%", render:function(r){return r.pausaMaior20;}},
+       {label:"Trechos de trabalho de 1h40 (certos)", html:"Trechos de<br>1h40", width:"9%", render:function(r){return r.trabalhoCorreto140;}},
+       {label:"Trechos com mais de 1h40 sem pausa", html:"Trechos<br>&gt; 1h40", width:"9%", render:function(r){return r.trabalhoMaior140;}},
+       {label:"Trechos com menos de 1h40", html:"Trechos<br>&lt; 1h40", width:"9%", render:function(r){return r.trabalhoMenor140;}},
+       {label:"Batidas de pausa faltando", html:"Batida<br>faltando", width:"9%", render:function(r){return r.pausasMarcacoesImpares;}}],
       pausasTermicasResumo(),
       {rowClass:function(r){ return r.pausasMarcacoesImpares > 0 ? "row-alert" : ""; }, tableClass:"tabela-compacta"});
 
@@ -3750,11 +3879,9 @@
     var eqDig = equipeDoFiltro(dig);
     var nEsq = dig.filter(isEsquecimento).length;
     function pct(a, b){ return b ? Math.round(a*100/b) + "%" : "0%"; }
-    function tile(label, valor, sub){
-      return '<div class="colab-kpi"><div class="ck-label">'+label+'</div><div class="ck-value">'+valor+'</div><div class="ck-sub">'+sub+'</div></div>';
-    }
+    var tile = kpiTile;
     $("digKpis").innerHTML =
-      tile("Marcações digitadas", formatNum(dig.length), "batidas no filtro") +
+      tile("Marcações digitadas", formatNum(dig.length), "batidas lançadas à mão") +
       tile("Colaboradores", formatNum(nPessoas), pct(nPessoas, eqDig.n) + " de " + formatNum(eqDig.n) + " " + eqDig.rotulo) +
       tile("Por esquecimento", formatNum(nEsq), pct(nEsq, dig.length) + " das digitadas");
 
@@ -3847,6 +3974,7 @@
       lista);
   }
   $("digBusca").addEventListener("input", debounce(applyFilters, 200));
+  $("bancoBusca").addEventListener("input", debounce(applyFilters, 200));
   /* ---------- Esquecimento crônico (P10) ----------
      Batidas digitadas por esquecimento, por pessoa e por ciclo (28 a 27),
      com a tendência do penúltimo para o último ciclo. Usa os filtros de
@@ -4016,13 +4144,19 @@
       if (isAtestado(r)){ atCiclo++; diasAtCiclo += n; }
     });
     var minHoras = porHoras.reduce(function(sm, r){ return sm + (r.duracao || 0); }, 0);
-    $("absResumo").innerHTML = soAtest
-      ? '<b>' + formatNum(visCiclo.length) + '</b> atestado(s) &middot; <b>' + formatNum(diasCiclo) + '</b> dia(s) &middot; <b>' +
-        formatNum(Object.keys(pessoasCiclo).length) + '</b> pessoa(s)'
-      : '<b>' + formatNum(visCiclo.length) + '</b> afastamento(s) &middot; <b>' + formatNum(diasCiclo) + '</b> dia(s) &middot; <b>' +
-        formatNum(Object.keys(pessoasCiclo).length) + '</b> pessoa(s)' + (soGrupo ? ' (só ' + escapeHtml(soGrupo.toLowerCase()) + ')' : ' &middot; desses, <b class="txt-atest">' + formatNum(atCiclo) +
-        '</b> atestado(s) com <b class="txt-atest">' + formatNum(diasAtCiclo) + '</b> dia(s) (' + (diasCiclo ? Math.round(diasAtCiclo*100/diasCiclo) : 0) + '% dos dias)') +
-        (porHoras.length ? ' &middot; fora da conta de dias: <b>' + formatNum(porHoras.length) + '</b> saída(s) por horas (' + formatHoras(minHoras) + ')' : '');
+    // Resumo do ciclo em frases curtas, para quem não é do ponto (29/10).
+    var nPes = Object.keys(pessoasCiclo).length;
+    var linhasRes = [];
+    var oQue = soAtest ? "atestado(s) médico(s)" : soGrupo ? "afastamento(s) do tipo “" + escapeHtml(soGrupo.toLowerCase()) + "”" : "afastamento(s) registrado(s)";
+    linhasRes.push('<b>' + formatNum(visCiclo.length) + '</b> ' + oQue + ', de <b>' + formatNum(nPes) + '</b> pessoa(s) diferente(s), somando <b>' +
+      formatNum(diasCiclo) + '</b> dia(s) de afastamento nesse período (cada dia do início ao fim conta, inclusive sábado, domingo e feriado; viagem, curso e reunião também contam, mesmo sendo trabalho fora do lugar de sempre).');
+    if (!soAtest && !soGrupo)
+      linhasRes.push('Desses, <b class="txt-atest">' + formatNum(atCiclo) + '</b> foram atestados médicos, com <b class="txt-atest">' + formatNum(diasAtCiclo) +
+        '</b> dia(s): ' + (diasCiclo ? Math.round(diasAtCiclo*100/diasCiclo) : 0) + '% de todos os dias de afastamento. O resto são férias, viagens a serviço, cursos, reuniões, licenças etc.');
+    if (porHoras.length)
+      linhasRes.push('Além disso, <b>' + formatNum(porHoras.length) + '</b> saída(s) de poucas horas no mesmo dia (consulta médica, horas de falta, reunião curta), somando <b>' +
+        formatHoras(minHoras) + '</b>. Essas não entram na conta de dias, porque a pessoa trabalhou no resto do dia.');
+    $("absResumo").innerHTML = '<div class="arc-titulo">📅 Resumo do ' + escapeHtml((state.absPeriodo.ciclo || "").replace(/^Ciclo/, "ciclo").replace(/^Últimos/, "período dos últimos")) + '</div><ul><li>' + linhasRes.join('</li><li>') + '</li></ul>';
 
     // Cada dia de afastamento vira um "pedaço" {ciclo, semana, grupo} para as
     // barras empilhadas por tipo (empilhar conta um por pedaço).
@@ -4098,7 +4232,14 @@
     $("absEmendaResumo").innerHTML = iniciados.length
       ? '<b>' + emendas.length + '</b> de <b>' + iniciados.length + '</b> atestados (' + Math.round(emendas.length*100/iniciados.length) + '%) encostam numa folga'
       : 'Nenhum atestado começou neste recorte.';
-    renderBarV($("chartAbsDiaSemana"), anexarOrigem(ocorrenciasPorDiaSemana(iniciados).map(function(it){ it.color = "var(--c-terracotta)"; return it; }), iniciados, diaSemanaRotulo), { total: iniciados.length });
+    // barra = atestados que começaram no dia da semana; pedaço vermelho = os que
+    // encostam numa folga, cinza = os que não encostam (cada pedaço abre só os seus, 29/10)
+    var emendaDe = function(r){ return r.emendaFolga ? "Encosta numa folga" : "Não encosta"; };
+    var corEmenda = function(k){ return k === "Encosta numa folga" ? "#E31E24" : "#C9CACC"; };
+    var itAbsDia = ocorrenciasPorDiaSemana(iniciados).map(function(it){ it.color = "var(--c-terracotta)"; return it; });
+    empilhar(itAbsDia, iniciados, diaSemanaRotulo, emendaDe, corEmenda);
+    renderBarV($("chartAbsDiaSemana"), itAbsDia, { total: iniciados.length,
+      legenda: [{ label:"Encosta numa folga", color:"#E31E24", value:emendas.length }, { label:"Não encosta", color:"#C9CACC", value:iniciados.length - emendas.length }] });
     renderTableSimple($("tableAbsEmendas"),
       [{label:"Colaborador", width:"22%", render:function(r){ return colabLink(r.colaborador); }},
        {label:"Gestor", width:"18%", render:function(r){ return escapeHtml(r.gestor); }},
@@ -4242,15 +4383,15 @@
       itens:function(){ return recsPessoa(function(r){ return r.tipo === "Interjornada"; }).map(function(r){ return { r:r, c:cicloDe(r.data), num:1 }; }); } },
     { id:"jor", nome:"Ocorrências de jornada (os 4 tipos)", secao:"Jornada", pior:"sobe", soNaSecao:true,
       itens:function(){ return recsPessoa(function(r){ return isTipoJornada(r.tipo); }).map(function(r){ return { r:r, c:cicloDe(r.data), num:1 }; }); } },
-    { id:"pauCertas", nome:"Pausas certas (20 min)", secao:"Pausas térmicas", pior:"desce", pct:true,
+    { id:"pauCertas", nome:"Pausas certas (20 min)", secao:"Pausas térmicas", pior:"desce", pct:true, medida:"pausaCorretas",
       itens:function(){ return recsPessoa(function(r){ return r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS; }).map(function(r){ return { r:r, c:cicloDe(r.data), num:r.pausaCorretas || 0, den:pausasTotal(r) }; }); } },
-    { id:"pauAcima", nome:"Trabalho acima de 1h40 sem pausa", secao:"Pausas térmicas", pior:"sobe", pct:true,
+    { id:"pauAcima", nome:"Trabalho acima de 1h40 sem pausa", secao:"Pausas térmicas", pior:"sobe", pct:true, medida:"trabalhoMaior140",
       itens:function(){ return recsPessoa(function(r){ return r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS; }).map(function(r){ return { r:r, c:cicloDe(r.data), num:r.trabalhoMaior140 || 0, den:blocosTrabalho(r) }; }); } },
     { id:"pnAprov", nome:"Justificativas aprovadas no PontoNet", secao:"PontoNet", pior:"sobe",
       itens:function(){ return recsPessoa(function(r){ return isTipoPontoNet(r.tipo) && isAprovadoPN(r); }).map(function(r){ return { r:r, c:cicloDe(r.data), num:1 }; }); } },
     { id:"pnGestor", nome:"Dias para o gestor avaliar (média)", secao:"PontoNet", pior:"sobe", media:true,
       itens:function(){ return recsPessoa(function(r){ return isTipoPontoNet(r.tipo) && isAprovadoPN(r) && r.diasGestor != null; }).map(function(r){ return { r:r, c:cicloDe(r.data), num:r.diasGestor, den:1 }; }); } },
-    { id:"pauImpar", nome:"Batida de pausa faltando", secao:"Pausas térmicas", pior:"sobe",
+    { id:"pauImpar", nome:"Batida de pausa faltando", secao:"Pausas térmicas", pior:"sobe", medida:"pausasMarcacoesImpares",
       itens:function(){ return recsPessoa(function(r){ return r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS; }).map(function(r){ return { r:r, c:cicloDe(r.data), num:r.pausasMarcacoesImpares || 0 }; }); } }
   ];
   function indicador(id){ for (var i = 0; i < INDICADORES.length; i++) if (INDICADORES[i].id === id) return INDICADORES[i]; return null; }
@@ -4317,6 +4458,11 @@
     var partes = vals.map(function(v, i){
       var x = i*(bw+gap), h = v ? Math.max(2, Math.round((v / max) * (H - 2))) : 0, c = ciclos[i];
       var recs = (a.c[c] && a.c[c].recs) || [];
+      // pausas: a janela "de onde vem" destaca a coluna do indicador; nos de
+      // quantidade (batida faltando) mostra só quem teve (29/10)
+      if (ind.medida && recs.length){
+        if (ind.pct){ recs = recs.slice(); recs.medida = ind.medida; } else recs = recsMedida(recs, ind.medida);
+      }
       var dica = cicloLabel(c) + " · " + ind.nome + ": " + (v == null ? "sem dado" : fmtValor(ind, v).replace("&ndash;", "–")) +
         (recs.length ? " · clique para ver de onde vem" : "");
       var idx = -1;
@@ -4494,8 +4640,8 @@
      Base: as linhas "Resumo Pausas Térmicas" (uma por pessoa por mês). A
      regra é 20 min de pausa a cada 1h40 de trabalho no frio. "Períodos de
      trabalho" = blocos entre duas pausas (certos + acima + abaixo de 1h40). */
-  var LIMITE_ACIMA_PCT = 0.30;   // T3: vermelho quando mais de 30% dos períodos passaram de 1h40
-  var COR_PAUSA = { "Certas (20 min)":"#1baf7a", "Curtas":"#E8840C", "Longas":"#2a78d6" };
+  var LIMITE_ACIMA_PCT = 0.30;   // T3: vermelho quando mais de 30% dos trechos passaram de 1h40
+  var COR_PAUSA = { "Certas (20 min)":"#1baf7a", "Curtas (menos de 20 min)":"#E8840C", "Longas (mais de 20 min)":"#2a78d6" };
   function blocosTrabalho(r){ return (r.trabalhoCorreto140 || 0) + (r.trabalhoMaior140 || 0) + (r.trabalhoMenor140 || 0); }
   function pausasTotal(r){ return (r.pausaCorretas || 0) + (r.pausaMenor20 || 0) + (r.pausaMaior20 || 0); }
   function pctAcima(r){ var b = blocosTrabalho(r); return b ? (r.trabalhoMaior140 || 0) / b : 0; }
@@ -4509,26 +4655,39 @@
     });
     return t;
   }
+  // Lista de pessoas do relatório de pausas que tiveram a medida "campo" (> 0),
+  // marcada com .medida: a janela "de onde vem" mostra essa coluna primeiro e
+  // conta pela medida (ex.: 28 pausas curtas de 5 pessoas), não por pessoa.
+  var MEDIDAS_PAUSA = {
+    pausaCorretas: { col:"Pausas de 20 min (certas)", un:"pausa(s) de 20 min (certas)" },
+    pausaMenor20: { col:"Pausas com menos de 20 min", un:"pausa(s) com menos de 20 min" },
+    pausaMaior20: { col:"Pausas com mais de 20 min", un:"pausa(s) com mais de 20 min" },
+    trabalhoMaior140: { col:"Trechos com mais de 1h40 sem pausa", un:"trecho(s) de trabalho com mais de 1h40 sem pausa" },
+    pausasMarcacoesImpares: { col:"Batidas de pausa faltando", un:"batida(s) de pausa faltando" }
+  };
+  function recsMedida(lista, campo){
+    var a = lista.filter(function(r){ return (r[campo] || 0) > 0; });
+    a.medida = campo;
+    return a;
+  }
   function renderPausas(){
     var mes = getPausasTermicasRecords(), t = somaPausas(mes);
-    function tile(label, valor, sub, cls){
-      return '<div class="colab-kpi'+(cls?' '+cls:'')+'"><div class="ck-label">'+label+'</div><div class="ck-value">'+valor+'</div><div class="ck-sub">'+sub+'</div></div>';
-    }
+    var tile = kpiTile;
     // T1: quatro números do topo
     $("pauKpis").hidden = !mes.length;
     $("pauKpis").innerHTML = !mes.length ? "" :
       tile("Pessoas no relatório", formatNum(t.pessoas), "trabalham no frio e fazem pausa") +
       tile("Pausas certas", pctTxt(t.corretas, t.pausas), formatNum(t.corretas) + " de " + formatNum(t.pausas) + " pausas com 20 minutos") +
-      tile("Trabalho acima de 1h40", formatNum(t.acima), pctTxt(t.acima, t.blocos) + " dos períodos &middot; " + t.acima30 + " pessoa(s) acima de 30%", t.acima30 ? "alerta" : "") +
+      tile("Trabalho acima de 1h40", formatNum(t.acima), pctTxt(t.acima, t.blocos) + " dos trechos &middot; " + t.acima30 + " pessoa(s) acima de 30%", t.acima30 ? "alerta" : "") +
       tile("Batida de pausa faltando", formatNum(t.impares), t.comImpar + " pessoa(s) esqueceram de bater a saída ou a volta da pausa", t.impares ? "alerta" : "");
 
     // T3: por pessoa (barras) e por gestor (tabela)
     var pessoas = mes.filter(function(r){ return r.trabalhoMaior140 > 0; }).map(function(r){
       var pc = pctAcima(r);
-      return { label:r.colaborador, value:r.trabalhoMaior140, pc:pc, recs:[r],
+      return { label:r.colaborador, value:r.trabalhoMaior140, pc:pc, recs:recsMedida([r], "trabalhoMaior140"),
                color: pc > LIMITE_ACIMA_PCT ? "#E31E24" : "var(--c-orange)",
-               texto: formatNum(r.trabalhoMaior140) + " · " + pctTxt(r.trabalhoMaior140, blocosTrabalho(r)) + " dos períodos",
-               dica: r.colaborador + ": " + formatNum(r.trabalhoMaior140) + " de " + formatNum(blocosTrabalho(r)) + " períodos de trabalho passaram de 1h40 (" + pctTxt(r.trabalhoMaior140, blocosTrabalho(r)) + ")" };
+               texto: formatNum(r.trabalhoMaior140) + " · " + pctTxt(r.trabalhoMaior140, blocosTrabalho(r)) + " dos trechos",
+               dica: r.colaborador + ": " + formatNum(r.trabalhoMaior140) + " de " + formatNum(blocosTrabalho(r)) + " trechos de trabalho passaram de 1h40 (" + pctTxt(r.trabalhoMaior140, blocosTrabalho(r)) + ")" };
     }).sort(function(a,b){ return b.value - a.value || b.pc - a.pc || a.label.localeCompare(b.label,"pt-BR"); });
     renderBarH($("chartPauAcima"), limitarLista(pessoas, "pauAcima", LIMITE_LISTA, "btnPauAcimaTodos"), { colab:true, rightW:150, filtro:"colab" });
     var porG = {};
@@ -4537,24 +4696,30 @@
       [{label:"Gestor", render:function(g){ return escapeHtml(g.gestor); }},
        {label:"Pessoas no relatório", html:"Pessoas no<br>relatório", width:"80px", render:function(g){ return g.t.pessoas; }},
        {label:"Acima de 1h40", html:"Acima de<br>1h40", width:"72px", render:function(g){ return "<strong>" + formatNum(g.t.acima) + "</strong>"; }},
-       {label:"% dos períodos", html:"% dos<br>períodos", width:"70px", render:function(g){ return pctTxt(g.t.acima, g.t.blocos); }},
+       {label:"% dos trechos", html:"% dos<br>trechos", width:"70px", render:function(g){ return pctTxt(g.t.acima, g.t.blocos); }},
        {label:"Pessoas acima de 30%", html:"Pessoas<br>acima de 30%", width:"84px", render:function(g){ return g.t.acima30 || "&ndash;"; }}],
       Object.keys(porG).map(function(k){ return { gestor:k, t:somaPausas(porG[k]) }; })
         .sort(function(a,b){ return b.t.acima - a.t.acima || a.gestor.localeCompare(b.gestor,"pt-BR"); }),
       { rowClass:function(g){ return g.t.acima30 ? "row-alert" : ""; }, tableClass:"tabela-compacta" });
 
     // T4: pausas por gestor ou por cargo (certas, curtas, longas)
-    var campo = $("pauAgrupar").value || "gestor", grupos = {}, tot3 = { "Certas (20 min)":0, "Curtas":0, "Longas":0 };
+    var campo = $("pauAgrupar").value || "gestor", grupos = {}, tot3 = { "Certas (20 min)":0, "Curtas (menos de 20 min)":0, "Longas (mais de 20 min)":0 };
     mes.forEach(function(r){ (grupos[r[campo]] = grupos[r[campo]] || []).push(r); });
     var itG = Object.keys(grupos).map(function(k){
       var l = grupos[k], tg = somaPausas(l);
       var curtas = l.reduce(function(sm, r){ return sm + (r.pausaMenor20 || 0); }, 0), longas = tg.pausas - tg.corretas - curtas;
-      tot3["Certas (20 min)"] += tg.corretas; tot3["Curtas"] += curtas; tot3["Longas"] += longas;
+      tot3["Certas (20 min)"] += tg.corretas; tot3["Curtas (menos de 20 min)"] += curtas; tot3["Longas (mais de 20 min)"] += longas;
       // filtro na legenda (só neste gráfico): esconde os pedaços desligados
-      var segs = [["Certas (20 min)", tg.corretas], ["Curtas", curtas], ["Longas", longas]].filter(function(x){ return x[1] > 0 && serieAtiva("chartPauGrupo", x[0]); })
-        .map(function(x){ return { label:x[0], value:x[1], color:COR_PAUSA[x[0]], recs:l }; });
+      // cada pedaço abre só as pessoas que tiveram aquele tipo de pausa, com a
+      // coluna dele em destaque (recsMedida); antes abria todas as pausas da
+      // equipe, qualquer que fosse o pedaço clicado (relato do RH, 29/10)
+      var campoPausa = { "Certas (20 min)":"pausaCorretas", "Curtas (menos de 20 min)":"pausaMenor20", "Longas (mais de 20 min)":"pausaMaior20" };
+      var segs = [["Certas (20 min)", tg.corretas], ["Curtas (menos de 20 min)", curtas], ["Longas (mais de 20 min)", longas]].filter(function(x){ return x[1] > 0 && serieAtiva("chartPauGrupo", x[0]); })
+        .map(function(x){ return { label:x[0], value:x[1], color:COR_PAUSA[x[0]], recs:recsMedida(l, campoPausa[x[0]]) }; });
       var soma = segs.reduce(function(sm, x){ return sm + x.value; }, 0);
-      return { label:k, value:soma, segs:segs, recs:l, pc: tg.pausas ? tg.corretas/tg.pausas : 1,
+      var recsBarra = l.filter(function(r){ return segs.some(function(sg){ return r[campoPausa[sg.label]] > 0; }); });
+      if (segs.length === 1) recsBarra = segs[0].recs;
+      return { label:k, value:soma, segs:segs, recs:recsBarra, pc: tg.pausas ? tg.corretas/tg.pausas : 1,
                texto: pctTxt(tg.corretas, tg.pausas) + " certas · " + l.length + " pessoa(s)" };
     }).filter(function(it){ return it.value > 0; }).sort(function(a,b){ return a.pc - b.pc || b.value - a.value; }).slice(0, 12);
     renderBarH($("chartPauGrupo"), itG, { rightW:150, filtro: campo === "gestor" ? "gestor" : "cargo",
@@ -4570,10 +4735,10 @@
       $("chartPauEvolucao").innerHTML = "";
       $("chartPauEvolucao").appendChild(emptyMsg("Para ver a evolução, o arquivo precisa trazer o relatório de pausas de mais de um mês. O RH inclui esse relatório quando gera o arquivo do painel."));
     } else {
-      $("pauEvolHint").textContent = "Trabalho acima de 1h40 em cada mês, em % dos períodos de trabalho · " + meses.length + " meses no arquivo";
+      $("pauEvolHint").textContent = "Trabalho acima de 1h40 em cada mês, em % dos trechos de trabalho · " + meses.length + " meses no arquivo";
       renderBarV($("chartPauEvolucao"), linhasMes.map(function(l){
         var v = l.t.blocos ? l.t.acima*100/l.t.blocos : 0;
-        return { label:l.rot, value:v, texto: pctTxt(l.t.acima, l.t.blocos), color:"var(--c-orange)", recs:l.recs.filter(function(r){ return r.trabalhoMaior140 > 0; }) };
+        return { label:l.rot, value:v, texto: pctTxt(l.t.acima, l.t.blocos), color:"var(--c-orange)", recs:recsMedida(l.recs, "trabalhoMaior140") };
       }), {});
     }
     renderTableSimple($("tablePauEvolucao"),
@@ -4588,7 +4753,7 @@
   /* ---------- Pausas térmicas: as batidas de cada dia (B1, B2, B5, B6, B7, B9) ----------
      Base: as linhas "Pausa Térmica Dia" (uma por pessoa por dia), com as
      batidas do dia em marcacoesDia ("21:02 P 21:30 F 21:50 F ..."). A conta é a
-     mesma do sistema: as batidas em ordem formam, alternando, um período de
+     mesma do sistema: as batidas em ordem formam, alternando, um trecho de
      trabalho e uma pausa (1ª→2ª trabalho, 2ª→3ª pausa, 3ª→4ª trabalho...).
      Pausa com as duas letras F = pausa térmica; G = refeição; P = entrada ou
      saída da jornada. Período de trabalho acima de 100 min = acima de 1h40.
@@ -4644,7 +4809,7 @@
   function resumoDiaPausa(r){
     var a = analisarDiaPausa(r), p = [];
     if (a.sem) p.push(hm(a.total) + " de trabalho e nenhuma pausa térmica");
-    if (a.acima.length) p.push(a.acima.length + " período(s) acima de 1h40 (maior: " + hm(a.maior.dur) + ")");
+    if (a.acima.length) p.push(a.acima.length + " trecho(s) acima de 1h40 (maior: " + hm(a.maior.dur) + ")");
     if (a.impar) p.push("faltou batida: " + a.falta.map(function(l){ return (NOME_LETRA[l] || "outra").toLowerCase(); }).join(", "));
     if (!p.length) p.push(a.ff + " pausa(s) térmica(s), tudo dentro de 1h40");
     return p.join(" · ");
@@ -4682,9 +4847,9 @@
     dias.forEach(function(r){ analisarDiaPausa(r); pessoas[chavePessoa(r)] = true; });
     var nAcima = dias.filter(function(r){ return r._pd.acima.length; }).length;
     $("pauBatResumo").textContent = formatNum(dias.length) + " dias trabalhados de " + Object.keys(pessoas).length + " pessoa(s) · " +
-      formatNum(nAcima) + " dia(s) com algum período acima de 1h40 (" + pctTxt(nAcima, dias.length) + ")";
+      formatNum(nAcima) + " dia(s) com algum trecho acima de 1h40 (" + pctTxt(nAcima, dias.length) + ")";
 
-    // B1: por hora de começo do período de trabalho
+    // B1: por hora de começo do trecho de trabalho
     var horas = {}, totB = 0, totA = 0;
     dias.forEach(function(r){
       r._pd.trab.forEach(function(b){
@@ -4698,9 +4863,9 @@
       var x = horas[h], pc = x.a / x.n;
       return { label: h + "h", value: Math.round(pc*1000)/10, texto: pctTxt(x.a, x.n), recs: x.recs.length ? x.recs : null,
                color: media && pc >= media*1.5 ? "#E31E24" : "var(--c-orange)",
-               dica: h + "h: " + formatNum(x.a) + " de " + formatNum(x.n) + " períodos que começaram nessa hora passaram de 1h40 (" + pctTxt(x.a, x.n) + ")" + (x.recs.length ? " · clique para ver os dias" : "") };
+               dica: h + "h: " + formatNum(x.a) + " de " + formatNum(x.n) + " trechos que começaram nessa hora passaram de 1h40 (" + pctTxt(x.a, x.n) + ")" + (x.recs.length ? " · clique para ver os dias" : "") };
     });
-    $("pauHoraHint").textContent = "Dos períodos de trabalho que começaram em cada hora, quantos passaram de 1h40 · média do mês: " + pctTxt(totA, totB) +
+    $("pauHoraHint").textContent = "Dos trechos de trabalho que começaram em cada hora, quantos passaram de 1h40 · média do mês: " + pctTxt(totA, totB) +
       " (" + formatNum(totA) + " de " + formatNum(totB) + ") · em vermelho: uma vez e meia a média ou mais";
     renderBarV($("chartPauHora"), itH, {});
 
@@ -4711,7 +4876,7 @@
       // dia da semana com menos de 10 dias trabalhados: cinza (a % engana com tão poucos dias)
       return { label: DIAS_LABELS[i], value: x.n ? Math.round(x.recs.length*1000/x.n)/10 : 0, texto: x.n ? pctTxt(x.recs.length, x.n) : "–",
                recs: x.recs.length ? x.recs : null, color: x.n < 10 ? "#C9CACC" : "var(--c-orange)",
-               dica: DIAS_LABELS[i] + ": " + formatNum(x.recs.length) + " de " + formatNum(x.n) + " dias trabalhados com algum período acima de 1h40 (" + pctTxt(x.recs.length, x.n) + ")" +
+               dica: DIAS_LABELS[i] + ": " + formatNum(x.recs.length) + " de " + formatNum(x.n) + " dias trabalhados com algum trecho acima de 1h40 (" + pctTxt(x.recs.length, x.n) + ")" +
                  (x.n < 10 ? " · poucos dias, a porcentagem engana" : "") };
     }), {});
 
@@ -4747,7 +4912,7 @@
     }).sort(function(a,b){ return b.value - a.value || a.label.localeCompare(b.label,"pt-BR"); });
     renderBarH($("chartPauSemPausa"), limitarLista(itSem, "pauSemPausa", LIMITE_LISTA, "btnPauSemPausaTodos"), { colab:true, rightW:104, filtro:"colab" });
 
-    // B6: maior período seguido sem pausa, por pessoa
+    // B6: maior trecho seguido sem pausa, por pessoa
     var maiorP = {};
     dias.forEach(function(r){
       var a = r._pd; if (!a.maior || a.maior.dur <= LIMITE_TRABALHO_MIN) return;
@@ -4758,7 +4923,7 @@
     var itMaior = Object.values(maiorP).map(function(x){
       return { label:x.label, value:x.max, recs:x.recs, color: x.max > LIMITE_TRABALHO_MIN*2 ? "#E31E24" : "var(--c-orange)",
                texto: hm(x.max) + " · " + formatDateBR(x.dia).slice(0,5),
-               dica: x.label + ": maior período sem pausa de " + hm(x.max) + " em " + formatDateBR(x.dia) + " · " + x.recs.length + " dia(s) acima de 1h40 · clique na barra para ver os dias" };
+               dica: x.label + ": maior trecho sem pausa de " + hm(x.max) + " em " + formatDateBR(x.dia) + " · " + x.recs.length + " dia(s) acima de 1h40 · clique na barra para ver os dias" };
     }).sort(function(a,b){ return b.value - a.value || a.label.localeCompare(b.label,"pt-BR"); });
     renderBarH($("chartPauMaior"), limitarLista(itMaior, "pauMaior", LIMITE_LISTA, "btnPauMaiorTodos"), { colab:true, rightW:104, filtro:"colab" });
 
@@ -4892,9 +5057,7 @@
     var aprov = rec;   // só há aprovados aqui (getPontoNetRecords)
 
     // números do topo
-    function tile(label, valor, sub, cls){
-      return '<div class="colab-kpi'+(cls?' '+cls:'')+'"><div class="ck-label">'+label+'</div><div class="ck-value">'+valor+'</div><div class="ck-sub">'+sub+'</div></div>';
-    }
+    var tile = kpiTile;
     var pessoas = {}; aprov.forEach(function(r){ pessoas[chavePessoa(r)] = true; });
     var mCol = mediaDias(aprov, "diasColaborador"), mGes = mediaDias(aprov, "diasGestor");
     $("pnKpis").innerHTML =
@@ -5107,9 +5270,7 @@
     var rec = cicloSel ? todos.filter(function(r){ return cicloDe(r.data) === cicloSel; }) : todos;
 
     // J1: quatro números do topo (recorte escolhido)
-    function tile(label, valor, sub){
-      return '<div class="colab-kpi"><div class="ck-label">'+label+'</div><div class="ck-value">'+valor+'</div><div class="ck-sub">'+sub+'</div></div>';
-    }
+    var tile = kpiTile;
     function pessoas(lista){ var p = {}; lista.forEach(function(r){ p[chavePessoa(r)] = true; }); return Object.keys(p).length; }
     var porTipo = {};
     TIPOS_JORNADA.forEach(function(t){ porTipo[t] = rec.filter(function(r){ return r.tipo === t; }); });
@@ -5532,6 +5693,85 @@
   // vários chamam applyFilters sozinhos, em msMudou.)
   $("fDataIni").addEventListener("change", applyFilters);
   $("fDataFim").addEventListener("change", applyFilters);
+
+  /* ---------- Calendário do período (29/10) ----------
+     Pedido do RH: no filtro de período só dá para clicar nos dias que têm
+     alguma informação (state.diasDados, montado em populateFilterOptions).
+     Os botões "De"/"Até" abrem o mesmo calendário (#calPop) logo abaixo;
+     escolher um dia grava "aaaa-mm-dd" no campo escondido (fDataIni ou
+     fDataFim) e redesenha o painel. Se o "De" passar do "Até" (ou o contrário),
+     o outro acompanha. */
+  var cal = { alvo:null, mes:null };   // alvo = id do campo; mes = Date do dia 1 do mês na tela
+  var MESES_LONGOS = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+  function atualizarBotoesData(){
+    ["fDataIni","fDataFim"].forEach(function(id){
+      var v = $(id).value;
+      $(id === "fDataIni" ? "btnDataIniVal" : "btnDataFimVal").textContent = v ? isoParaBR(v) : (id === "fDataIni" ? "início" : "fim");
+    });
+  }
+  function limitesDias(){
+    var k = Object.keys(state.diasDados || {}).sort();
+    return k.length ? { min:k[0], max:k[k.length-1] } : null;
+  }
+  function desenharCalendario(){
+    var pop = $("calPop"), lim = limitesDias();
+    if (!lim){ pop.innerHTML = '<div class="cal-nota">Carregue um arquivo para escolher o período.</div>'; return; }
+    var ini = $("fDataIni").value, fim = $("fDataFim").value, escolhido = $(cal.alvo).value;
+    var a = cal.mes.getFullYear(), m = cal.mes.getMonth();
+    var minMes = lim.min.slice(0,7), maxMes = lim.max.slice(0,7), esteMes = a + "-" + String(m+1).padStart(2,"0");
+    var h = '<div class="cal-topo"><button type="button" class="cal-nav" data-cal="-1" aria-label="Mês anterior"' + (esteMes <= minMes ? " disabled" : "") + '>&lsaquo;</button>' +
+      '<b>' + (cal.alvo === "fDataIni" ? "De: " : "Até: ") + MESES_LONGOS[m] + " de " + a + '</b>' +
+      '<button type="button" class="cal-nav" data-cal="1" aria-label="Próximo mês"' + (esteMes >= maxMes ? " disabled" : "") + '>&rsaquo;</button></div>';
+    h += '<div class="cal-grade">' + DIAS_LABELS.map(function(d){ return '<span class="cal-sem">' + d.charAt(0) + '</span>'; }).join("");
+    var primeiro = new Date(a, m, 1), vazios = (primeiro.getDay() + 6) % 7, nDias = new Date(a, m + 1, 0).getDate();
+    for (var i = 0; i < vazios; i++) h += '<span class="cal-dia fora-mes"></span>';
+    for (var d = 1; d <= nDias; d++){
+      var k = esteMes + "-" + String(d).padStart(2,"0"), tem = !!state.diasDados[k];
+      var cls = "cal-dia" + (!tem ? " vazio" : "") + (k === escolhido ? " escolhido" : (tem && ini && fim && k >= ini && k <= fim ? " no-periodo" : ""));
+      h += tem ? '<button type="button" class="' + cls + '" data-dia="' + k + '" title="' + isoParaBR(k) + '">' + d + '</button>'
+               : '<span class="' + cls + '" title="Sem informação neste dia">' + d + '</span>';
+    }
+    h += '</div><div class="cal-atalhos"><button type="button" data-cal-atalho="padrao">Período padrão do arquivo</button></div>' +
+      '<div class="cal-nota">Só os dias com alguma informação (ocorrência, hora extra, diferença de menos de 15 minutos ou batida digitada) podem ser escolhidos. Os riscados não têm nada.</div>';
+    pop.innerHTML = h;
+  }
+  function abrirCalendario(alvo){
+    var pop = $("calPop");
+    if (!pop.hidden && cal.alvo === alvo){ fecharCalendario(); return; }
+    cal.alvo = alvo;
+    var v = $(alvo).value || (limitesDias() || {}).max;
+    var d = v ? new Date(v + "T00:00:00") : new Date();
+    cal.mes = new Date(d.getFullYear(), d.getMonth(), 1);
+    document.querySelectorAll(".data-btn").forEach(function(b){ b.classList.toggle("aberto", b.dataset.alvo === alvo); });
+    pop.hidden = false;
+    desenharCalendario();
+  }
+  function fecharCalendario(){
+    $("calPop").hidden = true;
+    document.querySelectorAll(".data-btn").forEach(function(b){ b.classList.remove("aberto"); });
+  }
+  document.querySelectorAll(".data-btn").forEach(function(b){
+    b.addEventListener("click", function(e){ e.stopPropagation(); abrirCalendario(b.dataset.alvo); });
+  });
+  $("calPop").addEventListener("click", function(e){
+    e.stopPropagation();
+    var nav = e.target.closest("[data-cal]"), dia = e.target.closest("[data-dia]"), at = e.target.closest("[data-cal-atalho]");
+    if (nav && !nav.disabled){ cal.mes = new Date(cal.mes.getFullYear(), cal.mes.getMonth() + (+nav.dataset.cal), 1); desenharCalendario(); return; }
+    if (at){
+      var total = periodoCompleto();
+      $("fDataIni").value = total ? total.ini : ""; $("fDataFim").value = total ? total.fim : "";
+    } else if (dia){
+      var k = dia.dataset.dia;
+      $(cal.alvo).value = k;
+      if (cal.alvo === "fDataIni" && $("fDataFim").value && $("fDataFim").value < k) $("fDataFim").value = k;
+      if (cal.alvo === "fDataFim" && $("fDataIni").value && $("fDataIni").value > k) $("fDataIni").value = k;
+    } else return;
+    fecharCalendario();
+    atualizarBotoesData();
+    applyFilters();
+  });
+  document.addEventListener("click", function(e){ if (!$("calPop").hidden && !e.target.closest("#calPop")) fecharCalendario(); });
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape" && !$("calPop").hidden){ e._tratado = true; fecharCalendario(); } });
   // Volta todos os filtros ao estado inicial. Usada pelo botão "Limpar
   // filtros", ao tirar o arquivo ("Carregar outro arquivo") e ao carregar
   // um arquivo novo — sem isso, um colaborador digitado, um período ou a
@@ -5544,7 +5784,7 @@
     var total = periodoCompleto();
     $("fDataIni").value = total ? total.ini : "";
     $("fDataFim").value = total ? total.fim : "";
-    $("historySearch").value = "";
+    $("historySearch").value = ""; $("bancoBusca").value = "";
     $("orgBusca").value = ""; $("orgMostrar").value = ""; $("digBusca").value = "";
     $("absCiclo").value = ""; $("absAgrupar").value = "gestor"; $("absMostrar").value = "";
     $("jorCiclo").value = ""; $("gestorMedida").value = ""; $("pauAgrupar").value = "gestor"; $("tendIndicador").value = "";
@@ -5553,6 +5793,9 @@
     state.bancoMostrarTodos = false;
     state.mostrarTodos = {};
     state.serieSel = {};   // filtros dentro dos gráficos (um por gráfico)
+    if (!state.records.length) state.diasDados = {};
+    atualizarBotoesData();
+    if ($("calPop")) fecharCalendario();
   }
   $("clearFilters").addEventListener("click", function(){
     limparControlesFiltro();
@@ -5639,8 +5882,8 @@
     var linhas = [
       ["Pausas certas (20 min)", pctTxt(pcCerta(pausa)*100, 100) + " (" + formatNum(pausa.pausaCorretas) + " de " + formatNum(pausasTotal(pausa)) + ")", pctTxt(media(pcCerta)*100, 100), pcCerta(pausa) < media(pcCerta) - 0.05],
       ["Pausas curtas (menos de 20 min)", formatNum(pausa.pausaMenor20), formatDec(media(function(r){ return r.pausaMenor20 || 0; })), false],
-      ["Trabalho acima de 1h40 sem pausa", formatNum(pausa.trabalhoMaior140) + " (" + pctTxt(pausa.trabalhoMaior140, blocosTrabalho(pausa)) + " dos períodos)",
-        pctTxt(media(pctAcima)*100, 100) + " dos períodos", pctAcima(pausa) > LIMITE_ACIMA_PCT],
+      ["Trabalho acima de 1h40 sem pausa", formatNum(pausa.trabalhoMaior140) + " (" + pctTxt(pausa.trabalhoMaior140, blocosTrabalho(pausa)) + " dos trechos)",
+        pctTxt(media(pctAcima)*100, 100) + " dos trechos", pctAcima(pausa) > LIMITE_ACIMA_PCT],
       ["Batida de pausa faltando", formatNum(pausa.pausasMarcacoesImpares), formatDec(media(function(r){ return r.pausasMarcacoesImpares || 0; })), pausa.pausasMarcacoesImpares > 0]
     ];
     var h = '<h3 class="colab-section">Pausas térmicas no mês (' + cicloLabel(cicloDe(pausa.data)) + ') &middot; comparadas com a média de ' + equipe.length + ' pessoa(s) da equipe no relatório</h3>' +
@@ -5997,15 +6240,18 @@
         {label:"O que houve", width:"26%", render:function(r){ return escapeHtml(resumoDiaPausa(r)); }},
         {label:"Batidas", render:function(r){ return escapeHtml(batidasDiaTexto(r)); }}];
     } else if (tipo === "pausa"){
-      linhas = recs.slice().sort(function(a,b){ return pctAcima(b) - pctAcima(a) || a.colaborador.localeCompare(b.colaborador,"pt-BR"); });
+      var med = recs.medida && MEDIDAS_PAUSA[recs.medida] ? recs.medida : null;
+      linhas = recs.slice().sort(function(a,b){ return (med ? b[med] - a[med] : pctAcima(b) - pctAcima(a)) || a.colaborador.localeCompare(b.colaborador,"pt-BR"); });
       colunas = [
         {label:"Colaborador", width:"24%", render:function(r){ return colabLink(r.colaborador); }},
-        {label:"Gestor", width:"20%", render:function(r){ return escapeHtml(r.gestor); }},
+        {label:"Gestor", width:"20%", render:function(r){ return escapeHtml(r.gestor); }}].concat(med ? [
+        {label:MEDIDAS_PAUSA[med].col, width:"120px", render:function(r){ return "<strong>" + formatNum(r[med]) + "</strong>"; }}] : []).concat([
         {label:"Pausas certas", width:"90px", render:function(r){ return formatNum(r.pausaCorretas); }},
-        {label:"Curtas", width:"70px", render:function(r){ return formatNum(r.pausaMenor20); }},
-        {label:"Longas", width:"70px", render:function(r){ return formatNum(r.pausaMaior20); }},
-        {label:"Trabalho acima de 1h40", width:"110px", render:function(r){ return formatNum(r.trabalhoMaior140) + " (" + pctTxt(r.trabalhoMaior140, blocosTrabalho(r)) + ")"; }},
-        {label:"Batida faltando", width:"90px", render:function(r){ return formatNum(r.pausasMarcacoesImpares); }}];
+        {label:"Curtas (< 20 min)", width:"80px", render:function(r){ return formatNum(r.pausaMenor20); }},
+        {label:"Longas (> 20 min)", width:"80px", render:function(r){ return formatNum(r.pausaMaior20); }},
+        {label:"Trechos acima de 1h40", width:"110px", render:function(r){ return formatNum(r.trabalhoMaior140) + " (" + pctTxt(r.trabalhoMaior140, blocosTrabalho(r)) + ")"; }},
+        {label:"Batida faltando", width:"90px", render:function(r){ return formatNum(r.pausasMarcacoesImpares); }}]);
+      if (med) colunas = colunas.filter(function(c, i){ return i < 3 || c.label.indexOf({ trabalhoMaior140:"Trechos acima", pausaCorretas:"Pausas certas", pausaMenor20:"Curtas", pausaMaior20:"Longas", pausasMarcacoesImpares:"Batida faltando" }[med]) !== 0; });
     } else if (tipo === "digitada"){
       linhas = recs.slice().sort(function(a,b){ return a.data - b.data; });
       colunas = [
@@ -6025,11 +6271,18 @@
     }
     // resumo por pessoa: quem aparece e quantas vezes (do maior para o menor)
     var porPessoa = {};
-    linhas.forEach(function(x){ var r = x.r || x; porPessoa[r.colaborador] = (porPessoa[r.colaborador] || 0) + 1; });
+    var medO = tipo === "pausa" && recs.medida && MEDIDAS_PAUSA[recs.medida] ? recs.medida : null;
+    linhas.forEach(function(x){ var r = x.r || x; porPessoa[r.colaborador] = (porPessoa[r.colaborador] || 0) + (medO ? r[medO] : 1); });
     var nomes = Object.keys(porPessoa).sort(function(a,b){ return porPessoa[b]-porPessoa[a] || a.localeCompare(b,"pt-BR"); });
-    var unidade = { digitada:"batida(s) digitada(s)", ocorrencia:"ocorrência(s)", jornada:"ocorrência(s) de jornada", pausa:"pessoa(s) no relatório de pausas", pausaDia:"dia(s) de batidas de pausa", pontonet:"justificativa(s) aprovada(s)" }[tipo] || "afastamento(s)";
+    var unidade = medO ? MEDIDAS_PAUSA[medO].un : { digitada:"batida(s) digitada(s)", ocorrencia:"ocorrência(s)", jornada:"ocorrência(s) de jornada", pausa:"pessoa(s) no relatório de pausas", pausaDia:"dia(s) de batidas de pausa", pontonet:"justificativa(s) aprovada(s)" }[tipo] ||
+      (linhas.every(function(x){ return isAtestado(x.r || x); }) ? "atestado(s)" : "afastamento(s)");
     $("origemTitulo").textContent = titulo + (recorte ? " · " + recorte : "");
-    state.origem = { linhas:linhas, colunas:colunas, nomes:nomes, porPessoa:porPessoa, unidade:unidade, sel:{} };
+    // dias de afastamento (barras em dias): a conta de cima é dos dias, como a barra
+    // clicada, e diz de quantos afastamentos eles vêm (29/10)
+    var contar = medO ? function(l){ return l.reduce(function(sm, r){ return sm + (r[medO] || 0); }, 0); }
+      : tipo === "pedaco" ? function(l){ return l.reduce(function(sm, x){ return sm + x.dias; }, 0); } : null;
+    if (tipo === "pedaco"){ unidade = "dia(s) de afastamento, em " + formatNum(linhas.length) + " " + unidade + ","; }
+    state.origem = { linhas:linhas, colunas:colunas, nomes:nomes, porPessoa:porPessoa, unidade:unidade, sel:{}, contar: contar };
     desenharOrigem();
     $("origemOverlay").hidden = false;
     $("origemOverlay").querySelector(".origem-body").scrollTop = 0;
@@ -6040,8 +6293,9 @@
   function desenharOrigem(){
     var o = state.origem, temSel = Object.keys(o.sel).length > 0;
     var vis = temSel ? o.linhas.filter(function(x){ return o.sel[(x.r || x).colaborador]; }) : o.linhas;
-    $("origemSub").textContent = formatNum(o.linhas.length) + " " + o.unidade + " de " + formatNum(o.nomes.length) + " pessoa(s)" +
-      (temSel ? " · mostrando " + formatNum(vis.length) + " de " + Object.keys(o.sel).length + " pessoa(s) escolhida(s)" : "") +
+    var nTot = o.contar ? o.contar(o.linhas) : o.linhas.length, nVis = o.contar ? o.contar(vis) : vis.length;
+    $("origemSub").textContent = formatNum(nTot) + " " + o.unidade + " de " + formatNum(o.nomes.length) + " pessoa(s)" +
+      (temSel ? " · mostrando " + formatNum(nVis) + " de " + Object.keys(o.sel).length + " pessoa(s) escolhida(s)" : "") +
       " · clique num nome aqui em cima para filtrar a lista; clique no nome na lista para ver o resumo da pessoa";
     $("origemPessoas").innerHTML = o.nomes.map(function(n){
       return '<button type="button" class="origem-chip' + (o.sel[n] ? ' sel' : (temSel ? ' off' : '')) + '" data-origem-pessoa="' + escapeHtml(n) + '">' +
@@ -6078,7 +6332,7 @@
     filtro: ["chartTipo","chartDiaSemana","chartPorData","chartPorGestor","chartPorCargo","chartTopColaboradores","tableCurtas",
              "chartDigMotivo","chartDigDiaSemana","chartDigData","chartDigTop","chartDigGestor","chartDigHora",
              "tableDigJust","tableDigLista","historySection"],
-    cartao: ["chartBancoHoras"], cartao3: ["tableExtraFalta"], pausas: ["tablePausasTermicas","chartPauAcima","tablePauAcimaGestor","chartPauGrupo"],
+    cartao: ["chartBancoHoras","chartSaldoPositivo","chartSaldoNegativo"], cartao3: ["tableExtraFalta"], pausas: ["tablePausasTermicas","chartPauAcima","tablePauAcimaGestor","chartPauGrupo"],
     pausasMeses: ["chartPauEvolucao"],
     pauBat: ["chartPauHora","chartPauDiaSemana","chartPauPrimeira","chartPauSemPausa","chartPauMaior","pauHeat"],
     absEvol: ["chartAbsEvolucao"], absCiclo: ["chartAbsGrupo","chartAbsDiaSemana","tableAbsEmendas"], abs3m: ["tableAbsRanking","tableAbsMesmoDia","tableAbsSegSex","tableAbsFerias"],
@@ -6128,6 +6382,26 @@
         }
         selo.hidden = !textos[tipo];
         selo.textContent = textos[tipo] ? "📅 " + textos[tipo] : "";
+      });
+    });
+    // Números do topo das seções (pedido do RH, 29/10: "deixe claro a que período o
+    // número se refere"): uma linha 📅 dentro de cada número, sem o "(não segue o
+    // filtro de período)", que fica no "?".
+    var KPI_PERIODO = { kpiRow:"filtro", digKpis:"filtro", jorKpis:"jorCiclo", pauKpis:"pausas", pnKpis:"pnCiclo" };
+    Object.keys(KPI_PERIODO).forEach(function(id){
+      var t = textos[KPI_PERIODO[id]];
+      t = t ? t.replace(/ \(não segue o filtro de período\)/, "") : "";
+      if (KPI_PERIODO[id] === "filtro" && ini && fim) t = intervaloBR(ini, fim);
+      [].forEach.call(($(id) || document.createElement("i")).querySelectorAll(".colab-kpi, .kpi-tile"), function(tile){
+        var p = tile.querySelector(".ck-periodo, .kpi-periodo");
+        if (!p){
+          p = document.createElement("div");
+          p.className = tile.classList.contains("kpi-tile") ? "kpi-periodo" : "ck-periodo";
+          var antes = tile.querySelector(":scope > .card-fonte");
+          if (antes) tile.insertBefore(p, antes); else tile.appendChild(p);
+        }
+        p.hidden = !t;
+        p.textContent = t ? "📅 " + t : "";
       });
     });
   }

@@ -60,12 +60,32 @@ Option Explicit
 '   CSV -> painel (index.html). Por isso os nomes em targetHeaders (passo 3)
 '   não devem mudar sem conferir o GerarCSVPonto.
 '   Não depende de nenhum outro módulo (LimparTexto está no fim deste arquivo).
+'
+' COLAR NAS ABAS DE TRATAMENTO (29/10)
+'   Depois de montar a EDITADO, a macro separa as linhas pela coluna "Tipo de
+'   trabalho" da aba ORG (achada pela matrícula; se a matrícula não estiver no
+'   ORG, pelo nome) e cola os internos na aba "Tratamento - Internos" e os
+'   externos na "Tratamento - Externos", achando cada coluna pelo NOME do
+'   cabeçalho da aba de destino:
+'     Matricula, Nome, Situação, Data (<- Dt.Apuraç.), Status (<- Tratamento),
+'     Pontonet (só existe na de Externos), Marcações ... Refeição fora de Escala
+'       -> vêm da EDITADO;
+'     Trabalho, Cargo, Gestor -> se a aba já tem FÓRMULA nessas colunas (ex.:
+'       PROCX no ORG), a fórmula é estendida para as linhas novas; se não tem,
+'       o valor vem do ORG (Tipo de trabalho, Cargo, GESTOR);
+'     Check -> fica em branco (o RH marca).
+'   Se a aba de destino já tem linhas, a macro pergunta: apagar e colar de novo,
+'   colar embaixo, ou não colar. Quem não está no ORG (ou está sem "Tipo de
+'   trabalho") não é colado: a linha fica AMARELA na EDITADO e o nome aparece
+'   na mensagem final. Para refazer só esta parte, rode
+'   DistribuirEditadoNasAbasTratamento com a aba EDITADO aberta.
 ' ================================================================================
 
 ' Macro principal. Fluxo: 0) prepara o Excel; 1) acha a aba PURO; 2) mapeia os
 ' cabeçalhos; 3) define o layout de saída; 4) avisa cabeçalhos faltando;
 ' 5) descobre o mês para o nome da aba; 6) cria a aba; 7) cabeçalho;
-' 8) copia linha a linha; 9) aparência. Os rótulos Finalizar/TratarErro, no fim,
+' 8) copia linha a linha; 9) aparência; 10) cola internos e externos nas abas
+' "Tratamento - Internos" / "Tratamento - Externos" (DistribuirNasAbasTratamento). Os rótulos Finalizar/TratarErro, no fim,
 ' garantem que o Excel volte ao normal mesmo se der erro.
 Sub PURO_Para_EDITADO()
 
@@ -396,9 +416,18 @@ PularCriacaoComSufixo:
     wsEditado.Columns.AutoFit
     wsEditado.Rows(1).AutoFilter
 
+    ' ----------------------------------------------------------------------
+    ' 10) Cola os colaboradores nas abas de tratamento (pedido do RH, 29/10):
+    '     internos em "Tratamento - Internos" e externos em "Tratamento -
+    '     Externos", conforme a coluna "Tipo de trabalho" da aba ORG. Ver
+    '     DistribuirNasAbasTratamento, mais abaixo.
+    ' ----------------------------------------------------------------------
+    Dim resumoDistribuicao As String
+    resumoDistribuicao = DistribuirNasAbasTratamento(wbAtual, wsEditado)
+
     Application.StatusBar = False
     MsgBox "Concluído! " & (linhaDestino - 2) & " linha(s) transferida(s) da PURO para a aba '" & _
-           wsEditado.Name & "'.", vbInformation, "Processo finalizado"
+           wsEditado.Name & "'." & vbCrLf & vbCrLf & resumoDistribuicao, vbInformation, "Processo finalizado"
 
 Finalizar:
     ' Restaura o Excel ao estado normal, mesmo se algo tiver falhado
@@ -445,3 +474,414 @@ Private Function LimparTexto(ByVal valor As Variant) As Variant
         LimparTexto = txt
     End If
 End Function
+
+' ================================================================================
+' DistribuirEditadoNasAbasTratamento  (pode ser rodada sozinha, Alt+F8)
+' --------------------------------------------------------------------------------
+' Refaz só o passo 10: com uma aba EDITADO_... aberta (aba ativa), cola os
+' internos e os externos nas abas de tratamento. Útil quando o ORG foi
+' corrigido depois de rodar a PURO_Para_EDITADO.
+' ================================================================================
+Sub DistribuirEditadoNasAbasTratamento()
+    Dim wsOrigem As Worksheet, resumoFinal As String
+    Set wsOrigem = ActiveSheet
+    If UCase$(Left$(wsOrigem.Name, 7)) <> "EDITADO" Then
+        MsgBox "Abra (clique) a aba EDITADO_... antes de rodar esta macro.", vbExclamation, "Aba errada"
+        Exit Sub
+    End If
+    On Error GoTo FalhouDistribuir
+    Application.ScreenUpdating = False
+    resumoFinal = DistribuirNasAbasTratamento(wsOrigem.Parent, wsOrigem)
+    Application.ScreenUpdating = True
+    MsgBox resumoFinal, vbInformation, "Abas de tratamento"
+    Exit Sub
+FalhouDistribuir:
+    Application.ScreenUpdating = True
+    MsgBox "Erro " & Err.Number & ": " & Err.Description, vbCritical, "Erro na macro"
+End Sub
+
+' ================================================================================
+' DistribuirNasAbasTratamento
+' --------------------------------------------------------------------------------
+' Separa as linhas da EDITADO em internos e externos (coluna "Tipo de trabalho"
+' do ORG) e cola cada grupo na sua aba de tratamento. Devolve o texto do resumo
+' para a mensagem final. Não trava se faltar alguma aba: só avisa no resumo.
+' ================================================================================
+Private Function DistribuirNasAbasTratamento(wb As Workbook, wsEd As Worksheet) As String
+    Dim wsOrg As Worksheet, wsInt As Worksheet, wsExt As Worksheet
+    Dim colEd As Object, colOrg As Object
+    Dim orgPorMat As Object, orgPorNome As Object
+    Dim linhasInt As Collection, linhasExt As Collection
+    Dim semTipo As String, qtdSemTipo As Long
+    Dim ultEd As Long, r As Long, k As String, tipoTxt As String
+    Dim dadosOrg As Variant
+    Dim resumo As String
+
+    ' --- aba ORG: a primeira cujo nome começa com "ORG" e que tem Matricula e
+    '     "Tipo de trabalho" na linha 1
+    Dim ws As Worksheet
+    For Each ws In wb.Worksheets
+        If UCase$(Left$(Trim$(ws.Name), 3)) = "ORG" Then
+            Set colOrg = MapaCabecalhoNorm(ws)
+            If colOrg.Exists("MATRICULA") And ColunaTipoTrabalho(colOrg) > 0 Then
+                Set wsOrg = ws
+                Exit For
+            End If
+        End If
+    Next ws
+    If wsOrg Is Nothing Then
+        DistribuirNasAbasTratamento = "As abas de tratamento NÃO foram preenchidas: não achei a aba ORG " & _
+            "com as colunas ""Matricula"" e ""Tipo de trabalho"" na linha 1."
+        Exit Function
+    End If
+
+    ' --- abas de destino
+    Set wsInt = AchaAbaTratamento(wb, "INTERN", "- I")
+    Set wsExt = AchaAbaTratamento(wb, "EXTERN", "- E")
+    If Not wsInt Is Nothing Then LimparFiltroDaAba wsInt
+    If Not wsExt Is Nothing Then LimparFiltroDaAba wsExt
+
+    ' --- lê o ORG: matrícula -> Array(tipo de trabalho, cargo, gestor);
+    '     o mesmo pelo nome, para quem está com a matrícula em erro (#N/A).
+    '     Matrícula repetida: vale a primeira linha (como no GerarCSVPonto).
+    LimparFiltroDaAba wsOrg
+    Set orgPorMat = CreateObject("Scripting.Dictionary")
+    Set orgPorNome = CreateObject("Scripting.Dictionary")
+    Dim colOMat As Long, colONome As Long, colOTipo As Long, colOCargo As Long, colOGestor As Long
+    colOMat = colOrg("MATRICULA")
+    colONome = ValorOuZero(colOrg, "COLABORADOR")
+    colOTipo = ColunaTipoTrabalho(colOrg)
+    colOCargo = ValorOuZero(colOrg, "CARGO")
+    colOGestor = ValorOuZero(colOrg, "GESTOR")
+    Dim ultOrg As Long
+    ultOrg = UltimaLinhaDaAba(wsOrg)
+    For r = 2 To ultOrg
+        Dim cargoOrg As String, gestorOrg As String
+        cargoOrg = "": gestorOrg = ""
+        If colOCargo > 0 Then cargoOrg = TextoDaCelula(wsOrg.Cells(r, colOCargo).Value)
+        If colOGestor > 0 Then gestorOrg = TextoDaCelula(wsOrg.Cells(r, colOGestor).Value)
+        dadosOrg = Array(TextoDaCelula(wsOrg.Cells(r, colOTipo).Value), cargoOrg, gestorOrg)
+        k = ChaveDaMatricula(wsOrg.Cells(r, colOMat).Value)
+        If k <> "" Then
+            If Not orgPorMat.Exists(k) Then orgPorMat.Add k, dadosOrg
+        End If
+        If colONome > 0 Then
+            k = NormTexto(TextoDaCelula(wsOrg.Cells(r, colONome).Value))
+            If k <> "" Then
+                If Not orgPorNome.Exists(k) Then orgPorNome.Add k, dadosOrg
+            End If
+        End If
+    Next r
+
+    ' --- separa as linhas da EDITADO
+    Set colEd = MapaCabecalhoNorm(wsEd)
+    Set linhasInt = New Collection
+    Set linhasExt = New Collection
+    ultEd = UltimaLinhaDaAba(wsEd)
+    Dim infoOrg As Variant, achou As Boolean
+    For r = 2 To ultEd
+        achou = False
+        If colEd.Exists("MATRICULA") Then
+            k = ChaveDaMatricula(wsEd.Cells(r, colEd("MATRICULA")).Value)
+            If k <> "" Then
+                If orgPorMat.Exists(k) Then infoOrg = orgPorMat(k): achou = True
+            End If
+        End If
+        If Not achou And colEd.Exists("NOME") Then
+            k = NormTexto(TextoDaCelula(wsEd.Cells(r, colEd("NOME")).Value))
+            If k <> "" Then
+                If orgPorNome.Exists(k) Then infoOrg = orgPorNome(k): achou = True
+            End If
+        End If
+        tipoTxt = ""
+        If achou Then tipoTxt = NormTexto(CStr(infoOrg(0)))
+        If achou And InStr(tipoTxt, "EXTERN") > 0 Then
+            linhasExt.Add Array(r, infoOrg)
+        ElseIf achou And InStr(tipoTxt, "INTERN") > 0 Then
+            linhasInt.Add Array(r, infoOrg)
+        Else
+            ' fora do ORG ou sem "Tipo de trabalho": não cola, pinta de amarelo
+            wsEd.Rows(r).Interior.Color = RGB(255, 235, 156)
+            qtdSemTipo = qtdSemTipo + 1
+            If qtdSemTipo <= 15 And colEd.Exists("NOME") Then
+                semTipo = semTipo & vbCrLf & "   - " & TextoDaCelula(wsEd.Cells(r, colEd("NOME")).Value) & _
+                    IIf(achou, " (sem ""Tipo de trabalho"" no ORG)", " (não está no ORG)")
+            End If
+        End If
+    Next r
+
+    ' --- se alguma aba de destino já tem linhas, pergunta uma vez só
+    Dim modo As VbMsgBoxResult
+    modo = vbYes
+    Dim jaTem As Boolean
+    If Not wsInt Is Nothing Then
+        If UltimaLinhaDados(wsInt) > 1 Then jaTem = True
+    End If
+    If Not wsExt Is Nothing Then
+        If UltimaLinhaDados(wsExt) > 1 Then jaTem = True
+    End If
+    If jaTem Then
+        Application.ScreenUpdating = True
+        modo = MsgBox("As abas de tratamento já têm linhas preenchidas." & vbCrLf & vbCrLf & _
+                      "Sim = APAGAR as linhas que estão lá e colar as deste mês" & vbCrLf & _
+                      "Não = colar EMBAIXO das linhas que já existem" & vbCrLf & _
+                      "Cancelar = não mexer nas abas de tratamento", _
+                      vbYesNoCancel + vbQuestion, "Colar nas abas de tratamento")
+        Application.ScreenUpdating = False
+        If modo = vbCancel Then
+            DistribuirNasAbasTratamento = "Abas de tratamento: nada foi colado (você escolheu Cancelar)."
+            Exit Function
+        End If
+    End If
+
+    ' --- cola
+    If wsInt Is Nothing Then
+        resumo = "Não achei a aba ""Tratamento - Internos"": " & linhasInt.Count & " interno(s) não foram colados."
+    Else
+        ColarLinhasNaAba wsEd, colEd, linhasInt, wsInt, (modo = vbYes)
+        resumo = linhasInt.Count & " interno(s) colado(s) na aba '" & wsInt.Name & "'."
+    End If
+    If wsExt Is Nothing Then
+        resumo = resumo & vbCrLf & "Não achei a aba ""Tratamento - Externos"": " & linhasExt.Count & " externo(s) não foram colados."
+    Else
+        ColarLinhasNaAba wsEd, colEd, linhasExt, wsExt, (modo = vbYes)
+        resumo = resumo & vbCrLf & linhasExt.Count & " externo(s) colado(s) na aba '" & wsExt.Name & "'."
+    End If
+    If qtdSemTipo > 0 Then
+        resumo = resumo & vbCrLf & vbCrLf & qtdSemTipo & " linha(s) NÃO foram coladas (em amarelo na aba '" & _
+            wsEd.Name & "'): a pessoa não está no ORG ou está sem ""Tipo de trabalho"". Corrija o ORG e rode " & _
+            "DistribuirEditadoNasAbasTratamento, ou cole à mão." & semTipo
+        If qtdSemTipo > 15 Then resumo = resumo & vbCrLf & "   ... e mais " & (qtdSemTipo - 15)
+    End If
+    DistribuirNasAbasTratamento = resumo
+End Function
+
+' Cola as linhas escolhidas da EDITADO numa aba de tratamento, coluna por
+' coluna pelo nome do cabeçalho da aba de destino (linha 1).
+'   apagarAntes = True: tira as linhas que já estavam lá (Sim na pergunta).
+' Funciona com a aba em formato de Tabela do Excel (ListObject) ou sem tabela.
+Private Sub ColarLinhasNaAba(wsEd As Worksheet, colEd As Object, linhas As Collection, _
+                             wsDest As Worksheet, ByVal apagarAntes As Boolean)
+    Dim colDest As Object, lo As ListObject
+    Dim ultCol As Long, c As Long, i As Long, linhaIni As Long, lin As Long
+    Dim nomeCol As String, origemCol As String
+    Dim formulas() As String
+    Dim parLinha As Variant, rEd As Long, infoOrg As Variant, ultDados As Long
+
+    LimparFiltroDaAba wsDest
+    Set colDest = MapaCabecalhoNorm(wsDest)
+    ultCol = wsDest.Cells(1, wsDest.Columns.Count).End(xlToLeft).Column
+
+    ' Tabela do Excel com o cabeçalho na linha 1 (se houver)
+    For Each lo In wsDest.ListObjects
+        If lo.HeaderRowRange.Row = 1 Then Exit For
+    Next lo
+
+    ' Guarda as fórmulas da 1ª linha de dados (ex.: PROCX do Gestor/Cargo/
+    ' Trabalho), só das colunas que NÃO vêm da EDITADO, para estender às linhas novas.
+    ReDim formulas(1 To ultCol)
+    For c = 1 To ultCol
+        nomeCol = NormTexto(TextoDaCelula(wsDest.Cells(1, c).Value))
+        If ColunaDaEditado(nomeCol, colEd) = "" Then
+            If wsDest.Cells(2, c).HasFormula Then formulas(c) = wsDest.Cells(2, c).FormulaR1C1
+        End If
+    Next c
+
+    ' Apaga as linhas antigas (Sim na pergunta)
+    If apagarAntes Then
+        If Not lo Is Nothing Then
+            If Not lo.DataBodyRange Is Nothing Then lo.DataBodyRange.Delete
+        Else
+            ultDados = UltimaLinhaDados(wsDest)
+            If ultDados > 1 Then wsDest.Rows("2:" & ultDados).Delete
+        End If
+    End If
+
+    If linhas.Count = 0 Then Exit Sub
+    If Not lo Is Nothing Then
+        linhaIni = lo.HeaderRowRange.Row + 1
+        If Not lo.DataBodyRange Is Nothing Then
+            linhaIni = lo.DataBodyRange.Row + lo.DataBodyRange.Rows.Count
+            ' tabela com só a linha vazia do fim: escreve nela
+            If lo.ListRows.Count = 1 And Application.WorksheetFunction.CountA(lo.DataBodyRange) = 0 Then linhaIni = lo.DataBodyRange.Row
+        End If
+    Else
+        linhaIni = UltimaLinhaDados(wsDest) + 1
+    End If
+
+    lin = linhaIni
+    For i = 1 To linhas.Count
+        parLinha = linhas(i)
+        rEd = parLinha(0)
+        infoOrg = parLinha(1)
+        For c = 1 To ultCol
+            nomeCol = NormTexto(TextoDaCelula(wsDest.Cells(1, c).Value))
+            origemCol = ColunaDaEditado(nomeCol, colEd)
+            If origemCol <> "" Then
+                wsDest.Cells(lin, c).Value = wsEd.Cells(rEd, colEd(origemCol)).Value
+                wsDest.Cells(lin, c).NumberFormat = wsEd.Cells(rEd, colEd(origemCol)).NumberFormat
+            ElseIf formulas(c) <> "" Then
+                wsDest.Cells(lin, c).FormulaR1C1 = formulas(c)
+            ElseIf nomeCol = "TRABALHO" Or nomeCol = "TIPO DE TRABALHO" Then
+                wsDest.Cells(lin, c).Value = infoOrg(0)
+            ElseIf nomeCol = "CARGO" Then
+                wsDest.Cells(lin, c).Value = infoOrg(1)
+            ElseIf nomeCol = "GESTOR" Then
+                wsDest.Cells(lin, c).Value = infoOrg(2)
+            End If
+        Next c
+        lin = lin + 1
+    Next i
+
+    ' Tabela do Excel: estica a tabela até a última linha colada
+    If Not lo Is Nothing Then
+        If lin - 1 > lo.HeaderRowRange.Row + lo.ListRows.Count Then
+            lo.Resize wsDest.Range(lo.HeaderRowRange.Cells(1, 1), _
+                wsDest.Cells(lin - 1, lo.HeaderRowRange.Column + lo.HeaderRowRange.Columns.Count - 1))
+        End If
+    End If
+End Sub
+
+' De qual coluna da EDITADO (nome normalizado) vem a coluna da aba de
+' tratamento. "" = não vem da EDITADO (Check, Trabalho, Cargo, Gestor...).
+' Gestor da EDITADO só vale se alguém preencheu (normalmente está em branco).
+Private Function ColunaDaEditado(ByVal nomeDest As String, colEd As Object) As String
+    Dim alvo As String
+    Select Case nomeDest
+        Case "", "CHECK", "TRABALHO", "TIPO DE TRABALHO", "CARGO", "GESTOR": alvo = ""
+        Case "STATUS": alvo = "TRATAMENTO"
+        Case "DATA": alvo = "DT.APURAC."
+        Case Else: alvo = nomeDest
+    End Select
+    If alvo <> "" Then
+        If Not colEd.Exists(alvo) Then alvo = ""
+    End If
+    ColunaDaEditado = alvo
+End Function
+
+' Acha a aba de tratamento: nome começando com "Tratamento" e contendo
+' "Intern"/"Extern"; se não houver, uma aba cujo nome termina em "- I"/"- E".
+Private Function AchaAbaTratamento(wb As Workbook, ByVal trecho As String, ByVal fimNome As String) As Worksheet
+    Dim ws As Worksheet, nm As String
+    For Each ws In wb.Worksheets
+        nm = NormTexto(ws.Name)
+        If Left$(nm, 10) = "TRATAMENTO" And InStr(nm, trecho) > 0 Then
+            Set AchaAbaTratamento = ws
+            Exit Function
+        End If
+    Next ws
+    For Each ws In wb.Worksheets
+        nm = NormTexto(ws.Name)
+        If Right$(nm, Len(fimNome)) = fimNome Then
+            Set AchaAbaTratamento = ws
+            Exit Function
+        End If
+    Next ws
+End Function
+
+' Cabeçalho da linha 1 -> nº da coluna, com o nome sem acento, em maiúsculas
+' e sem espaços sobrando ("Situação" -> "SITUACAO"). Vale a primeira coluna
+' de cada nome.
+Private Function MapaCabecalhoNorm(ws As Worksheet) As Object
+    Dim d As Object, c As Long, ultCol As Long, nm As String
+    Set d = CreateObject("Scripting.Dictionary")
+    ultCol = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+    For c = 1 To ultCol
+        nm = NormTexto(TextoDaCelula(ws.Cells(1, c).Value))
+        If nm <> "" Then
+            If Not d.Exists(nm) Then d.Add nm, c
+        End If
+    Next c
+    Set MapaCabecalhoNorm = d
+End Function
+
+' Coluna "Tipo de trabalho" do ORG (aceita também só "Trabalho").
+Private Function ColunaTipoTrabalho(colOrg As Object) As Long
+    If colOrg.Exists("TIPO DE TRABALHO") Then
+        ColunaTipoTrabalho = colOrg("TIPO DE TRABALHO")
+    ElseIf colOrg.Exists("TRABALHO") Then
+        ColunaTipoTrabalho = colOrg("TRABALHO")
+    End If
+End Function
+
+Private Function ValorOuZero(d As Object, ByVal chaveBusca As String) As Long
+    If d.Exists(chaveBusca) Then ValorOuZero = d(chaveBusca)
+End Function
+
+' Matrícula como texto comparável: número sem zeros à esquerda; erro (#N/A)
+' ou vazio = "".
+Private Function ChaveDaMatricula(ByVal v As Variant) As String
+    Dim t As String
+    t = TextoDaCelula(v)
+    If t = "" Then Exit Function
+    If IsNumeric(t) Then t = CStr(CDbl(t))
+    ChaveDaMatricula = t
+End Function
+
+' Texto de uma célula sem espaços nas pontas; erro do Excel (#N/A) vira "".
+Private Function TextoDaCelula(ByVal v As Variant) As String
+    If IsError(v) Then Exit Function
+    If IsEmpty(v) Then Exit Function
+    TextoDaCelula = Trim$(Replace(CStr(v), Chr(160), " "))
+End Function
+
+' Sem acento, maiúsculas, um espaço só entre as palavras.
+Private Function NormTexto(ByVal t As String) As String
+    Dim com As String, sem As String, i As Long
+    com = "áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ"
+    sem = "aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC"
+    For i = 1 To Len(com)
+        t = Replace(t, Mid$(com, i, 1), Mid$(sem, i, 1))
+    Next i
+    t = UCase$(Trim$(Replace(t, Chr(160), " ")))
+    Do While InStr(t, "  ") > 0
+        t = Replace(t, "  ", " ")
+    Loop
+    NormTexto = t
+End Function
+
+' Última linha com qualquer coisa escrita na aba (não usa End(xlUp), que para
+' na última linha VISÍVEL quando há filtro).
+Private Function UltimaLinhaDaAba(ws As Worksheet) As Long
+    Dim achado As Range
+    Set achado = ws.Cells.Find(What:="*", LookIn:=xlFormulas, SearchOrder:=xlByRows, _
+                               SearchDirection:=xlPrevious)
+    If achado Is Nothing Then
+        UltimaLinhaDaAba = 1
+    Else
+        UltimaLinhaDaAba = achado.Row
+    End If
+End Function
+
+' Última linha com Matricula ou Nome preenchido numa aba de tratamento. Olha
+' só essas duas colunas e só VALORES: se a aba tem fórmulas (PROCX do Gestor)
+' puxadas até a linha 1000, as linhas só com fórmula não contam como dados.
+Private Function UltimaLinhaDados(ws As Worksheet) As Long
+    Dim colDest As Object, nomes As Variant, i As Long, achado As Range
+    Set colDest = MapaCabecalhoNorm(ws)
+    nomes = Array("MATRICULA", "NOME")
+    UltimaLinhaDados = 1
+    For i = 0 To 1
+        If colDest.Exists(nomes(i)) Then
+            Set achado = ws.Columns(colDest(nomes(i))).Find(What:="*", LookIn:=xlValues, _
+                SearchOrder:=xlByRows, SearchDirection:=xlPrevious)
+            If Not achado Is Nothing Then
+                If achado.Row > UltimaLinhaDados Then UltimaLinhaDados = achado.Row
+            End If
+        End If
+    Next i
+End Function
+
+' Tira o filtro da aba e das tabelas dela (senão colar e apagar pulam as
+' linhas escondidas).
+Private Sub LimparFiltroDaAba(ws As Worksheet)
+    Dim lo As ListObject
+    On Error Resume Next
+    If ws.FilterMode Then ws.ShowAllData
+    For Each lo In ws.ListObjects
+        If Not lo.AutoFilter Is Nothing Then
+            If lo.AutoFilter.FilterMode Then lo.AutoFilter.ShowAllData
+        End If
+    Next lo
+    On Error GoTo 0
+End Sub

@@ -27,7 +27,9 @@ const { chromium } = require('playwright');
     const txt = id => $(id) ? $(id).textContent.trim() : null;
     const tips = id => [...document.querySelectorAll('#'+id+' [data-tooltip]:not(.seg)')].map(e=>e.getAttribute('data-tooltip'));
     const table = id => [...document.querySelectorAll('#'+id+' tbody tr')].map(tr=>[...tr.children].map(td=>td.textContent.trim()));
-    const kpis = [...document.querySelectorAll('#kpiRow .kpi-tile, .kpis-demora .kpi-tile')].map(t=>[t.querySelector('.kpi-label').textContent.trim(), t.querySelector('.kpi-value').textContent.trim(), t.querySelector('.kpi-sub').textContent.trim()]);
+    const kpis = [...document.querySelectorAll('#kpiRow .kpi-tile')].map(t=>[t.querySelector('.kpi-label').textContent.trim(), t.querySelector('.kpi-value').textContent.trim(), t.querySelector('.kpi-sub').textContent.trim()]);
+    // a demora média saiu do card próprio (29/10) e virou a linha "Média de todos" da seção PontoNet
+    kpis.push(['Demora média no PontoNet', txt('kpiDemora'), txt('kpiDemoraSub').replace(/^\(|\)$/g,'')]);
     return {
       kpis,
       tipo: [...document.querySelectorAll('#chartTipo .legend-row')].map(r=>[r.querySelector('.legend-label').textContent, r.querySelector('.legend-value').textContent]),

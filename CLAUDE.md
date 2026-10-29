@@ -123,6 +123,19 @@ conteúdo num módulo.
   Horas Pagas, Intra, Inter, Marcações Impares, Horas Excedentes, Extras e Faltas, Refeição fora de Escala`.
 - `LimparTexto`: tira os espaços das pontas de **todo texto** (o sistema completa com espaços até
   uma largura fixa); célula só com espaços vira vazia; datas, horas e números ficam intactos.
+- (29/10) Passo 10, `DistribuirNasAbasTratamento`: acha o ORG (aba "ORG..." com `Matricula` e
+  `Tipo de trabalho` na linha 1; colunas do ORG: Matricula, COLABORADOR, Descrição, Cargo, Tipo de
+  trabalho, Unidade, GESTOR), casa cada linha da EDITADO pela matrícula (depois pelo nome) e cola
+  internos em "Tratamento - Internos" e externos em "Tratamento - Externos" (`AchaAbaTratamento`:
+  nome começa com "Tratamento" e contém Intern/Extern; senão termina em "- I"/"- E"). Colunas
+  achadas pelo nome normalizado (`MapaCabecalhoNorm`, `ColunaDaEditado`): Data ← Dt.Apuraç., Status
+  ← Tratamento, o resto pelo mesmo nome (Pontonet só existe na de Externos). Trabalho/Cargo/Gestor:
+  fórmula da 1ª linha de dados estendida (FormulaR1C1) ou, sem fórmula, valor do ORG. Check em
+  branco. Abas com linhas: pergunta Sim (apaga) / Não (cola embaixo) / Cancelar. Funciona com e
+  sem Tabela do Excel (ListObject, `lo.Resize`). Fora do ORG/sem tipo: linha amarela na EDITADO +
+  lista na mensagem. `DistribuirEditadoNasAbasTratamento` (pública) refaz só isso na aba ativa.
+  Última linha com dados = Matricula/Nome com valor (`UltimaLinhaDados`), para fórmulas puxadas
+  até o fim da aba não contarem. **Nunca rodou no Excel.**
 
 ### 5.3b FormatarMarcacoesDigitadas (aba ativa = relatório bruto)
 - Dump de impressão: cabeçalho de página repetido ("Crachá | Colaborador | Cargo | Local | Ori. |
@@ -412,6 +425,18 @@ PontoNet"); 28/29 na "Absenteísmo" e na "Afastamento"; 30/31/32 nas 4 de jornad
   falta" (mês atual × média dos 2 anteriores = (3 meses − mês) ÷ 2). Filtros de pessoa sim,
   período não. **`periodoCompleto` não conta as digitadas** (com 3 meses de digitadas o painel
   continuaria abrindo no mês atual).
+- **29/10**: período da lateral = calendário próprio (`abrirCalendario`, `#calPop`, campos
+  escondidos `fDataIni/fDataFim` "aaaa-mm-dd", botões `#btnDataIni/Fim`); só os dias de
+  `state.diasDados` (ocorrências, hora extra, curtas, digitadas + ini/fim do período padrão) são
+  clicáveis. Números do topo das seções = `kpiTile` com "?" (`EXPLICA_KPI`, `state.kpiAberto`) e
+  linha 📅 (`KPI_PERIODO` em `atualizarPeriodosCards`; também nos 2 cards de Ocorrências). Card
+  "Demora média no PontoNet" retirado: a média é a linha `#demoraGeral` (ids `kpiDemora`/
+  `kpiDemoraSub` mantidos para o extrator) e as tabelas de demora vêm logo após a lista do PontoNet.
+  Destaque: `chartSaldoPositivo`/`chartSaldoNegativo` (saldo = extra − banco do Resumo Horas
+  Cartão) e busca `#bancoBusca`. Afastamentos: resumo em frases (`.abs-resumo-caixa`). Pausas:
+  "trecho de trabalho" no lugar de "período"; "de onde vem" com `recsMedida`/`MEDIDAS_PAUSA`
+  (array com `.medida`: coluna em destaque e contagem pela medida); dias de afastamento contados
+  em dias (`contar` em `state.origem`); atestados por dia da semana empilhados encosta/não encosta.
 - Paleta: laranja `#F7931E`, vermelho `#E31E24`, amarelo `#FFC72C`, preto `#1A1A1A`, cinzas.
 
 ## 7. Conferência feita (01/10/2026)
@@ -724,10 +749,20 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   + dados_TODOS → 7.978 linhas, iguais ao TODOS sozinho. Arquivo inválido no meio: aviso e os
   outros abrem. Conferência 33/33.
 
+- 29/10 (depois): pedidos do Dimitri (texto). PURO_Para_EDITADO cola internos/externos nas abas
+  de tratamento pelo ORG; calendário do período só com dias com dados; topo sem o nome do painel;
+  período e "?" em todo número do topo das seções; resumo de afastamentos em frases; saldo
+  positivo/negativo e busca no banco de horas; "trecho de trabalho" nas pausas; card de demora
+  retirado (média numa linha) e demora logo após a lista do PontoNet; revisão de todos os cliques
+  "de onde vem" (script que clica em cada barra/pedaço e compara com o número: só sobraram as
+  diferenças esperadas — %, médias e minutos). Testado com CSV inventado (sem a planilha dele nesta
+  sessão): sem erro de JS, NaN ou rolagem lateral em 1400 e 390 px. Muitas perguntas enviadas a ele
+  sobre a origem dos números (ver conversa); respostas pendentes.
+
 ## 12. Estado atual e como continuar (29/10/2026)
 
-**Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`, branch
-`ccr-c6360952-zmkobs` (push funcionando; último commit "Painel: abrir vários arquivos CSV juntos").
+**Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`. `main` tinha o estado de 29/10
+(manhã); os pedidos de 29/10 (depois) estão no branch `ccr-50df95d0-4nvt7n`.
 `Dashboard/index.html` é o painel (≈470 KB, logo em base64 numa linha: nunca ler inteiro; use
 `grep -n` e `sed -n`); macros em `<Pasta>/<Macro>.bas` e `txt/<Macro>.txt` (iguais, CRLF no txt).
 
@@ -791,6 +826,8 @@ reunião é por gestor ou com todos e se pode usar salário (só o total da equi
 - Seletor que comanda vários cards fica numa caixa laranja (`.grupo-sel`) junto com eles.
 - PontoNet: só os pedidos aprovados; a demora segue o mês do seletor da seção. Sem B12.
 - O painel abre um ou vários CSVs juntos; linhas repetidas entre arquivos contam uma vez.
+- (29/10) Topo sem o nome do painel; sem card "Demora média no PontoNet" (média numa linha); todo
+  número diz o período (📅); no calendário do período só dias com informação.
 
 **Ainda em aberto com ele:** Check "S" nas curtas/auditoria; critério Internos × Externos;
 `destino_horas_extra`; absenteísmo completo (acidente, faltas, taxa); sugestões de 07/10 (horas de

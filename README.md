@@ -426,11 +426,39 @@ As 15 ideias marcadas na página de ideias que ainda faltavam:
 - Dá para abrir vários arquivos juntos (ex.: o de dois gestores) e juntar mais um depois; o filtro de
   gestor mostra todos. Linhas repetidas entre os arquivos (ex.: TODOS + um gestor) contam uma vez.
 
+## Ajustes pedidos em 29/10
+
+- **PURO → EDITADO cola nas abas de tratamento.** Depois de montar a `EDITADO_<MES><AA>`, a macro
+  procura cada pessoa no ORG (pela matrícula; se não achar, pelo nome) e olha a coluna
+  "Tipo de trabalho": internos vão para `Tratamento - Internos` e externos para `Tratamento -
+  Externos`, coluna por coluna pelo nome do cabeçalho (Data ← Dt.Apuraç., Status ← Tratamento,
+  Pontonet só na de externos). Trabalho, Cargo e Gestor: se a aba já tem fórmula (PROCX), a
+  fórmula é estendida; se não, o valor vem do ORG. Se as abas já têm linhas, a macro pergunta se
+  apaga e cola de novo, cola embaixo ou não mexe. Quem não está no ORG (ou está sem "Tipo de
+  trabalho") fica amarelo na EDITADO e aparece na mensagem final. A rotina
+  `DistribuirEditadoNasAbasTratamento` refaz só essa parte (com a aba EDITADO aberta).
+- Painel: o filtro de período virou um calendário próprio em que **só os dias com informação**
+  podem ser clicados.
+- Topo sem o nome "Painel de Ponto · Ocorrências dos Colaboradores".
+- Todo número do topo das seções mostra o período a que se refere (📅) e tem o seu "?".
+- Afastamentos: o resumo do ciclo virou frases simples numa caixa.
+- Colaboradores em destaque: busca por nome no banco de horas e dois gráficos novos, "quem ficou
+  mais no positivo" e "quem ficou mais no negativo" no saldo do mês (hora extra − banco).
+- Pausas térmicas: "período de trabalho" virou "trecho de trabalho" (o tempo entre uma pausa e a
+  próxima), com a explicação; cabeçalhos da tabela em palavras simples.
+- PontoNet: o card "Demora média" saiu; a média de todos virou uma linha no card por gestor e as
+  tabelas de demora vêm logo depois da lista de justificativas aprovadas.
+- "De onde vem" revisado em todos os gráficos: o pedaço "Curtas" (ou "Longas", "Certas") das
+  pausas por gestor abre só as pessoas que tiveram aquele tipo, com a coluna em destaque; as barras
+  de afastamento em dias contam dias na janela; o gráfico de atestados por dia da semana separa os
+  que encostam numa folga (vermelho) dos que não encostam (cinza).
+
 ## Ordem de uso no mês
 
 1. Rodar `ConsolidarCartaoPonto` no HRCP102 e colar o resultado numa aba `Cartão <Mês>`.
 2. Rodar `FormatarPausasTermicas` no HRES114 (numa cópia) e trazer a aba para a pasta de Tratamento.
-3. Rodar `PURO_Para_EDITADO` e tratar as ocorrências em `Tratamento - Internos` / `Tratamento - Externos`.
+3. Rodar `PURO_Para_EDITADO` (ele já cola os internos e os externos nas abas `Tratamento - Internos` /
+   `Tratamento - Externos`, pelo "Tipo de trabalho" do ORG) e tratar as ocorrências nessas abas.
 4. Rodar `FormatarMarcacoesDigitadas` no relatório de Marcações digitadas e
    `FormatarAfastamentos` no Histórico de Afastamentos, e trazer as duas abas.
 5. Rodar `GerarAbaCSV` e depois `ExportarCSVPorGestor`.
