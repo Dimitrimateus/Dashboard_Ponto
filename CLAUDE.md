@@ -1,6 +1,6 @@
 # CONTEXTO DO PROJETO — Tratamento de Ponto e Painel de Ocorrências (AuroraCoop)
 
-> Arquivo de contexto para o Claude Code. Estado em **13/10/2026**. Leia inteiro antes de propor
+> Arquivo de contexto para o Claude Code. Estado em **29/10/2026**. Leia inteiro antes de propor
 > qualquer mudança: várias regras abaixo já foram discutidas e decididas com o Dimitri, e as
 > "armadilhas" já custaram retrabalho.
 >
@@ -295,7 +295,8 @@ PontoNet"); 28/29 na "Absenteísmo" e na "Afastamento"; 30/31/32 nas 4 de jornad
   antigo) cai para as linhas da Tratamento e avisa no subtítulo.
 - Topo (faixa preta): **período** em destaque = valores do filtro de período; o período padrão
   (`periodoCompleto`) vai da 1ª data das ocorrências/curtas até a data das linhas-resumo do
-  Cartão (fim do ciclo). Botão **"Entenda o painel"** liga `body.modo-explicacao`, que mostra
+  Cartão (fim do ciclo). [Desde 27/10 o botão "Entenda o painel" do topo está escondido; no lugar,
+  "?" em cada card e "Entenda esta seção" em cada seção — ver seção 11.] `body.modo-explicacao` mostra
   as caixas `.card-fonte` (texto de "de onde vem" de cada card, escrito a partir do guia do
   Dimitri). **Só aparece com arquivo carregado** (pedido do Dimitri, 08/10); sem arquivo, a
   tela inicial (`#emptyState`) traz o passo a passo "Como usar o painel".
@@ -318,8 +319,7 @@ PontoNet"); 28/29 na "Absenteísmo" e na "Afastamento"; 30/31/32 nas 4 de jornad
   folga e ranking continuam só de atestados. Extrator escolhe "Só atestados" antes de ler.
 - Listas longas (`limitarLista`, botões `.btn-todos` e `#btnBancoTodos`): curtas e top de
   digitadas mostram 20 (`LIMITE_LISTA`), banco de horas 10; a lista inteira só em tela cheia.
-- Filtro de status: opções só das ocorrências (as linhas-resumo saem do macro como "Pendente");
-  com um só status o grupo (`#fStatusGroup`) some.
+- Filtro de status: **retirado** (26/10; `#fStatusGroup` sempre escondido). Sem coluna Status.
 - Demora no PontoNet: `feriasPorPessoa` (linhas "Afastamento" com "férias") + `feriasDoNome`
   (gestor casado pelo nome, ou nome único que começa por ele) → aviso amarelo (`row-ferias`)
   se as férias cruzam a janela 1ª ocorrência → última tratativa. Sem aba Afastamentos no CSV,
@@ -345,8 +345,8 @@ PontoNet"); 28/29 na "Absenteísmo" e na "Afastamento"; 30/31/32 nas 4 de jornad
   repetido, justificativas (agrupadas por `chaveTexto`), lista com busca. "No dia de uma ocorrência" =
   mesma matrícula + dia de uma ocorrência da Tratamento. `isTipoDigitada` entra em
   `isTipoNaoOcorrencia` e é excluído de `getFilteredRecords`.
-- **Seções**: `.pagina[data-pagina]` (geral, destaque, pausas, digitadas, afastamentos, demora, org,
-  historico); menu ☰ (`#menuSecoes`, `irParaPagina`, localStorage `painelPonto.pagina`, "todas"
+- **Seções**: `.pagina[data-pagina]` — ordem atual (28/10): geral ("Ocorrências"), digitadas,
+  afastamentos, jornada, destaque, pausas, demora ("PontoNet"), tendencias, org, historico; menu ☰ (`#menuSecoes`, `irParaPagina`, localStorage `painelPonto.pagina`, "todas"
   mostra tudo); KPIs só em "geral". Trocar de seção redesenha (largura dos SVG). O extrator de
   conferência clica em "todas" antes de ler.
 - **Pausas Térmicas**: tabela na própria seção (o modal saiu), `tabela-compacta` com cabeçalho em
@@ -360,7 +360,8 @@ PontoNet"); 28/29 na "Absenteísmo" e na "Afastamento"; 30/31/32 nas 4 de jornad
   sem a separação longo × curto (visão 3 recusada). Fica fora de `periodoCompleto`. Com ciclo
   escolhido, a evolução mostra as semanas do ciclo e destaca a linha (`row-sel`). O card do
   colaborador lista todos os afastamentos (atestados em vermelho).
-- Cards (KPI): Colaboradores envolvidos · Ocorrências no período · Demora média no PontoNet.
+- Cards (KPI): Colaboradores envolvidos · Ocorrências no período (na seção Ocorrências); Demora
+  média no PontoNet fica na seção PontoNet (`.kpis-demora`, desde 26/10).
   (**Os cards de total de horas extra e de horas falta foram retirados a pedido do Dimitri.**)
 - Gráficos/tabelas: por tipo (rosca), por dia da semana, por data (linha), por gestor (top 12),
   por cargo (top 12), top 10 colaboradores, extra e falta no mesmo dia (mês/3 meses, alerta 10+),
@@ -368,7 +369,7 @@ PontoNet"); 28/29 na "Absenteísmo" e na "Afastamento"; 30/31/32 nas 4 de jornad
   10 / "Mostrar todos"), pausas térmicas (tabela na seção), marcações digitadas, afastamentos
   (atestados), demora por gestor e por colaborador, lista de colaboradores (ORG), histórico paginado.
 - Filtros: gestor, **grupo** (só aparece se o CSV tiver a coluna `grupo` preenchida), cargo,
-  colaborador, tipo (chips), status (chips), período. Linhas de resumo ignoram o período.
+  colaborador, tipo, período (status saiu em 26/10). Linhas de resumo ignoram o período.
 - **Jornada** (13/10, `renderJornada`, `getJornadaRecords`: filtros de pessoa, sem período, seletor
   `#jorCiclo`): J1 4 números + barras por ciclo por tipo; J2 mais de 10h por pessoa (barra = minutos
   acima de 10h, texto "N dias · Xh", clique = dias com batidas); J7 por gestor (gráfico + tabela com
@@ -391,7 +392,7 @@ PontoNet"); 28/29 na "Absenteísmo" e na "Afastamento"; 30/31/32 nas 4 de jornad
   B1 por hora de começo do período (só horas com 10+ períodos; vermelho ≥ 1,5× a média), B2 por
   dia da semana do turno (cinza com < 10 dias), B7 trabalho até a 1ª batida F em faixas, B5 dias
   com total > 1h40 e nenhuma FF (por pessoa), B6 maior período por pessoa (vermelho > 3h20), B12
-  letra com contagem ímpar nos dias ímpares, B9 mapa (`COR_DIA_PAUSA`: ok/acima/sem/impar).
+  (RETIRADA em 26/10), B9 mapa (`COR_DIA_PAUSA`: ok/acima/sem/impar).
   Origem `pausaDia` (`resumoDiaPausa`, `batidasDiaTexto`). Tipo fora das vistas gerais e do
   `periodoCompleto` (`isTipoPausaDia`). Setembro: 2 pessoas sem nenhuma pausa no mês inteiro.
 - **M3** `renderPorGestor` (seletor `#gestorMedida`: total × por pessoa da equipe); **M4** botões
@@ -499,6 +500,8 @@ python3 ferramentas/carregar_planilha.py "Tratamento Ponto ....xlsx"     # -> pl
 python3 ferramentas/simular_gerarcsv.py                                  # -> dados_TODOS.csv (regras da seção 5.4)
 NODE_PATH=$(npm root -g) node ferramentas/extrair_painel.js "$PWD/Dashboard/index.html" "$PWD/dados_TODOS.csv" painel.json
 python3 ferramentas/formatar_pausas.py "pausa_termica.xlsx" pausas.pkl       # -> (fim do período, linhas)
+python3 ferramentas/ler_pontonet_csv.py "Ausência de marcação.csv" pontonet.pkl   # relatório do PontoNet (3 meses)
+python3 ferramentas/adicionar_aba_xlsx.py in.xlsx out.xlsx pontonet.pkl pontonet "Pontonet" --substituir
 python3 ferramentas/adicionar_aba_xlsx.py in.xlsx out.xlsx dig3.pkl marcacoes "Marcações Digitadas" --substituir  # troca o conteúdo
 PYTHONPATH=ferramentas python3 ferramentas/conferir_painel.py painel.json   # OK/FALHA item a item (hoje 33 itens)
 python3 ferramentas/checar_colisoes_vba.py */*.bas                         # antes de entregar VBA
@@ -721,90 +724,97 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   + dados_TODOS → 7.978 linhas, iguais ao TODOS sozinho. Arquivo inválido no meio: aviso e os
   outros abrem. Conferência 33/33.
 
-## 12. Estado atual e como continuar (13/10/2026)
+## 12. Estado atual e como continuar (29/10/2026)
 
 **Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`, branch
-`ccr-c6360952-zmkobs` (continuação da `claude/fervent-hamilton-281bul`; push funcionando). O
-`Dashboard/index.html` é o painel; as macros ficam em `<Pasta>/<Macro>.bas` e `txt/<Macro>.txt`.
+`ccr-c6360952-zmkobs` (push funcionando; último commit "Painel: abrir vários arquivos CSV juntos").
+`Dashboard/index.html` é o painel (≈470 KB, logo em base64 numa linha: nunca ler inteiro; use
+`grep -n` e `sed -n`); macros em `<Pasta>/<Macro>.bas` e `txt/<Macro>.txt` (iguais, CRLF no txt).
 
-**O que o Dimitri tem em mãos.**
-- Pacote `Teste Ponto 11-10.zip` (pastas Macros / Planilhas / Site + LEIA-ME): as 7 macros em
-  `.txt`, a planilha `Tratamento Ponto 28.08 até 27.09_2 - completa (com Jornada).xlsx` (ORG
-  corrigido + abas Marcações Digitadas, Afastamentos, Intrajornada, Interjornada, Interjornada
-  Semanal, Horas Excedentes) e o CSV de referência simulado.
-- Depois disso recebeu só o `index.html` atualizado (13/10): tela cheia, filtro na legenda por
-  gráfico, selo de período, clique "de onde vem" com nomes que filtram, textos para leigos,
-  correções da revisão geral; depois, a rolagem e o cabeçalho fixo da janela "de onde vem".
-- 13/10: pacote com as 15 escolhas construídas: `index.html` + `GerarCSVPonto.txt` (lê todas as
-  abas de pausas).
-- 18/10: pacote `Teste Ponto 18-10.zip`: `index.html` com as tendências, `FormatarPausasTermicas.txt`
-  (renomeia a aba pelo mês), `GerarCSVPonto.txt` (igual ao de 13/10) e a planilha
-  `... - com 3 meses.xlsx` (digitadas de 3 meses + pausas de jul/ago/set). Números esperados nela:
-  os mesmos de antes nas ocorrências; CSV com 3.082 linhas; 1.642 digitadas (416 no ciclo de
-  setembro); 156 linhas de pausas (52/53/51).
-- 18/10 (depois): pacote `Teste Ponto 18-10 (batidas).zip` com TUDO (7 macros `.txt`, `index.html`,
-  planilha `... - com 3 meses e batidas.xlsx`, CSV de referência, LEIA-ME): GerarCSV com as linhas
-  "Pausa Térmica Dia" (CSV de 6.084 linhas, 3.002 dias de batidas: 958/1.105/939) e as visões B.
-- Números esperados ao rodar o GerarAbaCSV nessa planilha: 138 ocorrências, 72 colaboradores,
-  demora média 5,7 dias (56 tratadas), 422 digitadas, 283 afastamentos (33 atestados, 105 dias),
-  210 pessoas no ORG, 163 com horas no Cartão, Intrajornada 21, Interjornada 1, Interjornada
-  Semanal 11, Horas Excedentes 72; CSV com 32 colunas e 1.757 linhas.
-- **As macros nunca rodaram no Excel dele.** O próximo retorno pode trazer erro de compilação ou
-  execução: peça print da mensagem e da linha amarela.
+**Arquivos de trabalho que NÃO estão no repositório** (dados pessoais): as planilhas do Dimitri e
+os CSVs simulados ficavam em `/tmp` da sessão anterior e não existem numa sessão nova. Para
+conferir números (seção 10) peça a ele a planilha mais recente (`... - com 3 meses, batidas e
+PontoNet.xlsx`, do pacote de 27/10) ou os relatórios do sistema, e monte de novo com as ferramentas.
+Sem planilha dá para testar o painel com um CSV inventado (cabeçalho do contrato da seção 5.4).
 
-**Escolhas da página de ideias** (https://claude.ai/artifact/SZEwQzRntr66SCDMms4YBG, doc
-`escolhas/atual`, campo `marcadas`): **todas construídas** (13/10). Em aberto: as sugestões para
-reunião R1–R10 (seção 11, 13/10 depois 6), que esperam ele responder se a reunião é por gestor ou
-com todos e se pode usar salário (só o total da equipe).
+**O que o Dimitri tem em mãos (mais recente primeiro).**
+- 28/10: dois `index.html` avulsos (PontoNet só com aprovados + demora que segue o mês + topo com
+  período no meio + Tendências depois de PontoNet; depois, abrir vários CSVs juntos).
+- 27/10: pacote `Teste Ponto 27-10.zip` com TUDO: 7 macros `.txt` (mudou a GerarCSVPonto: linhas
+  "Justificativa PontoNet", CSV de 37 colunas, e o INTEGRADO não é mais apagado por um cancelado),
+  `index.html`, planilha `Tratamento Ponto 28.08 até 27.09_2 - com 3 meses, batidas e
+  PontoNet.xlsx` (aba Pontonet trocada pelo relatório de 3 meses), CSV de referência, LEIA-ME.
+- 18/10, 19/10 e 26/10: pacotes/índex anteriores (tendências, batidas das pausas, ordem das
+  seções, "?" por card). Detalhes na seção 11.
+
+**Números esperados com a planilha de 27/10** (CSV de referência simulado): CSV com **37 colunas e
+7.978 linhas**; 138 ocorrências, 72 colaboradores; 1.642 digitadas "D" (674/552/416 em jul/ago/set);
+283 afastamentos (33 atestados, 105 dias); 210 no ORG; 163 com horas no Cartão; jornada 21/1/11/72;
+3.002 dias de batidas de pausa (958/1.105/939); 156 linhas de resumo de pausas (52/53/51);
+**1.894 justificativas do PontoNet** (769 aprovadas: 230/239/300; 696 canceladas; 429 achadas no
+relógio). Painel: demora (dia da batida que faltou → aprovação) set 4,2 dias (300), ago 3,8 (239),
+jul 3,8 (230); tempo do gestor para avaliar 0,7 / 0,9 / 1,6 dias. Conferência: **33/33**.
+
+**As macros nunca rodaram no Excel dele.** O próximo retorno pode trazer erro de compilação ou
+execução: peça print da mensagem e da linha amarela. Antes de entregar VBA: `checar_colisoes_vba.py`.
+
+**Escolhas da página de ideias** (https://claude.ai/artifact/SZEwQzRntr66SCDMms4YBG): todas
+construídas. Ideias para reunião R1–R10 (seção 11, 13/10 depois 6) esperam ele responder se a
+reunião é por gestor ou com todos e se pode usar salário (só o total da equipe).
 
 **Decisões já tomadas (não reabrir sem ele pedir):**
 - Check "S" ignora a linha inteira; "Problema horário" não entra; Origem "E" das digitadas não entra.
 - Cards de horas extra/falta retirados; aviso vermelho "fora do ORG" na lista retirado.
 - Absenteísmo = só atestados nas vistas de atestado; fonte oficial = relatório HRCL006.
-  Afastamentos mostram todos os tipos por cor, com opção "Só atestados".
+  Afastamentos mostram todos os tipos por cor; "Mostrar": todos, só atestados ou só um tipo
+  (doação de sangue é grupo próprio, 19/10).
 - O relatório de digitadas não diz quem digitou (colaborador × RH).
-- Painel em seções com menu ☰; Pausas Térmicas na própria seção.
-- Filtros da lateral sempre visíveis ao abrir; arquivo carregado abre na Visão geral.
+- Filtros da lateral sempre visíveis ao abrir; arquivo carregado abre na seção Ocorrências.
 - Filtro da legenda vale só para o gráfico clicado e não mexe nos números do topo.
-- Listas longas (curtas, top de digitadas, banco de horas) inteiras só em tela cheia.
+- Listas longas inteiras só em tela cheia.
 - Clique na barra/fatia/ponto/quadrado abre "de onde vem"; os nomes de cima dessa janela são
   filtros; o resumo da pessoa abre pelo nome na tabela.
 - Textos da tela para leigos: sem aba, coluna, macro, código de relatório, Check, ORG,
-  Tratamento, DSR. Cores: 5 cores de série + cinza "Outros"; vermelho só para alerta/atestado.
-- Gestores também veem as análises de "pegar no pulo".
-- Relatórios do sistema com 3 meses (digitadas, afastamentos, jornada, Cartão); pausas uma aba por
-  mês; planilha de tratamento e PontoNet só o mês atual (conversa de 14/10 e envio de 18/10).
-- Mudança entre ciclos sempre em palavras ("17 a menos que em Ago/26", "de 3,7% para 9,2%"),
-  nunca "p.p." nem número solto (19/10). Minigráficos de evolução com balão e clique.
-- Sem status (Regularizado/Pendente) no painel: ele é feito depois do fim do mês (26/10).
-- Ordem das seções e nomes "Ocorrências"/"PontoNet" (26/10); "?" por card; sem B12.
-- Sem "Entenda o painel" no topo; topo = ☰ + logo | período no meio | nome + Esconder filtros
-  (27-28/10). PontoNet com 3 meses, **só aprovados**; a demora segue o ciclo escolhido (28/10).
-- Ordem do menu (28/10): Ocorrências, Digitadas, Afastamentos, Jornada, Destaque, Pausas,
-  PontoNet, Tendências, Lista de colaboradores, Histórico, Todas.
-- Painel abre um ou vários CSVs juntos (28/10); repetidas entre arquivos contam uma vez.
-- Ordem base dos gráficos em toda seção (27/10): topo → mês a mês → o quê → quando → gestor →
-  pessoa → mapa → sinais → tendências → lista. Card novo segue essa ordem.
-- **O texto "pegar no pulo" não aparece na tela** (pedido do Dimitri, 18/10): os cards de sinais
-  de atenção ficam só com o título. A expressão pode existir em comentários do código.
+  Tratamento, DSR, "p.p.". Cores: 5 cores de série + cinza "Outros"; vermelho só para alerta/atestado.
+- Gestores também veem as análises de "pegar no pulo"; o texto "pegar no pulo" não aparece na tela.
+- Relatórios do sistema com 3 meses (digitadas, afastamentos, jornada, Cartão, **PontoNet**);
+  pausas uma aba por mês; planilha de tratamento só o mês atual.
+- Mudança entre ciclos sempre em palavras ("17 a menos que em Ago/26", "de 3,7% para 9,2%").
+  Minigráficos de evolução com mês embaixo, balão e clique.
+- Sem status (Regularizado/Pendente): o painel é feito depois do fim do mês.
+- Sem "Entenda o painel" no topo; "?" em cada card e "Entenda esta seção". Topo: ☰ + logo |
+  período no meio | nome do painel + "Esconder filtros" (abaixo de 1180 px vira uma fila).
+- Ordem do menu: Ocorrências, Marcações digitadas, Afastamentos, Jornada, Colaboradores em
+  destaque, Pausas térmicas, PontoNet, Tendências, Lista de colaboradores, Histórico, Todas.
+- Ordem base dos gráficos em toda seção: números do topo → mês a mês → o quê → quando → por
+  gestor → por pessoa → mapa → sinais de atenção → tendências → lista. Card novo segue essa ordem.
+- Seletor que comanda vários cards fica numa caixa laranja (`.grupo-sel`) junto com eles.
+- PontoNet: só os pedidos aprovados; a demora segue o mês do seletor da seção. Sem B12.
+- O painel abre um ou vários CSVs juntos; linhas repetidas entre arquivos contam uma vez.
 
 **Ainda em aberto com ele:** Check "S" nas curtas/auditoria; critério Internos × Externos;
 `destino_horas_extra`; absenteísmo completo (acidente, faltas, taxa); sugestões de 07/10 (horas de
-saída médica, quem está fora agora, férias por gestor, tempo de casa × atestados); o Tyrone só
-aparece no aviso de férias se o HRCL006 for exportado incluindo os gestores.
+saída médica, quem está fora agora, férias por gestor, tempo de casa × atestados); ideias R1–R10;
+"Inclusão esquecimento crachá" conta como esquecimento? (perguntado em 18/10, sem resposta); duas
+pessoas de cargo de encarregado sem nenhuma pausa térmica em setembro (estão no relatório por
+engano?); o Tyrone só aparece no aviso de férias se o HRCL006 incluir os gestores.
 
 **Como trabalhar com ele (o que funcionou):**
 - Toda resposta em pt-BR, explicando o porquê; dizer direto quando algo entregue estava errado.
+- Quando o pedido é ambíguo, faça a leitura mais provável, diga qual foi e peça print se não for.
 - Entregar VBA em `.txt` (CRLF): `sed 's/$/\r/' X/X.bas > txt/X.txt`. Manter `.bas` e `.txt` iguais.
-- Antes de entregar: `checar_colisoes_vba.py`, `simular_gerarcsv.py`, abrir o painel no Chromium
-  (Playwright), `conferir_painel.py` (18/18), screenshots desktop, 390 e 360 px, procurar erro de
-  JavaScript e texto "NaN/undefined". O extrator (`extrair_painel.js`) lê balões `data-tooltip`
-  sem a classe `seg` e a legenda `.legend-row` da rosca: não mude esses formatos sem ajustá-lo.
+- Antes de entregar: `checar_colisoes_vba.py`, `simular_gerarcsv.py`, `extrair_painel.js` +
+  `conferir_painel.py` (33/33), varredura no Chromium (Playwright: todas as seções, 1400/390/360
+  px, cliques de origem, legendas, tela cheia; sem erro de JavaScript, "NaN/undefined" nem rolagem
+  lateral) e screenshots. O extrator lê balões `data-tooltip` sem a classe `seg` e a legenda
+  `.legend-row` da rosca: não mude esses formatos sem ajustá-lo.
 - Relatórios novos do sistema (Senior) chegam como "dump" de impressão: macro `FormatarX` que
   reescreve a aba ativa como tabela; o GerarCSV acha a aba pelo cabeçalho; o painel ganha um
   `tipo_ocorrencia` novo, fora das vistas gerais e do `periodoCompleto`, com seção própria.
-- Planilha nova dele: inserir abas com `adicionar_aba_xlsx.py` (nunca salvar com openpyxl).
-- Pacotes de teste em zip (Macros / Planilhas / Site + LEIA-ME) quando ele pede "tudo".
+  Coluna nova no CSV: sempre no FIM (EscreverLinhaCSV, PrepararAbaCSV, simulador, HEADER_ALIASES).
+- Planilha dele: inserir/trocar abas com `adicionar_aba_xlsx.py` (nunca salvar com openpyxl).
+- Pacotes de teste em zip (Macros / Planilhas / Site + LEIA-ME) quando ele pede "tudo"; quando
+  só o painel muda, mandar só o `index.html`.
 - Dados pessoais (nomes, matrículas, salários): nunca no repositório nem em commits; só na conversa.
 - Código comentado para leigos; ao mudar código, atualizar os mapas no topo do index.html
-  ("O QUE APARECE NA TELA") e do GerarCSVPonto ("MAPA DO MÓDULO") e o histórico (seção 11).
+  ("O QUE APARECE NA TELA") e do GerarCSVPonto ("MAPA DO MÓDULO"), o README e o histórico (seção 11).
