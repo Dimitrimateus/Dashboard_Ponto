@@ -131,13 +131,14 @@ conteúdo num módulo.
   achadas pelo nome normalizado (`MapaCabecalhoNorm`, `ColunaDaEditado`): Data ← Dt.Apuraç., Status
   ← Tratamento, o resto pelo mesmo nome (Pontonet só existe na de Externos). Trabalho/Cargo/Gestor:
   fórmula da 1ª linha de dados estendida (FormulaR1C1) ou, sem fórmula, valor do ORG. Check em
-  branco. **Uso diário** (29/10, depois): nunca apaga nada das abas de tratamento; com linhas já
-  lá, pergunta OK (colar embaixo) / Cancelar. Linha que já está na aba (matrícula + data +
-  marcações, `ChaveDaLinha`) não é colada de novo. Funciona com e sem Tabela do Excel
-  (ListObject, `lo.Resize`). Fora do ORG/sem tipo: linha amarela na EDITADO. Toda pessoa com algo
-  faltando no ORG (não está, sem Tipo de trabalho/Cargo/Gestor, achada só pelo nome) vai para a
-  aba **"Avisos ORG"** (Matrícula, Nome, O que está faltando, Foi colado?), refeita a cada execução
-  (`EscreverAbaAvisos`), e a mensagem final avisa. `DistribuirEditadoNasAbasTratamento` (pública) refaz só isso na aba ativa.
+  branco. **Uso diário**: nunca apaga nada das abas de tratamento, só cola embaixo. (30/10)
+  Pergunta por InputBox: 1 = Internos e Externos, 2 = só Internos, 3 = só Externos, Cancelar.
+  Repetidas por pessoa + dia (`ChaveDiaPessoa`: matrícula ou nome + data), contra a aba e dentro
+  da EDITADO: mesmas marcações → não cola (iguais); marcações diferentes → não cola e vai para o
+  relatório com as duas (difs). Funciona com e sem Tabela do Excel (ListObject, `lo.Resize`).
+  Fora do ORG/sem tipo: linha amarela na EDITADO. Aba **"Relatório PURO-EDITADO"** (substituiu a
+  "Avisos ORG"; `EscreverRelatorio`, refeita a cada execução): Matrícula, Nome, Dia, Aviso,
+  Detalhe, Foi colado? — falta no ORG (uma por pessoa) e dia repetido com marcações diferentes. `DistribuirEditadoNasAbasTratamento` (pública) refaz só isso na aba ativa.
   Última linha com dados = Matricula/Nome com valor (`UltimaLinhaDados`), para fórmulas puxadas
   até o fim da aba não contarem. **Nunca rodou no Excel.**
 

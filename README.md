@@ -434,10 +434,12 @@ As 15 ideias marcadas na página de ideias que ainda faltavam:
   Externos`, coluna por coluna pelo nome do cabeçalho (Data ← Dt.Apuraç., Status ← Tratamento,
   Pontonet só na de externos). Trabalho, Cargo e Gestor: se a aba já tem fórmula (PROCX), a
   fórmula é estendida; se não, o valor vem do ORG. A macro é usada todo dia: **nunca apaga nada**
-  das abas de tratamento; se elas já têm linhas, pergunta OK (colar embaixo) ou Cancelar. Linha que
-  já está lá (mesma matrícula, data e marcações) não é colada de novo. Quem não está no ORG (ou está
-  sem "Tipo de trabalho") fica amarelo na EDITADO; toda pessoa com algo faltando no ORG aparece na
-  aba "Avisos ORG" (pessoa e o que falta), refeita a cada execução. A rotina
+  das abas de tratamento, só cola embaixo. Pergunta onde colar: 1 = internos e externos, 2 = só
+  internos, 3 = só externos, Cancelar = nada (30/10). Checa repetidas por pessoa + dia: com as mesmas
+  marcações não cola de novo; com marcações diferentes não cola e avisa. Quem não está no ORG (ou
+  está sem "Tipo de trabalho") fica amarelo na EDITADO. Tudo o que precisa de atenção (falta no ORG,
+  dia repetido com marcações diferentes) fica na aba "Relatório PURO-EDITADO", refeita a cada
+  execução. A rotina
   `DistribuirEditadoNasAbasTratamento` refaz só essa parte (com a aba EDITADO aberta).
 - Painel: o filtro de período virou um calendário próprio em que **só os dias com informação**
   podem ser clicados.
