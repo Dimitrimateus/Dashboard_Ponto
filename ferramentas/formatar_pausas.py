@@ -112,3 +112,57 @@ if __name__ == '__main__':
     print('%d colaboradores, %d batidas; período até %s' % (len(linhas), len(b), fim.strftime('%d/%m/%Y') if fim else '?'))
     pickle.dump({'fim': fim, 'linhas': linhas, 'geral': total_geral(sys.argv[1]), 'batidas': b},
                 open(sys.argv[2] if len(sys.argv) > 2 else 'pausas.pkl', 'wb'))
+
+# Relatório de pausas de VÁRIOS meses num arquivo só (31/10: o RH baixou 28/07 a 27/10 de uma vez).
+# O "Total do Colaborador" do sistema vem somado nos 3 meses, mas o painel usa um mês por aba.
+# por_ciclo() separa as batidas por ciclo (28 a 27, pela data do turno) e RECONTA os totais de cada
+# mês a partir delas, com as regras que bateram com o total do sistema nos 3 meses de 31/10:
+#   pausa térmica = batida F seguida de F; >= 20 min = correta, < 20 = menor (o sistema não deu
+#   nenhuma "maior" com pausas de até 52 min); trecho de trabalho (1ª->2ª, 3ª->4ª...) = 100 min
+#   correto, > 100 maior, < 100 menor; dia com nº ímpar de batidas = 1 marcação ímpar.
+# Conferência (3 meses, 52 pessoas): pausas corretas 8.016 e menores 47, iguais ao sistema;
+# trechos de trabalho 0,4% a 1,5% abaixo do sistema (diferença em dias com batida faltando).
+# Devolve [(nome do mês, dict {fim, linhas, geral, batidas})], do mais antigo ao mais recente.
+MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto",
+         "Setembro", "Outubro", "Novembro", "Dezembro"]
+def ciclo_fim(d):
+    a, m = d.year, d.month
+    if d.day >= 28:
+        m += 1
+        if m > 12: m, a = 1, a + 1
+    return datetime.datetime(a, m, 27)
+
+def recontar(bats):
+    import collections
+    dias = collections.defaultdict(list)
+    for b in bats: dias[(b[0], b[2])].append(b)
+    out = collections.defaultdict(lambda: [0] * 7)
+    for (m, dt), l in dias.items():
+        l.sort(key=lambda b: b[4]); t = []; base = 0; ant = None
+        for b in l:
+            v = round(b[3] * 1440)
+            if ant is not None and v + base < ant: base += 1440
+            t.append((v + base, b[5])); ant = v + base
+        o = out[m]
+        if len(t) % 2: o[6] += 1
+        for j in range(len(t) - 1):
+            dur = t[j + 1][0] - t[j][0]
+            if j % 2 == 0:
+                o[3 if dur == 100 else 4 if dur > 100 else 5] += 1
+            elif t[j][1] == 'F' and t[j + 1][1] == 'F':
+                o[0 if dur >= 20 else 1] += 1
+    return out
+
+def por_ciclo(dados):
+    import collections
+    cargo = {l[0]: (l[1], l[2]) for l in dados['linhas']}
+    grupos = collections.defaultdict(list)
+    for b in dados['batidas']: grupos[ciclo_fim(b[2])].append(b)
+    res = []
+    for fim in sorted(grupos):
+        bats = grupos[fim]; tot = recontar(bats)
+        linhas = [[m, cargo.get(m, ('', ''))[0] or next(b[1] for b in bats if b[0] == m), cargo.get(m, ('', ''))[1]] + tot[m]
+                  for m in sorted(tot, key=lambda m: cargo.get(m, ('', ''))[0])]
+        geral = [sum(l[3 + i] for l in linhas) for i in range(7)]
+        res.append((MESES[fim.month - 1], {'fim': fim, 'linhas': linhas, 'geral': geral, 'batidas': bats}))
+    return res

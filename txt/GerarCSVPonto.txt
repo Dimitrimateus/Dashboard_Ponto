@@ -1039,13 +1039,14 @@ End Function
 
 ' Acha a aba de cadastro "RE dd.mm" (o nome muda a cada extração: "RE
 ' 08.09", "RE 30.09"...): nome começando com "RE " e coluna "Matrícula"
-' na linha 1. Se houver mais de uma, usa a primeira (da esquerda pra
-' direita) — deixe só a RE mais recente na planilha.
+' na linha 1 (com ou sem acento: a RE de 23/10 veio com "Matricula").
+' Se houver mais de uma, usa a primeira (da esquerda pra direita) — deixe
+' só a RE mais recente na planilha.
 Private Function EncontrarAbaRE(wb As Workbook) As Worksheet
     Dim ws As Worksheet
     For Each ws In wb.Worksheets
         If UCase$(Left$(Trim$(ws.Name), 3)) = "RE " Then
-            If ColunaPorCabecalho(ws, "Matrícula") > 0 Then
+            If ColunaSemAcento(ws, "Matricula") > 0 Then
                 Set EncontrarAbaRE = ws
                 Exit Function
             End If
@@ -2313,9 +2314,9 @@ Private Function MontarDicionarioRE(ws As Worksheet) As Object
     Set dict = CreateObject("Scripting.Dictionary")
 
     Dim colMat As Long, colUnidadeNome As Long, colCargo As Long
-    colMat = ColunaPorCabecalho(ws, "Matrícula")
-    colUnidadeNome = ColunaPorCabecalho(ws, "Nome Unidade")
-    colCargo = ColunaPorCabecalho(ws, "Cargo")
+    colMat = ColunaSemAcento(ws, "Matricula")   ' "Matrícula" ou "Matricula" (RE de 23/10)
+    colUnidadeNome = ColunaSemAcento(ws, "Nome Unidade")
+    colCargo = ColunaSemAcento(ws, "Cargo")
     If colMat = 0 Then
         Set MontarDicionarioRE = dict
         Exit Function

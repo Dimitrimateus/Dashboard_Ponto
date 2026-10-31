@@ -59,6 +59,7 @@ aba PURO (exportação de ocorrências)   ──► PURO_Para_EDITADO      ─�
 | `Afastamentos/FormatarAfastamentos.bas` | relatório HRCL006 "Histórico de Afastamentos" → a mesma aba como tabela (renomeada "Afastamentos") |
 | `Jornada/FormatarJornada.bas` | os 4 relatórios de limite de jornada (intra, inter, inter semanal, horas excedentes) → a mesma aba como tabela, renomeada pelo tipo |
 | `GerarCSVPonto/GerarCSVPonto.bas` | `GerarAbaCSV` (monta a aba CSV) e `ExportarCSVPorGestor` (grava os .csv) |
+| `PrepararAbas/PrepararAbasDoMes.bas` | (31/10) uma macro só que reconhece e formata TODOS os relatórios brutos colados na planilha e cria a aba "Relatório da preparação" |
 | `Dashboard/index.html` | O painel. Contém o logo em base64 (linha enorme, ~60 KB); não leia o arquivo inteiro de uma vez |
 | `txt/*.txt` | As mesmas macros em `.txt`, CRLF, prontas para colar |
 | `ferramentas/` | Scripts para conferir CSV e painel sem Excel, formatar os relatórios em Python, inserir abas na planilha e checar colisões de nome no VBA (ver seção 10) |
@@ -195,6 +196,23 @@ conteúdo num módulo.
 - Arquivos de 09/10 (28/06 a 27/09): intra 21 ocorrências/18 pessoas; inter 1; semanal 11/8;
   excedentes 72/34. Horas arredondadas ao minuto (o sistema grava 10:05:00,96).
 
+### 5.3e PrepararAbasDoMes (31/10)
+- Percorre as abas, reconhece cada relatório bruto pelo conteúdo (`TipoDoRelatorioBruto`: "Cartão
+  Ponto"+"Empregado:", "PAUSAS TÉRMICAS", "Crachá"+"Coletor", "Histórico de Afastamentos", marcadores
+  de jornada, A1 "Data falta"), pula as já formatadas e roda a macro de cada uma por
+  `Application.Run "<Macro>_Auto"`. Cada módulo de formatação ganhou `modoAuto`/`msgAuto`, a função
+  pública `<Macro>_Auto() As String` e `Aviso` no lugar de `MsgBox` (no automático guarda o texto,
+  "ERRO: " quando o ícone é de erro, e responde Sim às perguntas). Cartão: renomeia
+  "Cartao_Consolidado" para "Cartão <Mês do último DT>" e apaga a aba bruta (sem período no
+  automático = erro, sem InputBox). PontoNet: TextToColumns por ";" se veio numa coluna, renomeia
+  "Pontonet". Aba "Relatório da preparação" (1ª aba): aba original, tipo, OK/Deu erro, aba(s)
+  gerada(s), detalhes + lista do que se espera no mês (FALTOU em vermelho). **Nunca rodou no Excel.**
+- FormatarPausasTermicas (31/10): relatório com mais de um ciclo → uma aba por ciclo
+  (`CiclosDasBatidas`, `EscreverMesRecontado`, `ContarDia`, escrita em `EscreverAbaPausas`), totais
+  recontados das batidas (pausa F–F ≥ 20 min = correta, < 20 = menor; trecho = 100 correto, > maior,
+  < menor; dia ímpar = 1). Nos 3 meses de 31/10: pausas iguais ao sistema (8.016/47/0), trechos até
+  1,5% abaixo. Versão Python: `formatar_pausas.por_ciclo`.
+
 ### 5.4 GerarCSVPonto
 **Entradas (achadas por nome/cabeçalho, nunca por posição):**
 - Abas cujo nome começa com **"Tratamento"** e que têm a coluna `Matricula` na linha 1:
@@ -203,6 +221,8 @@ conteúdo num módulo.
   Extras, Faltas, Extra 100%, Qtd. Horas Pagas, Intra, Inter, Marcações Impares, Horas Excedentes,
   Extras e Faltas, Refeição fora de Escala` (Gestor e Cargo são fórmulas XLOOKUP e podem dar `#N/A`).
 - **"RE ..."** (ex.: `RE 08.09`, `RE 30.09`): o cadastro (Matrícula → `Nome Unidade` = setor, `Cargo`).
+  Desde 31/10 achada com `ColunaSemAcento` (a RE 23.10 veio com "Matricula" sem acento e não era achada).
+  Na RE 23.10, "Nome Unidade" é a unidade ("UV RECIFE/CB ST AG", "UV TERESINA"), não o setor.
 - Abas começando com **"Cartão"** com `Matrícula` e `DT` na linha 2: até as **3 mais recentes**
   (pela maior data). A mais recente é o "mês atual".
 - `PontoNet` (opcional; se faltar, abre um seletor de arquivo): `Data falta, Matrícula, Situação
@@ -763,6 +783,20 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   diferenças esperadas — %, médias e minutos). Testado com CSV inventado (sem a planilha dele nesta
   sessão): sem erro de JS, NaN ou rolagem lateral em 1400 e 390 px. Muitas perguntas enviadas a ele
   sobre a origem dos números (ver conversa); respostas pendentes.
+
+- 31/10: Dimitri mandou os relatórios de 3 meses (28/07 a 27/10) e a planilha `Tratamento Ponto
+  28.09 até 27.10.xlsm` (RE 23.10, ORG, Cartão Agosto/Setembro já no layout antigo, Tratamento
+  Internos/Externos). Montada a versão "com todas as abas" (`adicionar_aba_xlsx.py` funciona em
+  .xlsm): Cartão Outubro (`ferramentas/formatar_cartao.py`, port do ConsolidarCartaoPonto, conferido
+  com as abas Agosto/Setembro: só mudam o horário do dia e ~10 dias que o sistema alterou), Pausas
+  Térmicas Agosto/Setembro/Outubro (o HRES114 veio com 3 meses: `por_ciclo`; setembro deu as mesmas
+  9.009 batidas do arquivo mensal de 18/10), Marcações Digitadas (1.387; 1.354 "D"), Afastamentos
+  (319), Intrajornada 30, Interjornada 3, Semanal 16, Excedentes 90, Pontonet 2.307. CSV simulado:
+  8.107 linhas, 77 ocorrências (9 com data 28/10 = ciclo seguinte, na aba Externos). Painel:
+  `periodoCompleto` agora para no fim do espelho de ponto (as de 28/10 jogavam período, ciclos dos
+  afastamentos e tendências para novembro): 68 ocorrências, 54 colaboradores. Simulador genérico
+  (RE pelo prefixo, todas as abas Tratamento com grupo). Macro `PrepararAbasDoMes` (5.3e).
+  Apresentação dele aos gestores: 03/11.
 
 ## 12. Estado atual e como continuar (29/10/2026)
 

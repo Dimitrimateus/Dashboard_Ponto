@@ -1,5 +1,11 @@
 Attribute VB_Name = "modFormatarAfastamentos"
 Option Explicit
+
+' Modo automático (31/10): quando a macro PrepararAbasDoMes chama esta formatação
+' (FormatarAfastamentos_Auto), nenhuma mensagem aparece; o texto de cada aviso vai para msgAuto e
+' volta para o relatório da preparação. Ver Aviso, no fim do módulo.
+Private modoAuto As Boolean
+Private msgAuto As String
 ' ============================================================================
 ' COMO ESTE MÓDULO SE LIGA AO RESTO DO PROJETO
 '   Ordem no mês: 1) exportar o HRCL006 do Senior; 2) abrir o arquivo e rodar
@@ -69,7 +75,7 @@ Sub FormatarAfastamentos()
     Dim usado As Range
     Set usado = ws.UsedRange
     If usado.Rows.Count < 2 Then
-        MsgBox "Nenhum dado encontrado na aba ativa.", vbExclamation, "Formatar Afastamentos"
+        Aviso "Nenhum dado encontrado na aba ativa.", vbExclamation, "Formatar Afastamentos"
         Exit Sub
     End If
 
@@ -216,7 +222,7 @@ ProximaLinha:
     ' Nada reconhecido = provavelmente a aba ativa não é o HRCL006: avisa e sai
     ' sem apagar nada.
     If nSaida = 0 Then
-        MsgBox "Não encontrei nenhum afastamento na aba ativa." & vbCrLf & _
+        Aviso "Não encontrei nenhum afastamento na aba ativa." & vbCrLf & _
                "Confira se a aba ativa é o relatório Histórico de Afastamentos.", vbExclamation, "Formatar Afastamentos"
         Exit Sub
     End If
@@ -309,7 +315,7 @@ ProximaLinha:
     ws.Cells(1, 1).Select
     Application.ScreenUpdating = True
 
-    MsgBox "Formatação concluída." & vbCrLf & _
+    Aviso "Formatação concluída." & vbCrLf & _
            nSaida & " afastamento(s) na tabela." & vbCrLf & _
            IIf(renomeada, "Aba renomeada para """ & NOME_ABA_SAIDA & """.", _
                "A aba não foi renomeada (já existe uma aba """ & NOME_ABA_SAIDA & """)."), _
@@ -374,5 +380,29 @@ Private Function CodigoTexto(v As Variant, ByVal digitos As Long) As String
         CodigoTexto = Format$(CLng(v), String$(digitos, "0"))
     Else
         CodigoTexto = TextoCel(v)
+    End If
+End Function
+
+' ----------------------------------------------------------------------------
+' Modo automático (31/10). FormatarAfastamentos_Auto é chamada pela macro PrepararAbasDoMes
+' com a aba do relatório ativa: roda a formatação sem nenhuma caixa de mensagem
+' e devolve, em texto, o que teria aparecido nelas.
+' Aviso substitui o MsgBox: fora do modo automático é o MsgBox de sempre; no
+' automático guarda o texto (com "ERRO: " na frente quando o aviso é de erro).
+' ----------------------------------------------------------------------------
+Public Function FormatarAfastamentos_Auto() As String
+    modoAuto = True: msgAuto = ""
+    FormatarAfastamentos
+    modoAuto = False
+    FormatarAfastamentos_Auto = msgAuto
+End Function
+
+Private Function Aviso(ByVal texto As String, Optional ByVal botoes As Long = vbInformation, Optional ByVal titulo As String = "") As VbMsgBoxResult
+    If modoAuto Then
+        If (botoes And 16) = 16 Then texto = "ERRO: " & texto
+        msgAuto = msgAuto & IIf(msgAuto = "", "", " ") & Replace(Replace(texto, vbCrLf, " "), vbLf, " ")
+        Aviso = vbYes
+    Else
+        Aviso = MsgBox(texto, botoes, titulo)
     End If
 End Function

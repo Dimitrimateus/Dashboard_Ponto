@@ -7,7 +7,7 @@ from xml.sax.saxutils import escape
 # [Content_Types].xml, docProps/app.xml e styles.xml (estilos novos no fim), e entra
 # xl/worksheets/sheetN.xml. Textos vão como inlineStr (não mexe no sharedStrings).
 # Uso: python3 adicionar_aba_xlsx.py entrada.xlsx saida.xlsx linhas.pkl LAYOUT ["Nome da aba"] [--substituir]
-#   LAYOUT = marcacoes | afastamentos | intrajornada | interjornada | intersemanal | excedentes | pausas
+#   LAYOUT = marcacoes | afastamentos | intrajornada | interjornada | intersemanal | excedentes | pausas | pontonet | cartao
 #   --substituir: em vez de criar a aba, troca o CONTEÚDO de uma aba que já existe com esse nome
 #   (só se ela não tiver fórmulas, tabelas, comentários nem ligações: senão recusa).
 # (linhas.pkl = saída do formatar_marcacoes.py ou do formatar_afastamentos.py)
@@ -49,6 +49,8 @@ LAYOUTS = {
              "Total dias processo"],
         larg=[11, 9, 9, 10, 10, 34, 8, 22, 30, 12, 8, 28, 36, 30, 16, 16, 16, 16, 9, 9, 9, 9],
         texto={11}, hora={2}, dur=set()),
+    # Cartão Ponto (formatar_cartao.py): o desenho da aba está em montar_sheet_cartao.
+    'cartao': dict(nome='Cartão', cab=[], larg=[], texto=set(), hora=set(), dur=set()),
     'afastamentos': dict(nome='Afastamentos',
         cab=["Matrícula", "Colaborador", "Admissão", "Cód. Situação", "Situação", "Início", "Hora início",
              "Término", "Hora término", "Dias", "Horas", "Prev. Término", "Exame"],
@@ -184,6 +186,45 @@ def montar_sheet_pausas(dados, ids):
             '<sheetFormatPr defaultRowHeight="15"/><cols>%s</cols><sheetData>%s</sheetData>'
             '<autoFilter ref="%s"/>%s</worksheet>') % (n, cols, ''.join(rows), ref1, mc)
 
+# Aba do Cartão Ponto como a ConsolidarCartaoPonto deixa (31/10): linha 1 com os rótulos de grupo
+# ("Horas faltas" Q:S, "Horas extras" T:W, "Painel de Auditoria Estatística" Y:AC), linha 2 com o
+# cabeçalho de 29 colunas e os dados a partir da linha 3. "dados" = dict do formatar_cartao.py
+# ({ini, fim, linhas}). E = data; I..N = hora; P..X = duração; G = código do horário (texto).
+def montar_sheet_cartao(dados, ids):
+    from formatar_cartao import CAB
+    base = datetime.datetime(1899, 12, 30)
+    def cel(ref, v, i):
+        if v is None or v == '': return '<c r="%s" s="%d"/>' % (ref, ids['txt'])
+        if isinstance(v, datetime.datetime): return '<c r="%s" s="%d"><v>%d</v></c>' % (ref, ids['data'], (v - base).days)
+        if 9 <= i <= 14 and isinstance(v, float): return '<c r="%s" s="%d"><v>%r</v></c>' % (ref, ids['hora'], v)
+        if 16 <= i <= 24 and isinstance(v, float): return '<c r="%s" s="%d"><v>%r</v></c>' % (ref, ids['dur'], v)
+        if isinstance(v, (int, float)) and i != 7: return '<c r="%s" s="%d"><v>%s</v></c>' % (ref, ids['num'], v)
+        return '<c r="%s" t="inlineStr" s="%d"><is><t xml:space="preserve">%s</t></is></c>' % (ref, ids['txt'], escape(str(v)))
+    def tcab(ref, v): return '<c r="%s" t="inlineStr" s="%d"><is><t>%s</t></is></c>' % (ref, ids['cab'], escape(v)) if v else '<c r="%s" s="%d"/>' % (ref, ids['cab'])
+    grupo = {17: 'Horas faltas', 20: 'Horas extras', 25: 'Painel de Auditoria Estatística'}
+    rows = ['<row r="1">%s</row>' % ''.join(tcab('%s1' % letra(i), grupo.get(i, '')) for i in range(1, 30)),
+            '<row r="2">%s</row>' % ''.join(tcab('%s2' % letra(i), h) for i, h in enumerate(CAB, start=1))]
+    for n, l in enumerate(dados['linhas'], start=3):
+        rows.append('<row r="%d">%s</row>' % (n, ''.join(cel('%s%d' % (letra(i), n), v, i) for i, v in enumerate(l, start=1))))
+    larg = [10, 34, 26, 26, 11, 5, 7, 24] + [7] * 6 + [26] + [8] * 9 + [12, 11, 9, 16, 18]
+    cols = ''.join('<col min="%d" max="%d" width="%d" customWidth="1"/>' % (i, i, w) for i, w in enumerate(larg, start=1))
+    ult = len(dados['linhas']) + 2
+    merges = ['Q1:S1', 'T1:W1', 'Y1:AC1']
+    return ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+            '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+            'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            '<dimension ref="A1:AC%d"/>'
+            '<sheetViews><sheetView workbookViewId="0"><pane ySplit="2" topLeftCell="A3" activePane="bottomLeft" state="frozen"/>'
+            '<selection pane="bottomLeft" activeCell="A3" sqref="A3"/></sheetView></sheetViews>'
+            '<sheetFormatPr defaultRowHeight="15"/><cols>%s</cols><sheetData>%s</sheetData>'
+            '<autoFilter ref="A2:AC%d"/><mergeCells count="3">%s</mergeCells></worksheet>') % (
+            ult, cols, ''.join(rows), ult, ''.join('<mergeCell ref="%s"/>' % m for m in merges))
+
+def montar(linhas, ids, lay):
+    if isinstance(linhas, dict) and 'ini' in linhas: return montar_sheet_cartao(linhas, ids)
+    if isinstance(linhas, dict): return montar_sheet_pausas(linhas, ids)
+    return montar_sheet(linhas, ids, lay)
+
 # Copia o .xlsx de entrada para o de saída parte por parte, trocando só:
 #   workbook.xml (registra a aba), workbook.xml.rels (aponta para o arquivo da aba),
 #   [Content_Types].xml (declara o tipo), styles.xml (estilos novos no fim) e
@@ -220,7 +261,7 @@ def adicionar_aba(entrada, saida, linhas, nome_aba, lay):
         for info in zin.infolist():
             dados = novos[info.filename].encode('utf-8') if info.filename in novos else zin.read(info.filename)
             zout.writestr(info, dados)
-        zout.writestr(parte, (montar_sheet_pausas(linhas, ids) if isinstance(linhas, dict) else montar_sheet(linhas, ids, lay)).encode('utf-8'))
+        zout.writestr(parte, montar(linhas, ids, lay).encode('utf-8'))
     return parte
 
 # Troca o conteúdo de uma aba existente (ex.: digitadas de 1 mês -> 3 meses) sem mexer no resto:
@@ -250,7 +291,7 @@ def substituir_aba(entrada, saida, linhas, nome_aba, lay):
     wb = re.sub(r'(<definedName name="_xlnm\._FilterDatabase" localSheetId="%d"[^>]*>)([^<]*)!\$[^<]*(</definedName>)' % idx,
                 lambda m: m.group(1) + m.group(2) + '!' + ref + m.group(3), wb)
     novos = {'xl/workbook.xml': wb, 'xl/styles.xml': styles,
-             parte: montar_sheet_pausas(linhas, ids) if isinstance(linhas, dict) else montar_sheet(linhas, ids, lay)}
+             parte: montar(linhas, ids, lay)}
     with zipfile.ZipFile(saida, 'w', zipfile.ZIP_DEFLATED) as zout:
         for info in zin.infolist():
             dados = novos[info.filename].encode('utf-8') if info.filename in novos else zin.read(info.filename)

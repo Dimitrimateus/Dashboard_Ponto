@@ -1,6 +1,12 @@
 Attribute VB_Name = "modFormatarJornada"
 Option Explicit
 
+' Modo automático (31/10): quando a macro PrepararAbasDoMes chama esta formatação
+' (FormatarJornada_Auto), nenhuma mensagem aparece; o texto de cada aviso vai para msgAuto e
+' volta para o relatório da preparação. Ver Aviso, no fim do módulo.
+Private modoAuto As Boolean
+Private msgAuto As String
+
 ' ============================================================================
 ' FormatarJornada
 '
@@ -46,7 +52,7 @@ Sub FormatarJornada()
     Dim usado As Range
     Set usado = ws.UsedRange
     If usado.Rows.Count < 2 Then
-        MsgBox "Nenhum dado encontrado na aba ativa.", vbExclamation, "Formatar Jornada"
+        Aviso "Nenhum dado encontrado na aba ativa.", vbExclamation, "Formatar Jornada"
         Exit Sub
     End If
 
@@ -63,7 +69,7 @@ Sub FormatarJornada()
     Dim tipo As String
     tipo = TipoDoRelatorio(dados)
     If tipo = "" Then
-        MsgBox "Não reconheci o relatório da aba ativa." & vbCrLf & _
+        Aviso "Não reconheci o relatório da aba ativa." & vbCrLf & _
                "Esta macro formata: Intrajornada, Interjornada, Interjornada semanal e Horas excedentes.", _
                vbExclamation, "Formatar Jornada"
         Exit Sub
@@ -80,7 +86,7 @@ Sub FormatarJornada()
     End Select
 
     If nSaida = 0 Then
-        MsgBox "Reconheci o relatório (" & nomeAba & "), mas não encontrei nenhuma ocorrência nele.", _
+        Aviso "Reconheci o relatório (" & nomeAba & "), mas não encontrei nenhuma ocorrência nele.", _
                vbExclamation, "Formatar Jornada"
         Exit Sub
     End If
@@ -96,7 +102,7 @@ Sub FormatarJornada()
     Err.Clear
     On Error GoTo 0
 
-    MsgBox "Relatório reconhecido: " & nomeAba & vbCrLf & _
+    Aviso "Relatório reconhecido: " & nomeAba & vbCrLf & _
            nSaida & " ocorrência(s) na tabela." & vbCrLf & _
            IIf(renomeada, "Aba renomeada para """ & nomeAba & """.", _
                "A aba não foi renomeada (já existe uma aba """ & nomeAba & """)."), _
@@ -566,4 +572,28 @@ Private Function TextoSimples(v As Variant) As String
         t = Replace(t, Mid$(com, i, 1), Mid$(sem, i, 1))
     Next i
     TextoSimples = t
+End Function
+
+' ----------------------------------------------------------------------------
+' Modo automático (31/10). FormatarJornada_Auto é chamada pela macro PrepararAbasDoMes
+' com a aba do relatório ativa: roda a formatação sem nenhuma caixa de mensagem
+' e devolve, em texto, o que teria aparecido nelas.
+' Aviso substitui o MsgBox: fora do modo automático é o MsgBox de sempre; no
+' automático guarda o texto (com "ERRO: " na frente quando o aviso é de erro).
+' ----------------------------------------------------------------------------
+Public Function FormatarJornada_Auto() As String
+    modoAuto = True: msgAuto = ""
+    FormatarJornada
+    modoAuto = False
+    FormatarJornada_Auto = msgAuto
+End Function
+
+Private Function Aviso(ByVal texto As String, Optional ByVal botoes As Long = vbInformation, Optional ByVal titulo As String = "") As VbMsgBoxResult
+    If modoAuto Then
+        If (botoes And 16) = 16 Then texto = "ERRO: " & texto
+        msgAuto = msgAuto & IIf(msgAuto = "", "", " ") & Replace(Replace(texto, vbCrLf, " "), vbLf, " ")
+        Aviso = vbYes
+    Else
+        Aviso = MsgBox(texto, botoes, titulo)
+    End If
 End Function

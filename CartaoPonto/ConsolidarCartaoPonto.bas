@@ -76,6 +76,12 @@
 ' Posição de cada coluna na aba de DESTINO (Cartao_Consolidado). Tudo que escreve ou lê o
 ' destino usa estas constantes: para mudar a ordem das colunas, basta mexer aqui (e no array
 ' "cabecalhos", mais abaixo, que tem que seguir a mesma ordem).
+' Modo automático (31/10): quando a macro PrepararAbasDoMes chama esta formatação
+' (ConsolidarCartaoPontoDefinitivo_Auto), nenhuma mensagem aparece; o texto de cada aviso vai para msgAuto e
+' volta para o relatório da preparação. Ver Aviso, no fim do módulo.
+Private modoAuto As Boolean
+Private msgAuto As String
+
 Private Const COL_MATRICULA As Integer = 1
 Private Const COL_NOME As Integer = 2
 Private Const COL_CARGO As Integer = 3
@@ -190,6 +196,11 @@ Sub ConsolidarCartaoPontoDefinitivo()
     '   dataInicioRelatorio = DateSerial(Year(Date), Month(Date), 1)
     ' Era isso que fazia a planilha sair sempre com o mês errado.
     ' Agora a macro avisa e deixa você digitar o período.
+    If Not temPeriodo And modoAuto Then
+        ' no modo automático não dá para perguntar as datas: avisa e para
+        Aviso "Não consegui ler o período no cabeçalho do relatório da aba """ & wsOrigem.Name & """.", vbExclamation
+        GoTo Sair
+    End If
     If Not temPeriodo Then
         Dim respIni As String, respFim As String
         respIni = InputBox("Não consegui ler o período no cabeçalho do relatório." & vbCrLf & vbCrLf & _
@@ -202,7 +213,7 @@ Sub ConsolidarCartaoPontoDefinitivo()
         dataInicioRelatorio = CDate(respIni)
         dataFimRelatorio = CDate(respFim)
         If Err.Number <> 0 Then
-            MsgBox "Data inválida. Processo cancelado.", vbExclamation
+            Aviso "Data inválida. Processo cancelado.", vbExclamation
             GoTo Sair
         End If
         On Error GoTo 0
@@ -646,9 +657,11 @@ Sair:
     Application.ScreenUpdating = True
 
     If linDestino > 3 Then
-        MsgBox "Planilha unificada com sucesso!" & vbCrLf & vbCrLf & _
+        Aviso "Planilha unificada com sucesso!" & vbCrLf & vbCrLf & _
                "Período lido: " & Format(dataInicioRelatorio, "dd/mm/yyyy") & " a " & Format(dataFimRelatorio, "dd/mm/yyyy") & vbCrLf & _
                "Linhas geradas: " & (linDestino - 3), vbInformation, "Automação Concluída"
+    ElseIf modoAuto And temPeriodo Then
+        Aviso "Nenhum dia de colaborador encontrado na aba """ & wsOrigem.Name & """ (é mesmo o Cartão Ponto?).", vbExclamation
     End If
 End Sub
 
@@ -856,5 +869,29 @@ Private Function SepararMarcacoesERecursos(ByVal textoOriginal As String, ByRef 
 
         outDescricao = Trim(textoOriginal)
         SepararMarcacoesERecursos = True
+    End If
+End Function
+
+' ----------------------------------------------------------------------------
+' Modo automático (31/10). ConsolidarCartaoPontoDefinitivo_Auto é chamada pela macro PrepararAbasDoMes
+' com a aba do relatório ativa: roda a formatação sem nenhuma caixa de mensagem
+' e devolve, em texto, o que teria aparecido nelas.
+' Aviso substitui o MsgBox: fora do modo automático é o MsgBox de sempre; no
+' automático guarda o texto (com "ERRO: " na frente quando o aviso é de erro).
+' ----------------------------------------------------------------------------
+Public Function ConsolidarCartaoPontoDefinitivo_Auto() As String
+    modoAuto = True: msgAuto = ""
+    ConsolidarCartaoPontoDefinitivo
+    modoAuto = False
+    ConsolidarCartaoPontoDefinitivo_Auto = msgAuto
+End Function
+
+Private Function Aviso(ByVal texto As String, Optional ByVal botoes As Long = vbInformation, Optional ByVal titulo As String = "") As VbMsgBoxResult
+    If modoAuto Then
+        If (botoes And 16) = 16 Then texto = "ERRO: " & texto
+        msgAuto = msgAuto & IIf(msgAuto = "", "", " ") & Replace(Replace(texto, vbCrLf, " "), vbLf, " ")
+        Aviso = vbYes
+    Else
+        Aviso = MsgBox(texto, botoes, titulo)
     End If
 End Function

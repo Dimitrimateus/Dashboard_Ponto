@@ -1,6 +1,12 @@
 Attribute VB_Name = "modFormatarPausas"
 Option Explicit
 
+' Modo automático (31/10): quando a macro PrepararAbasDoMes chama esta formatação
+' (FormatarPausasTermicas_Auto), nenhuma mensagem aparece; o texto de cada aviso
+' vai para msgAuto e volta para o relatório da preparação. Ver Aviso, no fim.
+Private modoAuto As Boolean
+Private msgAuto As String
+
 ' ============================================================================
 ' FormatarPausasTermicas
 '
@@ -68,12 +74,12 @@ Sub FormatarPausasTermicas()
     Dim lastRow As Long
     lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
     If lastRow < 2 Then
-        MsgBox "Nenhum dado encontrado na aba ativa.", vbExclamation
+        Aviso "Nenhum dado encontrado na aba ativa.", vbExclamation, "Formatar Pausas Térmicas"
         Exit Sub
     End If
 
     ' Confirmação antes de apagar: o usuário pode desistir.
-    If MsgBox("Este macro vai REESCREVER completamente a aba """ & ws.Name & _
+    If Aviso("Este macro vai REESCREVER completamente a aba """ & ws.Name & _
               """, deixando os totais por colaborador, o total geral e as batidas dia a dia." & vbCrLf & vbCrLf & _
               "Recomendado: rode numa CÓPIA do arquivo." & vbCrLf & vbCrLf & _
               "Continuar?", vbYesNo + vbQuestion, "Formatar Pausas Térmicas") = vbNo Then
@@ -218,131 +224,61 @@ Sub FormatarPausasTermicas()
         End If
     Next rp
 
+    ' Relatório de VÁRIOS meses num arquivo só (31/10): o "Total do Colaborador" do
+    ' sistema vem somado em todos os meses, mas o painel usa um mês por aba. Então,
+    ' quando as batidas passam de um ciclo (28 a 27), a macro faz uma aba por ciclo,
+    ' com os totais RECONTADOS das batidas daquele ciclo (RecontarPorCiclo).
+    Dim ciclos As Collection, ti As Long
+    Set ciclos = CiclosDasBatidas(batidas)
+
+    If ciclos.Count > 1 Then
+        Dim cargoPorMat As Object, ic As Long, fimCiclo As Date, wsMes As Worksheet
+        Dim msgMeses As String, nomeMes As String
+        Set cargoPorMat = CreateObject("Scripting.Dictionary")
+        For ti = 1 To totColMatricula.Count
+            If Not cargoPorMat.Exists(totColMatricula(ti)) Then cargoPorMat.Add totColMatricula(ti), totColCargo(ti)
+        Next ti
+        For ic = 1 To ciclos.Count
+            fimCiclo = ciclos(ic)
+            Application.StatusBar = "Montando o mês " & NomeDoMes(Month(fimCiclo)) & "..."
+            If ic = ciclos.Count Then
+                Set wsMes = ws     ' o mês mais recente fica na própria aba do relatório
+            Else
+                Set wsMes = ws.Parent.Worksheets.Add(Before:=ws)
+            End If
+            EscreverMesRecontado wsMes, batidas, fimCiclo, cargoPorMat
+            nomeMes = "Pausas Térmicas " & NomeDoMes(Month(fimCiclo))
+            If wsMes.Name <> nomeMes Then
+                If AbaExiste(ws.Parent, nomeMes) Then
+                    msgMeses = msgMeses & vbCrLf & "- " & NomeDoMes(Month(fimCiclo)) & ": já existia uma aba """ & nomeMes & _
+                        """; esta ficou como """ & wsMes.Name & """."
+                Else
+                    wsMes.Name = nomeMes
+                    msgMeses = msgMeses & vbCrLf & "- aba """ & nomeMes & """ (ciclo até " & Format$(fimCiclo, "dd/mm/yyyy") & ")"
+                End If
+            End If
+        Next ic
+        Application.ScreenUpdating = True
+        Application.Calculation = xlCalculationAutomatic
+        Application.StatusBar = False
+        Aviso "Formatação concluída. O relatório tinha " & ciclos.Count & " meses (ciclos de 28 a 27): " & _
+              "foi separado em uma aba por mês, com os totais recontados a partir das batidas de cada mês " & _
+              "(o total do sistema vinha somado nos " & ciclos.Count & " meses)." & msgMeses, _
+              vbInformation, "Formatar Pausas Térmicas"
+        Exit Sub
+    End If
+
     Application.StatusBar = "Reescrevendo a planilha..."
+    EscreverAbaPausas ws, totColMatricula, totColNome, totColCargo, totColVals, temGeral, _
+        Array(geralPausaCorretas, geralPausaMenor, geralPausaMaior, geralTrabCorreto, geralTrabMaior, geralTrabMenor, geralMarcacoesImpares), batidas
 
-    ' Cells.Clear apaga valores/formatos, mas não desfaz o AutoFiltro nem o congelamento de
-    ' painéis de uma execução anterior nesta mesma aba - por isso os dois são desligados antes.
-    If ws.AutoFilterMode Then ws.AutoFilterMode = False
-    ws.Cells.Clear
-    ActiveWindow.FreezePanes = False
-
-    ' Cabeçalho das duas tabelas. "Matrícula" e "Pausa corretas" são as palavras
-    ' que o GerarCSVPonto usa para achar esta tabela em qualquer aba.
-    Dim subHeaders As Variant
-    subHeaders = Array("Matrícula", "Colaborador", "Cargo", "Pausa corretas", _
-                        "Pausa menor 0:20", "Pausa maior 0:20", "Trabalho correto 1:40", _
-                        "Trabalho maior 1:40", "Trabalho menor 1:40", "Marcações Ímpares")
-
-    ' ============================================================
-    ' 1) Tabela de colaboradores (cabeçalho na linha 1, sem título em cima)
-    ' ============================================================
-    Dim writeRow As Long, shRow As Long, hcol As Long
-    shRow = 1
-    For hcol = 1 To 10
-        ws.Cells(shRow, hcol).Value = subHeaders(hcol - 1)
-    Next hcol
-    FormatarCabecalho ws.Range(ws.Cells(shRow, 1), ws.Cells(shRow, 10))
-    writeRow = shRow + 1
-
-    Dim ti As Long, k As Long
-    For ti = 1 To totColMatricula.Count
-        Dim vv As Variant
-        vv = totColVals(ti)
-        ws.Cells(writeRow, 1).Value = totColMatricula(ti)
-        ws.Cells(writeRow, 2).Value = totColNome(ti)
-        ws.Cells(writeRow, 3).Value = totColCargo(ti)
-        For k = 1 To 7
-            ws.Cells(writeRow, 3 + k).Value = vv(k)
-        Next k
-        writeRow = writeRow + 1
-    Next ti
-
-    If totColMatricula.Count > 0 Then
-        With ws.Range(ws.Cells(shRow, 1), ws.Cells(writeRow - 1, 10))
-            .Borders.LineStyle = xlContinuous
-            .Borders.Weight = xlThin
-        End With
-
-        ' Ativa o AutoFiltro na tabela e congela a linha de cabeçalho, para facilitar a
-        ' conferência quando a lista de colaboradores for longa.
-        ws.Range(ws.Cells(shRow, 1), ws.Cells(writeRow - 1, 10)).AutoFilter
-        ws.Activate
-        ws.Rows(shRow + 1).Select
-        ActiveWindow.FreezePanes = True
-    End If
-
-    ' ============================================================
-    ' 2) Tabela de total (uma linha em branco depois da tabela de colaboradores)
-    '    As colunas D:J são as mesmas da tabela de cima, para os números ficarem
-    '    alinhados; A:C viram uma única célula de rótulo.
-    ' ============================================================
-    If temGeral Then
-        writeRow = writeRow + 1
-
-        With ws.Range(ws.Cells(writeRow, 1), ws.Cells(writeRow, 3))
-            .Merge
-            .Value = "Total Geral"
-        End With
-        For hcol = 4 To 10
-            ws.Cells(writeRow, hcol).Value = subHeaders(hcol - 1)
-        Next hcol
-        FormatarCabecalho ws.Range(ws.Cells(writeRow, 1), ws.Cells(writeRow, 10))
-        writeRow = writeRow + 1
-
-        With ws.Range(ws.Cells(writeRow, 1), ws.Cells(writeRow, 3))
-            .Merge
-            .Value = "Todos os colaboradores"
-        End With
-        ws.Cells(writeRow, 4).Value = geralPausaCorretas
-        ws.Cells(writeRow, 5).Value = geralPausaMenor
-        ws.Cells(writeRow, 6).Value = geralPausaMaior
-        ws.Cells(writeRow, 7).Value = geralTrabCorreto
-        ws.Cells(writeRow, 8).Value = geralTrabMaior
-        ws.Cells(writeRow, 9).Value = geralTrabMenor
-        ws.Cells(writeRow, 10).Value = geralMarcacoesImpares
-        ws.Range(ws.Cells(writeRow, 1), ws.Cells(writeRow, 10)).Font.Bold = True
-
-        With ws.Range(ws.Cells(writeRow - 1, 1), ws.Cells(writeRow, 10))
-            .Borders.LineStyle = xlContinuous
-            .Borders.Weight = xlThin
-        End With
-    End If
-
-    ' ============================================================
-    ' Ajustes finais de layout
-    ' ============================================================
-    ' Fonte, larguras e alinhamento (só aparência; não afeta quem lê a aba).
-    ' Terceira tabela: as batidas, dia a dia (depois de duas linhas em branco).
-    Dim qtdBatidas As Long
-    qtdBatidas = batidas.Count
-    If qtdBatidas > 0 Then EscreverTabelaBatidas ws, writeRow + 3, batidas
-
-    ws.Cells.Font.Name = "Calibri"
-    ws.Cells.Font.Size = 10
-
-    ws.Columns("A").ColumnWidth = 12
-    ws.Columns("B").ColumnWidth = 32
-    ws.Columns("C").ColumnWidth = 28
-    ws.Columns("D").ColumnWidth = 14
-    ws.Columns("E").ColumnWidth = 14
-    ws.Columns("F").ColumnWidth = 14
-    ws.Columns("G").ColumnWidth = 18
-    ws.Columns("H").ColumnWidth = 16
-    ws.Columns("I").ColumnWidth = 16
-    ws.Columns("J").ColumnWidth = 16
-
-    ws.Range("D:J").HorizontalAlignment = xlCenter
-
-    ws.Cells(1, 1).Select
-
-    ' Religa tudo o que foi desligado no começo e mostra o resumo.
     Application.ScreenUpdating = True
     Application.Calculation = xlCalculationAutomatic
     Application.StatusBar = False
 
-    ' Renomeia a aba com o mês do fim do período ("Pausas Térmicas Setembro"), para o
-    ' GerarCSVPonto saber de que mês ela é e o painel mostrar a evolução mês a mês.
-    ' Se já existe uma aba com esse nome, mantém o nome atual e avisa.
+    ' Renomeia a aba pelo mês do fim do período ("Pausas Térmicas Setembro"), para
+    ' o GerarCSVPonto saber de que mês é cada aba quando houver mais de uma (T9).
+    ' Se o período não for achado, ou já existir aba com esse nome, mantém o nome.
     Dim msgNome As String, novoNome As String
     If fimPeriodo > 0 Then
         novoNome = "Pausas Térmicas " & NomeDoMes(Month(fimPeriodo))
@@ -358,10 +294,10 @@ Sub FormatarPausasTermicas()
         msgNome = "Período do relatório não encontrado: a aba ficou com o nome """ & ws.Name & """."
     End If
 
-    MsgBox "Formatação concluída." & vbCrLf & _
+    Aviso "Formatação concluída." & vbCrLf & _
            totColMatricula.Count & " colaborador(es) na tabela de colaboradores." & vbCrLf & _
            IIf(temGeral, "Total Geral incluído.", "Bloco ""Total Geral"" não encontrado no relatório original.") & vbCrLf & _
-           qtdBatidas & " batida(s) na tabela de marcações (embaixo do Total Geral)." & _
+           batidas.Count & " batida(s) na tabela de marcações (embaixo do Total Geral)." & _
            IIf(msgNome <> "", vbCrLf & msgNome, ""), _
            vbInformation, "Formatar Pausas Térmicas"
 
@@ -482,3 +418,252 @@ Private Sub FormatarCabecalho(rng As Range)
         .WrapText = True
     End With
 End Sub
+
+' ----------------------------------------------------------------------------
+' Escreve numa aba (que é limpa antes) as três tabelas: colaboradores (linha 1),
+' Total Geral e as batidas. É o mesmo desenho de sempre; virou rotina própria em
+' 31/10 para servir também às abas de cada mês (EscreverMesRecontado).
+'   geral = Array dos 7 números do Total Geral (pausas corretas ... marcações ímpares).
+' ----------------------------------------------------------------------------
+Private Sub EscreverAbaPausas(ws As Worksheet, mats As Collection, nomes As Collection, cargos As Collection, _
+                              vals As Collection, ByVal temGeral As Boolean, geral As Variant, batidas As Collection)
+    If ws.AutoFilterMode Then ws.AutoFilterMode = False
+    Do While ws.ListObjects.Count > 0     ' tabela de batidas de uma formatação anterior
+        ws.ListObjects(1).Unlist
+    Loop
+    ws.Cells.Clear
+    ws.Activate
+    ActiveWindow.FreezePanes = False
+
+    Dim subHeaders As Variant
+    subHeaders = Array("Matrícula", "Colaborador", "Cargo", "Pausa corretas", _
+                        "Pausa menor 0:20", "Pausa maior 0:20", "Trabalho correto 1:40", _
+                        "Trabalho maior 1:40", "Trabalho menor 1:40", "Marcações Ímpares")
+
+    Dim writeRow As Long, shRow As Long, hcol As Long, ti As Long, k As Long, vv As Variant
+    shRow = 1
+    For hcol = 1 To 10
+        ws.Cells(shRow, hcol).Value = subHeaders(hcol - 1)
+    Next hcol
+    FormatarCabecalho ws.Range(ws.Cells(shRow, 1), ws.Cells(shRow, 10))
+    writeRow = shRow + 1
+
+    For ti = 1 To mats.Count
+        vv = vals(ti)
+        ws.Cells(writeRow, 1).Value = mats(ti)
+        ws.Cells(writeRow, 2).Value = nomes(ti)
+        ws.Cells(writeRow, 3).Value = cargos(ti)
+        For k = 1 To 7
+            ws.Cells(writeRow, 3 + k).Value = vv(k)
+        Next k
+        writeRow = writeRow + 1
+    Next ti
+
+    If mats.Count > 0 Then
+        With ws.Range(ws.Cells(shRow, 1), ws.Cells(writeRow - 1, 10))
+            .Borders.LineStyle = xlContinuous
+            .Borders.Weight = xlThin
+        End With
+        ws.Range(ws.Cells(shRow, 1), ws.Cells(writeRow - 1, 10)).AutoFilter
+        ws.Rows(shRow + 1).Select
+        ActiveWindow.FreezePanes = True
+    End If
+
+    ' Total Geral, depois de UMA linha em branco (ela marca o fim da tabela 1
+    ' para o GerarCSVPonto)
+    If temGeral Then
+        writeRow = writeRow + 1
+        With ws.Range(ws.Cells(writeRow, 1), ws.Cells(writeRow, 3))
+            .Merge
+            .Value = "Total Geral"
+        End With
+        For hcol = 4 To 10
+            ws.Cells(writeRow, hcol).Value = subHeaders(hcol - 1)
+        Next hcol
+        FormatarCabecalho ws.Range(ws.Cells(writeRow, 1), ws.Cells(writeRow, 10))
+        writeRow = writeRow + 1
+        With ws.Range(ws.Cells(writeRow, 1), ws.Cells(writeRow, 3))
+            .Merge
+            .Value = "Todos os colaboradores"
+        End With
+        For k = 0 To 6
+            ws.Cells(writeRow, 4 + k).Value = geral(k)
+        Next k
+        ws.Range(ws.Cells(writeRow, 1), ws.Cells(writeRow, 10)).Font.Bold = True
+        With ws.Range(ws.Cells(writeRow - 1, 1), ws.Cells(writeRow, 10))
+            .Borders.LineStyle = xlContinuous
+            .Borders.Weight = xlThin
+        End With
+    End If
+
+    ' Batidas, duas linhas em branco depois do Total Geral
+    If batidas.Count > 0 Then EscreverTabelaBatidas ws, writeRow + 3, batidas
+
+    ws.Cells.Font.Name = "Calibri"
+    ws.Cells.Font.Size = 10
+    ws.Columns("A").ColumnWidth = 12
+    ws.Columns("B").ColumnWidth = 32
+    ws.Columns("C").ColumnWidth = 28
+    ws.Columns("D").ColumnWidth = 14
+    ws.Columns("E").ColumnWidth = 14
+    ws.Columns("F").ColumnWidth = 14
+    ws.Columns("G").ColumnWidth = 18
+    ws.Columns("H").ColumnWidth = 16
+    ws.Columns("I").ColumnWidth = 16
+    ws.Columns("J").ColumnWidth = 16
+    ws.Range("D:J").HorizontalAlignment = xlCenter
+    ws.Cells(1, 1).Select
+End Sub
+
+' Dia 27 que fecha o ciclo (28 a 27) de uma data: 28/09 -> 27/10; 27/10 -> 27/10.
+Private Function FimDoCiclo(ByVal d As Date) As Date
+    If Day(d) >= 28 Then
+        FimDoCiclo = DateSerial(Year(d), Month(d) + 1, 27)
+    Else
+        FimDoCiclo = DateSerial(Year(d), Month(d), 27)
+    End If
+End Function
+
+' Os ciclos que aparecem nas batidas, do mais antigo ao mais recente (cada item =
+' o dia 27 que fecha o ciclo). A data da batida é a do turno (coluna A do relatório).
+Private Function CiclosDasBatidas(batidas As Collection) As Collection
+    Dim vistos As Object, b As Variant, f As Date, chaves As Variant, i As Long, j As Long, tmp As Variant
+    Set vistos = CreateObject("Scripting.Dictionary")
+    For Each b In batidas
+        f = FimDoCiclo(CDate(b(2)))
+        If Not vistos.Exists(CLng(f)) Then vistos.Add CLng(f), f
+    Next b
+    Set CiclosDasBatidas = New Collection
+    If vistos.Count = 0 Then Exit Function
+    chaves = vistos.Keys
+    For i = 0 To UBound(chaves) - 1
+        For j = i + 1 To UBound(chaves)
+            If chaves(j) < chaves(i) Then tmp = chaves(i): chaves(i) = chaves(j): chaves(j) = tmp
+        Next j
+    Next i
+    For i = 0 To UBound(chaves)
+        CiclosDasBatidas.Add vistos(chaves(i))
+    Next i
+End Function
+
+' Monta numa aba o mês (ciclo) que termina em fimCiclo, com os totais RECONTADOS
+' das batidas daquele ciclo. Regras (as que bateram com o total do sistema nos 3
+' meses baixados em 31/10): em cada dia, as batidas em ordem alternam trabalho e
+' pausa (1ª->2ª trabalho, 2ª->3ª pausa...); pausa com as duas batidas F = pausa
+' térmica: 20 min ou mais = correta, menos = menor ("maior" o sistema não deu
+' nenhuma); trecho de trabalho = 1h40 certinho correto, mais = maior, menos =
+' menor; dia com número ímpar de batidas = 1 marcação ímpar. Hora que "volta"
+' (turno que passa da meia-noite) soma 24h. Pausas conferem com o sistema; os
+' trechos de trabalho ficam até 1,5% abaixo (dias com batida faltando).
+Private Sub EscreverMesRecontado(ws As Worksheet, batidas As Collection, ByVal fimCiclo As Date, cargoPorMat As Object)
+    Dim doMes As Collection, b As Variant
+    Set doMes = New Collection
+    For Each b In batidas
+        If FimDoCiclo(CDate(b(2))) = fimCiclo Then doMes.Add b
+    Next b
+
+    ' totais por matrícula, na ordem em que as pessoas aparecem
+    Dim tot As Object, ordem As Collection, nomePor As Object
+    Set tot = CreateObject("Scripting.Dictionary")
+    Set nomePor = CreateObject("Scripting.Dictionary")
+    Set ordem = New Collection
+    Dim minutos() As Long, letras() As String, n As Long, chaveDia As String, chaveAnt As String
+    Dim matAnt As String, i As Long
+    ReDim minutos(1 To 100): ReDim letras(1 To 100)
+    n = 0
+    For Each b In doMes
+        chaveDia = b(0) & "|" & CLng(b(2))
+        If chaveDia <> chaveAnt And n > 0 Then
+            ContarDia tot, matAnt, minutos, letras, n
+            n = 0
+        End If
+        If Not tot.Exists(CStr(b(0))) Then
+            Dim zeros(1 To 7) As Long
+            tot.Add CStr(b(0)), zeros
+            nomePor.Add CStr(b(0)), b(1)
+            ordem.Add CStr(b(0))
+        End If
+        If n < 100 Then
+            n = n + 1
+            minutos(n) = CLng(Round((CDbl(b(3)) - Int(CDbl(b(3)))) * 1440, 0))
+            letras(n) = UCase$(CStr(b(5)))
+        End If
+        chaveAnt = chaveDia
+        matAnt = CStr(b(0))
+    Next b
+    If n > 0 Then ContarDia tot, matAnt, minutos, letras, n
+
+    Dim mats As New Collection, nomes As New Collection, cargos As New Collection, vals As New Collection
+    Dim m As Variant, v As Variant, geral(0 To 6) As Long, k As Long
+    For Each m In ordem
+        v = tot(m)
+        Dim linhaVals(1 To 7) As Variant
+        For k = 1 To 7
+            linhaVals(k) = v(k)
+            geral(k - 1) = geral(k - 1) + v(k)
+        Next k
+        mats.Add m
+        nomes.Add nomePor(m)
+        If cargoPorMat.Exists(m) Then cargos.Add cargoPorMat(m) Else cargos.Add ""
+        vals.Add linhaVals
+    Next m
+    EscreverAbaPausas ws, mats, nomes, cargos, vals, True, _
+        Array(geral(0), geral(1), geral(2), geral(3), geral(4), geral(5), geral(6)), doMes
+End Sub
+
+' Soma num dia de uma pessoa (minutos/letras das n batidas, em ordem) os 7 totais.
+Private Sub ContarDia(tot As Object, ByVal mat As String, minutos() As Long, letras() As String, ByVal n As Long)
+    Dim v As Variant, j As Long, base As Long, t() As Long, dur As Long
+    ReDim t(1 To n)
+    base = 0
+    For j = 1 To n
+        t(j) = minutos(j) + base
+        If j > 1 Then
+            If t(j) < t(j - 1) Then base = base + 1440: t(j) = t(j) + 1440
+        End If
+    Next j
+    v = tot(mat)
+    If n Mod 2 = 1 Then v(7) = v(7) + 1
+    For j = 1 To n - 1
+        dur = t(j + 1) - t(j)
+        If j Mod 2 = 1 Then
+            ' trecho de trabalho (1ª->2ª, 3ª->4ª...)
+            If dur = 100 Then
+                v(4) = v(4) + 1
+            ElseIf dur > 100 Then
+                v(5) = v(5) + 1
+            Else
+                v(6) = v(6) + 1
+            End If
+        ElseIf letras(j) = "F" And letras(j + 1) = "F" Then
+            ' pausa térmica
+            If dur >= 20 Then v(1) = v(1) + 1 Else v(2) = v(2) + 1
+        End If
+    Next j
+    tot(mat) = v
+End Sub
+
+' ----------------------------------------------------------------------------
+' Modo automático (31/10). FormatarPausasTermicas_Auto é chamada pela macro
+' PrepararAbasDoMes com a aba do relatório ativa: roda a formatação sem nenhuma
+' caixa de mensagem e devolve, em texto, o que teria aparecido nelas.
+' Aviso substitui o MsgBox: fora do modo automático é o MsgBox de sempre; no
+' automático guarda o texto (com "ERRO: " na frente quando o aviso é de erro) e
+' responde "Sim" às perguntas (ex.: "vai reescrever a aba, continuar?").
+' ----------------------------------------------------------------------------
+Public Function FormatarPausasTermicas_Auto() As String
+    modoAuto = True: msgAuto = ""
+    FormatarPausasTermicas
+    modoAuto = False
+    FormatarPausasTermicas_Auto = msgAuto
+End Function
+
+Private Function Aviso(ByVal texto As String, Optional ByVal botoes As Long = vbInformation, Optional ByVal titulo As String = "") As VbMsgBoxResult
+    If modoAuto Then
+        If (botoes And 16) = 16 Then texto = "ERRO: " & texto
+        msgAuto = msgAuto & IIf(msgAuto = "", "", " ") & Replace(Replace(texto, vbCrLf, " "), vbLf, " ")
+        Aviso = vbYes
+    Else
+        Aviso = MsgBox(texto, botoes, titulo)
+    End If
+End Function

@@ -39,11 +39,14 @@ CHECK_S_TOTAL = '--check-s-total' in sys.argv
 def norm(t): return unicodedata.normalize('NFD',t).encode('ascii','ignore').decode().lower().strip()
 
 # Cadastro RE: matrícula -> (setor, cargo), como MontarDicionarioRE/ObterSetorCargo.
-RE=d['RE 08.09']; rh=hdrmap(RE[0])
+# (31/10) a RE é achada pelo prefixo "RE " (o nome muda a cada extração) e a matrícula pode vir
+# sem acento ("Matricula", RE de 23/10), como no EncontrarAbaRE/MontarDicionarioRE da macro.
+RE_NOME=next(n for n in d if n.upper().startswith('RE ') and d[n] and any(norm(s(x))=='matricula' for x in d[n][0]))
+RE=d[RE_NOME]; rh={norm(k):v for k,v in hdrmap(RE[0]).items()}
 dictRE={}
 for r in RE[1:]:
-    m=s(r[rh['Matrícula']])
-    if m and m not in dictRE: dictRE[m]=(s(r[rh['Nome Unidade']]), s(r[rh['Cargo']]))
+    m=s(r[rh['matricula']])
+    if m and m not in dictRE: dictRE[m]=(s(r[rh['nome unidade']]), s(r[rh['cargo']]))
 def setorcargo(m):
     if m in dictRE: a,b=dictRE[m]; return (a or 'Sem setor', b)
     return ('Sem setor','')
@@ -83,15 +86,23 @@ for r in P[1:]:
 # os mesmos campos do CSV). Regras: Check "S", situação vazia/"Sem alteração" e "Problema
 # horário" não entram; hora extra 100% em linha própria; extra/falta só se a Tratamento
 # apontar, com a quantidade do Cartão; sem falta, a ocorrência entra com duração 0.
-T=d['Tratamento']; th=hdrmap(T[0])
-out=[]; gestorPor={}
+# (31/10) todas as abas que começam com "Tratamento" e têm Matricula (Internos/Externos ou a
+# antiga única); grupo = Interno/Externo pelo nome da aba (GrupoDaAba).
+ABAS_TRAT=[n for n in d if n.startswith('Tratamento') and d[n] and 'Matricula' in hdrmap(d[n][0])]
+out=[]; gestorPor={}; grupoPor={}
 def W(dt,nome,mat,gestor,setor,cargo,tipo,sit,status,dur,trat=None,**kw):
     out.append(dict(data=dt,colaborador=nome,matricula=mat,gestor=gestor,setor=setor,cargo=cargo,tipo=tipo,situacao=sit,status=status,duracao=dur,tratativa=trat,**kw))
 def mapst(t): return 'Regularizado' if t.upper()=='TRATADO' else 'Pendente'
-for r in T[1:]:
+LINHAS_TRAT=[]
+for nT in ABAS_TRAT:
+    gT='Externo' if 'extern' in nT.lower() else 'Interno' if 'intern' in nT.lower() else ''
+    for r in d[nT][1:]: LINHAS_TRAT.append((hdrmap(d[nT][0]),gT,r))
+for th,gT,r in LINHAS_TRAT:
     mat=s(r[th['Matricula']]); nome=s(r[th['Nome']]); gestor=s(r[th['Gestor']]); gestor='' if gestor.startswith('#') else gestor; sit=s(r[th['Situação']]); st=s(r[th['Status']]); dt=r[th['Data']]; chk=s(r[th['Check']])
     if nome=='' or not isinstance(dt,datetime.datetime): continue
     if gestor and mat and mat not in gestorPor: gestorPor[mat]=gestor
+    if gT and mat and mat not in grupoPor: grupoPor[mat]=gT
+    n0=len(out)
     fb,f50,f100=dictCart.get((mat,dt.date()),(0,0,0))
     setor,cargo=setorcargo(mat); ct=s(r[th['Cargo']]) 
     if ct: cargo=ct
@@ -109,6 +120,7 @@ for r in T[1:]:
     if te: W(dt,nome,mat,gestor,setor,cargo,'Hora Extra',sitF,status,vround(mE))
     if tf: W(dt,nome,mat,gestor,setor,cargo,sit,sitF,status,-vround(mF),av if temTrat else None)
     if not tf: W(dt,nome,mat,gestor,setor,cargo,sit,sitF,status,0,av if temTrat else None)
+    for o in out[n0:]: o['grupo']=gT
 # ORG (LerListaORG): matrícula repetida = 1ª linha; matrícula em erro entra sem matrícula,
 # a não ser que o nome já exista com matrícula válida. Completa o gestor de quem não está na Tratamento.
 def semac(t): return unicodedata.normalize('NFD',t).encode('ascii','ignore').decode().upper()
@@ -327,6 +339,9 @@ for m,nm,ar,ca,g in listaORG:
     if se=='Sem setor' and ar: se=ar
     W(dmax,nm,m,g,se,ca or caRE,'Cadastro ORG',ar,'Pendente',0)
 # Grava a lista de linhas (simulacao.pkl) e mostra quantas linhas de cada tipo saíram.
+# grupo das linhas que não vêm da Tratamento: o 1º visto para a matrícula (dictGrupoPorMatricula)
+for o in out:
+    if 'grupo' not in o: o['grupo']=grupoPor.get(o['matricula'],'')
 pickle.dump(out,open('simulacao.pkl','wb'))
 print('cartoes',cards); print(len(out), collections.Counter(o['tipo'] for o in out))
 

@@ -3584,7 +3584,14 @@
     if (!recs.length) recs = state.records.filter(function(r){ return !fora(r); });
     if (!recs.length) return null;
     var dates = recs.map(function(r){ return r.data.getTime(); });
-    return { ini: toISODate(new Date(Math.min.apply(null, dates))), fim: toISODate(new Date(Math.max.apply(null, dates))) };
+    var fim = Math.max.apply(null, dates);
+    // (31/10) o fim nunca passa do fim do espelho de ponto (data das linhas-resumo do Cartão,
+    // dia 27): a planilha de outubro trouxe ocorrências de 28/10, que já são do ciclo seguinte,
+    // e com elas o período, os ciclos dos afastamentos e as tendências pulavam para novembro.
+    var fimCartao = null;
+    state.records.forEach(function(r){ if ((r.tipo === TIPO_RESUMO_HORAS_CARTAO || r.tipo === TIPO_AUDITORIA_EXTRA_FALTA) && (!fimCartao || r.data > fimCartao)) fimCartao = r.data; });
+    if (fimCartao && fimCartao.getTime() < fim) fim = fimCartao.getTime();
+    return { ini: toISODate(new Date(Math.min.apply(null, dates))), fim: toISODate(new Date(fim)) };
   }
   function isoParaBR(iso){ return iso ? iso.split("-").reverse().join("/") : ""; }
   function atualizarPeriodoTopo(){

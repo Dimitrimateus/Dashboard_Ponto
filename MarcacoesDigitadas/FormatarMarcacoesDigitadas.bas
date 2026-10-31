@@ -1,6 +1,12 @@
 Attribute VB_Name = "modFormatarMarcacoesDigitadas"
 Option Explicit
 
+' Modo automático (31/10): quando a macro PrepararAbasDoMes chama esta formatação
+' (FormatarMarcacoesDigitadas_Auto), nenhuma mensagem aparece; o texto de cada aviso vai para msgAuto e
+' volta para o relatório da preparação. Ver Aviso, no fim do módulo.
+Private modoAuto As Boolean
+Private msgAuto As String
+
 ' ============================================================================
 ' FormatarMarcacoesDigitadas
 '
@@ -63,7 +69,7 @@ Sub FormatarMarcacoesDigitadas()
     Dim usado As Range
     Set usado = ws.UsedRange
     If usado.Rows.Count < 2 Then
-        MsgBox "Nenhum dado encontrado na aba ativa.", vbExclamation, "Formatar Marcações Digitadas"
+        Aviso "Nenhum dado encontrado na aba ativa.", vbExclamation, "Formatar Marcações Digitadas"
         Exit Sub
     End If
 
@@ -206,7 +212,7 @@ Sub FormatarMarcacoesDigitadas()
     ' Nenhuma batida reconhecida: provavelmente a aba ativa não é o relatório certo.
     ' Sai sem apagar nada.
     If nSaida = 0 Then
-        MsgBox "Não encontrei nenhuma marcação (linha com crachá numérico e data) na aba ativa." & vbCrLf & _
+        Aviso "Não encontrei nenhuma marcação (linha com crachá numérico e data) na aba ativa." & vbCrLf & _
                "Confira se a aba ativa é o relatório de Marcações digitadas.", vbExclamation, "Formatar Marcações Digitadas"
         Exit Sub
     End If
@@ -300,7 +306,7 @@ Sub FormatarMarcacoesDigitadas()
     ws.Cells(1, 1).Select
     Application.ScreenUpdating = True
 
-    MsgBox "Formatação concluída." & vbCrLf & _
+    Aviso "Formatação concluída." & vbCrLf & _
            nSaida & " marcação(ões) digitada(s) na tabela." & vbCrLf & _
            nContinuacoes & " motivo(s) que estavam quebrados em duas linhas foram juntados." & vbCrLf & _
            IIf(renomeada, "Aba renomeada para """ & NOME_ABA_SAIDA & """.", _
@@ -356,4 +362,28 @@ End Function
 ' É só informativo: o painel calcula o dia da semana sozinho a partir da data.
 Private Function DiaDaSemana(d As Date) As String
     DiaDaSemana = Choose(Weekday(d, vbSunday), "DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB")
+End Function
+
+' ----------------------------------------------------------------------------
+' Modo automático (31/10). FormatarMarcacoesDigitadas_Auto é chamada pela macro PrepararAbasDoMes
+' com a aba do relatório ativa: roda a formatação sem nenhuma caixa de mensagem
+' e devolve, em texto, o que teria aparecido nelas.
+' Aviso substitui o MsgBox: fora do modo automático é o MsgBox de sempre; no
+' automático guarda o texto (com "ERRO: " na frente quando o aviso é de erro).
+' ----------------------------------------------------------------------------
+Public Function FormatarMarcacoesDigitadas_Auto() As String
+    modoAuto = True: msgAuto = ""
+    FormatarMarcacoesDigitadas
+    modoAuto = False
+    FormatarMarcacoesDigitadas_Auto = msgAuto
+End Function
+
+Private Function Aviso(ByVal texto As String, Optional ByVal botoes As Long = vbInformation, Optional ByVal titulo As String = "") As VbMsgBoxResult
+    If modoAuto Then
+        If (botoes And 16) = 16 Then texto = "ERRO: " & texto
+        msgAuto = msgAuto & IIf(msgAuto = "", "", " ") & Replace(Replace(texto, vbCrLf, " "), vbLf, " ")
+        Aviso = vbYes
+    Else
+        Aviso = MsgBox(texto, botoes, titulo)
+    End If
 End Function

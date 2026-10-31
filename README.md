@@ -457,6 +457,21 @@ As 15 ideias marcadas na página de ideias que ainda faltavam:
   de afastamento em dias contam dias na janela; o gráfico de atestados por dia da semana separa os
   que encostam numa folga (vermelho) dos que não encostam (cinza).
 
+## Uma macro só para preparar o mês (31/10)
+
+- **PrepararAbasDoMes** (nova): copie para a planilha de Tratamento as abas dos relatórios baixados
+  do sistema (Cartão Ponto de cada mês, Pausas Térmicas, Marcações digitadas, Afastamentos, os 4 de
+  jornada e o PontoNet), com qualquer nome, e rode só esta macro. Ela reconhece cada relatório pelo
+  conteúdo, formata com a macro dele (sem as mensagens de cada uma) e cria a aba "Relatório da
+  preparação" com o que foi feito em cada aba, o que deu certo, o que deu erro e o que faltou baixar.
+  Precisa dos módulos de todas as macros colados na planilha (as macros de formatação ganharam um
+  "modo automático"; usadas sozinhas continuam iguais).
+- Pausas Térmicas de vários meses num relatório só: sai uma aba por mês, com os totais recontados
+  das batidas de cada mês.
+- GerarCSVPonto: acha a RE também quando o cabeçalho vem "Matricula" sem acento (RE 23.10).
+- Painel: o período padrão termina no fim do espelho de ponto (dia 27), mesmo que a planilha de
+  tratamento traga ocorrências do dia 28 (que já são do ciclo seguinte).
+
 ## Ordem de uso no mês
 
 1. Rodar `ConsolidarCartaoPonto` no HRCP102 e colar o resultado numa aba `Cartão <Mês>`.
