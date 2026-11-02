@@ -457,6 +457,19 @@ As 15 ideias marcadas na página de ideias que ainda faltavam:
   de afastamento em dias contam dias na janela; o gráfico de atestados por dia da semana separa os
   que encostam numa folga (vermelho) dos que não encostam (cinza).
 
+## Gerar os CSVs a partir de uma pasta (02/11)
+
+- **GerarCSVsDaPasta** (no módulo PrepararAbasDoMes): na planilha de tratamento do mês, rode esta
+  macro. Ela pede (1) a pasta onde estão os relatórios baixados do sistema e (2) a pasta onde os
+  CSVs vão ser gravados. Depois abre cada arquivo da pasta (sem alterar os arquivos), traz as abas
+  para a planilha, formata tudo, gera a aba CSV e grava `dados_<gestor>.csv` e `dados_TODOS.csv` na
+  pasta escolhida. A aba "Relatório da preparação" mostra o que aconteceu com cada arquivo.
+- Pode rodar de novo no mesmo mês: as abas já formatadas do mesmo relatório (ex.: "Marcações
+  Digitadas", "Cartão Outubro", "Pausas Térmicas Setembro") são substituídas, sem duplicar.
+- A RE nova pode ir na pasta (entra como "RE dd.mm" e passa a ser a usada). ORG e as abas
+  Tratamento - Internos/Externos continuam na planilha.
+- Arquivo que não é nenhum dos relatórios esperados é ignorado e aparece no relatório.
+
 ## Uma macro só para preparar o mês (31/10)
 
 - **PrepararAbasDoMes** (nova): copie para a planilha de Tratamento as abas dos relatórios baixados

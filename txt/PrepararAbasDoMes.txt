@@ -1,6 +1,13 @@
 Attribute VB_Name = "modPrepararAbasDoMes"
 Option Explicit
 
+' ESTE MÓDULO TEM DUAS MACROS (Alt+F8):
+'   GerarCSVsDaPasta (02/11) - a do dia a dia: pede a pasta com os relatórios baixados
+'       e a pasta de destino, traz tudo, formata, gera a aba CSV e grava os CSVs.
+'       (descrita no fim do módulo)
+'   PrepararAbasDoMes (31/10) - só formata as abas de relatório que você já colou na
+'       planilha (sem gerar os CSVs).
+'
 ' ================================================================================
 ' MACRO: PrepararAbasDoMes  (31/10)
 ' --------------------------------------------------------------------------------
@@ -57,10 +64,12 @@ Option Explicit
 ' ================================================================================
 
 Private Const NOME_RELATORIO As String = "Relatório da preparação"
+' True quando a GerarCSVsDaPasta está rodando: a aba nova de um relatório SUBSTITUI a
+' já formatada do mesmo mês/tipo (em vez de ficar como "(novo)").
+Private substituirAbas As Boolean
 
 Sub PrepararAbasDoMes()
-    Dim wb As Workbook, abas As Collection, ws As Worksheet, i As Long
-    Dim tipo As String, resultado As String, detalhe As String, geradas As String
+    Dim wb As Workbook, abas As Collection, ws As Worksheet
     Dim linhas As Collection, vistos As Object
     Set wb = ThisWorkbook
 
@@ -80,7 +89,33 @@ Sub PrepararAbasDoMes()
     Set linhas = New Collection
     Set vistos = CreateObject("Scripting.Dictionary")
     Application.ScreenUpdating = False
+    PrepararLista wb, abas, linhas, vistos, Nothing
 
+    Application.StatusBar = False
+    Application.Calculation = xlCalculationAutomatic
+    Application.DisplayAlerts = True
+    EscreverRelatorio wb, linhas, vistos
+    Application.ScreenUpdating = True
+
+    Dim nErros As Long, l As Variant
+    For Each l In linhas
+        If l(2) = "Deu erro" Then nErros = nErros + 1
+    Next l
+    MsgBox linhas.Count & " relatório(s) encontrado(s) e preparado(s)" & _
+           IIf(nErros > 0, ", " & nErros & " com erro", ", todos OK") & "." & vbCrLf & vbCrLf & _
+           "Veja os detalhes na aba """ & NOME_RELATORIO & """." & vbCrLf & _
+           "Se estiver tudo certo, o próximo passo é a GerarAbaCSV.", _
+           IIf(nErros > 0, vbExclamation, vbInformation), "Preparar as abas do mês"
+End Sub
+
+' --------------------------------------------------------------------------------
+' Formata cada aba da lista que for relatório bruto e anota o resultado em
+' "linhas" (para o relatório). Usada pela PrepararAbasDoMes (todas as abas) e pela
+' GerarCSVsDaPasta (só as abas trazidas dos arquivos; origemPorAba = nome da aba
+' -> nome do arquivo de onde ela veio, para o relatório mostrar o arquivo).
+' --------------------------------------------------------------------------------
+Private Sub PrepararLista(wb As Workbook, abas As Collection, linhas As Collection, vistos As Object, origemPorAba As Object)
+    Dim ws As Worksheet, i As Long, tipo As String, resultado As String, detalhe As String, geradas As String
     For i = 1 To abas.Count
         Set ws = abas(i)
         tipo = TipoDoRelatorioBruto(ws)
@@ -111,25 +146,13 @@ Sub PrepararAbasDoMes()
             End If
             On Error GoTo 0
             If InStr(1, detalhe, "ERRO", vbBinaryCompare) > 0 Then resultado = "Deu erro" Else resultado = "OK"
+            If Not origemPorAba Is Nothing Then
+                If origemPorAba.Exists(nomeOriginal) Then nomeOriginal = "arquivo " & origemPorAba(nomeOriginal)
+            End If
             linhas.Add Array(nomeOriginal, NomeDoTipo(tipo), resultado, geradas, detalhe)
         End If
     Next i
 
-    Application.StatusBar = False
-    Application.Calculation = xlCalculationAutomatic
-    Application.DisplayAlerts = True
-    EscreverRelatorio wb, linhas, vistos
-    Application.ScreenUpdating = True
-
-    Dim nErros As Long, l As Variant
-    For Each l In linhas
-        If l(2) <> "OK" Then nErros = nErros + 1
-    Next l
-    MsgBox linhas.Count & " relatório(s) encontrado(s) e preparado(s)" & _
-           IIf(nErros > 0, ", " & nErros & " com erro", ", todos OK") & "." & vbCrLf & vbCrLf & _
-           "Veja os detalhes na aba """ & NOME_RELATORIO & """." & vbCrLf & _
-           "Se estiver tudo certo, o próximo passo é a GerarAbaCSV.", _
-           IIf(nErros > 0, vbExclamation, vbInformation), "Preparar as abas do mês"
 End Sub
 
 ' --------------------------------------------------------------------------------
@@ -263,6 +286,12 @@ Private Function PrepararCartao(wb As Workbook, ws As Worksheet, ByRef geradas A
         Exit Function
     End If
     nome = "Cartão " & NomeDoMesAqui(Month(maxDt))
+    If AbaExisteAqui(wb, nome) And substituirAbas Then
+        Application.DisplayAlerts = False
+        wb.Worksheets(nome).Delete
+        Application.DisplayAlerts = True
+        msg = msg & " Substituiu a aba """ & nome & """ que já existia."
+    End If
     If AbaExisteAqui(wb, nome) Then
         msg = msg & " ATENÇÃO: já existia uma aba """ & nome & """; a nova ficou como """ & nome & " (novo)"". " & _
               "Apague a que estiver errada (o GerarCSV usa as 3 abas de Cartão mais recentes)."
@@ -340,7 +369,7 @@ Private Sub EscreverRelatorio(wb As Workbook, linhas As Collection, vistos As Ob
         ws.Cells(r, 4).Value = l(3)
         ws.Cells(r, 5).Value = l(4)
         ws.Cells(r, 3).Font.Bold = True
-        ws.Cells(r, 3).Font.Color = IIf(l(2) = "OK", RGB(0, 120, 60), RGB(200, 0, 0))
+        ws.Cells(r, 3).Font.Color = IIf(l(2) = "OK", RGB(0, 120, 60), IIf(l(2) = "Deu erro", RGB(200, 0, 0), RGB(110, 110, 110)))
         r = r + 1
     Next l
 
@@ -402,4 +431,326 @@ End Function
 Private Function NomeDoMesAqui(ByVal m As Long) As String
     NomeDoMesAqui = Choose(m, "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", _
                            "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro")
+End Function
+
+' ================================================================================
+' MACRO: GerarCSVsDaPasta  (02/11)
+' --------------------------------------------------------------------------------
+' Faz o mês inteiro de uma vez, a partir de uma PASTA com os relatórios baixados:
+'   1) pede a pasta onde estão os arquivos do sistema (Cartão Ponto de cada mês,
+'      Pausas Térmicas, Marcações digitadas, Afastamentos, os 4 de jornada, o
+'      PontoNet .csv e, se quiser, a RE nova);
+'   2) pede a pasta onde os CSVs vão ser gravados;
+'   3) abre cada arquivo, traz as abas dele para esta planilha e fecha (os arquivos
+'      da pasta não são alterados);
+'   4) formata tudo (a mesma preparação da PrepararAbasDoMes). Uma aba já formatada
+'      do mesmo relatório é SUBSTITUÍDA pela nova (ex.: "Marcações Digitadas",
+'      "Pausas Térmicas Outubro", "Cartão Outubro"), para rodar de novo no mês sem
+'      duplicar nada;
+'   5) roda a GerarAbaCSV e grava os CSVs (dados_<gestor>.csv + dados_TODOS.csv) na
+'      pasta escolhida;
+'   6) deixa a aba "Relatório da preparação" com tudo o que aconteceu.
+' Ficam na planilha (não vêm da pasta): ORG e as abas Tratamento - Internos/Externos.
+' A RE pode vir na pasta: entra como "RE dd.mm" (data do arquivo) ANTES das REs que
+' já existem, e o GerarCSV passa a usar a nova (as antigas não são apagadas, porque
+' fórmulas da planilha podem apontar para elas).
+' Arquivo que não é nenhum desses relatórios é ignorado (e aparece no relatório).
+' Precisa dos módulos de todas as macros colados na planilha, inclusive o GerarCSVPonto.
+' ================================================================================
+Sub GerarCSVsDaPasta()
+    Dim wb As Workbook, pastaOrigem As String, pastaDestino As String
+    Dim arquivos As Collection, nomeArq As String, ext As String, f As Variant
+    Set wb = ThisWorkbook
+
+    pastaOrigem = EscolherPastaAqui("1 de 2: escolha a PASTA com os relatórios baixados do sistema")
+    If pastaOrigem = "" Then Exit Sub
+    pastaDestino = EscolherPastaAqui("2 de 2: escolha a pasta onde os arquivos CSV vão ser gravados")
+    If pastaDestino = "" Then Exit Sub
+
+    ' arquivos de planilha e .csv da pasta (sem os temporários "~$" e sem esta planilha)
+    Set arquivos = New Collection
+    nomeArq = Dir(pastaOrigem & "\*.*")
+    Do While nomeArq <> ""
+        ext = LCase$(Mid$(nomeArq, InStrRev(nomeArq, ".") + 1))
+        If (ext = "xlsx" Or ext = "xls" Or ext = "xlsm" Or ext = "csv") And Left$(nomeArq, 2) <> "~$" _
+           And LCase$(pastaOrigem & "\" & nomeArq) <> LCase$(wb.FullName) Then arquivos.Add nomeArq
+        nomeArq = Dir()
+    Loop
+    If arquivos.Count = 0 Then
+        MsgBox "Não encontrei nenhum arquivo .xlsx, .xls ou .csv na pasta:" & vbCrLf & pastaOrigem, vbExclamation, "Gerar CSVs da pasta"
+        Exit Sub
+    End If
+
+    Dim lista As String
+    For Each f In arquivos
+        lista = lista & vbCrLf & "  - " & f
+    Next f
+    If MsgBox("Encontrei " & arquivos.Count & " arquivo(s):" & lista & vbCrLf & vbCrLf & _
+              "Vou trazer os relatórios para esta planilha, formatar (substituindo as abas já formatadas " & _
+              "do mesmo relatório), gerar a aba CSV e gravar os CSVs em:" & vbCrLf & pastaDestino & vbCrLf & vbCrLf & _
+              "Recomendado: rode numa CÓPIA da planilha na primeira vez. Continuar?", _
+              vbYesNo + vbQuestion, "Gerar CSVs da pasta") <> vbYes Then Exit Sub
+
+    Dim linhas As Collection, vistos As Object, origemPorAba As Object, importadas As Collection
+    Set linhas = New Collection
+    Set vistos = CreateObject("Scripting.Dictionary")
+    Set origemPorAba = CreateObject("Scripting.Dictionary")
+    Set importadas = New Collection
+    Application.ScreenUpdating = False
+
+    ' 3) traz as abas de cada arquivo
+    For Each f In arquivos
+        Application.StatusBar = "Abrindo " & f & "..."
+        ImportarArquivo wb, pastaOrigem & "\" & f, CStr(f), importadas, origemPorAba, linhas
+    Next f
+
+    ' RE nova e arquivos que não são relatório; o resto vai para a preparação
+    ' (For Each numa Collection precisa de Variant; ws As Worksheet é o que as funções
+    ' recebem: passar o Variant direto daria "ByRef argument type mismatch")
+    Dim paraPreparar As Collection, elem As Variant, ws As Worksheet, tipo As String
+    Set paraPreparar = New Collection
+    For Each elem In importadas
+        Set ws = elem
+        tipo = TipoDoRelatorioBruto(ws)
+        If tipo <> "" Then
+            paraPreparar.Add ws
+        ElseIf EhRE(ws) Then
+            linhas.Add Array("arquivo " & origemPorAba(ws.Name), "RE (cadastro)", "OK", PrepararRE(wb, ws, CStr(origemPorAba(ws.Name))), _
+                "Entrou antes das outras REs: o GerarCSV usa esta.")
+        Else
+            linhas.Add Array("arquivo " & origemPorAba(ws.Name) & " (aba " & ws.Name & ")", "Não reconhecido", "Ignorado", "", _
+                "Não é nenhum dos relatórios esperados; a aba foi descartada.")
+            Application.DisplayAlerts = False
+            ws.Delete
+            Application.DisplayAlerts = True
+        End If
+    Next elem
+
+    ' 4) substitui as abas já formatadas dos mesmos relatórios e formata
+    Dim msgSubst As String
+    msgSubst = ApagarAbasQueSeraoSubstituidas(wb, paraPreparar)
+    substituirAbas = True
+    PrepararLista wb, paraPreparar, linhas, vistos, origemPorAba
+    substituirAbas = False
+
+    ' 5) aba CSV e arquivos CSV
+    Dim nErros As Long, l As Variant, resCSV As String, resExp As String, seguir As Boolean
+    For Each l In linhas
+        If l(2) = "Deu erro" Then nErros = nErros + 1
+    Next l
+    seguir = True
+    If nErros > 0 Then
+        Application.ScreenUpdating = True
+        seguir = (MsgBox(nErros & " relatório(s) deram erro na formatação (detalhes na aba """ & NOME_RELATORIO & """)." & vbCrLf & vbCrLf & _
+                         "Gerar os CSVs mesmo assim?", vbYesNo + vbExclamation, "Gerar CSVs da pasta") = vbYes)
+        Application.ScreenUpdating = False
+    End If
+    If seguir Then
+        Application.StatusBar = "Gerando a aba CSV..."
+        resCSV = RodarEtapaCSV("GerarAbaCSV_Auto", "")
+        linhas.Add Array("-", "Gerar a aba CSV", IIf(InStr(resCSV, "ERRO") > 0, "Deu erro", "OK"), "CSV", resCSV)
+        If InStr(resCSV, "ERRO") = 0 Then
+            Application.StatusBar = "Gravando os arquivos CSV..."
+            resExp = RodarEtapaCSV("ExportarCSVPorGestor_NaPasta", pastaDestino)
+            linhas.Add Array("-", "Gravar os arquivos CSV", IIf(InStr(resExp, "ERRO") > 0, "Deu erro", "OK"), pastaDestino, resExp)
+        End If
+    Else
+        linhas.Add Array("-", "Gerar os CSVs", "Não feito", "", "Você escolheu não gerar por causa dos erros. Corrija e rode de novo.")
+    End If
+    If msgSubst <> "" Then linhas.Add Array("-", "Abas substituídas", "OK", "", msgSubst)
+
+    Application.StatusBar = False
+    Application.Calculation = xlCalculationAutomatic
+    Application.DisplayAlerts = True
+    EscreverRelatorio wb, linhas, vistos
+    Application.ScreenUpdating = True
+
+    nErros = 0
+    For Each l In linhas
+        If l(2) = "Deu erro" Then nErros = nErros + 1
+    Next l
+    MsgBox IIf(nErros = 0 And seguir, "Pronto! Os CSVs foram gravados em:" & vbCrLf & pastaDestino, _
+               "Terminou com " & nErros & " erro(s).") & vbCrLf & vbCrLf & _
+           "Veja o que foi feito em cada arquivo na aba """ & NOME_RELATORIO & """.", _
+           IIf(nErros > 0, vbExclamation, vbInformation), "Gerar CSVs da pasta"
+End Sub
+
+' Roda uma etapa do GerarCSVPonto (pelo nome) e devolve o texto dela; se o módulo
+' não estiver colado, devolve o erro em palavras.
+Private Function RodarEtapaCSV(ByVal macro As String, ByVal pasta As String) As String
+    On Error Resume Next
+    If pasta = "" Then
+        RodarEtapaCSV = CStr(Application.Run(macro))
+    Else
+        RodarEtapaCSV = CStr(Application.Run(macro, pasta))
+    End If
+    If Err.Number <> 0 Then
+        If Err.Number = 1004 And InStr(1, Err.Description, "macro", vbTextCompare) > 0 Then
+            RodarEtapaCSV = "ERRO: a macro " & macro & " não está nesta planilha. Cole o módulo GerarCSVPonto (o .txt novo) e rode de novo."
+        Else
+            RodarEtapaCSV = "ERRO " & Err.Number & ": " & Err.Description & " " & RodarEtapaCSV
+        End If
+    End If
+    On Error GoTo 0
+End Function
+
+Private Function EscolherPastaAqui(ByVal titulo As String) As String
+    Dim fd As Object
+    Set fd = Application.FileDialog(4)    ' 4 = escolher pasta
+    fd.Title = titulo
+    fd.AllowMultiSelect = False
+    If fd.Show = -1 Then EscolherPastaAqui = fd.SelectedItems(1)
+End Function
+
+' Abre um arquivo (só leitura), copia para esta planilha cada aba dele que tenha algo
+' escrito ("Importado 1", "Importado 2"...) e fecha sem salvar. O .csv abre com o
+' separador e as datas do Windows em português (Local:=True).
+Private Sub ImportarArquivo(wb As Workbook, ByVal caminho As String, ByVal nomeArq As String, _
+                            importadas As Collection, origemPorAba As Object, linhas As Collection)
+    Dim src As Workbook, sh As Worksheet, nova As Worksheet, n As Long
+    On Error Resume Next
+    Application.DisplayAlerts = False
+    Set src = Workbooks.Open(Filename:=caminho, UpdateLinks:=0, ReadOnly:=True, Local:=True)
+    Application.DisplayAlerts = True
+    If src Is Nothing Or Err.Number <> 0 Then
+        linhas.Add Array("arquivo " & nomeArq, "Não abriu", "Deu erro", "", "ERRO: não consegui abrir o arquivo (" & Err.Description & ").")
+        Err.Clear
+        On Error GoTo 0
+        Exit Sub
+    End If
+    On Error GoTo 0
+    For Each sh In src.Worksheets
+        If Application.WorksheetFunction.CountA(sh.Cells) > 0 Then
+            sh.Copy After:=wb.Sheets(wb.Sheets.Count)
+            Set nova = wb.Sheets(wb.Sheets.Count)
+            n = 1
+            Do While AbaExisteAqui(wb, "Importado " & n)
+                n = n + 1
+            Loop
+            nova.Name = "Importado " & n
+            importadas.Add nova
+            origemPorAba(nova.Name) = nomeArq
+        End If
+    Next sh
+    src.Close SaveChanges:=False
+End Sub
+
+' A aba é a RE (cadastro)? Linha 1 com Matrícula (com ou sem acento) e "Nome Unidade".
+Private Function EhRE(ws As Worksheet) As Boolean
+    Dim c As Long, t As String, temMat As Boolean, temUni As Boolean
+    For c = 1 To 40
+        t = UCase$(Trim$(CStr(ws.Cells(1, c).Text)))
+        If t = "MATRICULA" Or t = "MATRÍCULA" Then temMat = True
+        If t = "NOME UNIDADE" Then temUni = True
+    Next c
+    EhRE = temMat And temUni
+End Function
+
+' RE trazida da pasta: nome "RE dd.mm" (data do arquivo) e posição antes da primeira
+' RE que já existe (o GerarCSV usa a primeira RE da esquerda para a direita).
+Private Function PrepararRE(wb As Workbook, ws As Worksheet, ByVal nomeArq As String) As String
+    Dim nome As String, sh As Worksheet, k As Long
+    nome = "RE " & Format(Date, "dd.mm")
+    k = 2
+    Do While AbaExisteAqui(wb, nome)
+        nome = "RE " & Format(Date, "dd.mm") & " (" & k & ")"
+        k = k + 1
+    Loop
+    ws.Name = nome
+    For Each sh In wb.Worksheets
+        If UCase$(Left$(sh.Name, 3)) = "RE " And Not sh Is ws Then
+            ws.Move Before:=sh
+            Exit For
+        End If
+    Next sh
+    PrepararRE = nome
+End Function
+
+' Apaga as abas já formatadas que os relatórios trazidos vão substituir: Marcações
+' Digitadas, Afastamentos, Pontonet, a aba de jornada do mesmo tipo e as Pausas
+' Térmicas dos meses do relatório. (O Cartão é substituído na hora de renomear, em
+' PrepararCartao, porque o mês só se sabe depois de consolidar.) Devolve a lista.
+Private Function ApagarAbasQueSeraoSubstituidas(wb As Workbook, paraPreparar As Collection) As String
+    Dim elem As Variant, ws As Worksheet, alvos As Collection, a As Variant, t As String, m As Variant
+    Set alvos = New Collection
+    For Each elem In paraPreparar
+        Set ws = elem
+        Select Case TipoDoRelatorioBruto(ws)
+            Case "digitadas": alvos.Add "Marcações Digitadas"
+            Case "afastamentos": alvos.Add "Afastamentos"
+            Case "pontonet": alvos.Add "Pontonet"
+            Case "jornada": If SubtipoJornada(ws) <> "" Then alvos.Add SubtipoJornada(ws)
+            Case "pausas"
+                For Each m In MesesDoRelatorioPausas(ws)
+                    alvos.Add "Pausas Térmicas " & m
+                Next m
+        End Select
+    Next elem
+    Application.DisplayAlerts = False
+    For Each a In alvos
+        If AbaExisteAqui(wb, CStr(a)) And Not EstaNaLista(wb.Worksheets(CStr(a)), paraPreparar) Then
+            wb.Worksheets(CStr(a)).Delete
+            t = t & IIf(t = "", "", ", ") & a
+        End If
+    Next a
+    Application.DisplayAlerts = True
+    ApagarAbasQueSeraoSubstituidas = t
+End Function
+
+Private Function EstaNaLista(sh As Worksheet, lista As Collection) As Boolean
+    Dim x As Variant
+    For Each x In lista
+        If x Is sh Then EstaNaLista = True: Exit Function
+    Next x
+End Function
+
+' Nome da aba que a FormatarJornada vai dar a este relatório (mesmos títulos que ela olha).
+Private Function SubtipoJornada(ws As Worksheet) As String
+    Dim v As Variant, r As Long, c As Long, tudo As String
+    v = ws.Range("A1:AH12").Value2
+    For r = 1 To 12
+        For c = 1 To 34
+            If VarType(v(r, c)) = vbString Then tudo = tudo & " | " & UCase$(v(r, c))
+        Next c
+    Next r
+    If InStr(tudo, "REGISTROS DE PONTO") > 0 And InStr(tudo, "INTERVALO") > 0 Then
+        SubtipoJornada = "Intrajornada"
+    ElseIf InStr(tudo, "HORAS DESCANSADAS") > 0 Then
+        SubtipoJornada = "Interjornada"
+    ElseIf InStr(tudo, "HORAS DSR") > 0 Or InStr(tudo, "MARCAÇÃO ANTES DSR") > 0 Or InStr(tudo, "MARCACAO ANTES DSR") > 0 Then
+        SubtipoJornada = "Interjornada Semanal"
+    ElseIf InStr(tudo, "CARGA HOR") > 0 And InStr(tudo, "EXTRAS") > 0 Then
+        SubtipoJornada = "Horas Excedentes"
+    End If
+End Function
+
+' Meses (ciclos de 28 a 27, pelo dia 27 que fecha cada um) do período do relatório de
+' pausas, lidos na linha "Período:" (as datas dessa linha).
+Private Function MesesDoRelatorioPausas(ws As Worksheet) As Collection
+    Dim r As Long, c As Long, v As Variant, ini As Double, fim As Double, d As Date, f As Date
+    Set MesesDoRelatorioPausas = New Collection
+    For r = 1 To 15
+        For c = 1 To 20
+            If Trim$(CStr(ws.Cells(r, c).Text)) = "Período:" Then
+                For c = 1 To 30
+                    v = ws.Cells(r, c).Value2
+                    If VarType(v) = vbDouble Then
+                        If v > 40000 And v < 80000 Then
+                            If ini = 0 Or v < ini Then ini = v
+                            If v > fim Then fim = v
+                        End If
+                    End If
+                Next c
+                Exit For
+            End If
+        Next c
+        If ini > 0 Then Exit For
+    Next r
+    If ini = 0 Then Exit Function
+    d = CDate(ini)
+    Do
+        If Day(d) >= 28 Then f = DateSerial(Year(d), Month(d) + 1, 27) Else f = DateSerial(Year(d), Month(d), 27)
+        MesesDoRelatorioPausas.Add NomeDoMesAqui(Month(f))
+        d = f + 1
+    Loop While d <= CDate(fim)
 End Function

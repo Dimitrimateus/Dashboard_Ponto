@@ -207,6 +207,19 @@ conteúdo num módulo.
   automático = erro, sem InputBox). PontoNet: TextToColumns por ";" se veio numa coluna, renomeia
   "Pontonet". Aba "Relatório da preparação" (1ª aba): aba original, tipo, OK/Deu erro, aba(s)
   gerada(s), detalhes + lista do que se espera no mês (FALTOU em vermelho). **Nunca rodou no Excel.**
+- **GerarCSVsDaPasta** (02/11, mesmo módulo): pede a pasta com os relatórios baixados e a pasta
+  dos CSVs (`EscolherPastaAqui`, FileDialog 4); abre cada .xlsx/.xls/.xlsm/.csv (só leitura,
+  `Local:=True`), copia as abas com conteúdo como "Importado n" (`ImportarArquivo`); RE (linha 1
+  com Matrícula + "Nome Unidade", `EhRE`) entra como "RE dd.mm" antes das REs existentes
+  (`PrepararRE`, não apaga as antigas: fórmulas podem apontar para elas); não reconhecido = aba
+  descartada e "Ignorado" no relatório. Antes de formatar, apaga as abas já formatadas que serão
+  substituídas (`ApagarAbasQueSeraoSubstituidas`: Marcações Digitadas, Afastamentos, Pontonet, a de
+  jornada do mesmo subtipo (`SubtipoJornada`) e as Pausas Térmicas dos meses da linha "Período:"
+  (`MesesDoRelatorioPausas`)); Cartão do mesmo mês é substituído no `PrepararCartao`
+  (`substituirAbas`). Formata com `PrepararLista` (o laço que a PrepararAbasDoMes também usa), roda
+  `GerarAbaCSV_Auto` e `ExportarCSVPorGestor_NaPasta` (GerarCSVPonto: `modoAutoCSV`, `AvisoCSV`,
+  `pastaFixaCSV`; sem janela do PontoNet no automático) e escreve o relatório com essas etapas.
+  Com erro na formatação, pergunta se gera os CSVs assim mesmo. **Nunca rodou no Excel.**
 - FormatarPausasTermicas (31/10): relatório com mais de um ciclo → uma aba por ciclo
   (`CiclosDasBatidas`, `EscreverMesRecontado`, `ContarDia`, escrita em `EscreverAbaPausas`), totais
   recontados das batidas (pausa F–F ≥ 20 min = correta, < 20 = menor; trecho = 100 correto, > maior,
@@ -797,6 +810,7 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   afastamentos e tendências para novembro): 68 ocorrências, 54 colaboradores. Simulador genérico
   (RE pelo prefixo, todas as abas Tratamento com grupo). Macro `PrepararAbasDoMes` (5.3e).
   Apresentação dele aos gestores: 03/11.
+- 02/11: macro `GerarCSVsDaPasta` (5.3e): pasta dos relatórios → pasta dos CSVs, tudo de uma vez.
 
 ## 12. Estado atual e como continuar (29/10/2026)
 

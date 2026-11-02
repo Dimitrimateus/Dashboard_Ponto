@@ -1,6 +1,14 @@
 Attribute VB_Name = "GerarCSVPonto"
 Option Explicit
 
+' Modo automático (02/11): a macro GerarCSVsDaPasta (módulo PrepararAbasDoMes) chama
+' GerarAbaCSV_Auto e ExportarCSVPorGestor_NaPasta. Nesse modo nenhuma mensagem
+' aparece (o texto vai para msgAutoCSV e volta para o relatório), o arquivo do
+' PontoNet não é pedido numa janela e a pasta dos CSVs já vem escolhida (pastaFixaCSV).
+Private modoAutoCSV As Boolean
+Private msgAutoCSV As String
+Private pastaFixaCSV As String
+
 ' =====================================================================
 ' GerarCSVPonto
 ' =====================================================================
@@ -330,7 +338,7 @@ Public Sub GerarAbaCSV()
     Dim abasTrat As Collection
     Set abasTrat = EncontrarAbasTratamento(wbTrat)
     If abasTrat.Count = 0 Then
-        MsgBox "Não encontrei nenhuma aba de Tratamento (ex.: 'Tratamento - Internos' / " & _
+        AvisoCSV "Não encontrei nenhuma aba de Tratamento (ex.: 'Tratamento - Internos' / " & _
             "'Tratamento - Externos') com a coluna 'Matricula' na linha 1.", vbExclamation, "Gerar CSV"
         Exit Sub
     End If
@@ -338,7 +346,7 @@ Public Sub GerarAbaCSV()
     ' Cadastro "RE dd.mm": o nome muda a cada extração, então é achado pelo prefixo.
     Set wsRE = EncontrarAbaRE(wbTrat)
     If wsRE Is Nothing Then
-        MsgBox "Não encontrei a aba de cadastro 'RE ...' (ex.: 'RE 30.09') com a coluna " & _
+        AvisoCSV "Não encontrei a aba de cadastro 'RE ...' (ex.: 'RE 30.09') com a coluna " & _
             "'Matrícula' na linha 1.", vbExclamation, "Gerar CSV"
         Exit Sub
     End If
@@ -907,7 +915,7 @@ ProximaAbaTratamento:
         msgAuditoria = msgAuditoria & vbCrLf & vbCrLf & "Filtros removidos antes da leitura (reaplique se precisar):" & abasComFiltro
     End If
 
-    MsgBox (linhaSaida - 2) & " linha(s) geradas na aba CSV (cadastro usado: " & wsRE.Name & ")" & msgAuditoria, _
+    AvisoCSV (linhaSaida - 2) & " linha(s) geradas na aba CSV (cadastro usado: " & wsRE.Name & ")" & msgAuditoria, _
         vbInformation, "Gerar CSV"
 End Sub
 
@@ -924,19 +932,23 @@ Public Sub ExportarCSVPorGestor()
     Set wsCSV = ThisWorkbook.Sheets("CSV")
     On Error GoTo 0
     If wsCSV Is Nothing Then
-        MsgBox "Não encontrei a aba 'CSV'. Rode primeiro a macro GerarAbaCSV.", vbExclamation
+        AvisoCSV "Não encontrei a aba 'CSV'. Rode primeiro a macro GerarAbaCSV.", vbExclamation
         Exit Sub
     End If
 
     Dim ultimaLinha As Long
     ultimaLinha = UltimaLinhaPreenchida(wsCSV, 1)
     If ultimaLinha < 2 Then
-        MsgBox "A aba 'CSV' está vazia. Rode primeiro a macro GerarAbaCSV.", vbExclamation
+        AvisoCSV "A aba 'CSV' está vazia. Rode primeiro a macro GerarAbaCSV.", vbExclamation
         Exit Sub
     End If
 
     Dim pasta As String
-    pasta = EscolherPasta()
+    If pastaFixaCSV <> "" Then
+        pasta = pastaFixaCSV        ' escolhida antes, pela GerarCSVsDaPasta (02/11)
+    Else
+        pasta = EscolherPasta()
+    End If
     If pasta = "" Then Exit Sub
 
     Const COL_GESTOR As Long = 4 ' ordem fixa: data,colaborador,matricula,gestor,...
@@ -959,7 +971,7 @@ Public Sub ExportarCSVPorGestor()
 
     ExportarLinhasParaCSV wsCSV, pasta & "\dados_TODOS.csv", ""
 
-    MsgBox dictGestores.Count & " arquivo(s) por gestor + 1 arquivo geral (dados_TODOS.csv) gerados em:" _
+    AvisoCSV dictGestores.Count & " arquivo(s) por gestor + 1 arquivo geral (dados_TODOS.csv) gerados em:" _
         & vbNewLine & pasta, vbInformation, "Exportar CSV"
 End Sub
 
@@ -974,6 +986,13 @@ End Sub
 ' (ObterDadosAusencia trata dictAus vazio normalmente).
 Private Function AbrirArquivoAusencia() As Workbook
     Dim caminho As Variant
+    ' no modo automático (GerarCSVsDaPasta) não abre janela: sem a aba Pontonet,
+    ' segue sem a demora e avisa no relatório
+    If modoAutoCSV Then
+        msgAutoCSV = msgAutoCSV & "Sem a aba Pontonet: CSV gerado sem o PontoNet. "
+        Set AbrirArquivoAusencia = Nothing
+        Exit Function
+    End If
     caminho = Application.GetOpenFilename( _
         FileFilter:="Planilhas Excel (*.xlsx;*.xls),*.xlsx;*.xls", _
         Title:="Selecione o arquivo 'Ausência de marcação' do PontoNet (ou cancele para pular a demora)")
@@ -2830,3 +2849,33 @@ Private Function CampoCSV(valor As String) As String
         CampoCSV = valor
     End If
 End Function
+
+' ---------------------------------------------------------------------
+' Modo automático (02/11): usado pela GerarCSVsDaPasta. Fazem o mesmo que
+' GerarAbaCSV e ExportarCSVPorGestor, sem mensagens, e devolvem o texto
+' delas ("ERRO: ..." quando algo impediu o trabalho).
+' ---------------------------------------------------------------------
+Public Function GerarAbaCSV_Auto() As String
+    modoAutoCSV = True: msgAutoCSV = ""
+    GerarAbaCSV
+    modoAutoCSV = False
+    GerarAbaCSV_Auto = msgAutoCSV
+End Function
+
+Public Function ExportarCSVPorGestor_NaPasta(ByVal pasta As String) As String
+    modoAutoCSV = True: msgAutoCSV = "": pastaFixaCSV = pasta
+    ExportarCSVPorGestor
+    modoAutoCSV = False: pastaFixaCSV = ""
+    ExportarCSVPorGestor_NaPasta = msgAutoCSV
+End Function
+
+' MsgBox de GerarAbaCSV e ExportarCSVPorGestor: no modo automático guarda o texto
+' (com "ERRO: " na frente quando o ícone é de erro) em vez de mostrar.
+Private Sub AvisoCSV(ByVal texto As String, Optional ByVal botoes As Long = vbInformation, Optional ByVal titulo As String = "")
+    If modoAutoCSV Then
+        If (botoes And 16) = 16 Then texto = "ERRO: " & texto
+        msgAutoCSV = msgAutoCSV & IIf(msgAutoCSV = "", "", " ") & Replace(Replace(texto, vbCrLf, " "), vbLf, " ")
+    Else
+        MsgBox texto, botoes, titulo
+    End If
+End Sub
