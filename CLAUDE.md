@@ -408,6 +408,17 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   Interjornada semanal e Intrajornada só são copiados como vieram**: o formato desses relatórios
   ainda não é conhecido (pedir amostras ao Dimitri). Nunca rodou no Excel.
 
+- 03/11 (2): nomes técnicos no painel (`nomeTecnico`, em tipo e situação): "Mais de 10h no dia" →
+  Horas excedentes; "Intervalo curto de almoço" → Intrajornada; "Menos de 11h de descanso" →
+  Interjornada; "Trabalho na folga ou feriado" → Interjornada semanal. Marcações digitadas: os 3 meses
+  do relatório ficam no CSV; a seção ignora o filtro de período e tem seletor de ciclo próprio
+  (`digCiclo`); digitadas saíram do `periodoCompleto`; o card do colaborador lista todas. No lote, a
+  ordem dos Cartões vem do nome do arquivo (`LoteAbasCartaoOrdenadas`: 3 = mês atual, 1 = mais
+  antigo), com aviso se as datas não seguirem essa ordem.
+  **Pendente (precisa dos arquivos do Dimitri):** totais das Pausas Térmicas calculados por mês a
+  partir das linhas de dia do HRES114 (hoje o total do relatório é dos 3 meses inteiros) e a leitura
+  dos relatórios Excedentes / Intrajornada / Interjornada / Interjornada semanal.
+
 ## 12. Estado atual e como continuar (08/10/2026)
 
 **Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`, branch `claude/new-session-69o070`.

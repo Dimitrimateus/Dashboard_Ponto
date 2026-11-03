@@ -790,6 +790,11 @@
         <div id="digSemDados" class="card wide" hidden><div class="chart-empty">Este CSV não traz as marcações digitadas. Formate o relatório com a macro FormatarMarcacoesDigitadas, traga a aba para a planilha de Tratamento e gere o CSV de novo.</div></div>
         <div id="digCorpo">
           <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema</span><p>Marcação digitada é a batida que <strong>não veio do relógio</strong>: o colaborador incluiu no PontoNet com uma justificativa, ou o RH lançou no sistema. Cada linha do relatório é uma marcação (uma batida), com o dia, a hora, o <strong>motivo</strong> (Inclusão por esquecimento, por atividade externa, problema no dispositivo...) e o texto da justificativa. As linhas com Origem “E” no relatório ficam de fora. O relatório não diz quem digitou (o colaborador ou o RH). Respeita os filtros de gestor, grupo, cargo, colaborador e período; não usa os filtros de tipo e status, que são das ocorrências da Tratamento.</p></div>
+          <div class="abs-toolbar">
+            <label for="digCiclo" style="font-size:11.5px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:.04em;">Ciclo</label>
+            <select id="digCiclo"></select>
+            <span class="abs-resumo" style="margin:0">Esta seção não segue o filtro de período: mostra os 3 meses do relatório ou o ciclo (28 a 27) escolhido aqui.</span>
+          </div>
           <section class="dig-kpis" id="digKpis"></section>
           <section class="grid">
             <div class="card">
@@ -806,7 +811,7 @@
             </div>
             <div class="card wide">
               <div class="card-title">Por data</div>
-              <div class="card-hint">Batidas digitadas dia a dia no período filtrado</div>
+              <div class="card-hint">Batidas digitadas dia a dia no ciclo escolhido (ou nos 3 meses)</div>
               <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Marcações digitadas do sistema, coluna Data</span><p>Quantas batidas digitadas existem para cada dia. Picos costumam coincidir com relógio parado ou com atividade externa da equipe.</p></div>
               <div class="card-body" id="chartDigData"></div>
             </div>
@@ -1222,6 +1227,23 @@
   // gestor ("Erro 2042", "#N/D", "#N/A"...) — tratado como vazio.
   function isErroExcel(v){ return /^(erro|error) \d+$|^#(n\/d|n\/a|ref!|valor!|value!|nome\?|name\?)$/i.test(String(v||"").trim()); }
   function textoCampo(v){ v = String(v||"").trim(); return isErroExcel(v) ? "" : v; }
+  // Nomes técnicos (pedido do Dimitri, 03/11): o texto do sistema/Tratamento vira o nome usado na
+  // legislação. Vale para tipo_ocorrencia e situacao, inclusive de CSV antigo.
+  //   "Mais de 10h no dia"            -> Horas excedentes
+  //   "Intervalo curto de almoço"     -> Intrajornada
+  //   "Menos de 11h de descanso"      -> Interjornada
+  //   "Trabalho na folga ou feriado"  -> Interjornada semanal
+  var NOMES_TECNICOS = [
+    [/^mais de 10 ?h(oras)?( no dia)?$/, "Horas excedentes"],
+    [/^intervalo (de almoco )?curto( de almoco| no almoco)?$/, "Intrajornada"],
+    [/^menos de 11 ?h(oras)?( de descanso)?$/, "Interjornada"],
+    [/^trabalho n[ao] folga( ou (no )?feriado)?$/, "Interjornada semanal"]
+  ];
+  function nomeTecnico(t){
+    var n = stripAccents(String(t||"").trim().toLowerCase()).replace(/\s+/g, " ");
+    for (var i = 0; i < NOMES_TECNICOS.length; i++) if (NOMES_TECNICOS[i][0].test(n)) return NOMES_TECNICOS[i][1];
+    return t;
+  }
 
   var TIPO_AUDITORIA_EXTRA_FALTA = "Auditoria Extra e Falta (3 Meses)";
   var LIMITE_AUDITORIA_EXTRA_FALTA = 10;
@@ -1532,8 +1554,8 @@
         gestor: idx.gestor != null ? textoCampo(r[idx.gestor]) || "Sem gestor" : "Sem gestor",
         setor: idx.setor != null ? (r[idx.setor]||"").trim() || "Sem setor" : "Sem setor",
         cargo: idx.cargo != null ? textoCampo(r[idx.cargo]) || "Sem cargo" : "Sem cargo",
-        tipo: idx.tipo != null ? (r[idx.tipo]||"").trim() || "Não informado" : "Não informado",
-        situacao: idx.situacao != null ? (r[idx.situacao]||"").trim() : "",
+        tipo: idx.tipo != null ? nomeTecnico((r[idx.tipo]||"").trim()) || "Não informado" : "Não informado",
+        situacao: idx.situacao != null ? nomeTecnico((r[idx.situacao]||"").trim()) : "",
         status: idx.status != null ? (r[idx.status]||"").trim() || "Pendente" : "Pendente",
         duracao: idx.duracao != null ? parseNumber(r[idx.duracao]) : 0,
         destinoExtra: idx.destinoExtra != null ? (r[idx.destinoExtra]||"").trim() : "",
@@ -2237,16 +2259,16 @@
   function getDigitadasRecords(){
     var gestor = $("fGestor").value, grupo = $("fGrupo").value, cargo = $("fCargo").value;
     var colabQuery = stripAccents($("fColab").value.trim().toLowerCase());
-    var dIni = $("fDataIni").value ? new Date($("fDataIni").value+"T00:00:00") : null;
-    var dFim = $("fDataFim").value ? new Date($("fDataFim").value+"T23:59:59") : null;
+    // Sem o filtro de período: o relatório de digitadas vem com 3 meses e o período do
+    // painel é o ciclo da Tratamento. O recorte aqui é o seletor "Ciclo" da própria seção.
+    var ciclo = $("digCiclo").value;
     return state.records.filter(function(r){
       if (!isTipoDigitada(r.tipo)) return false;
+      if (ciclo && cicloDe(r.data) !== ciclo) return false;
       if (gestor && r.gestor !== gestor) return false;
       if (grupo && r.grupo !== grupo) return false;
       if (cargo && r.cargo !== cargo) return false;
       if (colabQuery && stripAccents(r.colaborador.toLowerCase()).indexOf(colabQuery) === -1) return false;
-      if (dIni && r.data < dIni) return false;
-      if (dFim && r.data > dFim) return false;
       return true;
     });
   }
@@ -2374,8 +2396,9 @@
   // dia do Cartão atual, o fim do ciclo, ex.: 27/09). Fica de fora só o
   // resumo de pausas, cuja data cai em "hoje" quando não há Cartão.
   function periodoCompleto(){
-    // o absenteísmo cobre 3 meses de Cartão: fica fora do período padrão
-    var recs = state.records.filter(function(r){ return r.tipo !== TIPO_RESUMO_PAUSAS_TERMICAS && !isTipoAbsenteismo(r.tipo); });
+    // o absenteísmo e as marcações digitadas cobrem 3 meses (têm seletor de ciclo próprio):
+    // ficam fora do período padrão, que é o ciclo da Tratamento
+    var recs = state.records.filter(function(r){ return r.tipo !== TIPO_RESUMO_PAUSAS_TERMICAS && !isTipoAbsenteismo(r.tipo) && !isTipoDigitada(r.tipo); });
     if (!recs.length) return null;
     var dates = recs.map(function(r){ return r.data.getTime(); });
     return { ini: toISODate(new Date(Math.min.apply(null, dates))), fim: toISODate(new Date(Math.max.apply(null, dates))) };
@@ -2524,6 +2547,16 @@
     $("digSemDados").hidden = temDig;
     $("digCorpo").hidden = !temDig;
     if (!temDig) return;
+    var ciclosDig = {};
+    state.records.forEach(function(r){ if (isTipoDigitada(r.tipo)) ciclosDig[cicloDe(r.data)] = true; });
+    var listaCiclos = Object.keys(ciclosDig).sort().reverse();
+    var selDig = $("digCiclo"), atualDig = selDig.value;
+    var optsDig = '<option value="">Todos (' + listaCiclos.length + ' ciclo' + (listaCiclos.length === 1 ? '' : 's') + ')</option>' +
+      listaCiclos.map(function(k){
+        var f = cicloInicioFim(k);
+        return '<option value="'+k+'">'+cicloLabel(k)+' ('+formatDateBR(f.ini).slice(0,5)+' a '+formatDateBR(f.fim).slice(0,5)+')</option>';
+      }).join("");
+    if (selDig.innerHTML !== optsDig){ selDig.innerHTML = optsDig; selDig.value = listaCiclos.indexOf(atualDig) > -1 ? atualDig : ""; }
     var dig = getDigitadasRecords();
 
     var diasComOcorrencia = {};
@@ -2786,6 +2819,7 @@
     }
   }
   $("absCiclo").addEventListener("change", applyFilters);
+  $("digCiclo").addEventListener("change", applyFilters);
   $("absAgrupar").addEventListener("change", applyFilters);
 
   /* ---------- Lista de colaboradores (ORG) ----------
@@ -3086,7 +3120,7 @@
     $("fDataFim").value = total ? total.fim : "";
     $("historySearch").value = "";
     $("orgBusca").value = ""; $("orgMostrar").value = ""; $("digBusca").value = "";
-    $("absCiclo").value = ""; $("absAgrupar").value = "gestor";
+    $("absCiclo").value = ""; $("absAgrupar").value = "gestor"; $("digCiclo").value = "";
     state.historySort = { key:"data", dir:"desc" };
     state.historyPage = 1;
     state.bancoMostrarTodos = false;
@@ -3183,7 +3217,7 @@
     var aud = todas.filter(function(r){ return r.tipo === TIPO_AUDITORIA_EXTRA_FALTA; })[0];
     var pausa = todas.filter(function(r){ return r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS; })[0];
 
-    var digitadas = todas.filter(function(r){ return isTipoDigitada(r.tipo) && noPeriodo(r); })
+    var digitadas = todas.filter(function(r){ return isTipoDigitada(r.tipo); }) // os 3 meses do relatório
       .sort(function(a,b){ return b.data - a.data; });
     // afastamentos do relatório do sistema (todos os tipos); sem ele, os atestados do Cartão
     var temAfArquivo = state.records.some(function(r){ return r.tipo === TIPO_AFASTAMENTO; });
@@ -3244,7 +3278,7 @@
     }
     if (digitadas.length){
       var dEsq = digitadas.filter(isEsquecimento).length;
-      html += '<h3 class="colab-section">Marcações digitadas no período ('+digitadas.length+' &middot; '+dEsq+' por esquecimento)</h3>' +
+      html += '<h3 class="colab-section">Marcações digitadas, todos os meses do relatório ('+digitadas.length+' &middot; '+dEsq+' por esquecimento)</h3>' +
         '<div class="table-scroll colab-tab"><table class="data-table"><colgroup><col style="width:92px"><col style="width:60px"><col style="width:30%"><col></colgroup>' +
         '<thead><tr><th>Data</th><th>Hora</th><th>Motivo</th><th>Justificativa</th></tr></thead><tbody>' +
         digitadas.map(function(r){

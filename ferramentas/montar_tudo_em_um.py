@@ -27,7 +27,7 @@ PARTES = [
 ]
 TROCAS_GERARCSV = [
     ("AbasMaisRecentes(EncontrarAbasCartao(wbTrat), MAXIMO_MESES_AUDITORIA)",
-     "AbasMaisRecentes(LoteAbasCartao(wbTrat), MAXIMO_MESES_AUDITORIA)"),
+     "LoteAbasCartaoOrdenadas(wbTrat, MAXIMO_MESES_AUDITORIA)"),
     ("Set wsAfast = EncontrarAbaAfastamentos(wbTrat)", "Set wsAfast = LoteAbaAfastamentos(wbTrat)"),
     ("Set wsDigitadas = EncontrarAbaDigitadas(wbTrat)", "Set wsDigitadas = LoteAbaDigitadas(wbTrat)"),
     ("Set wsPausas = EncontrarTabelaPausas(wbTrat, linhaCabecalhoPausas)",

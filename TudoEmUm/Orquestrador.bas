@@ -23,7 +23,7 @@
 '        Excedentes / Interjornada / Interjornada semanal / Intrajornada 3 meses
 '                                  -> copiados como vieram    -> abas com o mesmo nome
 '          (ainda NÃO entram no CSV: falta conhecer o formato desses relatórios)
-'   5. Roda o GerarAbaCSV (usando SÓ as abas que acabou de importar para Cartão, Pausas, Digitadas e
+'   5. Roda o GerarAbaCSV ("Cartão ponto 3" = mês atual, 2 e 1 = meses anteriores; usando SÓ as abas que acabou de importar para Cartão, Pausas, Digitadas e
 '      Afastamentos; Tratamento, RE e ORG continuam vindo das abas da planilha) e o
 '      ExportarCSVPorGestor na pasta escolhida.
 '   6. Mostra um resumo único no fim (as mensagens de cada etapa não aparecem uma a uma).
@@ -207,6 +207,21 @@ Public Sub AtualizarPainelPonto()
         End Select
         Application.ScreenUpdating = False
     Next i
+
+    ' Confere se as datas batem com a ordem dos nomes (1 = mais antigo, 3 = mês atual).
+    ' (Worksheet de verdade, não Variant: DataMaximaAba recebe "ws As Worksheet" ByRef.)
+    Dim dtAnterior As Date, dtAba As Date, wsC As Worksheet, iC As Long
+    dtAnterior = 0
+    For iC = 1 To mAbasCartaoLote.Count
+        Set wsC = mAbasCartaoLote(iC)
+        dtAba = DataMaximaAba(wsC)
+        If dtAba <= dtAnterior Then
+            avisos = avisos & vbCrLf & "- A aba " & wsC.Name & " termina em " & Format(dtAba, "dd/mm/yyyy") & _
+                ", antes (ou no mesmo dia) do Cartão anterior. Confira se os arquivos Cartão ponto 1, 2 e 3 " & _
+                "estão na ordem (1 = mais antigo, 3 = mês atual): o painel usa o 3 como mês atual."
+        End If
+        dtAnterior = dtAba
+    Next iC
 
     ' Apaga as abas temporárias dos Cartões brutos.
     Dim nomeTemp As Variant
@@ -424,14 +439,20 @@ End Function
 ' acabaram de ser importadas (e não uma aba antiga com o mesmo cabeçalho que esteja na planilha).
 ' Fora do lote, procuram como antes.
 ' ---------------------------------------------------------------------------------------------
-Private Function LoteAbasCartao(wb As Workbook) As Collection
+' No lote, a ordem vem do NOME do arquivo (pedido do Dimitri): "Cartão ponto 3" = mês atual,
+' depois o 2 e o 1 (o mais antigo). Fora do lote: as N abas "Cartão..." de data mais recente.
+Private Function LoteAbasCartaoOrdenadas(wb As Workbook, ByVal maximoAbas As Long) As Collection
+    Dim resultado As New Collection, i As Long
     If mLote And Not mAbasCartaoLote Is Nothing Then
         If mAbasCartaoLote.Count > 0 Then
-            Set LoteAbasCartao = mAbasCartaoLote
+            For i = mAbasCartaoLote.Count To 1 Step -1
+                If resultado.Count < maximoAbas Then resultado.Add mAbasCartaoLote(i)
+            Next i
+            Set LoteAbasCartaoOrdenadas = resultado
             Exit Function
         End If
     End If
-    Set LoteAbasCartao = EncontrarAbasCartao(wb)
+    Set LoteAbasCartaoOrdenadas = AbasMaisRecentes(EncontrarAbasCartao(wb), maximoAbas)
 End Function
 
 Private Function LoteAbaAfastamentos(wb As Workbook) As Worksheet
