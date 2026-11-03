@@ -50,7 +50,8 @@ aba PURO (exportação de ocorrências)   ──► PURO_Para_EDITADO      ─�
 | Caminho | O que é |
 |---|---|
 | `CartaoPonto/ConsolidarCartaoPonto.bas` | HRCP102 → aba `Cartao_Consolidado` (1 linha por colaborador/dia) |
-| `PausasTermicas/FormatarPausasTermicas.bas` | HRES114 → a mesma aba, só com a tabela de colaboradores e a de total |
+| `PausasTermicas/FormatarPausasTermicas.bas` | HRES114 → a mesma aba: totais por colaborador **e por ciclo** calculados das batidas, conferência com o relatório e total geral |
+| `JornadaCLT/FormatarJornada.bas` | 4 relatórios de jornada (Excedentes, Intrajornada, Interjornada, Interjornada semanal) → tabela `Matrícula, Colaborador, Cargo, Local, Data, Ocorrência, Minutos, Detalhe` |
 | `PuroParaEditado/PURO_Para_EDITADO.bas` | aba `PURO` → `EDITADO_MESAA` (reordena, X→SIM, tira espaços) |
 | `MarcacoesDigitadas/FormatarMarcacoesDigitadas.bas` | relatório "Marcações digitadas" → a mesma aba como tabela (renomeada "Marcações Digitadas") |
 | `Afastamentos/FormatarAfastamentos.bas` | relatório HRCL006 "Histórico de Afastamentos" → a mesma aba como tabela (renomeada "Afastamentos") |
@@ -90,13 +91,30 @@ conteúdo num módulo.
   H..M Pontos...). O GerarCSV lê por **nome de cabeçalho**, então funciona com os dois layouts.
 
 ### 5.2 FormatarPausasTermicas (aba ativa = HRES114 bruto)
-- Reescreve a aba deixando **só**: a tabela de colaboradores (cabeçalho na linha 1: `Matrícula,
-  Colaborador, Cargo, Pausa corretas, Pausa menor 0:20, Pausa maior 0:20, Trabalho correto 1:40,
-  Trabalho maior 1:40, Trabalho menor 1:40, Marcações Ímpares`), **uma linha em branco** e a
-  tabela "Total Geral". Sem título, legenda nem "Soma dos itens" (pedido do Dimitri).
-- Não recalcula nada: copia o bloco "Total do Colaborador" (valores 2 linhas abaixo do rótulo, nas
-  colunas A, B, D, F, H, J, K) e o "Total Geral".
-- A linha em branco é o que marca o fim da tabela para o GerarCSV.
+- **Desde 03/11 calcula** (pedido do Dimitri: o relatório vem com 3 meses e o "Total do Colaborador"
+  é dos 3 meses juntos). Linha de dia = A data + pares (hora, tipo) a partir de B; tipo P =
+  jornada, F = pausa térmica, G = refeição. Regra (descoberta comparando com os totais do sistema):
+  batidas alternam saída/volta pela **posição**; trechos 1ª→2ª, 3ª→4ª... = trabalho; os outros =
+  intervalo, que é pausa térmica só entre duas "F" (≥20 min correta, <20 menor; "pausa maior"
+  nunca é contada); trabalho de 1:40 exato = correto; dia ímpar = 1 marcação ímpar e o último
+  trecho conta como trabalho; batida depois da meia-noite fica no dia da linha.
+  Conferência no relatório de 28/07 a 27/10 (52 pessoas): pausas e ímpares iguais em 52/52; os 7
+  números iguais em 36/52 (trabalho difere 0,5% em dias com batidas fora do padrão — causa não achada).
+- Saída: tabela 1 (linha 1) `Matrícula, Colaborador, Cargo, Fim do ciclo, Pausa corretas, Pausa
+  menor 0:20, Pausa maior 0:20, Trabalho correto 1:40, Trabalho maior 1:40, Trabalho menor 1:40,
+  Marcações Ímpares` (uma linha por pessoa e ciclo 28→27); **linha em branco** (fim para o
+  GerarCSV); tabela de conferência (relatório × soma calculada, "Confere?", "Diferenças"); Total Geral.
+- Python equivalente: `ferramentas/formatar_jornada.py` (`pausas`, `classificar_dia`).
+
+### 5.3d FormatarJornada (JornadaCLT/, aba ativa = relatório bruto)
+- `FormatarExcedentes` (mais de 10h no dia), `FormatarIntrajornada` (HRES108, intervalo curto),
+  `FormatarInterjornada` (menos de 11h de descanso), `FormatarInterjornadaSemanal` (trabalho no
+  DSR/feriado). Saída comum: `Matrícula, Colaborador, Cargo, Local, Data, Ocorrência, Minutos, Detalhe`.
+- Minutos: excedentes = coluna Total do relatório (horas + adicional noturno; é ela que passa de 10h:
+  33 das 90 linhas têm horas ≤ 10h); intrajornada = soma dos intervalos (26 de 30 sem intervalo);
+  interjornada = horas descansadas; semanal = 0 (dia vem do texto "(dd/mm/aaaa)").
+- Posições (relatórios de 30/10/2026): ver o cabeçalho do .bas. Python: `ferramentas/formatar_jornada.py`.
+- 28/07 a 27/10: 90 excedentes (37 pessoas), 30 intra (23), 3 inter (3), 16 semanal (8).
 
 ### 5.3 PURO_Para_EDITADO
 - Mapeia a aba `PURO` por nome de cabeçalho → `EDITADO_<MES><AA>` com as colunas `Matricula, Nome,
@@ -201,7 +219,7 @@ conteúdo num módulo.
    `UltimaLinhaPreenchida` (não usa `End(xlUp)`).
 10. `TextoLimpo`: erro do Excel (`#N/A`) vira "", quebras de linha viram espaço.
 
-**Saída: contrato do CSV (29 colunas, nesta ordem):**
+**Saída: contrato do CSV (30 colunas, nesta ordem):**
 ```
 data, colaborador, matricula, gestor, setor, cargo, tipo_ocorrencia, situacao, status,
 duracao_minutos, destino_horas_extra, data_tratativa_pontonet, horas_excedentes,
@@ -209,9 +227,12 @@ ocorrencias_extra_falta_mes_atual, ocorrencias_extra_falta_3_meses, pausas_corre
 pausas_menor_20min, pausas_maior_20min, trabalho_correto_140, trabalho_maior_140,
 trabalho_menor_140, pausas_marcacoes_impares, grupo,
 minutos_hora_extra_cartao, minutos_banco_horas_cartao, justificativa_marcacao, origem_marcacao,
-dias_ausencia, emenda_folga
+dias_ausencia, emenda_folga, detalhe
 ```
-(24/25 só na "Resumo Horas Cartão"; 26/27 só na "Marcação Digitada"; 28/29 na "Absenteísmo" e na "Afastamento")
+(24/25 só na "Resumo Horas Cartão"; 26/27 só na "Marcação Digitada"; 28/29 na "Absenteísmo" e na "Afastamento"; 30 só na "Jornada")
+- **"Jornada"** (03/11): uma por linha das abas de jornada (achadas pelo cabeçalho `Matrícula, Data,
+  Ocorrência, Minutos, Detalhe`): situacao = nome técnico, duracao_minutos = Minutos, detalhe.
+- **"Resumo Pausas Térmicas"** com a coluna "Fim do ciclo": uma por pessoa e ciclo, data = dia 27.
 - Separador **vírgula**; campo com vírgula/aspas/quebra vai entre aspas (RFC 4180); UTF-8 com BOM
   (`ADODB.Stream`); datas `dd/mm/aaaa` (`dd/mm/aaaa hh:mm` quando tem hora); duração em minutos
   inteiros (negativo = falta); `grupo` = Interno/Externo pelo nome da aba (vazio na planilha antiga).
@@ -261,7 +282,11 @@ dias_ausencia, emenda_folga
   repetido, justificativas (agrupadas por `chaveTexto`), lista com busca. "No dia de uma ocorrência" =
   mesma matrícula + dia de uma ocorrência da Tratamento. `isTipoDigitada` entra em
   `isTipoNaoOcorrencia` e é excluído de `getFilteredRecords`.
-- **Seções**: `.pagina[data-pagina]` (geral, destaque, pausas, digitadas, afastamentos, demora, org,
+- **Jornada (CLT)** (03/11, `renderJornada`, `getJornadaRecords`, seletor `jorCiclo`, sem período): KPIs
+  por regra, tabela ciclo × regra, por colaborador (maior jornada, menor descanso), por gestor, lista
+  com detalhe; também no card do colaborador. **Pausas** têm seletor `pausasCiclo` (abre no mais
+  recente; "Soma dos N ciclos"); o card do colaborador usa o ciclo mais recente.
+- **Seções**: `.pagina[data-pagina]` (geral, destaque, pausas, digitadas, jornada, afastamentos, demora, org,
   historico); menu ☰ (`#menuSecoes`, `irParaPagina`, localStorage `painelPonto.pagina`, "todas"
   mostra tudo); KPIs só em "geral". Trocar de seção redesenha (largura dos SVG). O extrator de
   conferência clica em "todas" antes de ler.
@@ -415,9 +440,10 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   (`digCiclo`); digitadas saíram do `periodoCompleto`; o card do colaborador lista todas. No lote, a
   ordem dos Cartões vem do nome do arquivo (`LoteAbasCartaoOrdenadas`: 3 = mês atual, 1 = mais
   antigo), com aviso se as datas não seguirem essa ordem.
-  **Pendente (precisa dos arquivos do Dimitri):** totais das Pausas Térmicas calculados por mês a
-  partir das linhas de dia do HRES114 (hoje o total do relatório é dos 3 meses inteiros) e a leitura
-  dos relatórios Excedentes / Intrajornada / Interjornada / Interjornada semanal.
+- 03/11 (3): com os arquivos de exemplo do Dimitri (28/07 a 27/10): Pausas calculadas por ciclo
+  (regra na seção 5.2), macro FormatarJornada + linhas "Jornada" no CSV (30 colunas) + seção
+  "Jornada (CLT)" no painel; Pontonet chega em **.csv** (";" e ANSI): o lote lê CSV direto
+  (`CopiarCSV`, datas dd/mm/aaaa convertidas na mão). Nada disso rodou no Excel ainda.
 
 ## 12. Estado atual e como continuar (08/10/2026)
 

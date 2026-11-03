@@ -557,6 +557,10 @@
     .brand-mark{ height:26px; }
     .topbar-period .tp-label{ font-size:9px; }
     .topbar-period .tp-value{ font-size:12.5px; }
+    .topbar{ gap:6px; }
+    .topbar-period{ padding:3px 7px; min-width:0; }
+    .brand-mark{ height:22px; }
+    .topbar-period .tp-value{ font-size:11.5px; }
   }
   /* Tablet range: keep the real table, but let it scroll horizontally with the first column pinned */
   @media (min-width: 769px) and (max-width: 980px){
@@ -659,7 +663,7 @@
 
   <nav class="menu-secoes" id="menuSecoes" hidden aria-label="Seções do painel">
     <div class="menu-titulo">Seções do painel</div>
-    <button type="button" data-pagina="geral">Visão geral</button><button type="button" data-pagina="destaque">Colaboradores em destaque</button><button type="button" data-pagina="pausas">Pausas térmicas</button><button type="button" data-pagina="digitadas">Marcações digitadas</button><button type="button" data-pagina="afastamentos">Afastamentos</button><button type="button" data-pagina="demora">Demora no PontoNet</button><button type="button" data-pagina="org">Lista de colaboradores</button><button type="button" data-pagina="historico">Histórico</button>
+    <button type="button" data-pagina="geral">Visão geral</button><button type="button" data-pagina="destaque">Colaboradores em destaque</button><button type="button" data-pagina="pausas">Pausas térmicas</button><button type="button" data-pagina="digitadas">Marcações digitadas</button><button type="button" data-pagina="jornada">Jornada (CLT)</button><button type="button" data-pagina="afastamentos">Afastamentos</button><button type="button" data-pagina="demora">Demora no PontoNet</button><button type="button" data-pagina="org">Lista de colaboradores</button><button type="button" data-pagina="historico">Histórico</button>
     <button type="button" data-pagina="todas" class="menu-todas">Todas as seções numa página só</button>
   </nav>
 
@@ -775,11 +779,16 @@
       </div>
       <div class="pagina" data-pagina="pausas">
         <h3 class="section-title">Pausas Térmicas</h3>
+        <div class="abs-toolbar">
+          <label for="pausasCiclo" style="font-size:11.5px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:.04em;">Ciclo</label>
+          <select id="pausasCiclo"></select>
+          <span class="abs-resumo" id="pausasCicloInfo" style="margin:0"></span>
+        </div>
         <section class="grid">
           <div class="card wide">
             <div class="card-title">Resumo por colaborador</div>
-            <div class="card-hint">Pausas e intervalos de trabalho do relatório de Pausas Térmicas do mês atual &middot; linhas em vermelho têm marcações inválidas</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Pausas Térmicas do sistema (HRES114)</span><p>Puxamos o relatório de pausas térmicas direto do sistema e a macro deixa só a tabela por colaborador. Para cada pessoa: pausas corretas (20 min), pausas mais curtas ou mais longas que 20 min, blocos de trabalho de 1h40 corretos, maiores ou menores, e marcações ímpares (batida faltando). Nada é recalculado: o painel mostra os números do relatório.</p></div>
+            <div class="card-hint">Pausas e blocos de trabalho do ciclo escolhido acima &middot; linhas em vermelho têm marcações inválidas</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: relatório de Pausas Térmicas do sistema (HRES114)</span><p>O relatório do sistema vem com 3 meses e o total que ele traz é dos 3 meses juntos. Por isso a macro <strong>calcula os números de cada ciclo (28 a 27)</strong> a partir das batidas de cada dia, com a mesma regra do sistema: pausa térmica (entre duas batidas “F”) de 20 min ou mais = correta, menos = curta; bloco de trabalho de 1h40 exato = correto, mais = longo, menos = curto; dia com número ímpar de batidas = marcação inválida. Conferido com o total do relatório: pausas e marcações inválidas batem em todos os colaboradores; os blocos de trabalho diferem em poucos dias com batidas fora do padrão (a aba da planilha mostra a conferência).</p></div>
             <div class="card-body" id="tablePausasTermicas"></div>
           </div>
         </section>
@@ -855,6 +864,46 @@
           </section>
         </div>
 
+      </div>
+      <div class="pagina" data-pagina="jornada">
+        <h3 class="section-title">Jornada (CLT)</h3>
+        <div id="jorSemDados" class="card wide" hidden><div class="chart-empty">Este CSV não traz os relatórios de jornada (Excedentes, Intrajornada, Interjornada, Interjornada semanal). Rode a macro AtualizarPainelPonto com os arquivos na pasta e gere o CSV de novo.</div></div>
+        <div id="jorCorpo">
+          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: 4 relatórios do sistema, um por regra da jornada</span><p><strong>Horas excedentes</strong> = mais de 10h no dia (jornada com o adicional noturno, como no relatório). <strong>Intrajornada</strong> = intervalo de almoço curto ou ausente. <strong>Interjornada</strong> = menos de 11h de descanso entre uma jornada e a outra. <strong>Interjornada semanal</strong> = trabalho no DSR ou no feriado. Cada linha é um dia apontado pelo sistema; os relatórios cobrem 3 meses.</p></div>
+          <div class="abs-toolbar">
+            <label for="jorCiclo" style="font-size:11.5px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:.04em;">Ciclo</label>
+            <select id="jorCiclo"></select>
+            <span class="abs-resumo" style="margin:0">Esta seção não segue o filtro de período: mostra os 3 meses dos relatórios ou o ciclo (28 a 27) escolhido aqui.</span>
+          </div>
+          <section class="dig-kpis" id="jorKpis"></section>
+          <section class="grid">
+            <div class="card wide">
+              <div class="card-title">Ocorrências de jornada por ciclo</div>
+              <div class="card-hint">Quantos dias cada regra foi descumprida em cada ciclo (28 a 27)</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: os 4 relatórios de jornada, pela data de cada registro</span><p>Cada número é a quantidade de registros (dias) do relatório naquele ciclo.</p></div>
+              <div class="card-body" id="tableJorCiclos"></div>
+            </div>
+            <div class="card wide">
+              <div class="card-title">Por colaborador</div>
+              <div class="card-hint">Quem mais aparece nos relatórios de jornada no filtro atual</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: os 4 relatórios de jornada</span><p>Quantidade de dias por regra. Em horas excedentes, “maior jornada” é o dia mais longo da pessoa; em interjornada, “menor descanso” é o menor intervalo entre duas jornadas.</p></div>
+              <div class="card-body" id="tableJorColab"></div>
+            </div>
+            <div class="card wide">
+              <div class="card-title">Por gestor</div>
+              <div class="card-hint">Dias e pessoas por gestor</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: os 4 relatórios de jornada + gestor da Tratamento/ORG</span><p>O gestor vem da Tratamento ou, para quem não está nela, da lista do ORG.</p></div>
+              <div class="card-body" id="tableJorGestor"></div>
+            </div>
+            <div class="card wide">
+              <div class="card-title">Todos os registros de jornada</div>
+              <div class="card-hint">Lista completa do filtro atual, com as marcações do dia</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: os 4 relatórios de jornada</span><p>Uma linha por dia apontado pelo sistema. A coluna “Detalhe” traz as marcações e os números do próprio relatório.</p></div>
+              <div class="org-toolbar"><select id="jorTipo"><option value="">Todas as regras</option><option>Horas excedentes</option><option>Intrajornada</option><option>Interjornada</option><option>Interjornada semanal</option></select><input type="text" id="jorBusca" placeholder="Buscar por colaborador, gestor, detalhe..."><span id="jorCount" style="font-size:12px;color:var(--c-muted);"></span></div>
+              <div class="card-body" id="tableJorLista"></div>
+            </div>
+          </section>
+        </div>
       </div>
       <div class="pagina" data-pagina="afastamentos">
         <h3 class="section-title">Afastamentos — atestados</h3>
@@ -1215,7 +1264,8 @@
     justificativaMarcacao: ["justificativa_marcacao"],
     origemMarcacao: ["origem_marcacao"],
     diasAusencia: ["dias_ausencia"],
-    emendaFolga: ["emenda_folga"]
+    emendaFolga: ["emenda_folga"],
+    detalhe: ["detalhe"]
   };
 
   // Situações que o painel ignora mesmo que venham no CSV (o GerarCSV
@@ -1263,6 +1313,12 @@
   // tem a seção própria "Marcações digitadas".
   var TIPO_MARCACAO_DIGITADA = "Marcação Digitada";
   function isTipoDigitada(tipo){ return tipo === TIPO_MARCACAO_DIGITADA; }
+  // Um registro por dia apontado nos relatórios de jornada (GerarLinhasJornada do
+  // macro): situacao = Horas excedentes / Intrajornada / Interjornada / Interjornada
+  // semanal; duracao = minutos do relatório; detalhe = marcações. Seção própria.
+  var TIPO_JORNADA = "Jornada";
+  var REGRAS_JORNADA = ["Horas excedentes", "Intrajornada", "Interjornada", "Interjornada semanal"];
+  function isTipoJornada(tipo){ return tipo === TIPO_JORNADA; }
   // Um registro por ATESTADO (dias seguidos de atestado no Cartão), gerado
   // pelo GerarAbsenteismo do macro: data = 1º dia, situacao = descrição do
   // Cartão, colunas dias_ausencia e emenda_folga. Seção própria.
@@ -1315,7 +1371,7 @@
   // Combina os três: nada disso conta como "ocorrência" pros
   // gráficos/KPI de ocorrências/histórico/filtro de Tipo.
   function isTipoNaoOcorrencia(tipo){
-    return isTipoResumo(tipo) || isTipoCurta(tipo) || isTipoHoraExtra(tipo) || isTipoDigitada(tipo) || isTipoAbsenteismo(tipo);
+    return isTipoResumo(tipo) || isTipoCurta(tipo) || isTipoHoraExtra(tipo) || isTipoDigitada(tipo) || isTipoAbsenteismo(tipo) || isTipoJornada(tipo);
   }
 
   // Estado global do painel inteiro — de propósito, um único objeto
@@ -1576,7 +1632,8 @@
         justificativaMarcacao: idx.justificativaMarcacao != null ? textoCampo(r[idx.justificativaMarcacao]) : "",
         origemMarcacao: idx.origemMarcacao != null ? textoCampo(r[idx.origemMarcacao]) : "",
         diasAusencia: idx.diasAusencia != null ? parseNumber(r[idx.diasAusencia]) : 0,
-        emendaFolga: idx.emendaFolga != null ? textoCampo(r[idx.emendaFolga]) : ""
+        emendaFolga: idx.emendaFolga != null ? textoCampo(r[idx.emendaFolga]) : "",
+        detalhe: idx.detalhe != null ? textoCampo(r[idx.detalhe]) : ""
       };
       out.push(rec);
     }
@@ -2025,8 +2082,40 @@
   // GerarCSV a partir da aba "Pausas térmicas" já formatada). Lista
   // todos os colaboradores (não só um top N), ordenados com quem tem
   // marcações inválidas ou pausas curtas primeiro.
+  // Ciclos que existem nas linhas de pausas (o GerarCSV grava uma por colaborador e
+  // por ciclo, com data = dia 27); CSV antigo = uma por colaborador, um ciclo só.
+  function ciclosPausas(){
+    var c = {};
+    state.records.forEach(function(r){ if (r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS) c[cicloDe(r.data)] = true; });
+    return Object.keys(c).sort().reverse();
+  }
+  function atualizarSeletorPausas(){
+    var ciclos = ciclosPausas(), sel = $("pausasCiclo"), atual = sel.value;
+    var opts = ciclos.map(function(k){
+      var f = cicloInicioFim(k);
+      return '<option value="'+k+'">'+cicloLabel(k)+' ('+formatDateBR(f.ini).slice(0,5)+' a '+formatDateBR(f.fim).slice(0,5)+')</option>';
+    }).join("") + (ciclos.length > 1 ? '<option value="todos">Soma dos ' + ciclos.length + ' ciclos</option>' : '');
+    if (sel.innerHTML !== opts){ sel.innerHTML = opts; }
+    sel.value = (atual && (atual === "todos" ? ciclos.length > 1 : ciclos.indexOf(atual) > -1)) ? atual : (ciclos[0] || "");
+    $("pausasCicloInfo").textContent = ciclos.length > 1
+      ? "Números calculados por ciclo a partir do relatório de 3 meses; abre no ciclo mais recente."
+      : "";
+    return sel.value;
+  }
+  var CAMPOS_PAUSAS = ["pausaCorretas","pausaMenor20","pausaMaior20","trabalhoCorreto140","trabalhoMaior140","trabalhoMenor140","pausasMarcacoesImpares"];
   function pausasTermicasResumo(){
-    return getPausasTermicasRecords().map(function(r){
+    var ciclo = atualizarSeletorPausas();
+    var base = getPausasTermicasRecords().filter(function(r){ return ciclo === "todos" || cicloDe(r.data) === ciclo; });
+    if (ciclo === "todos"){
+      var soma = {};
+      base.forEach(function(r){
+        var k = chavePessoa(r);
+        if (!soma[k]){ soma[k] = { colaborador:r.colaborador, cargo:r.cargo }; CAMPOS_PAUSAS.forEach(function(c){ soma[k][c] = 0; }); }
+        CAMPOS_PAUSAS.forEach(function(c){ soma[k][c] += r[c] || 0; });
+      });
+      base = Object.values(soma);
+    }
+    return base.map(function(r){
       return {
         colaborador: r.colaborador,
         cargo: r.cargo,
@@ -2223,7 +2312,7 @@
       // ocorrências curtas (<15min) não contam como ocorrência normal:
       // têm suas próprias vistas dedicadas, não entram nos
       // gráficos/KPIs/histórico gerais.
-      if (isTipoResumo(r.tipo) || isTipoCurta(r.tipo) || isTipoDigitada(r.tipo) || isTipoAbsenteismo(r.tipo)) return false;
+      if (isTipoResumo(r.tipo) || isTipoCurta(r.tipo) || isTipoDigitada(r.tipo) || isTipoAbsenteismo(r.tipo) || isTipoJornada(r.tipo)) return false;
       if (gestor && r.gestor !== gestor) return false;
       if (grupo && r.grupo !== grupo) return false;
       if (cargo && r.cargo !== cargo) return false;
@@ -2264,6 +2353,21 @@
     var ciclo = $("digCiclo").value;
     return state.records.filter(function(r){
       if (!isTipoDigitada(r.tipo)) return false;
+      if (ciclo && cicloDe(r.data) !== ciclo) return false;
+      if (gestor && r.gestor !== gestor) return false;
+      if (grupo && r.grupo !== grupo) return false;
+      if (cargo && r.cargo !== cargo) return false;
+      if (colabQuery && stripAccents(r.colaborador.toLowerCase()).indexOf(colabQuery) === -1) return false;
+      return true;
+    });
+  }
+  // Jornada: gestor/grupo/cargo/colaborador + o seletor "Ciclo" da seção (sem o período).
+  function getJornadaRecords(ignorarCiclo){
+    var gestor = $("fGestor").value, grupo = $("fGrupo").value, cargo = $("fCargo").value;
+    var colabQuery = stripAccents($("fColab").value.trim().toLowerCase());
+    var ciclo = ignorarCiclo ? "" : $("jorCiclo").value;
+    return state.records.filter(function(r){
+      if (!isTipoJornada(r.tipo)) return false;
       if (ciclo && cicloDe(r.data) !== ciclo) return false;
       if (gestor && r.gestor !== gestor) return false;
       if (grupo && r.grupo !== grupo) return false;
@@ -2398,7 +2502,7 @@
   function periodoCompleto(){
     // o absenteísmo e as marcações digitadas cobrem 3 meses (têm seletor de ciclo próprio):
     // ficam fora do período padrão, que é o ciclo da Tratamento
-    var recs = state.records.filter(function(r){ return r.tipo !== TIPO_RESUMO_PAUSAS_TERMICAS && !isTipoAbsenteismo(r.tipo) && !isTipoDigitada(r.tipo); });
+    var recs = state.records.filter(function(r){ return r.tipo !== TIPO_RESUMO_PAUSAS_TERMICAS && !isTipoAbsenteismo(r.tipo) && !isTipoDigitada(r.tipo) && !isTipoJornada(r.tipo); });
     if (!recs.length) return null;
     var dates = recs.map(function(r){ return r.data.getTime(); });
     return { ini: toISODate(new Date(Math.min.apply(null, dates))), fim: toISODate(new Date(Math.max.apply(null, dates))) };
@@ -2524,6 +2628,7 @@
       demoraStats(records, function(r){ return r.colaborador; }));
 
     renderDigitadas(ocorrenciasRecords);
+    renderJornada();
     renderAbsenteismo();
     renderListaORG(ocorrenciasRecords);
     renderHistory(ocorrenciasRecords);
@@ -2646,6 +2751,120 @@
       lista);
   }
   $("digBusca").addEventListener("input", debounce(applyFilters, 200));
+
+  /* ---------- Jornada (CLT) ----------
+     Os 4 relatórios de jornada do sistema (linhas "Jornada" do CSV). Sem o filtro
+     de período: seletor de ciclo próprio, como as digitadas. */
+  function minHM(m){ m = Math.round(m || 0); var s = m < 0 ? "-" : ""; m = Math.abs(m); return s + Math.floor(m/60) + ":" + String(m%60).padStart(2,"0"); }
+  // O número que importa em cada regra, em texto curto.
+  function medidaJornada(r){
+    if (r.situacao === "Horas excedentes") return "jornada " + minHM(r.duracao) + " (+" + minHM(r.duracao - 600) + " além de 10h)";
+    if (r.situacao === "Intrajornada") return r.duracao > 0 ? "intervalo de " + minHM(r.duracao) : "sem intervalo";
+    if (r.situacao === "Interjornada") return "descanso de " + minHM(r.duracao) + " (faltou " + minHM(660 - r.duracao) + ")";
+    return "trabalho no DSR/feriado";
+  }
+  function renderJornada(){
+    var todos = state.records.filter(function(r){ return isTipoJornada(r.tipo); });
+    $("jorSemDados").hidden = todos.length > 0;
+    $("jorCorpo").hidden = todos.length === 0;
+    if (!todos.length) return;
+
+    var ciclosSet = {};
+    todos.forEach(function(r){ ciclosSet[cicloDe(r.data)] = true; });
+    var ciclos = Object.keys(ciclosSet).sort().reverse();
+    var sel = $("jorCiclo"), atual = sel.value;
+    var opts = '<option value="">Todos (' + ciclos.length + ' ciclo' + (ciclos.length === 1 ? '' : 's') + ')</option>' + ciclos.map(function(k){
+      var f = cicloInicioFim(k);
+      return '<option value="'+k+'">'+cicloLabel(k)+' ('+formatDateBR(f.ini).slice(0,5)+' a '+formatDateBR(f.fim).slice(0,5)+')</option>';
+    }).join("");
+    if (sel.innerHTML !== opts){ sel.innerHTML = opts; sel.value = ciclos.indexOf(atual) > -1 ? atual : ""; }
+
+    var jor = getJornadaRecords();
+    function tile(label, valor, sub){
+      return '<div class="colab-kpi"><div class="ck-label">'+label+'</div><div class="ck-value">'+valor+'</div><div class="ck-sub">'+sub+'</div></div>';
+    }
+    $("jorKpis").innerHTML = REGRAS_JORNADA.map(function(regra){
+      var rs = jor.filter(function(r){ return r.situacao === regra; });
+      var p = {}; rs.forEach(function(r){ p[chavePessoa(r)] = true; });
+      return tile(regra, formatNum(rs.length), "dia(s) &middot; " + Object.keys(p).length + " pessoa(s)");
+    }).join("");
+
+    // por ciclo (usa todos os ciclos, com os filtros de pessoa)
+    var filtrados = getJornadaRecords(true);
+    var porCiclo = {};
+    filtrados.forEach(function(r){
+      var k = cicloDe(r.data);
+      if (!porCiclo[k]){ porCiclo[k] = { ciclo:k, total:0 }; REGRAS_JORNADA.forEach(function(g){ porCiclo[k][g] = 0; }); }
+      if (porCiclo[k][r.situacao] != null) porCiclo[k][r.situacao]++;
+      porCiclo[k].total++;
+    });
+    renderTableSimple($("tableJorCiclos"),
+      [{label:"Ciclo", width:"22%", render:function(r){ var f = cicloInicioFim(r.ciclo); return '<strong>'+cicloLabel(r.ciclo)+'</strong> <span style="color:var(--c-muted)">('+formatDateBR(f.ini).slice(0,5)+' a '+formatDateBR(f.fim).slice(0,5)+')</span>'; }}]
+        .concat(REGRAS_JORNADA.map(function(g){ return {label:g, render:function(r){ return r[g] || "&ndash;"; }}; }))
+        .concat([{label:"Total", width:"70px", render:function(r){ return '<strong>'+r.total+'</strong>'; }}]),
+      Object.values(porCiclo).sort(function(a,b){ return a.ciclo < b.ciclo ? 1 : -1; }),
+      {rowClass:function(r){ return r.ciclo === sel.value ? "row-sel" : ""; }, tableClass:"tabela-compacta"});
+
+    // por colaborador
+    var pc = {};
+    jor.forEach(function(r){
+      var k = chavePessoa(r);
+      if (!pc[k]){ pc[k] = { colaborador:r.colaborador, gestor:r.gestor, total:0, maiorJornada:0, menorDescanso:null }; REGRAS_JORNADA.forEach(function(g){ pc[k][g] = 0; }); }
+      if (pc[k][r.situacao] != null) pc[k][r.situacao]++;
+      pc[k].total++;
+      if (r.situacao === "Horas excedentes") pc[k].maiorJornada = Math.max(pc[k].maiorJornada, r.duracao);
+      if (r.situacao === "Interjornada") pc[k].menorDescanso = pc[k].menorDescanso == null ? r.duracao : Math.min(pc[k].menorDescanso, r.duracao);
+    });
+    renderTableSimple($("tableJorColab"),
+      [{label:"Colaborador", width:"22%", render:function(r){ return colabLink(r.colaborador); }},
+       {label:"Gestor", width:"16%", render:function(r){ return escapeHtml(r.gestor); }},
+       {label:"Horas excedentes", html:"Horas<br>excedentes", render:function(r){ return r["Horas excedentes"] || "&ndash;"; }},
+       {label:"Maior jornada", html:"Maior<br>jornada", render:function(r){ return r.maiorJornada ? minHM(r.maiorJornada) : "&ndash;"; }},
+       {label:"Intrajornada", render:function(r){ return r["Intrajornada"] || "&ndash;"; }},
+       {label:"Interjornada", render:function(r){ return r["Interjornada"] || "&ndash;"; }},
+       {label:"Menor descanso", html:"Menor<br>descanso", render:function(r){ return r.menorDescanso != null ? minHM(r.menorDescanso) : "&ndash;"; }},
+       {label:"Interjornada semanal", html:"Interjornada<br>semanal", render:function(r){ return r["Interjornada semanal"] || "&ndash;"; }},
+       {label:"Total", width:"60px", render:function(r){ return '<strong>'+r.total+'</strong>'; }}],
+      Object.values(pc).sort(function(a,b){ return b.total - a.total || a.colaborador.localeCompare(b.colaborador, "pt-BR"); }),
+      {tableClass:"tabela-compacta"});
+
+    // por gestor
+    var pg = {};
+    jor.forEach(function(r){
+      var k = r.gestor;
+      if (!pg[k]){ pg[k] = { gestor:k, total:0, pessoas:{} }; REGRAS_JORNADA.forEach(function(g){ pg[k][g] = 0; }); }
+      if (pg[k][r.situacao] != null) pg[k][r.situacao]++;
+      pg[k].total++; pg[k].pessoas[chavePessoa(r)] = true;
+    });
+    renderTableSimple($("tableJorGestor"),
+      [{label:"Gestor", width:"26%", render:function(r){ return escapeHtml(r.gestor); }}]
+        .concat(REGRAS_JORNADA.map(function(g){ return {label:g, render:function(r){ return r[g] || "&ndash;"; }}; }))
+        .concat([{label:"Pessoas", width:"70px", render:function(r){ return Object.keys(r.pessoas).length; }},
+                 {label:"Total", width:"60px", render:function(r){ return '<strong>'+r.total+'</strong>'; }}]),
+      Object.values(pg).sort(function(a,b){ return b.total - a.total; }),
+      {tableClass:"tabela-compacta"});
+
+    // lista
+    var busca = stripAccents($("jorBusca").value.trim().toLowerCase()), regra = $("jorTipo").value;
+    var lista = jor.filter(function(r){
+      if (regra && r.situacao !== regra) return false;
+      if (!busca) return true;
+      return stripAccents((r.colaborador+" "+r.matricula+" "+r.gestor+" "+r.situacao+" "+r.detalhe).toLowerCase()).indexOf(busca) > -1;
+    }).sort(function(a,b){ return b.data - a.data; });
+    $("jorCount").textContent = formatNum(lista.length) + " registro(s)";
+    renderTableSimple($("tableJorLista"),
+      [{label:"Data", width:"88px", render:function(r){ return formatDateBR(r.data); }},
+       {label:"Colaborador", width:"18%", render:function(r){ return colabLink(r.colaborador); }},
+       {label:"Gestor", width:"13%", render:function(r){ return escapeHtml(r.gestor); }},
+       {label:"Regra", width:"13%", render:function(r){ return escapeHtml(r.situacao); }},
+       {label:"Medida", width:"17%", render:function(r){ return escapeHtml(medidaJornada(r)); }},
+       {label:"Detalhe", render:function(r){ return '<span title="'+escapeHtml(r.detalhe)+'">'+escapeHtml(r.detalhe)+'</span>'; }}],
+      lista);
+  }
+  $("jorBusca").addEventListener("input", debounce(applyFilters, 200));
+  $("jorTipo").addEventListener("change", applyFilters);
+  $("jorCiclo").addEventListener("change", applyFilters);
+  $("pausasCiclo").addEventListener("change", applyFilters);
 
   /* ---------- Absenteísmo (atestados) ----------
      Registros "Absenteísmo" (um por atestado) filtrados por
@@ -3121,6 +3340,7 @@
     $("historySearch").value = "";
     $("orgBusca").value = ""; $("orgMostrar").value = ""; $("digBusca").value = "";
     $("absCiclo").value = ""; $("absAgrupar").value = "gestor"; $("digCiclo").value = "";
+    $("jorCiclo").value = ""; $("jorBusca").value = ""; $("jorTipo").value = ""; $("pausasCiclo").value = "";
     state.historySort = { key:"data", dir:"desc" };
     state.historyPage = 1;
     state.bancoMostrarTodos = false;
@@ -3215,7 +3435,10 @@
     var curtas = todas.filter(function(r){ return isTipoCurta(r.tipo) && noPeriodo(r); });
     var horas = todas.filter(function(r){ return r.tipo === TIPO_RESUMO_HORAS_CARTAO; })[0];
     var aud = todas.filter(function(r){ return r.tipo === TIPO_AUDITORIA_EXTRA_FALTA; })[0];
-    var pausa = todas.filter(function(r){ return r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS; })[0];
+    // pausas: a linha do ciclo mais recente da pessoa (o CSV tem uma por ciclo)
+    var pausa = todas.filter(function(r){ return r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS; })
+      .sort(function(a,b){ return b.data - a.data; })[0];
+    var jornadaColab = todas.filter(function(r){ return isTipoJornada(r.tipo); }).sort(function(a,b){ return b.data - a.data; });
 
     var digitadas = todas.filter(function(r){ return isTipoDigitada(r.tipo); }) // os 3 meses do relatório
       .sort(function(a,b){ return b.data - a.data; });
@@ -3259,7 +3482,7 @@
       tile("Demora no PontoNet", demoras.length ? formatDelay(demoras.reduce(function(a,b){return a+b;},0)/demoras.length) : "&ndash;",
            demoras.length ? formatNum(demoras.length) + " tratada(s), média" : "nenhuma tratativa") +
       tile("Pausas térmicas", pausa ? formatNum(pausa.pausaCorretas) : "&ndash;",
-           pausa ? "corretas &middot; " + pausa.pausaMenor20 + " curta(s) &middot; " + pausa.pausasMarcacoesImpares + " marcação(ões) ímpar(es)" : "fora do relatório",
+           pausa ? "corretas em " + cicloLabel(cicloDe(pausa.data)) + " &middot; " + pausa.pausaMenor20 + " curta(s) &middot; " + pausa.pausasMarcacoesImpares + " marcação(ões) ímpar(es)" : "fora do relatório",
            pausa && pausa.pausasMarcacoesImpares > 0 ? "alerta" : "") +
       '</div>';
     if (atestados.length){
@@ -3284,6 +3507,16 @@
         digitadas.map(function(r){
           return '<tr><td data-label="Data">'+formatDateBR(r.data)+'</td><td data-label="Hora">'+horaMin(r.data)+'</td>'+
                  '<td data-label="Motivo">'+escapeHtml(r.situacao)+'</td><td data-label="Justificativa" title="'+escapeHtml(r.justificativaMarcacao)+'">'+escapeHtml(r.justificativaMarcacao)+'</td></tr>';
+        }).join("") + '</tbody></table></div>';
+    }
+
+    if (jornadaColab.length){
+      html += '<h3 class="colab-section">Jornada (CLT), todos os meses dos relatórios ('+jornadaColab.length+')</h3>' +
+        '<div class="table-scroll colab-tab"><table class="data-table"><colgroup><col style="width:92px"><col style="width:22%"><col style="width:26%"><col></colgroup>' +
+        '<thead><tr><th>Data</th><th>Regra</th><th>Medida</th><th>Detalhe</th></tr></thead><tbody>' +
+        jornadaColab.map(function(r){
+          return '<tr><td data-label="Data">'+formatDateBR(r.data)+'</td><td data-label="Regra">'+escapeHtml(r.situacao)+'</td>'+
+                 '<td data-label="Medida">'+escapeHtml(medidaJornada(r))+'</td><td data-label="Detalhe" title="'+escapeHtml(r.detalhe)+'">'+escapeHtml(r.detalhe)+'</td></tr>';
         }).join("") + '</tbody></table></div>';
     }
 

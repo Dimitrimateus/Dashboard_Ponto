@@ -10,7 +10,7 @@
 '   1. Pede a pasta com os relatórios do sistema.
 '   2. Confere se a pasta tem os 11 arquivos com os nomes combinados (lista em ArquivosEsperados).
 '      O nome é comparado sem diferenciar maiúsculas, acentos e espaços repetidos; a extensão pode
-'      ser .xlsx, .xls, .xlsm ou .xlsb. Se faltar algum (ou houver dois com o mesmo nome), avisa
+'      ser .xlsx, .xls, .xlsm, .xlsb ou .csv. Se faltar algum (ou houver dois com o mesmo nome), avisa
 '      quais e para, sem mexer em nada.
 '   3. Pergunta em qual pasta salvar os CSVs.
 '   4. Copia cada relatório para uma aba desta planilha (se a aba já existe, ela é LIMPA e
@@ -20,9 +20,11 @@
 '        Digitadas 3 meses         -> FormatarMarcacoesDigitadas -> aba "Marcações Digitadas"
 '        Afastamentos 3 meses      -> FormatarAfastamentos   -> aba "Afastamentos"
 '        Pontonet 3 meses          -> (já vem como tabela)   -> aba "PontoNet"
-'        Excedentes / Interjornada / Interjornada semanal / Intrajornada 3 meses
-'                                  -> copiados como vieram    -> abas com o mesmo nome
-'          (ainda NÃO entram no CSV: falta conhecer o formato desses relatórios)
+'        Excedentes 3 meses        -> FormatarExcedentes     -> aba "Horas Excedentes"
+'        Intrajornada 3 meses      -> FormatarIntrajornada   -> aba "Intrajornada"
+'        Interjornada 3 meses      -> FormatarInterjornada   -> aba "Interjornada"
+'        Interjornada semanal 3 m. -> FormatarInterjornadaSemanal -> aba "Interjornada Semanal"
+'        (Pontonet pode vir em .csv: é lido direto, ver CopiarCSV)
 '   5. Roda o GerarAbaCSV ("Cartão ponto 3" = mês atual, 2 e 1 = meses anteriores; usando SÓ as abas que acabou de importar para Cartão, Pausas, Digitadas e
 '      Afastamentos; Tratamento, RE e ORG continuam vindo das abas da planilha) e o
 '      ExportarCSVPorGestor na pasta escolhida.
@@ -39,6 +41,7 @@ Private mAbasCartaoLote As Collection       ' abas de Cartão importadas agora (
 Private mAbaAfastLote As Worksheet
 Private mAbaDigitLote As Worksheet
 Private mAbaPausasLote As Worksheet
+Private mAbasJornadaLote As Collection      ' Horas Excedentes, Intrajornada, Interjornada, Interjornada Semanal
 
 Private Const TITULO_LOTE As String = "Atualizar Painel de Ponto"
 Private Const ABA_CONSOLIDADO As String = "Cartao_Consolidado"
@@ -54,10 +57,10 @@ Private Function ArquivosEsperados() As Variant
         Array("Digitadas 3 meses", "Marcações Digitadas", "DIGITADAS"), _
         Array("Afastamentos 3 meses", "Afastamentos", "AFASTAMENTOS"), _
         Array("Pontonet 3 meses", "PontoNet", "PONTONET"), _
-        Array("Excedentes 3 meses", "Excedentes", "BRUTO"), _
-        Array("Interjornada 3 meses", "Interjornada", "BRUTO"), _
-        Array("Interjornada semanal 3 meses", "Interjornada Semanal", "BRUTO"), _
-        Array("Intrajornada 3 meses", "Intrajornada", "BRUTO"))
+        Array("Excedentes 3 meses", "Horas Excedentes", "EXCEDENTES"), _
+        Array("Intrajornada 3 meses", "Intrajornada", "INTRA"), _
+        Array("Interjornada 3 meses", "Interjornada", "INTER"), _
+        Array("Interjornada semanal 3 meses", "Interjornada Semanal", "SEMANAL"))
 End Function
 
 Public Sub AtualizarPainelPonto()
@@ -111,6 +114,7 @@ Public Sub AtualizarPainelPonto()
     Set mAbaAfastLote = Nothing
     Set mAbaDigitLote = Nothing
     Set mAbaPausasLote = Nothing
+    Set mAbasJornadaLote = New Collection
 
     Dim etapa As String, avisos As String
     Dim consolidadoGuardado As Boolean
@@ -201,7 +205,23 @@ Public Sub AtualizarPainelPonto()
                     "a demora no PontoNet vai sair vazia no painel."
             End If
 
-        Case Else ' BRUTO
+        Case "EXCEDENTES", "INTRA", "INTER", "SEMANAL"
+            Set wsAba = AbaLimpa(wb, nomeAba)
+            CopiarRelatorio caminhos(i), wsAba
+            etapa = "formatar """ & nomeArq & """ (FormatarJornada)"
+            wsAba.Activate
+            Select Case tipo
+                Case "EXCEDENTES": FormatarExcedentes
+                Case "INTRA": FormatarIntrajornada
+                Case "INTER": FormatarInterjornada
+                Case Else: FormatarInterjornadaSemanal
+            End Select
+            If ColunaPorCabecalho(wsAba, "Ocorrência") = 0 Or ColunaPorCabecalho(wsAba, "Detalhe") = 0 Then
+                Err.Raise vbObjectError + 8, , "A tabela de jornada não foi gerada (confira se é o relatório certo)."
+            End If
+            mAbasJornadaLote.Add wsAba
+
+        Case Else ' copiado como veio
             Set wsAba = AbaLimpa(wb, nomeAba)
             CopiarRelatorio caminhos(i), wsAba
         End Select
@@ -255,9 +275,7 @@ Public Sub AtualizarPainelPonto()
 
     MsgBox "Pronto! Relatórios importados e CSVs salvos." & vbCrLf & vbCrLf & _
         resumoExport & vbCrLf & vbCrLf & _
-        "---- Resumo do CSV ----" & vbCrLf & resumoCSV & vbCrLf & vbCrLf & _
-        "Excedentes, Interjornada, Interjornada semanal e Intrajornada foram copiados para abas com " & _
-        "esses nomes, mas ainda não entram no CSV/painel." & _
+        "---- Resumo do CSV ----" & vbCrLf & resumoCSV & _
         IIf(avisos <> "", vbCrLf & vbCrLf & "ATENÇÃO:" & avisos, ""), vbInformation, TITULO_LOTE
     Exit Sub
 
@@ -288,6 +306,7 @@ Private Sub LimparEstadoLote(wb As Workbook, ByVal consolidadoGuardado As Boolea
     Set mAbaAfastLote = Nothing
     Set mAbaDigitLote = Nothing
     Set mAbaPausasLote = Nothing
+    Set mAbasJornadaLote = Nothing
     Application.CutCopyMode = False
     Application.Calculation = calcAntes
     Application.DisplayAlerts = True
@@ -307,7 +326,7 @@ Private Function LocalizarArquivos(ByVal pasta As String, lista As Variant, ByRe
     Set repetidos = CreateObject("Scripting.Dictionary")
     For Each arq In fso.GetFolder(pasta).Files
         ext = LCase$(fso.GetExtensionName(arq.Name))
-        If Left$(arq.Name, 2) <> "~$" And (ext = "xlsx" Or ext = "xls" Or ext = "xlsm" Or ext = "xlsb") Then
+        If Left$(arq.Name, 2) <> "~$" And (ext = "xlsx" Or ext = "xls" Or ext = "xlsm" Or ext = "xlsb" Or ext = "csv") Then
             chave = NomeComparavel(fso.GetBaseName(arq.Name))
             If porNome.Exists(chave) Then
                 repetidos(chave) = repetidos(chave) & ", " & arq.Name
@@ -344,7 +363,7 @@ Private Function LocalizarArquivos(ByVal pasta As String, lista As Variant, ByRe
             If Not usados.Exists(k) Then sobrando = sobrando & vbCrLf & "  - " & fso.GetFileName(porNome(k))
         Next k
         If sobrando <> "" Then
-            texto = texto & vbCrLf & vbCrLf & "Arquivos Excel da pasta que não bateram com nenhum nome " & _
+            texto = texto & vbCrLf & vbCrLf & "Arquivos Excel/CSV da pasta que não bateram com nenhum nome " & _
                 "(confira se não é um deles com o nome diferente):" & sobrando
         End If
     End If
@@ -363,6 +382,10 @@ End Function
 ' Abre o relatório só para leitura e copia a primeira aba para "destino" (mesmas posições de células,
 ' com formatos, para as macros de formatação lerem como se fosse o arquivo original).
 Private Sub CopiarRelatorio(ByVal caminho As String, destino As Worksheet)
+    If LCase$(Right$(caminho, 4)) = ".csv" Then
+        CopiarCSV caminho, destino
+        Exit Sub
+    End If
     Dim wbOrigem As Workbook, jaAberto As Boolean, w As Workbook
     For Each w In Application.Workbooks
         If LCase$(w.FullName) = LCase$(caminho) Then
@@ -384,6 +407,127 @@ Private Sub CopiarRelatorio(ByVal caminho As String, destino As Worksheet)
     If Not jaAberto Then wbOrigem.Close SaveChanges:=False
     ThisWorkbook.Activate
 End Sub
+
+' CSV (ex.: o "Pontonet 3 meses", que o PontoNet exporta com ";" e acentos em ANSI): lido aqui
+' mesmo, sem abrir no Excel, porque o Excel abre CSV com o separador e o formato de data da
+' configuração do Windows e pode trocar dia e mês. Datas "dd/mm/aaaa" (com ou sem hora) e horas
+' "hh:mm" viram data/hora de verdade; o resto vai como texto.
+Private Sub CopiarCSV(ByVal caminho As String, destino As Worksheet)
+    Dim texto As String
+    texto = LerTextoArquivo(caminho)
+    texto = Replace(Replace(texto, vbCrLf, vbLf), vbCr, vbLf)
+    Dim linhas() As String
+    linhas = Split(texto, vbLf)
+
+    Dim sep As String, primeira As String
+    primeira = linhas(0)
+    If Len(primeira) - Len(Replace(primeira, ";", "")) >= Len(primeira) - Len(Replace(primeira, ",", "")) Then
+        sep = ";"
+    Else
+        sep = ","
+    End If
+
+    Dim i As Long, j As Long, nLin As Long, nCol As Long, campos As Variant
+    For i = 0 To UBound(linhas)
+        If Trim$(linhas(i)) <> "" Then
+            nLin = nLin + 1
+            campos = DividirLinhaCSV(linhas(i), sep)
+            If UBound(campos) + 1 > nCol Then nCol = UBound(campos) + 1
+        End If
+    Next i
+    If nLin = 0 Then Exit Sub
+
+    Dim dados() As Variant, r As Long
+    ReDim dados(1 To nLin, 1 To nCol)
+    r = 0
+    For i = 0 To UBound(linhas)
+        If Trim$(linhas(i)) <> "" Then
+            r = r + 1
+            campos = DividirLinhaCSV(linhas(i), sep)
+            For j = 0 To UBound(campos)
+                If r = 1 Then
+                    dados(r, j + 1) = Trim$(campos(j))      ' cabeçalho: sempre texto
+                Else
+                    dados(r, j + 1) = ValorCSV(CStr(campos(j)))
+                End If
+            Next j
+        End If
+    Next i
+    destino.Range("A1").Resize(nLin, nCol).Value = dados
+End Sub
+
+' Texto do arquivo: UTF-8 se tiver BOM ou se for UTF-8 válido; senão Windows-1252 (ANSI).
+Private Function LerTextoArquivo(ByVal caminho As String) As String
+    Dim st As Object, t As String
+    Set st = CreateObject("ADODB.Stream")
+    st.Type = 2
+    st.Charset = "utf-8"
+    st.Open
+    st.LoadFromFile caminho
+    t = st.ReadText
+    st.Close
+    If InStr(t, ChrW(65533)) > 0 Then
+        Set st = CreateObject("ADODB.Stream")
+        st.Type = 2
+        st.Charset = "windows-1252"
+        st.Open
+        st.LoadFromFile caminho
+        t = st.ReadText
+        st.Close
+    End If
+    If Len(t) > 0 Then
+        If AscW(Left$(t, 1)) = &HFEFF Then t = Mid$(t, 2)
+    End If
+    LerTextoArquivo = t
+End Function
+
+' Divide uma linha de CSV no separador, respeitando campos entre aspas ("a;b" e aspas dobradas "").
+Private Function DividirLinhaCSV(ByVal linha As String, ByVal sep As String) As Variant
+    Dim campos() As String, n As Long, i As Long, ch As String, atual As String, entreAspas As Boolean
+    ReDim campos(0 To 0)
+    For i = 1 To Len(linha)
+        ch = Mid$(linha, i, 1)
+        If entreAspas Then
+            If ch = """" Then
+                If Mid$(linha, i + 1, 1) = """" Then
+                    atual = atual & """"
+                    i = i + 1
+                Else
+                    entreAspas = False
+                End If
+            Else
+                atual = atual & ch
+            End If
+        ElseIf ch = """" Then
+            entreAspas = True
+        ElseIf ch = sep Then
+            ReDim Preserve campos(0 To n)
+            campos(n) = atual
+            n = n + 1
+            atual = ""
+        Else
+            atual = atual & ch
+        End If
+    Next i
+    ReDim Preserve campos(0 To n)
+    campos(n) = atual
+    DividirLinhaCSV = campos
+End Function
+
+' "20/10/2026" -> data; "28/10/2026 10:29" -> data e hora; "07:30" -> hora; o resto, texto.
+Private Function ValorCSV(ByVal t As String) As Variant
+    t = Trim$(t)
+    If t Like "##/##/####" Then
+        ValorCSV = DateSerial(CInt(Mid$(t, 7, 4)), CInt(Mid$(t, 4, 2)), CInt(Left$(t, 2)))
+    ElseIf t Like "##/##/#### ##:##" Or t Like "##/##/#### ##:##:##" Then
+        ValorCSV = DateSerial(CInt(Mid$(t, 7, 4)), CInt(Mid$(t, 4, 2)), CInt(Left$(t, 2))) + _
+            TimeSerial(CInt(Mid$(t, 12, 2)), CInt(Mid$(t, 15, 2)), IIf(Len(t) >= 19, Val(Mid$(t, 18, 2)), 0))
+    ElseIf t Like "##:##" Then
+        ValorCSV = TimeSerial(CInt(Left$(t, 2)), CInt(Right$(t, 2)), 0)
+    Else
+        ValorCSV = t
+    End If
+End Function
 
 ' Devolve a aba com esse nome, LIMPA (conteúdo e formatos). Se não existe, cria no fim da pasta.
 ' A aba existente é reaproveitada (e não apagada) para não quebrar fórmulas que apontem para ela.
@@ -453,6 +597,16 @@ Private Function LoteAbasCartaoOrdenadas(wb As Workbook, ByVal maximoAbas As Lon
         End If
     End If
     Set LoteAbasCartaoOrdenadas = AbasMaisRecentes(EncontrarAbasCartao(wb), maximoAbas)
+End Function
+
+Private Function LoteAbasJornada(wb As Workbook) As Collection
+    If mLote And Not mAbasJornadaLote Is Nothing Then
+        If mAbasJornadaLote.Count > 0 Then
+            Set LoteAbasJornada = mAbasJornadaLote
+            Exit Function
+        End If
+    End If
+    Set LoteAbasJornada = EncontrarAbasJornada(wb)
 End Function
 
 Private Function LoteAbaAfastamentos(wb As Workbook) As Worksheet

@@ -12,7 +12,7 @@ Option Explicit
 '   1. Pede a pasta com os relatórios do sistema.
 '   2. Confere se a pasta tem os 11 arquivos com os nomes combinados (lista em ArquivosEsperados).
 '      O nome é comparado sem diferenciar maiúsculas, acentos e espaços repetidos; a extensão pode
-'      ser .xlsx, .xls, .xlsm ou .xlsb. Se faltar algum (ou houver dois com o mesmo nome), avisa
+'      ser .xlsx, .xls, .xlsm, .xlsb ou .csv. Se faltar algum (ou houver dois com o mesmo nome), avisa
 '      quais e para, sem mexer em nada.
 '   3. Pergunta em qual pasta salvar os CSVs.
 '   4. Copia cada relatório para uma aba desta planilha (se a aba já existe, ela é LIMPA e
@@ -22,9 +22,11 @@ Option Explicit
 '        Digitadas 3 meses         -> FormatarMarcacoesDigitadas -> aba "Marcações Digitadas"
 '        Afastamentos 3 meses      -> FormatarAfastamentos   -> aba "Afastamentos"
 '        Pontonet 3 meses          -> (já vem como tabela)   -> aba "PontoNet"
-'        Excedentes / Interjornada / Interjornada semanal / Intrajornada 3 meses
-'                                  -> copiados como vieram    -> abas com o mesmo nome
-'          (ainda NÃO entram no CSV: falta conhecer o formato desses relatórios)
+'        Excedentes 3 meses        -> FormatarExcedentes     -> aba "Horas Excedentes"
+'        Intrajornada 3 meses      -> FormatarIntrajornada   -> aba "Intrajornada"
+'        Interjornada 3 meses      -> FormatarInterjornada   -> aba "Interjornada"
+'        Interjornada semanal 3 m. -> FormatarInterjornadaSemanal -> aba "Interjornada Semanal"
+'        (Pontonet pode vir em .csv: é lido direto, ver CopiarCSV)
 '   5. Roda o GerarAbaCSV ("Cartão ponto 3" = mês atual, 2 e 1 = meses anteriores; usando SÓ as abas que acabou de importar para Cartão, Pausas, Digitadas e
 '      Afastamentos; Tratamento, RE e ORG continuam vindo das abas da planilha) e o
 '      ExportarCSVPorGestor na pasta escolhida.
@@ -41,6 +43,7 @@ Private mAbasCartaoLote As Collection       ' abas de Cartão importadas agora (
 Private mAbaAfastLote As Worksheet
 Private mAbaDigitLote As Worksheet
 Private mAbaPausasLote As Worksheet
+Private mAbasJornadaLote As Collection      ' Horas Excedentes, Intrajornada, Interjornada, Interjornada Semanal
 
 Private Const TITULO_LOTE As String = "Atualizar Painel de Ponto"
 Private Const ABA_CONSOLIDADO As String = "Cartao_Consolidado"
@@ -56,10 +59,10 @@ Private Function ArquivosEsperados() As Variant
         Array("Digitadas 3 meses", "Marcações Digitadas", "DIGITADAS"), _
         Array("Afastamentos 3 meses", "Afastamentos", "AFASTAMENTOS"), _
         Array("Pontonet 3 meses", "PontoNet", "PONTONET"), _
-        Array("Excedentes 3 meses", "Excedentes", "BRUTO"), _
-        Array("Interjornada 3 meses", "Interjornada", "BRUTO"), _
-        Array("Interjornada semanal 3 meses", "Interjornada Semanal", "BRUTO"), _
-        Array("Intrajornada 3 meses", "Intrajornada", "BRUTO"))
+        Array("Excedentes 3 meses", "Horas Excedentes", "EXCEDENTES"), _
+        Array("Intrajornada 3 meses", "Intrajornada", "INTRA"), _
+        Array("Interjornada 3 meses", "Interjornada", "INTER"), _
+        Array("Interjornada semanal 3 meses", "Interjornada Semanal", "SEMANAL"))
 End Function
 
 Public Sub AtualizarPainelPonto()
@@ -113,6 +116,7 @@ Public Sub AtualizarPainelPonto()
     Set mAbaAfastLote = Nothing
     Set mAbaDigitLote = Nothing
     Set mAbaPausasLote = Nothing
+    Set mAbasJornadaLote = New Collection
 
     Dim etapa As String, avisos As String
     Dim consolidadoGuardado As Boolean
@@ -203,7 +207,23 @@ Public Sub AtualizarPainelPonto()
                     "a demora no PontoNet vai sair vazia no painel."
             End If
 
-        Case Else ' BRUTO
+        Case "EXCEDENTES", "INTRA", "INTER", "SEMANAL"
+            Set wsAba = AbaLimpa(wb, nomeAba)
+            CopiarRelatorio caminhos(i), wsAba
+            etapa = "formatar """ & nomeArq & """ (FormatarJornada)"
+            wsAba.Activate
+            Select Case tipo
+                Case "EXCEDENTES": FormatarExcedentes
+                Case "INTRA": FormatarIntrajornada
+                Case "INTER": FormatarInterjornada
+                Case Else: FormatarInterjornadaSemanal
+            End Select
+            If ColunaPorCabecalho(wsAba, "Ocorrência") = 0 Or ColunaPorCabecalho(wsAba, "Detalhe") = 0 Then
+                Err.Raise vbObjectError + 8, , "A tabela de jornada não foi gerada (confira se é o relatório certo)."
+            End If
+            mAbasJornadaLote.Add wsAba
+
+        Case Else ' copiado como veio
             Set wsAba = AbaLimpa(wb, nomeAba)
             CopiarRelatorio caminhos(i), wsAba
         End Select
@@ -257,9 +277,7 @@ Public Sub AtualizarPainelPonto()
 
     MsgBox "Pronto! Relatórios importados e CSVs salvos." & vbCrLf & vbCrLf & _
         resumoExport & vbCrLf & vbCrLf & _
-        "---- Resumo do CSV ----" & vbCrLf & resumoCSV & vbCrLf & vbCrLf & _
-        "Excedentes, Interjornada, Interjornada semanal e Intrajornada foram copiados para abas com " & _
-        "esses nomes, mas ainda não entram no CSV/painel." & _
+        "---- Resumo do CSV ----" & vbCrLf & resumoCSV & _
         IIf(avisos <> "", vbCrLf & vbCrLf & "ATENÇÃO:" & avisos, ""), vbInformation, TITULO_LOTE
     Exit Sub
 
@@ -290,6 +308,7 @@ Private Sub LimparEstadoLote(wb As Workbook, ByVal consolidadoGuardado As Boolea
     Set mAbaAfastLote = Nothing
     Set mAbaDigitLote = Nothing
     Set mAbaPausasLote = Nothing
+    Set mAbasJornadaLote = Nothing
     Application.CutCopyMode = False
     Application.Calculation = calcAntes
     Application.DisplayAlerts = True
@@ -309,7 +328,7 @@ Private Function LocalizarArquivos(ByVal pasta As String, lista As Variant, ByRe
     Set repetidos = CreateObject("Scripting.Dictionary")
     For Each arq In fso.GetFolder(pasta).Files
         ext = LCase$(fso.GetExtensionName(arq.Name))
-        If Left$(arq.Name, 2) <> "~$" And (ext = "xlsx" Or ext = "xls" Or ext = "xlsm" Or ext = "xlsb") Then
+        If Left$(arq.Name, 2) <> "~$" And (ext = "xlsx" Or ext = "xls" Or ext = "xlsm" Or ext = "xlsb" Or ext = "csv") Then
             chave = NomeComparavel(fso.GetBaseName(arq.Name))
             If porNome.Exists(chave) Then
                 repetidos(chave) = repetidos(chave) & ", " & arq.Name
@@ -346,7 +365,7 @@ Private Function LocalizarArquivos(ByVal pasta As String, lista As Variant, ByRe
             If Not usados.Exists(k) Then sobrando = sobrando & vbCrLf & "  - " & fso.GetFileName(porNome(k))
         Next k
         If sobrando <> "" Then
-            texto = texto & vbCrLf & vbCrLf & "Arquivos Excel da pasta que não bateram com nenhum nome " & _
+            texto = texto & vbCrLf & vbCrLf & "Arquivos Excel/CSV da pasta que não bateram com nenhum nome " & _
                 "(confira se não é um deles com o nome diferente):" & sobrando
         End If
     End If
@@ -365,6 +384,10 @@ End Function
 ' Abre o relatório só para leitura e copia a primeira aba para "destino" (mesmas posições de células,
 ' com formatos, para as macros de formatação lerem como se fosse o arquivo original).
 Private Sub CopiarRelatorio(ByVal caminho As String, destino As Worksheet)
+    If LCase$(Right$(caminho, 4)) = ".csv" Then
+        CopiarCSV caminho, destino
+        Exit Sub
+    End If
     Dim wbOrigem As Workbook, jaAberto As Boolean, w As Workbook
     For Each w In Application.Workbooks
         If LCase$(w.FullName) = LCase$(caminho) Then
@@ -386,6 +409,127 @@ Private Sub CopiarRelatorio(ByVal caminho As String, destino As Worksheet)
     If Not jaAberto Then wbOrigem.Close SaveChanges:=False
     ThisWorkbook.Activate
 End Sub
+
+' CSV (ex.: o "Pontonet 3 meses", que o PontoNet exporta com ";" e acentos em ANSI): lido aqui
+' mesmo, sem abrir no Excel, porque o Excel abre CSV com o separador e o formato de data da
+' configuração do Windows e pode trocar dia e mês. Datas "dd/mm/aaaa" (com ou sem hora) e horas
+' "hh:mm" viram data/hora de verdade; o resto vai como texto.
+Private Sub CopiarCSV(ByVal caminho As String, destino As Worksheet)
+    Dim texto As String
+    texto = LerTextoArquivo(caminho)
+    texto = Replace(Replace(texto, vbCrLf, vbLf), vbCr, vbLf)
+    Dim linhas() As String
+    linhas = Split(texto, vbLf)
+
+    Dim sep As String, primeira As String
+    primeira = linhas(0)
+    If Len(primeira) - Len(Replace(primeira, ";", "")) >= Len(primeira) - Len(Replace(primeira, ",", "")) Then
+        sep = ";"
+    Else
+        sep = ","
+    End If
+
+    Dim i As Long, j As Long, nLin As Long, nCol As Long, campos As Variant
+    For i = 0 To UBound(linhas)
+        If Trim$(linhas(i)) <> "" Then
+            nLin = nLin + 1
+            campos = DividirLinhaCSV(linhas(i), sep)
+            If UBound(campos) + 1 > nCol Then nCol = UBound(campos) + 1
+        End If
+    Next i
+    If nLin = 0 Then Exit Sub
+
+    Dim dados() As Variant, r As Long
+    ReDim dados(1 To nLin, 1 To nCol)
+    r = 0
+    For i = 0 To UBound(linhas)
+        If Trim$(linhas(i)) <> "" Then
+            r = r + 1
+            campos = DividirLinhaCSV(linhas(i), sep)
+            For j = 0 To UBound(campos)
+                If r = 1 Then
+                    dados(r, j + 1) = Trim$(campos(j))      ' cabeçalho: sempre texto
+                Else
+                    dados(r, j + 1) = ValorCSV(CStr(campos(j)))
+                End If
+            Next j
+        End If
+    Next i
+    destino.Range("A1").Resize(nLin, nCol).Value = dados
+End Sub
+
+' Texto do arquivo: UTF-8 se tiver BOM ou se for UTF-8 válido; senão Windows-1252 (ANSI).
+Private Function LerTextoArquivo(ByVal caminho As String) As String
+    Dim st As Object, t As String
+    Set st = CreateObject("ADODB.Stream")
+    st.Type = 2
+    st.Charset = "utf-8"
+    st.Open
+    st.LoadFromFile caminho
+    t = st.ReadText
+    st.Close
+    If InStr(t, ChrW(65533)) > 0 Then
+        Set st = CreateObject("ADODB.Stream")
+        st.Type = 2
+        st.Charset = "windows-1252"
+        st.Open
+        st.LoadFromFile caminho
+        t = st.ReadText
+        st.Close
+    End If
+    If Len(t) > 0 Then
+        If AscW(Left$(t, 1)) = &HFEFF Then t = Mid$(t, 2)
+    End If
+    LerTextoArquivo = t
+End Function
+
+' Divide uma linha de CSV no separador, respeitando campos entre aspas ("a;b" e aspas dobradas "").
+Private Function DividirLinhaCSV(ByVal linha As String, ByVal sep As String) As Variant
+    Dim campos() As String, n As Long, i As Long, ch As String, atual As String, entreAspas As Boolean
+    ReDim campos(0 To 0)
+    For i = 1 To Len(linha)
+        ch = Mid$(linha, i, 1)
+        If entreAspas Then
+            If ch = """" Then
+                If Mid$(linha, i + 1, 1) = """" Then
+                    atual = atual & """"
+                    i = i + 1
+                Else
+                    entreAspas = False
+                End If
+            Else
+                atual = atual & ch
+            End If
+        ElseIf ch = """" Then
+            entreAspas = True
+        ElseIf ch = sep Then
+            ReDim Preserve campos(0 To n)
+            campos(n) = atual
+            n = n + 1
+            atual = ""
+        Else
+            atual = atual & ch
+        End If
+    Next i
+    ReDim Preserve campos(0 To n)
+    campos(n) = atual
+    DividirLinhaCSV = campos
+End Function
+
+' "20/10/2026" -> data; "28/10/2026 10:29" -> data e hora; "07:30" -> hora; o resto, texto.
+Private Function ValorCSV(ByVal t As String) As Variant
+    t = Trim$(t)
+    If t Like "##/##/####" Then
+        ValorCSV = DateSerial(CInt(Mid$(t, 7, 4)), CInt(Mid$(t, 4, 2)), CInt(Left$(t, 2)))
+    ElseIf t Like "##/##/#### ##:##" Or t Like "##/##/#### ##:##:##" Then
+        ValorCSV = DateSerial(CInt(Mid$(t, 7, 4)), CInt(Mid$(t, 4, 2)), CInt(Left$(t, 2))) + _
+            TimeSerial(CInt(Mid$(t, 12, 2)), CInt(Mid$(t, 15, 2)), IIf(Len(t) >= 19, Val(Mid$(t, 18, 2)), 0))
+    ElseIf t Like "##:##" Then
+        ValorCSV = TimeSerial(CInt(Left$(t, 2)), CInt(Right$(t, 2)), 0)
+    Else
+        ValorCSV = t
+    End If
+End Function
 
 ' Devolve a aba com esse nome, LIMPA (conteúdo e formatos). Se não existe, cria no fim da pasta.
 ' A aba existente é reaproveitada (e não apagada) para não quebrar fórmulas que apontem para ela.
@@ -455,6 +599,16 @@ Private Function LoteAbasCartaoOrdenadas(wb As Workbook, ByVal maximoAbas As Lon
         End If
     End If
     Set LoteAbasCartaoOrdenadas = AbasMaisRecentes(EncontrarAbasCartao(wb), maximoAbas)
+End Function
+
+Private Function LoteAbasJornada(wb As Workbook) As Collection
+    If mLote And Not mAbasJornadaLote Is Nothing Then
+        If mAbasJornadaLote.Count > 0 Then
+            Set LoteAbasJornada = mAbasJornadaLote
+            Exit Function
+        End If
+    End If
+    Set LoteAbasJornada = EncontrarAbasJornada(wb)
 End Function
 
 Private Function LoteAbaAfastamentos(wb As Workbook) As Worksheet
@@ -1336,46 +1490,36 @@ End Function
 ' ============================================================================
 ' FormatarPausasTermicas
 '
-' DE ONDE VEM: a aba ATIVA no momento em que a macro é executada (ws =
-'   ActiveSheet). Espera-se que seja o "Relatório Analítico de Pausas
-'   Térmicas" bruto, exportado como um único "dump" de impressão: cabeçalhos
-'   de página repetidos a cada colaborador, uma tabela de marcações por dia,
-'   um bloco "Total do Colaborador" ao final de cada colaborador, e um bloco
-'   "Total Geral" (com a legenda e o rodapé do relatório) no final do
-'   arquivo inteiro.
+' DE ONDE VEM: a aba ATIVA, com o "Relatório Analítico de Pausas Térmicas" (HRES114) bruto: um
+'   bloco por colaborador (matrícula, nome, cargo), uma linha por dia com as batidas (hora + tipo:
+'   P = entrada/saída da jornada, F = pausa térmica, G = refeição), o bloco "Total do Colaborador"
+'   e, no fim, o "Total Geral" e a legenda.
 '
-' PARA ONDE VAI E O QUE ESTE MACRO FAZ: reescreve essa MESMA aba (in-place),
-'   substituindo o "dump" bruto por apenas DUAS tabelas limpas, uma abaixo
-'   da outra, e NADA MAIS (sem título em cima, sem legenda/rodapé/"Soma dos
-'   itens" embaixo):
-'     1) Tabela de colaboradores - começa na linha 1 (cabeçalho) e tem uma
-'        linha por colaborador, com os 7 números que o próprio relatório
-'        original já calcula (Pausa corretas/menor/maior 0:20, Trabalho
-'        correto/maior/menor 1:40, Marcações Ímpares).
-'     2) Tabela de total - depois de UMA linha em branco, com o "Total
-'        Geral" desses mesmos 7 números para todos os colaboradores, também
-'        já calculado pelo relatório original.
-'   A linha em branco entre as duas é proposital: é ela que marca o fim da
-'   tabela de colaboradores para quem lê esta aba depois (GerarCSVPonto).
-'   Este macro NÃO recalcula nada: ele só ENCONTRA esses dois blocos dentro
-'   do relatório bruto (que já vêm prontos do sistema de ponto) e os copia
-'   para um layout de tabela normal, descartando o cabeçalho de página, a
-'   legenda, a tabela de marcações dia a dia e o rodapé — nada disso é usado
-'   por quem consome o resultado (a aba "Totais por Colaborador" é lida
-'   depois pelo macro GerarCSVPonto, na função GerarResumoPausasTermicas,
-'   que só precisa dessas duas tabelas).
+' PARA ONDE VAI: a mesma aba, reescrita com três tabelas, uma embaixo da outra:
+'   1) POR CICLO (cabeçalho na linha 1): uma linha por colaborador e por ciclo de apuração (28 a 27),
+'      com os 7 números CALCULADOS por esta macro a partir das linhas de cada dia:
+'      Matrícula | Colaborador | Cargo | Fim do ciclo | Pausa corretas | Pausa menor 0:20 |
+'      Pausa maior 0:20 | Trabalho correto 1:40 | Trabalho maior 1:40 | Trabalho menor 1:40 |
+'      Marcações Ímpares. A linha em branco depois dela marca o fim para o GerarCSVPonto.
+'   2) CONFERÊNCIA: o "Total do Colaborador" do próprio relatório (período inteiro) ao lado da soma
+'      dos ciclos calculados, com "Confere?" = Sim/Não.
+'   3) TOTAL GERAL do relatório.
 '
-' POR QUE SÓ ESSAS DUAS TABELAS (e não a tabela detalhada de marcações):
-'   Este macro já teve uma versão que também reconstruía uma tabela com uma
-'   linha por marcação de ponto (classificando cada intervalo em "pausa
-'   correta/curta" e "trabalho correto/curto/longo"), mais a legenda de
-'   classificação e o cabeçalho do relatório. Essa versão foi simplificada a
-'   pedido do RH: o que realmente é consumido no fluxo (GerarCSVPonto) são
-'   só os totais por colaborador e o total geral, então o macro agora entrega
-'   só isso, sem título/legenda/tabela de marcações.
+' POR QUE CALCULAR (pedido do Dimitri, 03/11): o relatório vem com 3 meses e o total que ele traz
+'   é dos 3 meses juntos; o painel precisa dos números de cada mês.
 '
-' Rode este macro numa CÓPIA da planilha antes de usar em produção — ele
-' reescreve a aba ativa por completo (Ctrl+Z desfaz se rodar por engano).
+' A REGRA (descoberta comparando com o "Total do Colaborador" de 52 colaboradores, 28/07 a 27/10):
+'   - as batidas do dia se alternam saída/volta pela POSIÇÃO; o trecho da 1ª para a 2ª batida, da
+'     3ª para a 4ª... é TRABALHO; os outros são intervalo;
+'   - intervalo entre duas batidas "F" é PAUSA TÉRMICA: 20 min ou mais = correta, menos = menor
+'     (o relatório nunca conta "pausa maior"; a coluna fica, sempre 0);
+'   - trabalho de exatamente 1:40 = correto, mais = maior, menos = menor;
+'   - dia com número ímpar de batidas = 1 "marcação ímpar", e o último trecho do dia conta como
+'     trabalho;
+'   - batidas depois da meia-noite pertencem ao dia em que a jornada começou (como no relatório).
+'   Resultado: pausas (corretas e menores) e marcações ímpares iguais ao sistema nos 52; os três
+'   números de trabalho iguais em 36 dos 52 (nos outros, diferença de 1 a 13 trechos em dias com
+'   batidas fora do padrão). A tabela de conferência mostra isso a cada mês.
 ' ============================================================================
 
 Private Sub FormatarPausasTermicas()
@@ -1383,254 +1527,301 @@ Private Sub FormatarPausasTermicas()
     Dim ws As Worksheet
     Set ws = ActiveSheet
 
-    Dim lastRow As Long
-    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
-    If lastRow < 2 Then
+    Dim ultLin As Long, ultCol As Long
+    ultLin = ws.UsedRange.Row + ws.UsedRange.Rows.Count - 1
+    ultCol = ws.UsedRange.Column + ws.UsedRange.Columns.Count - 1
+    If ultLin < 2 Then
         Avisar "Nenhum dado encontrado na aba ativa.", vbExclamation
         Exit Sub
     End If
 
     If Perguntar("Este macro vai REESCREVER completamente a aba """ & ws.Name & _
-              """, deixando só os totais por colaborador e o total geral." & vbCrLf & vbCrLf & _
-              "Recomendado: rode numa CÓPIA do arquivo." & vbCrLf & vbCrLf & _
-              "Continuar?", vbYesNo + vbQuestion, "Formatar Pausas Térmicas") = vbNo Then
+              """, deixando os totais por colaborador e por ciclo (28 a 27), a conferência com o relatório " & _
+              "e o total geral." & vbCrLf & vbCrLf & "Continuar?", vbYesNo + vbQuestion, "Formatar Pausas Térmicas") = vbNo Then
         Exit Sub
     End If
 
     Application.ScreenUpdating = False
-    Application.Calculation = xlCalculationManual
-    Application.StatusBar = "Lendo dados originais..."
+    Application.StatusBar = "Lendo o relatório de pausas..."
 
-    ' ---------- Totais gerais originais (bloco "Total Geral" do relatório) ----------
-    Dim geralPausaCorretas As Variant, geralPausaMenor As Variant, geralPausaMaior As Variant
-    Dim geralTrabCorreto As Variant, geralTrabMaior As Variant, geralTrabMenor As Variant
-    Dim geralMarcacoesImpares As Variant
-    Dim temGeral As Boolean
+    Dim dados As Variant
+    dados = ws.Range(ws.Cells(1, 1), ws.Cells(ultLin, ultCol)).Value2
 
-    ' ---------- Totais por colaborador (um item por colaborador, bloco "Total do Colaborador") ----------
-    Dim totColMatricula As Collection, totColNome As Collection, totColCargo As Collection
-    Dim totColVals As Collection    ' cada item é um array(1 to 7)
-    Set totColMatricula = New Collection
-    Set totColNome = New Collection
-    Set totColCargo = New Collection
-    Set totColVals = New Collection
+    ' por ciclo: chave "matrícula|fim do ciclo" -> Array(mat, nome, cargo, fimCiclo, 7 números)
+    Dim dictCiclo As Object, ordemCiclo As Collection
+    Set dictCiclo = CreateObject("Scripting.Dictionary")
+    Set ordemCiclo = New Collection
+    ' conferência: uma linha por bloco "Total do Colaborador"
+    Dim confLinhas As Collection
+    Set confLinhas = New Collection
+    Dim geral(1 To 7) As Variant, temGeral As Boolean
 
-    ' Contexto do colaborador "atual" enquanto varremos o relatório de cima a baixo: atualizado
-    ' sempre que passamos pela linha de identificação do colaborador, e usado quando encontramos o
-    ' bloco "Total do Colaborador" logo depois (esse bloco não repete matrícula/nome/cargo, então
-    ' precisamos ter guardado isso momentos antes).
-    Dim curMatricula As String, curNome As String, curCargo As String
+    Dim curMat As String, curNome As String, curCargo As String
+    Dim somaPessoa(1 To 7) As Long
+    Dim r As Long, k As Long, i As Long, qtdBat As Long
+    Dim horas() As Double, tipos() As String
+    ReDim horas(1 To ultCol)
+    ReDim tipos(1 To ultCol)
+    Dim t(1 To 7) As Long, chave As String, fimCiclo As Date, item As Variant
+    Dim a1 As Variant, b1 As Variant, c1 As Variant
 
-    ' ============================================================
-    ' Varredura do relatório bruto, linha a linha.
-    ' Este relatório é um "dump" de impressão, não uma tabela: cada tipo de linha (marcação de dia,
-    ' identificação do colaborador, subtotal do colaborador, total geral) tem um formato de
-    ' texto/posição próprio, reconhecido aqui pelo conteúdo das colunas A/B/F. Linhas que não
-    ' interessam para o resultado final (cabeçalho de página, legenda, "Soma dos itens", marcação
-    ' dia a dia, rodapé) são simplesmente puladas (ramo Else, ao final) — não precisamos extrair nada
-    ' delas, já que a saída deste macro não as usa.
-    ' ============================================================
-    Dim r As Long
-    r = 1
-    Do While r <= lastRow
+    For r = 1 To UBound(dados, 1)
+        a1 = PCel(dados, r, 1)
+        b1 = PCel(dados, r, 2)
+        c1 = PCel(dados, r, 3)
 
-        Dim a1 As Variant, b1 As Variant, f1 As Variant
-        a1 = ws.Cells(r, 1).Value
-        b1 = ws.Cells(r, 2).Value
-        f1 = ws.Cells(r, 6).Value
+        If PNum(a1) And VarType(b1) = vbString And Not PEhTipo(c1) Then
+            If Trim$(b1) <> "" And Trim$(b1) <> "-" Then
+                ' identificação do colaborador: A = matrícula, B = nome, F = cargo
+                curMat = CStr(CLng(a1))
+                curNome = Trim$(b1)
+                curCargo = PTxt(PCel(dados, r, 6))
+                For i = 1 To 7: somaPessoa(i) = 0: Next i
+            End If
 
-        If UCase(ws.Cells(r, 1).NumberFormat) = "DD/MM/YYYY" And IsNumeric(a1) And Len(Trim(CStr(a1))) > 0 Then
-            ' ---------------- Linha de marcações do dia (uma data + as batidas de ponto daquele
-            ' dia, nas colunas B, D, F...) ----------------
-            ' Esses dados alimentavam a antiga tabela detalhada (uma linha por marcação), que não
-            ' faz mais parte da saída deste macro (ver cabeçalho do arquivo). Os números que
-            ' interessam (Pausa corretas/menor/maior, Trabalho correto/maior/menor, Marcações
-            ' Ímpares) não são recalculados a partir dessas marcações: eles já vêm prontos, por
-            ' colaborador, no bloco "Total do Colaborador" mais abaixo no relatório - por isso esta
-            ' linha só precisa ser pulada.
-            r = r + 1
+        ElseIf PNum(a1) And PEhTipo(c1) And curMat <> "" Then
+            ' linha do dia: A = data; depois pares (hora, tipo) a partir da coluna B
+            qtdBat = 0
+            k = 2
+            Do While k + 1 <= UBound(dados, 2)
+                If Not (PNum(dados(r, k)) And PEhTipo(dados(r, k + 1))) Then Exit Do
+                qtdBat = qtdBat + 1
+                horas(qtdBat) = CDbl(dados(r, k))
+                tipos(qtdBat) = UCase$(Trim$(dados(r, k + 1)))
+                k = k + 2
+            Loop
+            ClassificarDiaPausas horas, tipos, qtdBat, t
 
-        ElseIf IsNumeric(a1) And ws.Cells(r, 1).NumberFormat <> "DD/MM/YYYY" _
-                And Len(Trim(CStr(b1))) > 0 And Not IsNumeric(b1) _
-                And Len(Trim(CStr(f1))) > 0 Then
-            ' ---------------- Linha de identificação do colaborador ----------------
-            ' Formato: coluna A = matrícula (número, mas SEM o formato de data DD/MM/YYYY das
-            ' linhas de marcação), coluna B = nome (texto), coluna F = cargo (texto). Guardamos os
-            ' três em curMatricula/curNome/curCargo para rotular o bloco "Total do Colaborador"
-            ' deste mesmo colaborador, que vem logo a seguir no relatório.
-            curMatricula = CStr(CLng(a1))
-            curNome = Trim(CStr(b1))
-            curCargo = Trim(CStr(f1))
-            r = r + 1
+            fimCiclo = FimDoCiclo(CDate(Int(CDbl(a1))))
+            chave = curMat & "|" & CLng(fimCiclo)
+            If Not dictCiclo.Exists(chave) Then
+                dictCiclo.Add chave, Array(curMat, curNome, curCargo, fimCiclo, 0, 0, 0, 0, 0, 0, 0)
+                ordemCiclo.Add chave
+            End If
+            item = dictCiclo(chave)
+            For i = 1 To 7
+                item(3 + i) = item(3 + i) + t(i)
+                somaPessoa(i) = somaPessoa(i) + t(i)
+            Next i
+            dictCiclo(chave) = item
 
-        ElseIf Trim(CStr(a1)) = "Total do Colaborador" Then
-            ' ---------------- Subtotais do colaborador (já calculados pelo relatório original) ----
-            ' Os 7 números ficam sempre 2 linhas abaixo do rótulo "Total do Colaborador", em
-            ' colunas fixas (posições definidas pelo layout de impressão do relatório original) -
-            ' por isso os deslocamentos "r + 2" e os números de coluna abaixo são fixos, não
-            ' calculados por cabeçalho como em outras partes deste projeto.
-            Dim valsCol(1 To 7) As Variant
-            valsCol(1) = ws.Cells(r + 2, 1).Value  ' Pausa corretas
-            valsCol(2) = ws.Cells(r + 2, 2).Value  ' Pausa menor 0:20
-            valsCol(3) = ws.Cells(r + 2, 4).Value  ' Pausa maior 0:20
-            valsCol(4) = ws.Cells(r + 2, 6).Value  ' Trabalho correto 1:40
-            valsCol(5) = ws.Cells(r + 2, 8).Value  ' Trabalho maior 1:40
-            valsCol(6) = ws.Cells(r + 2, 10).Value ' Trabalho menor 1:40
-            valsCol(7) = ws.Cells(r + 2, 11).Value ' Marcações Ímpares
+        ElseIf Trim$(PTxt(a1)) = "Total do Colaborador" And curMat <> "" Then
+            ' 7 números do sistema 2 linhas abaixo, nas colunas A, B, D, F, H, J, K
+            Dim sist As Variant, confere As Boolean, cols As Variant
+            cols = Array(1, 2, 4, 6, 8, 10, 11)
+            sist = Array(0, 0, 0, 0, 0, 0, 0)
+            confere = True
+            For i = 0 To 6
+                sist(i) = CLng(PNumOuZero(PCel(dados, r + 2, cols(i))))
+                If sist(i) <> somaPessoa(i + 1) Then confere = False
+            Next i
+            confLinhas.Add Array(curMat, curNome, curCargo, sist, _
+                Array(somaPessoa(1), somaPessoa(2), somaPessoa(3), somaPessoa(4), somaPessoa(5), somaPessoa(6), somaPessoa(7)), confere)
 
-            totColMatricula.Add curMatricula
-            totColNome.Add curNome
-            totColCargo.Add curCargo
-            totColVals.Add valsCol
-
-            r = r + 3
-
-        ElseIf Trim(CStr(a1)) = "Total" And Trim(CStr(b1)) = "Geral" Then
-            ' ---------------- Total geral (soma de todos os colaboradores, já calculada) ----------
-            ' Mesma lógica de deslocamento fixo "r + 2" do bloco "Total do Colaborador" acima, só
-            ' que aqui é a única ocorrência do relatório inteiro (por isso a flag temGeral, usada
-            ' na hora de escrever a saída: só escrevemos a seção "Total Geral" se ela existir).
-            geralPausaCorretas = ws.Cells(r + 2, 1).Value
-            geralPausaMenor = ws.Cells(r + 2, 2).Value
-            geralPausaMaior = ws.Cells(r + 2, 4).Value
-            geralTrabCorreto = ws.Cells(r + 2, 6).Value
-            geralTrabMaior = ws.Cells(r + 2, 8).Value
-            geralTrabMenor = ws.Cells(r + 2, 10).Value
-            geralMarcacoesImpares = ws.Cells(r + 2, 11).Value
+        ElseIf Trim$(PTxt(a1)) = "Total" And Trim$(PTxt(b1)) = "Geral" Then
+            cols = Array(1, 2, 4, 6, 8, 10, 11)
+            For i = 0 To 6
+                geral(i + 1) = PCel(dados, r + 2, cols(i))
+            Next i
             temGeral = True
-            r = r + 3
-
-        Else
-            ' ---------------- Qualquer outra linha: cabeçalho de página, legenda original do
-            ' relatório, "Soma dos itens 1 e 3...", rodapé (linhas "HRES...") etc. ----------------
-            ' Nenhuma dessas informações faz parte da saída deste macro (pedido do RH: "só as
-            ' tabelas dos colaboradores e a tabela de total, mais nada"), então essas linhas são
-            ' simplesmente ignoradas - avançamos uma linha e seguimos procurando os blocos que
-            ' interessam.
-            r = r + 1
         End If
-    Loop
+    Next r
 
-    Application.StatusBar = "Reescrevendo a planilha..."
-
-    ' Cells.Clear apaga valores/formatos, mas não desfaz o AutoFiltro nem o congelamento de
-    ' painéis de uma execução anterior nesta mesma aba - por isso os dois são desligados antes.
-    If ws.AutoFilterMode Then ws.AutoFilterMode = False
-    ws.Cells.Clear
-    ActiveWindow.FreezePanes = False
-
-    Dim subHeaders As Variant
-    subHeaders = Array("Matrícula", "Colaborador", "Cargo", "Pausa corretas", _
-                        "Pausa menor 0:20", "Pausa maior 0:20", "Trabalho correto 1:40", _
-                        "Trabalho maior 1:40", "Trabalho menor 1:40", "Marcações Ímpares")
-
-    ' ============================================================
-    ' 1) Tabela de colaboradores (cabeçalho na linha 1, sem título em cima)
-    ' ============================================================
-    Dim writeRow As Long, shRow As Long, hcol As Long
-    shRow = 1
-    For hcol = 1 To 10
-        ws.Cells(shRow, hcol).Value = subHeaders(hcol - 1)
-    Next hcol
-    FormatarCabecalho ws.Range(ws.Cells(shRow, 1), ws.Cells(shRow, 10))
-    writeRow = shRow + 1
-
-    Dim ti As Long, k As Long
-    For ti = 1 To totColMatricula.Count
-        Dim vv As Variant
-        vv = totColVals(ti)
-        ws.Cells(writeRow, 1).Value = totColMatricula(ti)
-        ws.Cells(writeRow, 2).Value = totColNome(ti)
-        ws.Cells(writeRow, 3).Value = totColCargo(ti)
-        For k = 1 To 7
-            ws.Cells(writeRow, 3 + k).Value = vv(k)
-        Next k
-        writeRow = writeRow + 1
-    Next ti
-
-    If totColMatricula.Count > 0 Then
-        With ws.Range(ws.Cells(shRow, 1), ws.Cells(writeRow - 1, 10))
-            .Borders.LineStyle = xlContinuous
-            .Borders.Weight = xlThin
-        End With
-
-        ' Ativa o AutoFiltro na tabela e congela a linha de cabeçalho, para facilitar a
-        ' conferência quando a lista de colaboradores for longa.
-        ws.Range(ws.Cells(shRow, 1), ws.Cells(writeRow - 1, 10)).AutoFilter
-        ws.Activate
-        ws.Rows(shRow + 1).Select
-        ActiveWindow.FreezePanes = True
+    If dictCiclo.Count = 0 Then
+        Application.ScreenUpdating = True
+        Application.StatusBar = False
+        Avisar "Não encontrei nenhuma linha de dia (data + batidas P/F/G) na aba ativa.", vbExclamation, _
+            "Formatar Pausas Térmicas"
+        Exit Sub
     End If
 
-    ' ============================================================
-    ' 2) Tabela de total (uma linha em branco depois da tabela de colaboradores)
-    '    As colunas D:J são as mesmas da tabela de cima, para os números ficarem
-    '    alinhados; A:C viram uma única célula de rótulo.
-    ' ============================================================
+    Application.StatusBar = "Reescrevendo a aba..."
+    If ws.AutoFilterMode Then ws.AutoFilterMode = False
+    ws.Cells.Clear
+
+    Dim nomes7 As Variant
+    nomes7 = Array("Pausa corretas", "Pausa menor 0:20", "Pausa maior 0:20", "Trabalho correto 1:40", _
+                   "Trabalho maior 1:40", "Trabalho menor 1:40", "Marcações Ímpares")
+
+    ' ---------------- 1) por ciclo
+    Dim lin As Long, hcol As Long
+    ws.Cells(1, 1).Value = "Matrícula"
+    ws.Cells(1, 2).Value = "Colaborador"
+    ws.Cells(1, 3).Value = "Cargo"
+    ws.Cells(1, 4).Value = "Fim do ciclo"
+    For hcol = 0 To 6
+        ws.Cells(1, 5 + hcol).Value = nomes7(hcol)
+    Next hcol
+    FormatarCabecalho ws.Range("A1:K1")
+
+    Dim saida() As Variant, n As Long, ch As Variant
+    ReDim saida(1 To dictCiclo.Count, 1 To 11)
+    n = 0
+    For Each ch In ordemCiclo
+        item = dictCiclo(ch)
+        n = n + 1
+        saida(n, 1) = CLng(item(0))
+        saida(n, 2) = item(1)
+        saida(n, 3) = item(2)
+        saida(n, 4) = item(3)
+        For i = 1 To 7
+            saida(n, 4 + i) = item(3 + i)
+        Next i
+    Next ch
+    ws.Range("A2").Resize(n, 11).Value = saida
+    ws.Range("D2").Resize(n, 1).NumberFormat = "dd/mm/yyyy"
+    ws.Range("A1").Resize(n + 1, 11).Borders.LineStyle = xlContinuous
+    lin = n + 4   ' linha n+2 fica EM BRANCO: é ela que marca o fim da tabela 1 para o GerarCSVPonto
+
+    ' ---------------- 2) conferência com o relatório (período inteiro)
+    ws.Cells(lin - 1, 1).Value = "Conferência: total do relatório (período inteiro) x soma dos ciclos calculados"
+    ws.Cells(lin - 1, 1).Font.Bold = True
+    ws.Cells(lin, 1).Value = "Matrícula"
+    ws.Cells(lin, 2).Value = "Colaborador"
+    ws.Cells(lin, 3).Value = "Cargo"
+    For hcol = 0 To 6
+        ws.Cells(lin, 4 + hcol).Value = "Relatório: " & nomes7(hcol)
+    Next hcol
+    ws.Cells(lin, 11).Value = "Confere?"
+    ws.Cells(lin, 12).Value = "Diferenças (relatório x cálculo)"
+    FormatarCabecalho ws.Range(ws.Cells(lin, 1), ws.Cells(lin, 12))
+    Dim inicioConf As Long, qtdConfere As Long, dif As String, cf As Variant
+    inicioConf = lin
+    For Each cf In confLinhas
+        lin = lin + 1
+        ws.Cells(lin, 1).Value = CLng(cf(0))
+        ws.Cells(lin, 2).Value = cf(1)
+        ws.Cells(lin, 3).Value = cf(2)
+        dif = ""
+        For i = 0 To 6
+            ws.Cells(lin, 4 + i).Value = cf(3)(i)
+            If cf(3)(i) <> cf(4)(i) Then dif = dif & IIf(dif = "", "", "; ") & nomes7(i) & " " & cf(3)(i) & " x " & cf(4)(i)
+        Next i
+        ws.Cells(lin, 11).Value = IIf(cf(5), "Sim", "Não")
+        ws.Cells(lin, 12).Value = dif
+        If cf(5) Then qtdConfere = qtdConfere + 1
+    Next cf
+    ws.Range(ws.Cells(inicioConf, 1), ws.Cells(lin, 12)).Borders.LineStyle = xlContinuous
+
+    ' ---------------- 3) total geral do relatório
     If temGeral Then
-        writeRow = writeRow + 1
-
-        With ws.Range(ws.Cells(writeRow, 1), ws.Cells(writeRow, 3))
+        lin = lin + 2
+        With ws.Range(ws.Cells(lin, 1), ws.Cells(lin, 3))
             .Merge
-            .Value = "Total Geral"
+            .Value = "Total Geral (relatório)"
         End With
-        For hcol = 4 To 10
-            ws.Cells(writeRow, hcol).Value = subHeaders(hcol - 1)
+        For hcol = 0 To 6
+            ws.Cells(lin, 4 + hcol).Value = nomes7(hcol)
+            ws.Cells(lin + 1, 4 + hcol).Value = geral(hcol + 1)
         Next hcol
-        FormatarCabecalho ws.Range(ws.Cells(writeRow, 1), ws.Cells(writeRow, 10))
-        writeRow = writeRow + 1
-
-        With ws.Range(ws.Cells(writeRow, 1), ws.Cells(writeRow, 3))
+        FormatarCabecalho ws.Range(ws.Cells(lin, 1), ws.Cells(lin, 10))
+        With ws.Range(ws.Cells(lin + 1, 1), ws.Cells(lin + 1, 3))
             .Merge
             .Value = "Todos os colaboradores"
         End With
-        ws.Cells(writeRow, 4).Value = geralPausaCorretas
-        ws.Cells(writeRow, 5).Value = geralPausaMenor
-        ws.Cells(writeRow, 6).Value = geralPausaMaior
-        ws.Cells(writeRow, 7).Value = geralTrabCorreto
-        ws.Cells(writeRow, 8).Value = geralTrabMaior
-        ws.Cells(writeRow, 9).Value = geralTrabMenor
-        ws.Cells(writeRow, 10).Value = geralMarcacoesImpares
-        ws.Range(ws.Cells(writeRow, 1), ws.Cells(writeRow, 10)).Font.Bold = True
-
-        With ws.Range(ws.Cells(writeRow - 1, 1), ws.Cells(writeRow, 10))
-            .Borders.LineStyle = xlContinuous
-            .Borders.Weight = xlThin
-        End With
+        ws.Range(ws.Cells(lin + 1, 1), ws.Cells(lin + 1, 10)).Font.Bold = True
+        ws.Range(ws.Cells(lin, 1), ws.Cells(lin + 1, 10)).Borders.LineStyle = xlContinuous
     End If
 
-    ' ============================================================
-    ' Ajustes finais de layout
-    ' ============================================================
     ws.Cells.Font.Name = "Calibri"
     ws.Cells.Font.Size = 10
-
     ws.Columns("A").ColumnWidth = 12
     ws.Columns("B").ColumnWidth = 32
     ws.Columns("C").ColumnWidth = 28
-    ws.Columns("D").ColumnWidth = 14
-    ws.Columns("E").ColumnWidth = 14
-    ws.Columns("F").ColumnWidth = 14
-    ws.Columns("G").ColumnWidth = 18
-    ws.Columns("H").ColumnWidth = 16
-    ws.Columns("I").ColumnWidth = 16
-    ws.Columns("J").ColumnWidth = 16
-
-    ws.Range("D:J").HorizontalAlignment = xlCenter
-
+    ws.Columns("D:K").ColumnWidth = 14
+    ws.Columns("L").ColumnWidth = 60
+    ws.Range("D:K").HorizontalAlignment = xlCenter
+    ws.Activate
     ws.Cells(1, 1).Select
 
     Application.ScreenUpdating = True
-    Application.Calculation = xlCalculationAutomatic
     Application.StatusBar = False
 
     Avisar "Formatação concluída." & vbCrLf & _
-           totColMatricula.Count & " colaborador(es) na tabela de colaboradores." & vbCrLf & _
-           IIf(temGeral, "Total Geral incluído.", "Bloco ""Total Geral"" não encontrado no relatório original."), _
-           vbInformation, "Formatar Pausas Térmicas"
-
+           n & " linha(s) por colaborador e ciclo, de " & confLinhas.Count & " colaborador(es)." & vbCrLf & _
+           "Conferência com o total do relatório: " & qtdConfere & " de " & confLinhas.Count & _
+           " colaborador(es) com os 7 números iguais (pausas e marcações ímpares costumam bater em todos;" & _
+           " veja a coluna ""Diferenças"").", vbInformation, "Formatar Pausas Térmicas"
 End Sub
 
+' Classifica as batidas de UM dia (ver a regra no cabeçalho). t(1..7) = pausa correta, pausa menor,
+' pausa maior (sempre 0), trabalho correto, trabalho maior, trabalho menor, marcação ímpar.
+Private Sub ClassificarDiaPausas(horas() As Double, tipos() As String, ByVal qtd As Long, t() As Long)
+    Dim i As Long, base As Long, ant As Long, x As Long, dur As Long, impar As Boolean
+    Dim mins() As Long
+    For i = 1 To 7: t(i) = 0: Next i
+    If qtd = 0 Then Exit Sub
+    ReDim mins(1 To qtd)
+    base = 0
+    For i = 1 To qtd
+        x = CLng(Round(horas(i) * 1440, 0))
+        If i > 1 Then
+            If x + base < ant Then base = base + 1440
+        End If
+        mins(i) = x + base
+        ant = mins(i)
+    Next i
+    impar = (qtd Mod 2 = 1)
+    If impar Then t(7) = 1
+    For i = 1 To qtd - 1
+        dur = mins(i + 1) - mins(i)
+        If (i Mod 2 = 1) Or (impar And i = qtd - 1) Then
+            ' trecho de trabalho (1ª->2ª, 3ª->4ª...; no dia ímpar, também o último)
+            If dur = 100 Then
+                t(4) = t(4) + 1
+            ElseIf dur > 100 Then
+                t(5) = t(5) + 1
+            Else
+                t(6) = t(6) + 1
+            End If
+        ElseIf tipos(i) = "F" And tipos(i + 1) = "F" Then
+            If dur >= 20 Then t(1) = t(1) + 1 Else t(2) = t(2) + 1
+        End If
+    Next i
+End Sub
+
+' Último dia do ciclo de apuração (28 a 27) a que a data pertence.
+Private Function FimDoCiclo(ByVal d As Date) As Date
+    If Day(d) >= 28 Then
+        FimDoCiclo = DateSerial(Year(d), Month(d) + 1, 27)
+    Else
+        FimDoCiclo = DateSerial(Year(d), Month(d), 27)
+    End If
+End Function
+
+Private Function PCel(dados As Variant, ByVal r As Long, ByVal c As Long) As Variant
+    If r < 1 Or r > UBound(dados, 1) Or c < 1 Or c > UBound(dados, 2) Then
+        PCel = Empty
+    Else
+        PCel = dados(r, c)
+    End If
+End Function
+
+Private Function PNum(v As Variant) As Boolean
+    If IsError(v) Or IsEmpty(v) Then
+        PNum = False
+    ElseIf VarType(v) = vbString Then
+        PNum = False
+    Else
+        PNum = IsNumeric(v)
+    End If
+End Function
+
+Private Function PNumOuZero(v As Variant) As Double
+    If PNum(v) Then PNumOuZero = CDbl(v) Else PNumOuZero = 0
+End Function
+
+Private Function PTxt(v As Variant) As String
+    If IsError(v) Or IsEmpty(v) Then PTxt = "" Else PTxt = Trim$(CStr(v))
+End Function
+
+' Tipo de batida do relatório: P, F ou G.
+Private Function PEhTipo(v As Variant) As Boolean
+    Dim s As String
+    If VarType(v) <> vbString Then Exit Function
+    s = UCase$(Trim$(v))
+    PEhTipo = (s = "P" Or s = "F" Or s = "G")
+End Function
 
 ' Visual padrão das linhas de cabeçalho das duas tabelas (negrito, fundo cinza, borda).
 Private Sub FormatarCabecalho(rng As Range)
@@ -2257,6 +2448,406 @@ Private Function CodigoTextoAfa(v As Variant, ByVal digitos As Long) As String
 End Function
 
 ' ==============================================================================================================
+' PARTE: JornadaCLT/FormatarJornada.bas (gerado por ferramentas/montar_tudo_em_um.py)
+' ==============================================================================================================
+
+' ============================================================================
+' FormatarJornada: os 4 relatórios de jornada do sistema (Senior), cada um na sua aba
+'
+'   FormatarExcedentes           "Excedentes"            (mais de 10h no dia)
+'   FormatarIntrajornada         "Intrajornada" HRES108  (intervalo curto de almoço)
+'   FormatarInterjornada         "Interjornada"          (menos de 11h de descanso)
+'   FormatarInterjornadaSemanal  "Interjornada semanal"  (trabalho na folga ou feriado)
+'
+' DE ONDE VEM: a aba ATIVA, com o relatório como o sistema exporta (dump de impressão:
+'   cabeçalho de página repetido e valores deslocados em relação aos títulos).
+' PARA ONDE VAI: a mesma aba, reescrita como UMA tabela (cabeçalho na linha 1):
+'   Matrícula | Colaborador | Cargo | Local | Data | Ocorrência | Minutos | Detalhe
+'   Ocorrência = nome técnico; Minutos depende do relatório:
+'     Horas excedentes     -> jornada do dia (horas trabalhadas + adicional noturno, igual à
+'                             coluna "Total" do relatório; o painel mostra quanto passou de 10h)
+'     Intrajornada         -> soma dos intervalos do dia (0 = sem intervalo)
+'     Interjornada         -> horas descansadas entre uma jornada e a outra
+'     Interjornada semanal -> 0 (o relatório só diz o dia trabalhado no DSR/feriado)
+'   Detalhe = texto com as marcações e os números do relatório, para o painel mostrar.
+' O GerarCSVPonto acha essas abas pelo cabeçalho (Matrícula, Data, Ocorrência, Minutos, Detalhe)
+' e grava uma linha "Jornada" por registro.
+'
+' Os títulos são procurados pelo texto; a posição dos valores em relação aos títulos foi tirada dos
+' relatórios de 28/07 a 27/10/2026:
+'   Excedentes:   matrícula = col. "Colaborador/Nome", nome +1; carga = "Carga Hor." +1; marcações a
+'                 partir de "Marcações" +1; os 4 últimos números da linha = extras, horas, adicional
+'                 noturno e total.
+'   Intrajornada: marcações = "Registros de Ponto" até +7; jornada = +8; intervalos = +9 a +12.
+'   Interjornada: data = "Data Apuração" +1; marcação anterior/atual = título +1 (data) e +2 (hora);
+'                 horas descansadas e ocorrência = título +1; local e cargo = na coluna do título.
+'   Semanal:      matrícula/nome só na 1ª linha da pessoa; o dia vem no texto "(dd/mm/aaaa)".
+' ============================================================================
+
+Private Sub FormatarExcedentes()
+    FormatarJornadaAba "EXCEDENTES", "Formatar Horas Excedentes"
+End Sub
+
+Private Sub FormatarIntrajornada()
+    FormatarJornadaAba "INTRA", "Formatar Intrajornada"
+End Sub
+
+Private Sub FormatarInterjornada()
+    FormatarJornadaAba "INTER", "Formatar Interjornada"
+End Sub
+
+Private Sub FormatarInterjornadaSemanal()
+    FormatarJornadaAba "SEMANAL", "Formatar Interjornada Semanal"
+End Sub
+
+Private Sub FormatarJornadaAba(ByVal tipoRel As String, ByVal tituloMsg As String)
+    Dim ws As Worksheet
+    Set ws = ActiveSheet
+
+    Dim ultLin As Long, ultCol As Long
+    ultLin = ws.UsedRange.Row + ws.UsedRange.Rows.Count - 1
+    ultCol = ws.UsedRange.Column + ws.UsedRange.Columns.Count - 1
+    If ultLin < 2 Or ultCol < 2 Then
+        Avisar "Nenhum dado encontrado na aba ativa.", vbExclamation, tituloMsg
+        Exit Sub
+    End If
+
+    Dim dados As Variant
+    dados = ws.Range(ws.Cells(1, 1), ws.Cells(ultLin, ultCol)).Value2
+
+    Dim saida() As Variant, n As Long
+    ReDim saida(1 To ultLin, 1 To 8)
+    Select Case tipoRel
+        Case "EXCEDENTES": n = JLerExcedentes(dados, saida)
+        Case "INTRA": n = JLerIntrajornada(dados, saida)
+        Case "INTER": n = JLerInterjornada(dados, saida)
+        Case Else: n = JLerSemanal(dados, saida)
+    End Select
+
+    If n < 0 Then
+        Avisar "Não encontrei os títulos do relatório na aba ativa (confira se é o relatório certo).", _
+            vbExclamation, tituloMsg
+        Exit Sub
+    End If
+
+    Application.ScreenUpdating = False
+    If ws.AutoFilterMode Then ws.AutoFilterMode = False
+    ws.Cells.Clear
+
+    Dim cab As Variant, i As Long
+    cab = Array("Matrícula", "Colaborador", "Cargo", "Local", "Data", "Ocorrência", "Minutos", "Detalhe")
+    For i = 0 To 7
+        ws.Cells(1, i + 1).Value = cab(i)
+    Next i
+    With ws.Range("A1:H1")
+        .Font.Bold = True
+        .Interior.Color = RGB(26, 26, 26)
+        .Font.Color = RGB(255, 255, 255)
+    End With
+    If n > 0 Then
+        ws.Range("A2").Resize(n, 8).Value = saida
+        ws.Range("E2").Resize(n, 1).NumberFormat = "dd/mm/yyyy"
+        ws.Range("G2").Resize(n, 1).NumberFormat = "0"
+        ws.Range("A1").Resize(n + 1, 8).AutoFilter
+    End If
+    ws.Cells.Font.Name = "Calibri"
+    ws.Cells.Font.Size = 10
+    ws.Columns("A:G").AutoFit
+    ws.Columns("H").ColumnWidth = 90
+    Application.ScreenUpdating = True
+
+    Avisar "Formatação concluída: " & n & " registro(s) na tabela.", vbInformation, tituloMsg
+End Sub
+
+' ---------------------------------------------------------------------------- Excedentes
+Private Function JLerExcedentes(dados As Variant, saida() As Variant) As Long
+    Dim rh As Long
+    rh = JLinhaCab(dados, Array("Data", "Colaborador/Nome", "Marcações"))
+    If rh = 0 Then
+        JLerExcedentes = -1
+        Exit Function
+    End If
+    Dim cData As Long, cMat As Long, cCargo As Long, cLocal As Long, cCarga As Long, cMarc As Long
+    cData = JAchar(dados, rh, "Data")
+    cMat = JAchar(dados, rh, "Colaborador/Nome")
+    cCargo = JAchar(dados, rh, "Cargo")
+    cLocal = JAchar(dados, rh, "Local")
+    cCarga = JAchar(dados, rh, "Carga Hor.") + 1
+    cMarc = JAchar(dados, rh, "Marcações") + 1
+
+    Dim r As Long, c As Long, n As Long, k As Long
+    Dim nums() As Double, qtd As Long, marcTxt As String
+    ReDim nums(1 To UBound(dados, 2))
+    For r = 1 To UBound(dados, 1)
+        If JNum(JCel(dados, r, cData)) And JNum(JCel(dados, r, cMat)) And _
+           VarType(JCel(dados, r, cMat + 1)) = vbString Then
+            qtd = 0
+            For c = cMarc To UBound(dados, 2)
+                If JNum(dados(r, c)) Then
+                    qtd = qtd + 1
+                    nums(qtd) = CDbl(dados(r, c))
+                End If
+            Next c
+            If qtd >= 4 Then
+                marcTxt = ""
+                For k = 1 To qtd - 4
+                    marcTxt = marcTxt & IIf(marcTxt = "", "", " ") & JHora(nums(k))
+                Next k
+                n = n + 1
+                saida(n, 1) = CLng(dados(r, cMat))
+                saida(n, 2) = JTxt(dados(r, cMat + 1))
+                saida(n, 3) = JTxt(JCel(dados, r, cCargo))
+                saida(n, 4) = JTxt(JCel(dados, r, cLocal))
+                saida(n, 5) = CDate(Int(CDbl(dados(r, cData))))
+                saida(n, 6) = "Horas excedentes"
+                saida(n, 7) = CLng(Round(nums(qtd) * 1440, 0))
+                saida(n, 8) = "Jornada " & JDur(nums(qtd)) & " (" & JDur(nums(qtd - 2)) & " trabalhadas + " & _
+                    JDur(nums(qtd - 1)) & " de adicional noturno) · carga " & JDur(JNumOuZero(JCel(dados, r, cCarga))) & _
+                    " · extras " & JDur(nums(qtd - 3)) & " · marcações " & marcTxt
+            End If
+        End If
+    Next r
+    JLerExcedentes = n
+End Function
+
+' ---------------------------------------------------------------------------- Intrajornada
+Private Function JLerIntrajornada(dados As Variant, saida() As Variant) As Long
+    Dim rh As Long
+    rh = JLinhaCab(dados, Array("Cadastro", "Registros de Ponto"))
+    If rh = 0 Then
+        JLerIntrajornada = -1
+        Exit Function
+    End If
+    Dim cMat As Long, cNome As Long, cLocal As Long, cCargo As Long, cData As Long, cDia As Long, cRP As Long
+    cMat = JAchar(dados, rh, "Cadastro")
+    cNome = JAchar(dados, rh, "Nome")
+    cLocal = JAchar(dados, rh, "Local")
+    cCargo = JAchar(dados, rh, "Cargo")
+    cData = JAchar(dados, rh, "Data")
+    cDia = JAchar(dados, rh, "Dia")
+    cRP = JAchar(dados, rh, "Registros de Ponto")
+
+    Dim r As Long, c As Long, n As Long
+    Dim marcTxt As String, intTxt As String, somaInt As Double, trab As Double
+    For r = 1 To UBound(dados, 1)
+        If JNum(JCel(dados, r, cMat)) And VarType(JCel(dados, r, cNome)) = vbString And JNum(JCel(dados, r, cData)) Then
+            marcTxt = ""
+            For c = cRP To cRP + 7
+                If JNum(JCel(dados, r, c)) Then marcTxt = marcTxt & IIf(marcTxt = "", "", " ") & JHora(CDbl(dados(r, c)))
+            Next c
+            trab = JNumOuZero(JCel(dados, r, cRP + 8))
+            intTxt = ""
+            somaInt = 0
+            For c = cRP + 9 To cRP + 12
+                If JNum(JCel(dados, r, c)) Then
+                    somaInt = somaInt + CDbl(dados(r, c))
+                    intTxt = intTxt & IIf(intTxt = "", "", " + ") & JDur(CDbl(dados(r, c)))
+                End If
+            Next c
+            n = n + 1
+            saida(n, 1) = CLng(dados(r, cMat))
+            saida(n, 2) = JTxt(dados(r, cNome))
+            saida(n, 3) = JTxt(JCel(dados, r, cCargo))
+            saida(n, 4) = JTxt(JCel(dados, r, cLocal))
+            saida(n, 5) = CDate(Int(CDbl(dados(r, cData))))
+            saida(n, 6) = "Intrajornada"
+            saida(n, 7) = CLng(Round(somaInt * 1440, 0))
+            saida(n, 8) = "Trabalhou " & JDur(trab) & " " & _
+                IIf(intTxt = "", "sem intervalo", "com intervalo(s) de " & intTxt) & _
+                " · marcações " & marcTxt & " · horário " & JTxt(JCel(dados, r, cDia))
+        End If
+    Next r
+    JLerIntrajornada = n
+End Function
+
+' ---------------------------------------------------------------------------- Interjornada
+Private Function JLerInterjornada(dados As Variant, saida() As Variant) As Long
+    Dim rh As Long
+    rh = JLinhaCab(dados, Array("Data Apuração", "Horas Descansadas"))
+    If rh = 0 Then
+        JLerInterjornada = -1
+        Exit Function
+    End If
+    Dim cApur As Long, cAnt As Long, cAtu As Long, cDesc As Long, cOc As Long, cLocal As Long, cCargo As Long
+    cApur = JAchar(dados, rh, "Data Apuração") + 1
+    cAnt = JAchar(dados, rh, "Marcação Anterior") + 1
+    cAtu = JAchar(dados, rh, "Marcação Atual") + 1
+    cDesc = JAchar(dados, rh, "Horas Descansadas") + 1
+    cOc = JAchar(dados, rh, "Ocorrência") + 1
+    cLocal = JAchar(dados, rh, "Local")
+    cCargo = JAchar(dados, rh, "Cargo")
+
+    Dim r As Long, n As Long, desc As Double
+    For r = rh + 1 To UBound(dados, 1)
+        If JNum(JCel(dados, r, 1)) And VarType(JCel(dados, r, 2)) = vbString And JNum(JCel(dados, r, cApur)) Then
+            desc = JNumOuZero(JCel(dados, r, cDesc))
+            n = n + 1
+            saida(n, 1) = CLng(dados(r, 1))
+            saida(n, 2) = JTxt(dados(r, 2))
+            saida(n, 3) = JTxt(JCel(dados, r, cCargo))
+            saida(n, 4) = JTxt(JCel(dados, r, cLocal))
+            saida(n, 5) = CDate(Int(CDbl(dados(r, cApur))))
+            saida(n, 6) = "Interjornada"
+            saida(n, 7) = CLng(Round(desc * 1440, 0))
+            saida(n, 8) = "Descansou " & JDur(desc) & " entre " & JDiaMes(JCel(dados, r, cAnt)) & " " & _
+                JHora(JNumOuZero(JCel(dados, r, cAnt + 1))) & " e " & JDiaMes(JCel(dados, r, cAtu)) & " " & _
+                JHora(JNumOuZero(JCel(dados, r, cAtu + 1))) & " · " & JTxt(JCel(dados, r, cOc))
+        End If
+    Next r
+    JLerInterjornada = n
+End Function
+
+' ---------------------------------------------------------------------------- Interjornada semanal
+Private Function JLerSemanal(dados As Variant, saida() As Variant) As Long
+    Dim rh As Long
+    rh = JLinhaCab(dados, Array("Colaborador", "Horas DSR"))
+    If rh = 0 Then
+        JLerSemanal = -1
+        Exit Function
+    End If
+    Dim cLocal As Long, cTxt As Long
+    cLocal = JAchar(dados, rh, "Local")
+    cTxt = JAchar(dados, rh, "Horas DSR")
+
+    Dim r As Long, c As Long, n As Long, t As String, extra As String, p As Long
+    Dim matAtual As Variant, nomeAtual As String, dia As Date
+    For r = rh + 1 To UBound(dados, 1)
+        t = JTxt(JCel(dados, r, cTxt))
+        p = InStrRev(t, "(")
+        If p > 0 And Len(t) >= p + 11 Then
+            If Mid$(t, p + 3, 1) = "/" And Mid$(t, p + 6, 1) = "/" And IsNumeric(Mid$(t, p + 1, 2)) And _
+               IsNumeric(Mid$(t, p + 4, 2)) And IsNumeric(Mid$(t, p + 7, 4)) Then
+                dia = DateSerial(CInt(Mid$(t, p + 7, 4)), CInt(Mid$(t, p + 4, 2)), CInt(Mid$(t, p + 1, 2)))
+                If JNum(JCel(dados, r, 1)) Then
+                    matAtual = CLng(dados(r, 1))
+                    nomeAtual = JTxt(JCel(dados, r, 2))
+                End If
+                extra = ""
+                For c = cTxt + 1 To UBound(dados, 2)
+                    If JNum(dados(r, c)) Then
+                        extra = extra & " · " & JHora(CDbl(dados(r, c)))
+                    ElseIf JTxt(dados(r, c)) <> "" Then
+                        extra = extra & " · " & JTxt(dados(r, c))
+                    End If
+                Next c
+                n = n + 1
+                saida(n, 1) = matAtual
+                saida(n, 2) = nomeAtual
+                saida(n, 3) = ""
+                saida(n, 4) = JSemCodigo(JTxt(JCel(dados, r, cLocal)))
+                saida(n, 5) = dia
+                saida(n, 6) = "Interjornada semanal"
+                saida(n, 7) = 0
+                saida(n, 8) = t & extra
+            End If
+        End If
+    Next r
+    JLerSemanal = n
+End Function
+
+' ---------------------------------------------------------------------------- auxiliares
+Private Function JCel(dados As Variant, ByVal r As Long, ByVal c As Long) As Variant
+    If c < 1 Or c > UBound(dados, 2) Or r < 1 Or r > UBound(dados, 1) Then
+        JCel = Empty
+    Else
+        JCel = dados(r, c)
+    End If
+End Function
+
+' Número de verdade (não vazio, não texto, não erro).
+Private Function JNum(v As Variant) As Boolean
+    If IsError(v) Or IsEmpty(v) Then
+        JNum = False
+    ElseIf VarType(v) = vbString Then
+        JNum = False
+    Else
+        JNum = IsNumeric(v)
+    End If
+End Function
+
+Private Function JNumOuZero(v As Variant) As Double
+    If JNum(v) Then JNumOuZero = CDbl(v) Else JNumOuZero = 0
+End Function
+
+Private Function JTxt(v As Variant) As String
+    If IsError(v) Or IsEmpty(v) Then
+        JTxt = ""
+    Else
+        JTxt = Trim$(Replace(Replace(CStr(v), vbCr, " "), vbLf, " "))
+    End If
+End Function
+
+' Coluna do título (comparação sem diferenciar maiúsculas) na linha r; 0 = não achou.
+Private Function JAchar(dados As Variant, ByVal r As Long, ByVal rotulo As String) As Long
+    Dim c As Long
+    For c = 1 To UBound(dados, 2)
+        If VarType(dados(r, c)) = vbString Then
+            If LCase$(Trim$(dados(r, c))) = LCase$(rotulo) Then
+                JAchar = c
+                Exit Function
+            End If
+        End If
+    Next c
+    JAchar = 0
+End Function
+
+' Primeira linha que tem todos os títulos; 0 = não achou.
+Private Function JLinhaCab(dados As Variant, rotulos As Variant) As Long
+    Dim r As Long, i As Long, tem As Boolean
+    For r = 1 To UBound(dados, 1)
+        tem = True
+        For i = LBound(rotulos) To UBound(rotulos)
+            If JAchar(dados, r, CStr(rotulos(i))) = 0 Then
+                tem = False
+                Exit For
+            End If
+        Next i
+        If tem Then
+            JLinhaCab = r
+            Exit Function
+        End If
+    Next r
+    JLinhaCab = 0
+End Function
+
+' Fração do dia -> "hh:mm" (hora do relógio).
+Private Function JHora(ByVal f As Double) As String
+    Dim m As Long
+    m = CLng(Round(f * 1440, 0)) Mod 1440
+    JHora = Format$(m \ 60, "00") & ":" & Format$(m Mod 60, "00")
+End Function
+
+' Fração do dia -> "h:mm" (duração).
+Private Function JDur(ByVal f As Double) As String
+    Dim m As Long
+    m = CLng(Round(f * 1440, 0))
+    JDur = (m \ 60) & ":" & Format$(m Mod 60, "00")
+End Function
+
+Private Function JDiaMes(v As Variant) As String
+    If JNum(v) Then JDiaMes = Format$(CDate(Int(CDbl(v))), "dd/mm") Else JDiaMes = ""
+End Function
+
+' "2.028.30.304.3041 - Ativ. Operacional 1ºT" -> "Ativ. Operacional 1ºT"
+Private Function JSemCodigo(ByVal t As String) As String
+    Dim p As Long, prefixo As String, i As Long, ch As String
+    p = InStr(t, " - ")
+    If p > 1 Then
+        prefixo = Left$(t, p - 1)
+        For i = 1 To Len(prefixo)
+            ch = Mid$(prefixo, i, 1)
+            If Not (ch Like "#" Or ch = ".") Then
+                JSemCodigo = t
+                Exit Function
+            End If
+        Next i
+        JSemCodigo = Trim$(Mid$(t, p + 3))
+    Else
+        JSemCodigo = t
+    End If
+End Function
+
+' ==============================================================================================================
 ' PARTE: GerarCSVPonto/GerarCSVPonto.bas (gerado por ferramentas/montar_tudo_em_um.py)
 ' ==============================================================================================================
 
@@ -2350,7 +2941,7 @@ End Function
 ' -----------------------------------------------------------------
 ' PRA ONDE CADA COISA VAI: A ABA "CSV" (formato de saída)
 '
-' Uma linha = um evento. O cabeçalho tem 29 colunas (ver
+' Uma linha = um evento. O cabeçalho tem 30 colunas (ver
 ' PrepararAbaCSV); a maioria das linhas só preenche as primeiras 13
 ' (ocorrência normal — extra, falta, hora extra 100%, curta etc.) e a
 ' 23ª ("grupo" = Interno/Externo, preenchida em toda linha cujo
@@ -2381,6 +2972,13 @@ End Function
 '   - tipo_ocorrencia = "Resumo Horas Cartão" → preenche
 '     minutos_hora_extra_cartao / minutos_banco_horas_cartao (total do
 '     mês atual, direto do Cartão Ponto, ver GerarResumoHorasCartao).
+'   - tipo_ocorrencia = "Jornada" → um por registro das abas de jornada
+'     (FormatarJornada: Horas excedentes, Intrajornada, Interjornada,
+'     Interjornada semanal): situacao = nome técnico, duracao_minutos =
+'     minutos do relatório, detalhe (30ª coluna) = texto com as marcações.
+'     Ver GerarLinhasJornada.
+'   - "Resumo Pausas Térmicas" sai uma vez por colaborador E por ciclo
+'     (data = fim do ciclo) quando a aba de pausas tem "Fim do ciclo".
 '   - qualquer outro tipo (Hora Extra, Falta, Atraso, Falta < 15min,
 '     Extra < 15min, ...) → só usa as 13 primeiras colunas.
 ' O painel (index.html) sabe diferenciar esses 3 casos pelo próprio
@@ -2989,6 +3587,24 @@ ProximaAbaTratamento:
             wsCSV, linhaSaida, qtdDigitadas, qtdDigitadasOrigemE
     End If
 
+    ' =====================================================================
+    ' Jornada (03/11): abas formatadas pelo FormatarJornada (Horas excedentes,
+    ' Intrajornada, Interjornada, Interjornada semanal), achadas pelo
+    ' cabeçalho. Uma linha "Jornada" por registro; situacao = nome técnico,
+    ' duracao_minutos = minutos do relatório, detalhe = texto com as marcações.
+    ' =====================================================================
+    Dim qtdJornada As Long, resumoJornada As String, abasJornada As Collection, abaJ As Variant
+    qtdJornada = 0
+    resumoJornada = ""
+    Set abasJornada = LoteAbasJornada(wbTrat)
+    For Each abaJ In abasJornada
+        Dim antesJ As Long, wsJ As Worksheet
+        Set wsJ = abaJ
+        antesJ = qtdJornada
+        GerarLinhasJornada wsJ, dictRE, dictGestorPorMatricula, dictGrupoPorMatricula, wsCSV, linhaSaida, qtdJornada
+        resumoJornada = resumoJornada & IIf(resumoJornada = "", "", ", ") & wsJ.Name & " " & (qtdJornada - antesJ)
+    Next abaJ
+
     ' Uma linha "Cadastro ORG" por pessoa da lista do ORG (ver acima).
     Dim qtdORG As Long
     qtdORG = 0
@@ -3019,6 +3635,11 @@ ProximaAbaTratamento:
     Else
         msgAuditoria = msgAuditoria & vbCrLf & qtdDigitadas & " marcação(ões) digitada(s) (aba " & wsDigitadas.Name & _
             "); " & qtdDigitadasOrigemE & " com Origem ""E"" ignorada(s)."
+    End If
+    If abasJornada.Count = 0 Then
+        msgAuditoria = msgAuditoria & vbCrLf & "Nenhuma aba de Jornada (Excedentes, Intrajornada, Interjornada...) encontrada."
+    Else
+        msgAuditoria = msgAuditoria & vbCrLf & qtdJornada & " registro(s) de jornada (" & resumoJornada & ")."
     End If
     ' If em vez de IIf: o IIf avalia os dois lados e wsORG.Name daria erro
     ' quando a aba não existe.
@@ -3776,6 +4397,56 @@ End Sub
 ' Aba ORG (relação colaborador x gestor): a que começa com "ORG" e tem as
 ' colunas Matricula, COLABORADOR e GESTOR na linha 1; se nenhuma começar
 ' com "ORG", vale a primeira aba que tiver essas três colunas.
+' Abas de Jornada (saída do FormatarJornada): cabeçalho na linha 1 com Matrícula, Data,
+' Ocorrência, Minutos e Detalhe. Todas as que existirem, na ordem das abas.
+Private Function EncontrarAbasJornada(wb As Workbook) As Collection
+    Dim col As New Collection, ws As Worksheet
+    For Each ws In wb.Worksheets
+        If ColunaPorCabecalho(ws, "Matrícula") > 0 And ColunaPorCabecalho(ws, "Data") > 0 And _
+           ColunaPorCabecalho(ws, "Ocorrência") > 0 And ColunaPorCabecalho(ws, "Minutos") > 0 And _
+           ColunaPorCabecalho(ws, "Detalhe") > 0 Then col.Add ws
+    Next ws
+    Set EncontrarAbasJornada = col
+End Function
+
+' Uma linha "Jornada" por linha da aba. Setor = RE (ou o Local do relatório, se a pessoa não está
+' na RE); cargo = o do relatório (ou o da RE); gestor e grupo, dos dicionários (Tratamento, ORG).
+' Não depende da Tratamento nem do Check: é o relatório do sistema como veio.
+Private Sub GerarLinhasJornada(ws As Worksheet, dictRE As Object, dictGestorPorMatricula As Object, _
+    dictGrupoPorMatricula As Object, wsCSV As Worksheet, ByRef linhaSaida As Long, ByRef qtdGerada As Long)
+
+    Dim colMat As Long, colNome As Long, colCargo As Long, colLocal As Long, colData As Long
+    Dim colOc As Long, colMin As Long, colDet As Long
+    colMat = ColunaPorCabecalho(ws, "Matrícula")
+    colNome = ColunaPorCabecalho(ws, "Colaborador")
+    colCargo = ColunaPorCabecalho(ws, "Cargo")
+    colLocal = ColunaPorCabecalho(ws, "Local")
+    colData = ColunaPorCabecalho(ws, "Data")
+    colOc = ColunaPorCabecalho(ws, "Ocorrência")
+    colMin = ColunaPorCabecalho(ws, "Minutos")
+    colDet = ColunaPorCabecalho(ws, "Detalhe")
+
+    Dim ultima As Long, r As Long
+    ultima = UltimaLinhaPreenchida(ws, colMat)
+    For r = 2 To ultima
+        Dim matJ As String, nomeJ As String, setorJ As String, cargoJ As String, cargoREJ As String
+        matJ = TextoLimpo(ws.Cells(r, colMat).Value)
+        nomeJ = TextoDaCelula(ws, r, colNome)
+        If (matJ <> "" Or nomeJ <> "") And IsDate(ws.Cells(r, colData).Value) Then
+            ObterSetorCargo dictRE, matJ, setorJ, cargoREJ
+            If (setorJ = "" Or setorJ = "Sem setor") And TextoDaCelula(ws, r, colLocal) <> "" Then setorJ = TextoDaCelula(ws, r, colLocal)
+            cargoJ = TextoDaCelula(ws, r, colCargo)
+            If cargoJ = "" Then cargoJ = cargoREJ
+            EscreverLinhaCSV wsCSV, linhaSaida, CDate(ws.Cells(r, colData).Value), nomeJ, matJ, _
+                TextoDoDicionario(dictGestorPorMatricula, matJ), setorJ, cargoJ, "Jornada", _
+                TextoDaCelula(ws, r, colOc), "", NumeroDaCelula(ws, r, colMin), "", Empty, _
+                grupo:=TextoDoDicionario(dictGrupoPorMatricula, matJ), detalhe:=TextoDaCelula(ws, r, colDet)
+            linhaSaida = linhaSaida + 1
+            qtdGerada = qtdGerada + 1
+        End If
+    Next r
+End Sub
+
 Private Function EncontrarAbaORG(wb As Workbook) As Worksheet
     Dim ws As Worksheet
     For Each ws In wb.Worksheets
@@ -3952,6 +4623,11 @@ Private Sub GerarResumoPausasTermicas(ws As Worksheet, linhaCabecalho As Long, d
     colTrabMenor = ColunaPorCabecalho(ws, "Trabalho menor 1:40", linhaCabecalho)
     colImpares = ColunaPorCabecalho(ws, "Marcações Ímpares", linhaCabecalho)
     If colMat = 0 Then Exit Sub
+    ' "Fim do ciclo" (FormatarPausasTermicas de 03/11): uma linha por colaborador E por ciclo, com os
+    ' números calculados pela macro; a data da linha no CSV é o fim do ciclo (dia 27), e o painel
+    ' separa os meses por ela. Sem a coluna (aba antiga), a data é a do Cartão, como antes.
+    Dim colCiclo As Long
+    colCiclo = ColunaPorCabecalho(ws, "Fim do ciclo", linhaCabecalho)
 
     Dim r As Long
     r = linhaCabecalho + 1
@@ -3965,7 +4641,13 @@ Private Sub GerarResumoPausasTermicas(ws As Worksheet, linhaCabecalho As Long, d
         ObterSetorCargo dictRE, mat, setorNome, cargoRE
         If cargoPausas = "" Then cargoPausas = cargoRE
 
-        EscreverLinhaCSV wsCSV, linhaSaida, dataRef, nome, mat, TextoDoDicionario(dictGestorPorMatricula, mat), _
+        Dim dataLinhaPausa As Variant
+        dataLinhaPausa = dataRef
+        If colCiclo > 0 Then
+            If IsDate(ws.Cells(r, colCiclo).Value) Then dataLinhaPausa = CDate(ws.Cells(r, colCiclo).Value)
+        End If
+
+        EscreverLinhaCSV wsCSV, linhaSaida, dataLinhaPausa, nome, mat, TextoDoDicionario(dictGestorPorMatricula, mat), _
             setorNome, cargoPausas, "Resumo Pausas Térmicas", "", "Pendente", 0, "", Empty, _
             pausaCorretas:=NumeroDaCelula(ws, r, colCorretas), _
             pausaMenor20:=NumeroDaCelula(ws, r, colMenor20), _
@@ -4363,7 +5045,7 @@ Private Function PrepararAbaCSV(wb As Workbook) As Worksheet
                         "trabalho_maior_140", "trabalho_menor_140", "pausas_marcacoes_impares", "grupo", _
                         "minutos_hora_extra_cartao", "minutos_banco_horas_cartao", _
                         "justificativa_marcacao", "origem_marcacao", _
-                        "dias_ausencia", "emenda_folga")
+                        "dias_ausencia", "emenda_folga", "detalhe")
     For i = LBound(cabecalhos) To UBound(cabecalhos)
         ws.Cells(1, i + 1).Value = cabecalhos(i)
     Next i
@@ -4391,7 +5073,7 @@ Private Sub EscreverLinhaCSV(ws As Worksheet, linha As Long, dataOcorrencia As V
     Optional grupo As String = "", Optional minHoraExtraCartao As Variant = Empty, _
     Optional minBancoHorasCartao As Variant = Empty, Optional justificativaMarcacao As String = "", _
     Optional origemMarcacao As String = "", Optional diasAusencia As Variant = Empty, _
-    Optional emendaFolga As String = "")
+    Optional emendaFolga As String = "", Optional detalhe As String = "")
 
     ws.Cells(linha, 1).Value = CDate(dataOcorrencia)
     ws.Cells(linha, 2).Value = nome
@@ -4426,6 +5108,7 @@ Private Sub EscreverLinhaCSV(ws As Worksheet, linha As Long, dataOcorrencia As V
     If origemMarcacao <> "" Then ws.Cells(linha, 27).Value = origemMarcacao
     If Not IsEmpty(diasAusencia) Then ws.Cells(linha, 28).Value = diasAusencia
     If emendaFolga <> "" Then ws.Cells(linha, 29).Value = emendaFolga
+    If detalhe <> "" Then ws.Cells(linha, 30).Value = detalhe
 End Sub
 
 ' Pede ao usuário a pasta de destino dos CSVs exportados por

@@ -23,6 +23,7 @@ PARTES = [
     ("Afastamentos/FormatarAfastamentos.bas", {
         "NOME_ABA_SAIDA": "NOME_ABA_AFASTAMENTOS", "Celula": "CelulaAfa", "TextoCel": "TextoCelAfa",
         "TextoSimples": "TextoSimplesAfa", "CodigoTexto": "CodigoTextoAfa"}),
+    ("JornadaCLT/FormatarJornada.bas", {}),
     ("GerarCSVPonto/GerarCSVPonto.bas", {}),
 ]
 TROCAS_GERARCSV = [
@@ -32,6 +33,7 @@ TROCAS_GERARCSV = [
     ("Set wsDigitadas = EncontrarAbaDigitadas(wbTrat)", "Set wsDigitadas = LoteAbaDigitadas(wbTrat)"),
     ("Set wsPausas = EncontrarTabelaPausas(wbTrat, linhaCabecalhoPausas)",
      "Set wsPausas = LoteTabelaPausas(wbTrat, linhaCabecalhoPausas)"),
+    ("Set abasJornada = EncontrarAbasJornada(wbTrat)", "Set abasJornada = LoteAbasJornada(wbTrat)"),
     ("    pasta = EscolherPasta()\n",
      "    If mPastaSaida <> \"\" Then pasta = mPastaSaida Else pasta = EscolherPasta()\n"),
 ]

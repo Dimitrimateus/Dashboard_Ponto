@@ -30,8 +30,9 @@ Cole **só** o `txt/AtualizarPainelPonto.txt` num módulo da planilha de Tratame
    Afastamentos; PontoNet como veio). Aba que já existe é limpa e reaproveitada;
 5. gera a aba CSV e salva `dados_<gestor>.csv` + `dados_TODOS.csv` na pasta escolhida.
 
-Tratamento, RE e ORG continuam sendo as abas da própria planilha. Excedentes, Interjornada,
-Interjornada semanal e Intrajornada por enquanto só são copiados para abas (ainda não entram no CSV).
+Tratamento, RE e ORG continuam sendo as abas da própria planilha. O Pontonet pode vir em `.csv`.
+Pausas Térmicas são calculadas por ciclo (28 a 27) a partir das batidas; os 4 relatórios de jornada
+(Excedentes, Intrajornada, Interjornada, Interjornada semanal) viram a seção "Jornada (CLT)" do painel.
 O módulo é gerado por `ferramentas/montar_tudo_em_um.py` a partir das macros abaixo: depois de mudar
 qualquer `.bas`, rode o script de novo.
 

@@ -91,7 +91,7 @@ Option Explicit
 ' -----------------------------------------------------------------
 ' PRA ONDE CADA COISA VAI: A ABA "CSV" (formato de saída)
 '
-' Uma linha = um evento. O cabeçalho tem 29 colunas (ver
+' Uma linha = um evento. O cabeçalho tem 30 colunas (ver
 ' PrepararAbaCSV); a maioria das linhas só preenche as primeiras 13
 ' (ocorrência normal — extra, falta, hora extra 100%, curta etc.) e a
 ' 23ª ("grupo" = Interno/Externo, preenchida em toda linha cujo
@@ -122,6 +122,13 @@ Option Explicit
 '   - tipo_ocorrencia = "Resumo Horas Cartão" → preenche
 '     minutos_hora_extra_cartao / minutos_banco_horas_cartao (total do
 '     mês atual, direto do Cartão Ponto, ver GerarResumoHorasCartao).
+'   - tipo_ocorrencia = "Jornada" → um por registro das abas de jornada
+'     (FormatarJornada: Horas excedentes, Intrajornada, Interjornada,
+'     Interjornada semanal): situacao = nome técnico, duracao_minutos =
+'     minutos do relatório, detalhe (30ª coluna) = texto com as marcações.
+'     Ver GerarLinhasJornada.
+'   - "Resumo Pausas Térmicas" sai uma vez por colaborador E por ciclo
+'     (data = fim do ciclo) quando a aba de pausas tem "Fim do ciclo".
 '   - qualquer outro tipo (Hora Extra, Falta, Atraso, Falta < 15min,
 '     Extra < 15min, ...) → só usa as 13 primeiras colunas.
 ' O painel (index.html) sabe diferenciar esses 3 casos pelo próprio
@@ -730,6 +737,24 @@ ProximaAbaTratamento:
             wsCSV, linhaSaida, qtdDigitadas, qtdDigitadasOrigemE
     End If
 
+    ' =====================================================================
+    ' Jornada (03/11): abas formatadas pelo FormatarJornada (Horas excedentes,
+    ' Intrajornada, Interjornada, Interjornada semanal), achadas pelo
+    ' cabeçalho. Uma linha "Jornada" por registro; situacao = nome técnico,
+    ' duracao_minutos = minutos do relatório, detalhe = texto com as marcações.
+    ' =====================================================================
+    Dim qtdJornada As Long, resumoJornada As String, abasJornada As Collection, abaJ As Variant
+    qtdJornada = 0
+    resumoJornada = ""
+    Set abasJornada = EncontrarAbasJornada(wbTrat)
+    For Each abaJ In abasJornada
+        Dim antesJ As Long, wsJ As Worksheet
+        Set wsJ = abaJ
+        antesJ = qtdJornada
+        GerarLinhasJornada wsJ, dictRE, dictGestorPorMatricula, dictGrupoPorMatricula, wsCSV, linhaSaida, qtdJornada
+        resumoJornada = resumoJornada & IIf(resumoJornada = "", "", ", ") & wsJ.Name & " " & (qtdJornada - antesJ)
+    Next abaJ
+
     ' Uma linha "Cadastro ORG" por pessoa da lista do ORG (ver acima).
     Dim qtdORG As Long
     qtdORG = 0
@@ -760,6 +785,11 @@ ProximaAbaTratamento:
     Else
         msgAuditoria = msgAuditoria & vbCrLf & qtdDigitadas & " marcação(ões) digitada(s) (aba " & wsDigitadas.Name & _
             "); " & qtdDigitadasOrigemE & " com Origem ""E"" ignorada(s)."
+    End If
+    If abasJornada.Count = 0 Then
+        msgAuditoria = msgAuditoria & vbCrLf & "Nenhuma aba de Jornada (Excedentes, Intrajornada, Interjornada...) encontrada."
+    Else
+        msgAuditoria = msgAuditoria & vbCrLf & qtdJornada & " registro(s) de jornada (" & resumoJornada & ")."
     End If
     ' If em vez de IIf: o IIf avalia os dois lados e wsORG.Name daria erro
     ' quando a aba não existe.
@@ -1517,6 +1547,56 @@ End Sub
 ' Aba ORG (relação colaborador x gestor): a que começa com "ORG" e tem as
 ' colunas Matricula, COLABORADOR e GESTOR na linha 1; se nenhuma começar
 ' com "ORG", vale a primeira aba que tiver essas três colunas.
+' Abas de Jornada (saída do FormatarJornada): cabeçalho na linha 1 com Matrícula, Data,
+' Ocorrência, Minutos e Detalhe. Todas as que existirem, na ordem das abas.
+Private Function EncontrarAbasJornada(wb As Workbook) As Collection
+    Dim col As New Collection, ws As Worksheet
+    For Each ws In wb.Worksheets
+        If ColunaPorCabecalho(ws, "Matrícula") > 0 And ColunaPorCabecalho(ws, "Data") > 0 And _
+           ColunaPorCabecalho(ws, "Ocorrência") > 0 And ColunaPorCabecalho(ws, "Minutos") > 0 And _
+           ColunaPorCabecalho(ws, "Detalhe") > 0 Then col.Add ws
+    Next ws
+    Set EncontrarAbasJornada = col
+End Function
+
+' Uma linha "Jornada" por linha da aba. Setor = RE (ou o Local do relatório, se a pessoa não está
+' na RE); cargo = o do relatório (ou o da RE); gestor e grupo, dos dicionários (Tratamento, ORG).
+' Não depende da Tratamento nem do Check: é o relatório do sistema como veio.
+Private Sub GerarLinhasJornada(ws As Worksheet, dictRE As Object, dictGestorPorMatricula As Object, _
+    dictGrupoPorMatricula As Object, wsCSV As Worksheet, ByRef linhaSaida As Long, ByRef qtdGerada As Long)
+
+    Dim colMat As Long, colNome As Long, colCargo As Long, colLocal As Long, colData As Long
+    Dim colOc As Long, colMin As Long, colDet As Long
+    colMat = ColunaPorCabecalho(ws, "Matrícula")
+    colNome = ColunaPorCabecalho(ws, "Colaborador")
+    colCargo = ColunaPorCabecalho(ws, "Cargo")
+    colLocal = ColunaPorCabecalho(ws, "Local")
+    colData = ColunaPorCabecalho(ws, "Data")
+    colOc = ColunaPorCabecalho(ws, "Ocorrência")
+    colMin = ColunaPorCabecalho(ws, "Minutos")
+    colDet = ColunaPorCabecalho(ws, "Detalhe")
+
+    Dim ultima As Long, r As Long
+    ultima = UltimaLinhaPreenchida(ws, colMat)
+    For r = 2 To ultima
+        Dim matJ As String, nomeJ As String, setorJ As String, cargoJ As String, cargoREJ As String
+        matJ = TextoLimpo(ws.Cells(r, colMat).Value)
+        nomeJ = TextoDaCelula(ws, r, colNome)
+        If (matJ <> "" Or nomeJ <> "") And IsDate(ws.Cells(r, colData).Value) Then
+            ObterSetorCargo dictRE, matJ, setorJ, cargoREJ
+            If (setorJ = "" Or setorJ = "Sem setor") And TextoDaCelula(ws, r, colLocal) <> "" Then setorJ = TextoDaCelula(ws, r, colLocal)
+            cargoJ = TextoDaCelula(ws, r, colCargo)
+            If cargoJ = "" Then cargoJ = cargoREJ
+            EscreverLinhaCSV wsCSV, linhaSaida, CDate(ws.Cells(r, colData).Value), nomeJ, matJ, _
+                TextoDoDicionario(dictGestorPorMatricula, matJ), setorJ, cargoJ, "Jornada", _
+                TextoDaCelula(ws, r, colOc), "", NumeroDaCelula(ws, r, colMin), "", Empty, _
+                grupo:=TextoDoDicionario(dictGrupoPorMatricula, matJ), detalhe:=TextoDaCelula(ws, r, colDet)
+            linhaSaida = linhaSaida + 1
+            qtdGerada = qtdGerada + 1
+        End If
+    Next r
+End Sub
+
 Private Function EncontrarAbaORG(wb As Workbook) As Worksheet
     Dim ws As Worksheet
     For Each ws In wb.Worksheets
@@ -1693,6 +1773,11 @@ Private Sub GerarResumoPausasTermicas(ws As Worksheet, linhaCabecalho As Long, d
     colTrabMenor = ColunaPorCabecalho(ws, "Trabalho menor 1:40", linhaCabecalho)
     colImpares = ColunaPorCabecalho(ws, "Marcações Ímpares", linhaCabecalho)
     If colMat = 0 Then Exit Sub
+    ' "Fim do ciclo" (FormatarPausasTermicas de 03/11): uma linha por colaborador E por ciclo, com os
+    ' números calculados pela macro; a data da linha no CSV é o fim do ciclo (dia 27), e o painel
+    ' separa os meses por ela. Sem a coluna (aba antiga), a data é a do Cartão, como antes.
+    Dim colCiclo As Long
+    colCiclo = ColunaPorCabecalho(ws, "Fim do ciclo", linhaCabecalho)
 
     Dim r As Long
     r = linhaCabecalho + 1
@@ -1706,7 +1791,13 @@ Private Sub GerarResumoPausasTermicas(ws As Worksheet, linhaCabecalho As Long, d
         ObterSetorCargo dictRE, mat, setorNome, cargoRE
         If cargoPausas = "" Then cargoPausas = cargoRE
 
-        EscreverLinhaCSV wsCSV, linhaSaida, dataRef, nome, mat, TextoDoDicionario(dictGestorPorMatricula, mat), _
+        Dim dataLinhaPausa As Variant
+        dataLinhaPausa = dataRef
+        If colCiclo > 0 Then
+            If IsDate(ws.Cells(r, colCiclo).Value) Then dataLinhaPausa = CDate(ws.Cells(r, colCiclo).Value)
+        End If
+
+        EscreverLinhaCSV wsCSV, linhaSaida, dataLinhaPausa, nome, mat, TextoDoDicionario(dictGestorPorMatricula, mat), _
             setorNome, cargoPausas, "Resumo Pausas Térmicas", "", "Pendente", 0, "", Empty, _
             pausaCorretas:=NumeroDaCelula(ws, r, colCorretas), _
             pausaMenor20:=NumeroDaCelula(ws, r, colMenor20), _
@@ -2104,7 +2195,7 @@ Private Function PrepararAbaCSV(wb As Workbook) As Worksheet
                         "trabalho_maior_140", "trabalho_menor_140", "pausas_marcacoes_impares", "grupo", _
                         "minutos_hora_extra_cartao", "minutos_banco_horas_cartao", _
                         "justificativa_marcacao", "origem_marcacao", _
-                        "dias_ausencia", "emenda_folga")
+                        "dias_ausencia", "emenda_folga", "detalhe")
     For i = LBound(cabecalhos) To UBound(cabecalhos)
         ws.Cells(1, i + 1).Value = cabecalhos(i)
     Next i
@@ -2132,7 +2223,7 @@ Private Sub EscreverLinhaCSV(ws As Worksheet, linha As Long, dataOcorrencia As V
     Optional grupo As String = "", Optional minHoraExtraCartao As Variant = Empty, _
     Optional minBancoHorasCartao As Variant = Empty, Optional justificativaMarcacao As String = "", _
     Optional origemMarcacao As String = "", Optional diasAusencia As Variant = Empty, _
-    Optional emendaFolga As String = "")
+    Optional emendaFolga As String = "", Optional detalhe As String = "")
 
     ws.Cells(linha, 1).Value = CDate(dataOcorrencia)
     ws.Cells(linha, 2).Value = nome
@@ -2167,6 +2258,7 @@ Private Sub EscreverLinhaCSV(ws As Worksheet, linha As Long, dataOcorrencia As V
     If origemMarcacao <> "" Then ws.Cells(linha, 27).Value = origemMarcacao
     If Not IsEmpty(diasAusencia) Then ws.Cells(linha, 28).Value = diasAusencia
     If emendaFolga <> "" Then ws.Cells(linha, 29).Value = emendaFolga
+    If detalhe <> "" Then ws.Cells(linha, 30).Value = detalhe
 End Sub
 
 ' Pede ao usuário a pasta de destino dos CSVs exportados por
