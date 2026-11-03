@@ -1,6 +1,6 @@
 # CONTEXTO DO PROJETO — Tratamento de Ponto e Painel de Ocorrências (AuroraCoop)
 
-> Arquivo de contexto para o Claude Code. Estado em **29/10/2026**. Leia inteiro antes de propor
+> Arquivo de contexto para o Claude Code. Estado em **03/11/2026**. Leia inteiro antes de propor
 > qualquer mudança: várias regras abaixo já foram discutidas e decididas com o Dimitri, e as
 > "armadilhas" já custaram retrabalho.
 >
@@ -59,6 +59,7 @@ aba PURO (exportação de ocorrências)   ──► PURO_Para_EDITADO      ─�
 | `Afastamentos/FormatarAfastamentos.bas` | relatório HRCL006 "Histórico de Afastamentos" → a mesma aba como tabela (renomeada "Afastamentos") |
 | `Jornada/FormatarJornada.bas` | os 4 relatórios de limite de jornada (intra, inter, inter semanal, horas excedentes) → a mesma aba como tabela, renomeada pelo tipo |
 | `GerarCSVPonto/GerarCSVPonto.bas` | `GerarAbaCSV` (monta a aba CSV) e `ExportarCSVPorGestor` (grava os .csv) |
+| `ModuloUnico/PainelPonto_TudoEmUm.bas` (= `txt/PainelPonto_TudoEmUm.txt`) | (03/11) **o que o Dimitri cola**: todas as macros num módulo só, GERADO por `ferramentas/montar_modulo_unico.py` (não editar à mão; mude o .bas de origem e rode o script) |
 | `PrepararAbas/PrepararAbasDoMes.bas` | (31/10) uma macro só que reconhece e formata TODOS os relatórios brutos colados na planilha e cria a aba "Relatório da preparação" |
 | `Dashboard/index.html` | O painel. Contém o logo em base64 (linha enorme, ~60 KB); não leia o arquivo inteiro de uma vez |
 | `txt/*.txt` | As mesmas macros em `.txt`, CRLF, prontas para colar |
@@ -207,6 +208,16 @@ conteúdo num módulo.
   automático = erro, sem InputBox). PontoNet: TextToColumns por ";" se veio numa coluna, renomeia
   "Pontonet". Aba "Relatório da preparação" (1ª aba): aba original, tipo, OK/Deu erro, aba(s)
   gerada(s), detalhes + lista do que se espera no mês (FALTOU em vermelho). **Nunca rodou no Excel.**
+- (03/11) **GerarCSVsDaPasta confere os 11 arquivos** antes de pedir a pasta dos CSVs
+  (`ArquivosObrigatorios`, `ConferirArquivosDaPasta`, `NomeComparavel`: sem maiúscula/acento/espaço
+  duplo; .xlsx/.xls/.xlsm/.xlsb/.csv): Cartão ponto 1/2/3, Pausas térmicas 3 meses, Digitadas 3
+  meses, Afastamentos 3 meses, Pontonet 3 meses, Excedentes/Intrajornada/Interjornada/Interjornada
+  semanal 3 meses. Falta ou repetido = aviso com a lista e para sem mexer em nada. RE na pasta segue opcional.
+- **Módulo único** (03/11): `ferramentas/montar_modulo_unico.py` junta as 8 macros (inclusive a
+  PURO); nomes de módulo repetidos entre partes ou iguais a variável de outra parte ganham sufixo
+  (`Aviso_Pau`, `modoAuto_Jor`, `ColunasFaltando_Csv`...); `Application.Run` vira `RodarMacroAuto`
+  (Select Case, chamada direta); públicas só GerarCSVsDaPasta, PrepararAbasDoMes, PURO_Para_EDITADO e
+  DistribuirEditadoNasAbasTratamento. Conferir com `checar_colisoes_vba.py ModuloUnico/*.bas`.
 - **GerarCSVsDaPasta** (02/11, mesmo módulo): pede a pasta com os relatórios baixados e a pasta
   dos CSVs (`EscolherPastaAqui`, FileDialog 4); abre cada .xlsx/.xls/.xlsm/.csv (só leitura,
   `Local:=True`), copia as abas com conteúdo como "Importado n" (`ImportarArquivo`); RE (linha 1
@@ -475,6 +486,17 @@ PontoNet"); 28/29 na "Absenteísmo" e na "Afastamento"; 30/31/32 nas 4 de jornad
   "trecho de trabalho" no lugar de "período"; "de onde vem" com `recsMedida`/`MEDIDAS_PAUSA`
   (array com `.medida`: coluna em destaque e contagem pela medida); dias de afastamento contados
   em dias (`contar` em `state.origem`); atestados por dia da semana empilhados encosta/não encosta.
+- **03/11**: (1) `tipoCanonico` na leitura do CSV: tipo comparado sem acento/maiúscula/espaço (e
+  com acento estragado "TÃ©rmica"/"T?rmica" consertado) com a lista de tipos fixos e trocado pelo
+  nome certo. Sem isso, CSV gerado por módulo IMPORTADO no VBA (UTF-8 lido como ANSI) jogava "Pausa
+  TÃ©rmica Dia", "MarcaÃ§Ã£o Digitada", "Resumo Pausas TÃ©rmicas" na seção Ocorrências e esticava
+  o período para 3 meses (reproduzido no Chromium; provável causa do "Ocorrências toda errada" do
+  Dimitri — confirmar com o CSV dele). (2) Jornada com **nomes técnicos** (pedido dele, vale mais
+  que a regra de "texto leigo" para esses 4): Horas excedentes, Intrajornada, Interjornada,
+  Interjornada semanal (`JORNADA_INFO`, números do topo, `EXPLICA_KPI`, indicadores, `CURTO`); o "?"
+  explica em palavras simples. (3) **Digitadas dos 3 meses**: a seção não segue mais o filtro de
+  período; seletor `#digCiclo` (vazio = todos os ciclos), `state.digPeriodo`, selo `digCiclo` em
+  `PERIODO_DOS_CARDS`/`KPI_PERIODO`. A lista de equipes conta as digitadas do ciclo escolhido.
 - Paleta: laranja `#F7931E`, vermelho `#E31E24`, amarelo `#FFC72C`, preto `#1A1A1A`, cinzas.
 
 ## 7. Conferência feita (01/10/2026)
@@ -811,11 +833,22 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   (RE pelo prefixo, todas as abas Tratamento com grupo). Macro `PrepararAbasDoMes` (5.3e).
   Apresentação dele aos gestores: 03/11.
 - 02/11: macro `GerarCSVsDaPasta` (5.3e): pasta dos relatórios → pasta dos CSVs, tudo de uma vez.
+- 03/11: **atenção à branch**: a sessão de 03/11 começou na branch padrão do GitHub
+  (`claude/new-session-69o070`, parada em 08/10) e refez trabalho que já existia; foi descartado e
+  refeito em cima desta versão (backup do trabalho errado: commit `5e64cbf`). Feito: módulo único
+  colável, conferência dos 11 arquivos na GerarCSVsDaPasta, `tipoCanonico` (ocorrências limpas),
+  nomes técnicos na Jornada, digitadas dos 3 meses com `#digCiclo` (ver seções 5.3e e 6).
+  Testado com CSV inventado (37 colunas, com e sem acento estragado): 10 seções, 1400/390 px, sem
+  erro de JS, NaN ou rolagem lateral. `conferir_painel.py` não rodou (sem a planilha nesta sessão);
+  o item de digitadas pode precisar de ajuste porque elas não seguem mais o período.
 
 ## 12. Estado atual e como continuar (29/10/2026)
 
-**Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`. `main` tinha o estado de 29/10
-(manhã); os pedidos de 29/10 (depois) estão no branch `ccr-50df95d0-4nvt7n`.
+**Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`. ⚠️ A **branch padrão do GitHub é
+`claude/new-session-69o070` (08/10, velha)**: confira com `git fetch` e `git log --all` qual branch é a
+mais nova ANTES de mexer. Em 03/11: `main` = 29/10; `ccr-50df95d0-4nvt7n` = 02/11; o trabalho de 03/11
+está em `ccr-ed849798-y33xdr` (em cima da de 02/11). Pedido ao Dimitri: juntar na `main` e trocar a
+branch padrão para `main`.
 `Dashboard/index.html` é o painel (≈470 KB, logo em base64 numa linha: nunca ler inteiro; use
 `grep -n` e `sed -n`); macros em `<Pasta>/<Macro>.bas` e `txt/<Macro>.txt` (iguais, CRLF no txt).
 

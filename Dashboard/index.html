@@ -1004,6 +1004,10 @@
         <div id="digSemDados" class="card wide" hidden><div class="chart-empty">Este arquivo não traz as marcações digitadas. O RH inclui esse relatório quando gera o arquivo do painel.</div></div>
         <div id="digCorpo">
           <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: o relatório de batidas digitadas do sistema de ponto</span><p>Batida digitada é a batida que <strong>não foi feita no relógio de ponto</strong>: alguém lançou a hora à mão no sistema, com um motivo (esqueceu de bater, o relógio deu problema, estava trabalhando fora…) e um texto de justificativa. Cada batida digitada conta 1. O relatório não informa quem digitou (se foi a própria pessoa ou o RH). Esta seção segue os filtros de gestor, grupo, cargo, colaborador e período.</p></div>
+          <div class="abs-toolbar">
+            <label for="digCiclo" style="font-size:11.5px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:.04em;">Ciclo</label>
+            <select id="digCiclo"></select>
+          </div>
           <section class="dig-kpis" id="digKpis"></section>
           <section class="grid">
             <div class="card wide">
@@ -1026,7 +1030,7 @@
             </div>
           <div class="card wide">
               <div class="card-title">Por data</div>
-              <div class="card-hint">Batidas digitadas dia a dia no período filtrado</div>
+              <div class="card-hint">Batidas digitadas dia a dia no ciclo escolhido acima (ou nos 3 meses)</div>
               <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de batidas digitadas, data de cada uma</span><p>Quantas batidas foram digitadas para cada dia. Picos costumam coincidir com relógio parado ou com trabalho fora da empresa. <strong>Clique num ponto</strong> para ver quem foi.</p></div>
               <div class="card-body" id="chartDigData"></div>
             </div>
@@ -1216,7 +1220,7 @@
               <div class="card-body" id="chartJorGestor"></div>
             </div>
           <div class="card">
-              <div class="card-title">Mais de 10h no dia, por pessoa</div>
+              <div class="card-title">Horas excedentes (mais de 10h no dia), por pessoa</div>
               <div class="card-hint">Dias acima de 10h e quanto passou de 10h, somado &middot; os 20 primeiros (a lista inteira abre em tela cheia) &middot; clique na barra para ver as batidas de cada dia</div>
               <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de horas excedentes</span><p>A jornada máxima é de 10 horas no dia (8 normais + 2 extras). Para cada pessoa: em quantos dias ela passou disso e quanto tempo passou, somando os dias (ex.: um dia de 12h40 conta 2h40). As horas do dia são as do sistema de ponto, que já contam a hora da noite como a lei manda (52 minutos e meio de trabalho à noite valem 1 hora). Ordenado por quem mais passou do limite. Clique na barra para ver cada dia, com as batidas.</p></div>
               <div class="card-body" id="chartJorDezHoras"></div>
@@ -2103,6 +2107,38 @@
 
   // Combina os três: nada disso conta como "ocorrência" pros
   // gráficos/KPI de ocorrências/histórico/filtro de Tipo.
+  // (03/11) Tipo "canônico": o CSV escreve os tipos fixos das linhas que NÃO são ocorrência
+  // ("Pausa Térmica Dia", "Marcação Digitada", "Resumo Pausas Térmicas"...) e o painel os
+  // separa pelo texto exato. Se o texto chegar diferente — acento estragado porque o módulo
+  // foi IMPORTADO no VBA em vez de colado ("Pausa TÃ©rmica Dia", "Pausa T?rmica Dia"),
+  // maiúscula/minúscula ou espaço a mais —, a linha não era reconhecida e caía na seção
+  // Ocorrências como se fosse uma ocorrência da Tratamento. Aqui o texto é comparado sem
+  // acento, sem maiúscula e sem espaço com a lista de tipos conhecidos e trocado pelo
+  // nome certo. Situações da Tratamento (que não estão na lista) não mudam.
+  function consertarAcentos(t){
+    if (!/[ÃÂ]/.test(t)) return t;
+    try { return decodeURIComponent(escape(t)); } catch(e){ return t; }
+  }
+  function chaveTipo(t, semEstranhos){
+    var x = stripAccents(consertarAcentos(String(t||""))).toLowerCase();
+    // semEstranhos: tira também "?" e letras que não são a-z (para "T?rmica" casar com "Térmica")
+    if (semEstranhos) x = String(t||"").toLowerCase().replace(/[^a-z0-9<%()]/g, "");
+    return x.replace(/[^a-z0-9<%()]/g, "");
+  }
+  var TIPOS_CONHECIDOS = null;
+  function tipoCanonico(t){
+    if (!TIPOS_CONHECIDOS){
+      TIPOS_CONHECIDOS = {};
+      [TIPO_AUDITORIA_EXTRA_FALTA, TIPO_RESUMO_PAUSAS_TERMICAS, TIPO_RESUMO_HORAS_CARTAO, TIPO_CADASTRO_ORG,
+       TIPO_MARCACAO_DIGITADA, TIPO_PAUSA_DIA, TIPO_PONTONET, TIPO_ABSENTEISMO, TIPO_AFASTAMENTO]
+        .concat(TIPOS_JORNADA, TIPOS_CURTAS, TIPOS_HORA_EXTRA).forEach(function(k){
+          TIPOS_CONHECIDOS["a:" + chaveTipo(k)] = k;
+          TIPOS_CONHECIDOS["b:" + chaveTipo(k, true)] = k;
+        });
+    }
+    return TIPOS_CONHECIDOS["a:" + chaveTipo(t)] || TIPOS_CONHECIDOS["b:" + chaveTipo(t, true)] || t;
+  }
+
   function isTipoNaoOcorrencia(tipo){
     return isTipoResumo(tipo) || isTipoCurta(tipo) || isTipoHoraExtra(tipo) || isTipoDigitada(tipo) || isTipoAbsenteismo(tipo) || isTipoJornada(tipo) || isTipoPausaDia(tipo) || isTipoPontoNet(tipo);
   }
@@ -2394,7 +2430,7 @@
       var dt = parseDate(r[idx.data]);
       if (!dt) continue;
       var tratativaRaw = idx.tratativa != null ? r[idx.tratativa] : "";
-      var tipoRaw = idx.tipo != null ? (r[idx.tipo]||"").trim() : "";
+      var tipoRaw = idx.tipo != null ? tipoCanonico((r[idx.tipo]||"").trim()) : "";
       if (isTipoIgnorado(tipoRaw)) continue;
       // marcação digitada com Origem "E" não entra (pedido do RH; o GerarCSV
       // atual já não grava essas linhas — isto protege contra um CSV antigo)
@@ -2419,7 +2455,7 @@
         gestor: idx.gestor != null ? textoCampo(r[idx.gestor]) || "Sem gestor" : "Sem gestor",
         setor: idx.setor != null ? (r[idx.setor]||"").trim() || "Sem setor" : "Sem setor",
         cargo: idx.cargo != null ? textoCampo(r[idx.cargo]) || "Sem cargo" : "Sem cargo",
-        tipo: idx.tipo != null ? (r[idx.tipo]||"").trim() || "Não informado" : "Não informado",
+        tipo: tipoRaw || "Não informado",
         situacao: idx.situacao != null ? (r[idx.situacao]||"").trim() : "",
         status: idx.status != null ? (r[idx.status]||"").trim() || "Pendente" : "Pendente",
         duracao: idx.duracao != null ? parseNumber(r[idx.duracao]) : 0,
@@ -3387,9 +3423,15 @@
   }
   // Marcações digitadas: filtros de pessoa + período (são eventos datados),
   // sem tipo/status (que são da Tratamento).
+  // (03/11) As digitadas não seguem mais o filtro de período: o relatório traz 3 meses e o
+  // período do painel abre no mês atual, o que escondia os 2 meses anteriores (pedido do
+  // Dimitri: "mostrar as digitadas dos 3 meses"). O recorte é o seletor "Ciclo" da seção
+  // (#digCiclo; vazio = todos os ciclos do arquivo), como na Jornada e no PontoNet.
   function getDigitadasRecords(){
-    var f = filtroPessoas(), per = periodoFiltro();
-    return state.records.filter(function(r){ return isTipoDigitada(r.tipo) && passaPessoa(r, f) && noPeriodoFiltro(r, per); });
+    var f = filtroPessoas(), ciclo = $("digCiclo").value;
+    return state.records.filter(function(r){
+      return isTipoDigitada(r.tipo) && passaPessoa(r, f) && (!ciclo || cicloDe(r.data) === ciclo);
+    });
   }
   function getAuditoriaRecords(){ return getResumoRecords(TIPO_AUDITORIA_EXTRA_FALTA); }
   // Pausas térmicas: com a aba de pausas de vários meses (T9), cada mês vem
@@ -3504,10 +3546,10 @@
     "Marcações digitadas": "Quantas batidas foram lançadas à mão no sistema, em vez de feitas no relógio de ponto, nos dias do período. Cada batida conta 1: quem esqueceu a entrada e a saída no mesmo dia conta 2.",
     "Colaboradores": "Quantas pessoas diferentes tiveram pelo menos uma batida digitada no período. A porcentagem compara com o total de pessoas da equipe do filtro (sem filtro, todas as pessoas da lista de equipes).",
     "Por esquecimento": "Das batidas digitadas do período, quantas foram lançadas porque a pessoa esqueceu de bater o ponto. É o motivo que mais depende da própria pessoa; os outros são problema no relógio ou trabalho fora da unidade.",
-    "Mais de 10h no dia": "Dias em que a pessoa trabalhou mais de 10 horas (8 normais + 2 extras, o máximo que a lei permite). Embaixo: quantas pessoas diferentes e quanto tempo passou de 10h, somando todos esses dias.",
-    "Intervalo de almoço curto": "Dias em que a pausa para refeição foi menor que o mínimo exigido, ou não houve pausa nenhuma. Embaixo: quantas pessoas e em quantos dias não houve intervalo nenhum.",
-    "Trabalho na folga ou feriado": "Dias de folga da semana ou feriado em que a pessoa trabalhou (bateu ponto).",
-    "Menos de 11h de descanso": "Vezes em que, entre a saída de um dia e a entrada do dia seguinte, a pessoa descansou menos de 11 horas, o mínimo da lei.",
+    "Horas excedentes": "Mais de 10h no dia. Dias em que a pessoa trabalhou mais de 10 horas (8 normais + 2 extras, o máximo que a lei permite). Embaixo: quantas pessoas diferentes e quanto tempo passou de 10h, somando todos esses dias.",
+    "Intrajornada": "Intervalo de almoço curto. Dias em que a pausa para refeição foi menor que o mínimo exigido, ou não houve pausa nenhuma. Embaixo: quantas pessoas e em quantos dias não houve intervalo nenhum.",
+    "Interjornada semanal": "Trabalho na folga ou feriado. Dias de folga da semana ou feriado em que a pessoa trabalhou (bateu ponto).",
+    "Interjornada": "Menos de 11h de descanso. Vezes em que, entre a saída de um dia e a entrada do dia seguinte, a pessoa descansou menos de 11 horas, o mínimo da lei.",
     "Pessoas no relatório": "Quantas pessoas aparecem no relatório de pausas térmicas do mês: são as que trabalham em ambiente frio e precisam fazer as pausas.",
     "Pausas certas": "De todas as pausas térmicas feitas no mês, quantas duraram os 20 minutos certos. As outras foram mais curtas ou mais longas que 20 minutos.",
     "Trabalho acima de 1h40": "Quantas vezes alguém trabalhou mais de 1h40 seguidas no frio sem fazer a pausa. Cada trecho de trabalho (o tempo entre uma pausa e a próxima) conta 1; um mesmo dia tem vários trechos. Embaixo: que parte de todos os trechos do mês isso representa e quantas pessoas passaram do limite em mais de 30% dos seus trechos.",
@@ -3868,8 +3910,22 @@
     $("digSemDados").hidden = temDig;
     $("digCorpo").hidden = !temDig;
     if (!temDig) return;
-    // dig = batidas digitadas que passam nos filtros (gestor, grupo, cargo,
-    // colaborador e período). Tudo abaixo é calculado sobre esta lista.
+    // seletor de ciclo (sem filtro de pessoa, para as opções não mudarem a cada filtro)
+    var ciclosDigSet = {};
+    state.records.forEach(function(r){ if (isTipoDigitada(r.tipo)) ciclosDigSet[cicloDe(r.data)] = true; });
+    var ciclosDig = Object.keys(ciclosDigSet).sort().reverse();
+    var selDig = $("digCiclo"), atualDig = selDig.value;
+    var optsDig = '<option value="">Todos os ciclos do arquivo</option>' + ciclosDig.map(function(k){
+      var f = cicloInicioFim(k);
+      return '<option value="'+k+'">'+cicloLabel(k)+' ('+formatDateBR(f.ini).slice(0,5)+' a '+formatDateBR(f.fim).slice(0,5)+')</option>';
+    }).join("");
+    if (selDig.innerHTML !== optsDig){ selDig.innerHTML = optsDig; selDig.value = ciclosDig.indexOf(atualDig) > -1 ? atualDig : ""; }
+    var fTodosDig = ciclosDig.length ? { ini: cicloInicioFim(ciclosDig[ciclosDig.length-1]).ini, fim: cicloInicioFim(ciclosDig[0]).fim } : null;
+    state.digPeriodo = selDig.value
+      ? "Ciclo " + cicloLabel(selDig.value) + ": " + intervaloBR(cicloInicioFim(selDig.value).ini, cicloInicioFim(selDig.value).fim) + " (não segue o filtro de período)"
+      : (fTodosDig ? "Todos os ciclos do arquivo: " + intervaloBR(fTodosDig.ini, fTodosDig.fim) + " (não segue o filtro de período)" : null);
+    // dig = batidas digitadas que passam nos filtros de pessoa (gestor, grupo, cargo,
+    // colaborador) e no ciclo escolhido. Tudo abaixo é calculado sobre esta lista.
     var dig = getDigitadasRecords();
 
     var diasComOcorrencia = {};
@@ -4380,13 +4436,13 @@
         var out = [];
         getAtestados(true).forEach(function(r){ diasDoAtestado(r).forEach(function(d){ out.push({ r:r, c:cicloDe(d), num:1 }); }); });
         return out; } },
-    { id:"he", nome:"Dias com mais de 10h", secao:"Jornada", pior:"sobe",
+    { id:"he", nome:"Horas excedentes (dias com mais de 10h)", secao:"Jornada", pior:"sobe",
       itens:function(){ return recsPessoa(function(r){ return r.tipo === "Horas Excedentes"; }).map(function(r){ return { r:r, c:cicloDe(r.data), num:1 }; }); } },
-    { id:"intra", nome:"Intervalos de almoço curtos", secao:"Jornada", pior:"sobe",
+    { id:"intra", nome:"Intrajornada (intervalo de almoço curto)", secao:"Jornada", pior:"sobe",
       itens:function(){ return recsPessoa(function(r){ return r.tipo === "Intrajornada"; }).map(function(r){ return { r:r, c:cicloDe(r.data), num:1 }; }); } },
-    { id:"folga", nome:"Trabalho na folga ou feriado", secao:"Jornada", pior:"sobe",
+    { id:"folga", nome:"Interjornada semanal (trabalho na folga ou feriado)", secao:"Jornada", pior:"sobe",
       itens:function(){ return recsPessoa(function(r){ return r.tipo === "Interjornada Semanal"; }).map(function(r){ return { r:r, c:cicloDe(r.data), num:1 }; }); } },
-    { id:"inter", nome:"Menos de 11h de descanso", secao:"Jornada", pior:"sobe",
+    { id:"inter", nome:"Interjornada (menos de 11h de descanso)", secao:"Jornada", pior:"sobe",
       itens:function(){ return recsPessoa(function(r){ return r.tipo === "Interjornada"; }).map(function(r){ return { r:r, c:cicloDe(r.data), num:1 }; }); } },
     { id:"jor", nome:"Ocorrências de jornada (os 4 tipos)", secao:"Jornada", pior:"sobe", soNaSecao:true,
       itens:function(){ return recsPessoa(function(r){ return isTipoJornada(r.tipo); }).map(function(r){ return { r:r, c:cicloDe(r.data), num:1 }; }); } },
@@ -5221,10 +5277,11 @@
      traz 3 ciclos e a seção tem o seu seletor de ciclo (#jorCiclo). Na tela
      os tipos aparecem com nomes simples (JORNADA_INFO), sem os termos da lei. */
   var JORNADA_INFO = {
-    "Horas Excedentes":     { nome:"Mais de 10h no dia",            cor:"#E8840C" },
-    "Intrajornada":         { nome:"Intervalo de almoço curto",     cor:"#2a78d6" },
-    "Interjornada Semanal": { nome:"Trabalho na folga ou feriado",  cor:"#1baf7a" },
-    "Interjornada":         { nome:"Menos de 11h de descanso",      cor:"#e87ba4" }
+    // nomes técnicos (pedido do Dimitri, 03/11); o "?" de cada número explica em palavras simples
+    "Horas Excedentes":     { nome:"Horas excedentes",      cor:"#E8840C" },
+    "Intrajornada":         { nome:"Intrajornada",          cor:"#2a78d6" },
+    "Interjornada Semanal": { nome:"Interjornada semanal",  cor:"#1baf7a" },
+    "Interjornada":         { nome:"Interjornada",          cor:"#e87ba4" }
   };
   var LIMITE_JORNADA_MIN = 600;   // 10h
   function nomeJornada(tipo){ return JORNADA_INFO[tipo] ? JORNADA_INFO[tipo].nome : tipo; }
@@ -5284,10 +5341,10 @@
     var minAcima = porTipo["Horas Excedentes"].reduce(function(sm, r){ return sm + acimaDe10h(r); }, 0);
     var semInterv = porTipo["Intrajornada"].filter(function(r){ return /sem intervalo/i.test(r.situacao); }).length;
     $("jorKpis").innerHTML =
-      tile("Mais de 10h no dia", formatNum(porTipo["Horas Excedentes"].length), pessoas(porTipo["Horas Excedentes"]) + " pessoa(s) &middot; " + formatHoras(minAcima) + " acima de 10h") +
-      tile("Intervalo de almoço curto", formatNum(porTipo["Intrajornada"].length), pessoas(porTipo["Intrajornada"]) + " pessoa(s) &middot; " + semInterv + " sem intervalo nenhum") +
-      tile("Trabalho na folga ou feriado", formatNum(porTipo["Interjornada Semanal"].length), pessoas(porTipo["Interjornada Semanal"]) + " pessoa(s)") +
-      tile("Menos de 11h de descanso", formatNum(porTipo["Interjornada"].length), pessoas(porTipo["Interjornada"]) + " pessoa(s)");
+      tile("Horas excedentes", formatNum(porTipo["Horas Excedentes"].length), pessoas(porTipo["Horas Excedentes"]) + " pessoa(s) &middot; " + formatHoras(minAcima) + " acima de 10h") +
+      tile("Intrajornada", formatNum(porTipo["Intrajornada"].length), pessoas(porTipo["Intrajornada"]) + " pessoa(s) &middot; " + semInterv + " sem intervalo nenhum") +
+      tile("Interjornada semanal", formatNum(porTipo["Interjornada Semanal"].length), pessoas(porTipo["Interjornada Semanal"]) + " pessoa(s)") +
+      tile("Interjornada", formatNum(porTipo["Interjornada"].length), pessoas(porTipo["Interjornada"]) + " pessoa(s)");
 
     // J1: evolução por ciclo (sempre todos os ciclos), empilhada por tipo
     var tipoNome = function(r){ return nomeJornada(r.tipo); };
@@ -5332,7 +5389,7 @@
       g.nPessoas = Object.keys(g.pessoas).length; g.equipe = eq[g.gestor] || 0;
       g.pct = g.equipe ? g.nPessoas / g.equipe : null; return g;
     }).sort(function(a,b){ return b.total - a.total || a.gestor.localeCompare(b.gestor,"pt-BR"); });
-    var CURTO = { "Horas Excedentes":"Mais de<br>10h", "Intrajornada":"Almoço<br>curto", "Interjornada Semanal":"Folga ou<br>feriado", "Interjornada":"Descanso<br>&lt; 11h" };
+    var CURTO = { "Horas Excedentes":"Horas<br>excedentes", "Intrajornada":"Intra-<br>jornada", "Interjornada Semanal":"Interjornada<br>semanal", "Interjornada":"Inter-<br>jornada" };
     var colTipo = function(t, larg){ return { label: nomeJornada(t), html: CURTO[t], width: larg, render:function(g){ return g.t[t] ? formatNum(g.t[t]) : "&ndash;"; } }; };
     renderTableSimple($("tableJorGestor"),
       [{label:"Gestor", render:function(g){ return escapeHtml(g.gestor); }},
@@ -5359,6 +5416,7 @@
       recLista.slice().sort(function(a,b){ return b.data - a.data || a.colaborador.localeCompare(b.colaborador,"pt-BR"); }));
   }
   $("jorCiclo").addEventListener("change", applyFilters);
+  $("digCiclo").addEventListener("change", applyFilters);
 
   $("absAgrupar").addEventListener("change", applyFilters);
   $("absMostrar").addEventListener("change", applyFilters);
@@ -5794,7 +5852,7 @@
     $("historySearch").value = ""; $("bancoBusca").value = "";
     $("orgBusca").value = ""; $("orgMostrar").value = ""; $("digBusca").value = "";
     $("absCiclo").value = ""; $("absAgrupar").value = "gestor"; $("absMostrar").value = "";
-    $("jorCiclo").value = ""; $("gestorMedida").value = ""; $("pauAgrupar").value = "gestor"; $("tendIndicador").value = "";
+    $("jorCiclo").value = ""; $("digCiclo").value = ""; $("gestorMedida").value = ""; $("pauAgrupar").value = "gestor"; $("tendIndicador").value = "";
     state.historySort = { key:"data", dir:"desc" };
     state.historyPage = 1;
     state.bancoMostrarTodos = false;
@@ -6337,8 +6395,9 @@
      (pelo id do gráfico/tabela que fica dentro dele). */
   var PERIODO_DOS_CARDS = {
     filtro: ["chartTipo","chartDiaSemana","chartPorData","chartPorGestor","chartPorCargo","chartTopColaboradores","tableCurtas",
-             "chartDigMotivo","chartDigDiaSemana","chartDigData","chartDigTop","chartDigGestor","chartDigHora",
-             "tableDigJust","tableDigLista","historySection"],
+             "historySection"],
+    digCiclo: ["chartDigMotivo","chartDigDiaSemana","chartDigData","chartDigTop","chartDigGestor","chartDigHora",
+             "tableDigJust","tableDigLista"],
     cartao: ["chartBancoHoras","chartSaldoPositivo","chartSaldoNegativo"], cartao3: ["tableExtraFalta"], pausas: ["tablePausasTermicas","chartPauAcima","tablePauAcimaGestor","chartPauGrupo"],
     pausasMeses: ["chartPauEvolucao"],
     pauBat: ["chartPauHora","chartPauDiaSemana","chartPauPrimeira","chartPauSemPausa","chartPauMaior","pauHeat"],
@@ -6374,7 +6433,8 @@
       tend: (function(){ var c = ciclosTendencia(); return c.length ? "Ciclos " + c.map(cicloLabel).join(", ") + ": " +
         intervaloBR(cicloInicioFim(c[0]).ini, cicloInicioFim(c[c.length-1]).fim) + " (não segue o filtro de período)" : null; })(),
       pnTodos: state.pnPeriodo && state.pnPeriodo.todos, pnCiclo: state.pnPeriodo && state.pnPeriodo.ciclo,
-      jorTodos: state.jorPeriodo && state.jorPeriodo.todos, jorCiclo: state.jorPeriodo && state.jorPeriodo.ciclo
+      jorTodos: state.jorPeriodo && state.jorPeriodo.todos, jorCiclo: state.jorPeriodo && state.jorPeriodo.ciclo,
+      digCiclo: state.digPeriodo
     };
     Object.keys(PERIODO_DOS_CARDS).forEach(function(tipo){
       PERIODO_DOS_CARDS[tipo].forEach(function(id){
@@ -6394,7 +6454,7 @@
     // Números do topo das seções (pedido do RH, 29/10: "deixe claro a que período o
     // número se refere"): uma linha 📅 dentro de cada número, sem o "(não segue o
     // filtro de período)", que fica no "?".
-    var KPI_PERIODO = { kpiRow:"filtro", digKpis:"filtro", jorKpis:"jorCiclo", pauKpis:"pausas", pnKpis:"pnCiclo" };
+    var KPI_PERIODO = { kpiRow:"filtro", digKpis:"digCiclo", jorKpis:"jorCiclo", pauKpis:"pausas", pnKpis:"pnCiclo" };
     Object.keys(KPI_PERIODO).forEach(function(id){
       var t = textos[KPI_PERIODO[id]];
       t = t ? t.replace(/ \(não segue o filtro de período\)/, "") : "";

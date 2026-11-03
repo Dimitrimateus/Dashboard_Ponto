@@ -437,10 +437,14 @@ End Function
 ' MACRO: GerarCSVsDaPasta  (02/11)
 ' --------------------------------------------------------------------------------
 ' Faz o mês inteiro de uma vez, a partir de uma PASTA com os relatórios baixados:
-'   1) pede a pasta onde estão os arquivos do sistema (Cartão Ponto de cada mês,
-'      Pausas Térmicas, Marcações digitadas, Afastamentos, os 4 de jornada, o
-'      PontoNet .csv e, se quiser, a RE nova);
-'   2) pede a pasta onde os CSVs vão ser gravados;
+'   1) pede a pasta onde estão os arquivos do sistema e CONFERE se ela tem os 11
+'      arquivos com estes nomes (03/11; maiúscula, acento e extensão .xlsx/.xls/.xlsm/
+'      .xlsb/.csv tanto faz): Cartão ponto 1, Cartão ponto 2, Cartão ponto 3 (1 = o
+'      mais antigo), Pausas térmicas 3 meses, Digitadas 3 meses, Afastamentos 3 meses,
+'      Pontonet 3 meses, Excedentes 3 meses, Intrajornada 3 meses, Interjornada 3
+'      meses e Interjornada semanal 3 meses. Se faltar algum, avisa quais e para sem
+'      mexer em nada. A RE nova pode ficar na pasta também (é opcional);
+'   2) só então pede a pasta onde os CSVs vão ser gravados;
 '   3) abre cada arquivo, traz as abas dele para esta planilha e fecha (os arquivos
 '      da pasta não são alterados);
 '   4) formata tudo (a mesma preparação da PrepararAbasDoMes). Uma aba já formatada
@@ -464,7 +468,18 @@ Sub GerarCSVsDaPasta()
 
     pastaOrigem = EscolherPastaAqui("1 de 2: escolha a PASTA com os relatórios baixados do sistema")
     If pastaOrigem = "" Then Exit Sub
-    pastaDestino = EscolherPastaAqui("2 de 2: escolha a pasta onde os arquivos CSV vão ser gravados")
+
+    ' (03/11) Confere se a pasta tem os 11 arquivos com os nomes combinados ANTES de pedir a
+    ' pasta dos CSVs; se faltar algum, avisa quais e para sem mexer em nada.
+    Dim faltando As String
+    faltando = ConferirArquivosDaPasta(pastaOrigem)
+    If faltando <> "" Then
+        MsgBox "A pasta escolhida não tem todos os arquivos necessários. Nada foi alterado." & vbCrLf & vbCrLf & _
+               "Pasta: " & pastaOrigem & vbCrLf & vbCrLf & faltando, vbExclamation, "Gerar CSVs da pasta"
+        Exit Sub
+    End If
+
+    pastaDestino = EscolherPastaAqui("2 de 2: todos os arquivos foram encontrados. Escolha a pasta onde os CSVs vão ser gravados")
     If pastaDestino = "" Then Exit Sub
 
     ' arquivos de planilha e .csv da pasta (sem os temporários "~$" e sem esta planilha)
@@ -472,7 +487,7 @@ Sub GerarCSVsDaPasta()
     nomeArq = Dir(pastaOrigem & "\*.*")
     Do While nomeArq <> ""
         ext = LCase$(Mid$(nomeArq, InStrRev(nomeArq, ".") + 1))
-        If (ext = "xlsx" Or ext = "xls" Or ext = "xlsm" Or ext = "csv") And Left$(nomeArq, 2) <> "~$" _
+        If (ext = "xlsx" Or ext = "xls" Or ext = "xlsm" Or ext = "xlsb" Or ext = "csv") And Left$(nomeArq, 2) <> "~$" _
            And LCase$(pastaOrigem & "\" & nomeArq) <> LCase$(wb.FullName) Then arquivos.Add nomeArq
         nomeArq = Dir()
     Loop
@@ -574,6 +589,77 @@ Sub GerarCSVsDaPasta()
            "Veja o que foi feito em cada arquivo na aba """ & NOME_RELATORIO & """.", _
            IIf(nErros > 0, vbExclamation, vbInformation), "Gerar CSVs da pasta"
 End Sub
+
+' Os 11 arquivos que a pasta tem que ter (nome sem a extensão). A ordem dos Cartões não importa
+' para a macro (cada um vira "Cartão <mês>" pelo período dele), mas o combinado é 1 = o mais antigo.
+Private Function ArquivosObrigatorios() As Variant
+    ArquivosObrigatorios = Array("Afastamentos 3 meses", "Cartão ponto 1", "Cartão ponto 2", "Cartão ponto 3", _
+        "Excedentes 3 meses", "Interjornada 3 meses", "Interjornada semanal 3 meses", "Intrajornada 3 meses", _
+        "Digitadas 3 meses", "Pausas térmicas 3 meses", "Pontonet 3 meses")
+End Function
+
+' Nome para comparar: minúsculas, sem acento e com espaços simples ("Cartão  Ponto 1" = "cartao ponto 1").
+Private Function NomeComparavel(ByVal t As String) As String
+    Dim com As String, sem As String, i As Long
+    t = LCase$(Trim$(t))
+    com = "áàâãäéèêëíìîïóòôõöúùûüç"
+    sem = "aaaaaeeeeiiiiooooouuuuc"
+    For i = 1 To Len(com)
+        t = Replace(t, Mid$(com, i, 1), Mid$(sem, i, 1))
+    Next i
+    Do While InStr(t, "  ") > 0
+        t = Replace(t, "  ", " ")
+    Loop
+    NomeComparavel = t
+End Function
+
+' "" se a pasta tem os 11 arquivos (Excel ou .csv, maiúsculas/acentos tanto faz); senão o texto
+' do aviso: os que faltam, os repetidos (mesmo nome com duas extensões) e os arquivos da pasta
+' que não bateram com nenhum nome (para ver se é só um nome digitado diferente).
+Private Function ConferirArquivosDaPasta(ByVal pasta As String) As String
+    Dim achados As Object, nomeArq As String, ext As String, base As String, chave As String
+    Set achados = CreateObject("Scripting.Dictionary")
+    nomeArq = Dir(pasta & "\*.*")
+    Do While nomeArq <> ""
+        If InStrRev(nomeArq, ".") > 0 And Left$(nomeArq, 2) <> "~$" Then
+            ext = LCase$(Mid$(nomeArq, InStrRev(nomeArq, ".") + 1))
+            If ext = "xlsx" Or ext = "xls" Or ext = "xlsm" Or ext = "xlsb" Or ext = "csv" Then
+                base = Left$(nomeArq, InStrRev(nomeArq, ".") - 1)
+                chave = NomeComparavel(base)
+                If achados.Exists(chave) Then
+                    achados(chave) = achados(chave) & ", " & nomeArq
+                Else
+                    achados.Add chave, nomeArq
+                End If
+            End If
+        End If
+        nomeArq = Dir()
+    Loop
+
+    Dim lista As Variant, i As Long, faltam As String, repetidos As String, usados As Object, k As Variant, sobra As String
+    Set usados = CreateObject("Scripting.Dictionary")
+    lista = ArquivosObrigatorios()
+    For i = LBound(lista) To UBound(lista)
+        chave = NomeComparavel(CStr(lista(i)))
+        If achados.Exists(chave) Then
+            usados(chave) = True
+            If InStr(achados(chave), ", ") > 0 Then repetidos = repetidos & vbCrLf & "  - " & lista(i) & ": " & achados(chave)
+        Else
+            faltam = faltam & vbCrLf & "  - " & lista(i)
+        End If
+    Next i
+    If faltam = "" And repetidos = "" Then Exit Function
+
+    Dim texto As String
+    If faltam <> "" Then texto = "FALTANDO (" & (Len(faltam) - Len(Replace(faltam, vbCrLf, ""))) / 2 & "):" & faltam
+    If repetidos <> "" Then texto = texto & IIf(texto = "", "", vbCrLf & vbCrLf) & "NOME REPETIDO (deixe só um arquivo de cada):" & repetidos
+    For Each k In achados.Keys
+        If Not usados.Exists(k) Then sobra = sobra & vbCrLf & "  - " & achados(k)
+    Next k
+    If sobra <> "" Then texto = texto & vbCrLf & vbCrLf & "Arquivos da pasta que não bateram com nenhum nome " & _
+        "(confira se não é um deles com o nome diferente; a RE pode ficar na pasta):" & sobra
+    ConferirArquivosDaPasta = texto
+End Function
 
 ' Roda uma etapa do GerarCSVPonto (pelo nome) e devolve o texto dela; se o módulo
 ' não estiver colado, devolve o erro em palavras.

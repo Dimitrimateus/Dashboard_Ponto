@@ -15,6 +15,16 @@ no fim, no CSV que alimenta o painel dos gestores.
 
 Contexto completo para o Claude Code em [`CLAUDE.md`](CLAUDE.md). As macros em `.txt`, prontas para colar no VBA, estão em `txt/`; as ferramentas de conferência, em `ferramentas/`.
 
+## Jeito mais fácil (03/11): um código só
+
+Cole **só** o `txt/PainelPonto_TudoEmUm.txt` num módulo da planilha de Tratamento (apague os módulos
+antigos) e rode **GerarCSVsDaPasta** (Alt+F8). Ela pede a pasta dos relatórios, confere se estão lá os
+11 arquivos (`Cartão ponto 1`, `Cartão ponto 2`, `Cartão ponto 3`, `Pausas térmicas 3 meses`,
+`Digitadas 3 meses`, `Afastamentos 3 meses`, `Pontonet 3 meses`, `Excedentes 3 meses`,
+`Intrajornada 3 meses`, `Interjornada 3 meses`, `Interjornada semanal 3 meses`), avisa os que
+faltam, pergunta onde salvar os CSVs e faz o resto. O módulo é montado por
+`ferramentas/montar_modulo_unico.py` a partir dos `.bas` de cada macro.
+
 ## Como instalar
 
 Abra o editor do VBA (`Alt + F11`), crie um módulo (**Inserir > Módulo**) e **cole** o conteúdo
