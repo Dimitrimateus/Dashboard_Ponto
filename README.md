@@ -15,6 +15,26 @@ no fim, no CSV que alimenta o painel dos gestores.
 
 Contexto completo para o Claude Code em [`CLAUDE.md`](CLAUDE.md). As macros em `.txt`, prontas para colar no VBA, estão em `txt/`; as ferramentas de conferência, em `ferramentas/`.
 
+## Jeito mais fácil: um módulo só (`AtualizarPainelPonto`)
+
+Cole **só** o `txt/AtualizarPainelPonto.txt` num módulo da planilha de Tratamento e rode a macro
+**AtualizarPainelPonto** (Alt+F8). Ela:
+
+1. pede a pasta com os relatórios do sistema;
+2. confere se estão lá os 11 arquivos (Excel, qualquer extensão): `Cartão ponto 1`, `Cartão ponto 2`,
+   `Cartão ponto 3`, `Pausas térmicas 3 meses`, `Digitadas 3 meses`, `Afastamentos 3 meses`,
+   `Pontonet 3 meses`, `Excedentes 3 meses`, `Interjornada 3 meses`, `Interjornada semanal 3 meses`,
+   `Intrajornada 3 meses`. Se faltar algum, diz quais e para sem mexer em nada;
+3. pergunta onde salvar os CSVs;
+4. importa cada relatório para uma aba da planilha e formata (Cartões consolidados, Pausas, Digitadas,
+   Afastamentos; PontoNet como veio). Aba que já existe é limpa e reaproveitada;
+5. gera a aba CSV e salva `dados_<gestor>.csv` + `dados_TODOS.csv` na pasta escolhida.
+
+Tratamento, RE e ORG continuam sendo as abas da própria planilha. Excedentes, Interjornada,
+Interjornada semanal e Intrajornada por enquanto só são copiados para abas (ainda não entram no CSV).
+O módulo é gerado por `ferramentas/montar_tudo_em_um.py` a partir das macros abaixo: depois de mudar
+qualquer `.bas`, rode o script de novo.
+
 ## Como instalar
 
 Abra o editor do VBA (`Alt + F11`), crie um módulo (**Inserir > Módulo**) e **cole** o conteúdo

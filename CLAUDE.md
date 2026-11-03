@@ -55,6 +55,7 @@ aba PURO (exportação de ocorrências)   ──► PURO_Para_EDITADO      ─�
 | `MarcacoesDigitadas/FormatarMarcacoesDigitadas.bas` | relatório "Marcações digitadas" → a mesma aba como tabela (renomeada "Marcações Digitadas") |
 | `Afastamentos/FormatarAfastamentos.bas` | relatório HRCL006 "Histórico de Afastamentos" → a mesma aba como tabela (renomeada "Afastamentos") |
 | `GerarCSVPonto/GerarCSVPonto.bas` | `GerarAbaCSV` (monta a aba CSV) e `ExportarCSVPorGestor` (grava os .csv) |
+| `TudoEmUm/Orquestrador.bas` | Macro `AtualizarPainelPonto` (pasta → confere 11 arquivos → importa/formata → CSVs). **Fonte**; o módulo final `TudoEmUm/AtualizarPainelPonto.bas` / `txt/AtualizarPainelPonto.txt` é GERADO por `ferramentas/montar_tudo_em_um.py` (junta todas as macros menos a PURO; tudo Private; MsgBox → Avisar/Perguntar). Não edite o gerado |
 | `Dashboard/index.html` | O painel. Contém o logo em base64 (linha enorme, ~60 KB); não leia o arquivo inteiro de uma vez |
 | `txt/*.txt` | As mesmas macros em `.txt`, CRLF, prontas para colar |
 | `ferramentas/` | Scripts para conferir CSV e painel sem Excel, formatar os relatórios em Python, inserir abas na planilha e checar colisões de nome no VBA (ver seção 10) |
@@ -395,6 +396,17 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
 - 07/10: macro FormatarAfastamentos e linhas "Afastamento" no CSV (relatório HRCL006 substitui o
   Cartão como fonte dos atestados); menu de seções; Pausas na própria seção com colunas estreitas;
   evolução de atestados reage ao ciclo.
+
+- 03/11: módulo único `AtualizarPainelPonto` (pedido do Dimitri: colar um código só). Lê de uma
+  pasta os arquivos `Cartão ponto 1/2/3`, `Pausas térmicas 3 meses`, `Digitadas 3 meses`,
+  `Afastamentos 3 meses`, `Pontonet 3 meses`, `Excedentes 3 meses`, `Interjornada 3 meses`,
+  `Interjornada semanal 3 meses`, `Intrajornada 3 meses` (nome comparado sem maiúscula/acento;
+  .xlsx/.xls/.xlsm/.xlsb), avisa os que faltam, pergunta a pasta dos CSVs, importa cada um para uma
+  aba (aba existente é limpa, não apagada, para não quebrar fórmulas), formata e roda GerarAbaCSV +
+  ExportarCSVPorGestor. No lote, o GerarAbaCSV usa só as abas recém-importadas (`LoteAbasCartao`,
+  `LoteAbaAfastamentos`, `LoteAbaDigitadas`, `LoteTabelaPausas`). **Excedentes, Interjornada,
+  Interjornada semanal e Intrajornada só são copiados como vieram**: o formato desses relatórios
+  ainda não é conhecido (pedir amostras ao Dimitri). Nunca rodou no Excel.
 
 ## 12. Estado atual e como continuar (08/10/2026)
 
