@@ -1,6 +1,64 @@
 Option Explicit
 
 ' ============================================================================================================
+' DECLARAÇÕES DE TODAS AS PARTES (o VBA só aceita antes da 1ª Sub/Function)
+' ============================================================================================================
+' --- de GerarCSVPonto/GerarCSVPonto.bas
+Private modoAutoCSV As Boolean
+Private msgAutoCSV As String
+Private pastaFixaCSV As String
+Private Const INCLUIR_SEM_ALTERACAO As Boolean = False
+Private Const VALOR_CHECK_IGNORAR As String = "S"
+Private Const DESTINO_HORA_EXTRA_PADRAO As String = ""
+Private Const SITUACOES_IGNORAR As String = "problema horario"
+Private Const ABSENTEISMO_CONTEM As String = "atest"
+Private Const FOLGA_CONTEM As String = "dsr|compensado|folga|feriado"
+' --- de PrepararAbas/PrepararAbasDoMes.bas
+Private Const NOME_RELATORIO As String = "Relatório da preparação"
+Private substituirAbas As Boolean
+' --- de CartaoPonto/ConsolidarCartaoPonto.bas
+Private modoAuto As Boolean
+Private msgAuto As String
+Private Const COL_MATRICULA As Integer = 1
+Private Const COL_NOME As Integer = 2
+Private Const COL_CARGO As Integer = 3
+Private Const COL_SETOR As Integer = 4
+Private Const COL_DT As Integer = 5
+Private Const COL_SEM As Integer = 6
+Private Const COL_COD_HORARIO As Integer = 7
+Private Const COL_HORARIO As Integer = 8
+Private Const COL_PONTO1 As Integer = 9          ' Ponto 1 a Ponto 6 = colunas 9 a 14
+Private Const COL_DESCRICAO As Integer = 15
+Private Const COL_TRABALHO As Integer = 16       ' Trabalho, BH, Just., Injus., 50%, 60%, 100%, 120%, Ad. Not. = 16 a 24
+Private Const COL_BH As Integer = 17
+Private Const COL_EXTRA50 As Integer = 20
+Private Const COL_EXTRA120 As Integer = 23
+Private Const COL_BANCO As Integer = 25
+Private Const COL_FALTANDO As Integer = 26
+Private Const COL_MAIS4 As Integer = 27
+Private Const COL_TOLERANCIA As Integer = 28
+Private Const COL_PROXIMOS As Integer = 29
+' --- de PausasTermicas/FormatarPausasTermicas.bas
+Private modoAuto_Pau As Boolean
+Private msgAuto_Pau As String
+' --- de MarcacoesDigitadas/FormatarMarcacoesDigitadas.bas
+Private modoAuto_Dig As Boolean
+Private msgAuto_Dig As String
+Private Const NOME_ABA_SAIDA As String = "Marcações Digitadas"
+' --- de Afastamentos/FormatarAfastamentos.bas
+Private modoAuto_Afa As Boolean
+Private msgAuto_Afa As String
+Private Const NOME_ABA_SAIDA_Afa As String = "Afastamentos"
+' --- de Jornada/FormatarJornada.bas
+Private modoAuto_Jor As Boolean
+Private msgAuto_Jor As String
+' --- de BancoHoras/FormatarBancoHoras.bas
+Private modoAuto_BH As Boolean
+Private msgAuto_BH As String
+Private Const NOME_ABA_SAIDA_BH As String = "Banco de Horas"
+Private Const N_COLS_BH As Long = 16
+
+' ============================================================================================================
 ' MÓDULO ÚNICO DO PAINEL DE PONTO (03/11)
 '
 ' Cole SÓ este código num módulo da planilha de Tratamento (Alt+F11 > Inserir > Módulo > colar).
@@ -9,8 +67,8 @@ Option Explicit
 '   GerarCSVsDaPasta ............... a do mês: confere os 12 arquivos da pasta (11 + BH), pergunta onde salvar os
 '                                    CSVs, traz os relatórios, formata, gera a aba CSV e grava os CSVs
 '   PrepararAbasDoMes .............. só formata relatórios que você colou como abas (sem CSV)
-'   PURO_Para_EDITADO .............. a do dia a dia (aba PURO -> abas de tratamento)
-'   DistribuirEditadoNasAbasTratamento  refaz só a distribuição da aba EDITADO ativa
+' A PURO_Para_EDITADO (aba PURO -> abas de tratamento) NÃO está aqui: é de outro assunto e fica no
+' txt/PURO_Para_EDITADO.txt, num módulo separado.
 ' Este arquivo é montado por ferramentas/montar_modulo_unico.py a partir dos .bas de cada macro.
 ' ============================================================================================================
 
@@ -39,9 +97,6 @@ End Function
 ' GerarAbaCSV_Auto e ExportarCSVPorGestor_NaPasta. Nesse modo nenhuma mensagem
 ' aparece (o texto vai para msgAutoCSV e volta para o relatório), o arquivo do
 ' PontoNet não é pedido numa janela e a pasta dos CSVs já vem escolhida (pastaFixaCSV).
-Private modoAutoCSV As Boolean
-Private msgAutoCSV As String
-Private pastaFixaCSV As String
 
 ' =====================================================================
 ' GerarCSVPonto
@@ -330,18 +385,14 @@ Private pastaFixaCSV As String
 ' =====================================================================
 
 ' ---- Regras configuráveis -------------------------------------------
-Private Const INCLUIR_SEM_ALTERACAO As Boolean = False
 ' "S" = ocorrência sem problema real (confirmado pelo RH); mude para
 ' um array maior se algum dia existir um terceiro valor válido.
-Private Const VALOR_CHECK_IGNORAR As String = "S"
 ' REGRA: sem informação separada de banco de horas x pagamento na aba
 ' Tratamento. Por padrão toda hora extra fica com destino em branco
 ' (o painel trata "em branco" como Pagamento). Ajuste aqui se preciso.
-Private Const DESTINO_HORA_EXTRA_PADRAO As String = ""
 ' Situações da Tratamento que NÃO entram no CSV, separadas por "|".
 ' A comparação ignora acento e maiúscula ("Problema horario" e
 ' "Problema Horário" caem na mesma regra) — ver SituacaoIgnorada.
-Private Const SITUACOES_IGNORAR As String = "problema horario"
 ' Absenteísmo: o que procurar na coluna "Descrição Marcação" dos Cartões
 ' (contém, sem acento e sem maiúscula, separado por "|"). Por enquanto só
 ' ATESTADOS (pedido do RH, 06/10: "Atestado ate 15 dias", "... Noturno",
@@ -349,10 +400,8 @@ Private Const SITUACOES_IGNORAR As String = "problema horario"
 ' também acidente de trabalho, suspensão (medida disciplinar), faltas
 ' justificadas e faltas injustificadas; para incluir, acrescente os textos
 ' exatos como aparecem no Cartão, ex.: "atest|acidente trabalho|faltas injustificadas".
-Private Const ABSENTEISMO_CONTEM As String = "atest"
 ' Descrições que contam como folga para a regra "atestado encostado em
 ' folga" (o dia antes do início ou depois do fim do atestado é folga).
-Private Const FOLGA_CONTEM As String = "dsr|compensado|folga|feriado"
 
 ' ---------------------------------------------------------------------
 ' Sub principal: gera a aba "CSV"
@@ -486,7 +535,7 @@ Private Sub GerarAbaCSV()
         ' uma coluna inexistente não dá erro na hora, só depois, ao ler a
         ' célula) — então a aba é pulada e o motivo aparece na mensagem final.
         Dim colunasFaltantes As String
-        colunasFaltantes = ColunasFaltando_Csv(colIdx, Array("Matricula", "Nome", "Gestor", "Situação", "Status", _
+        colunasFaltantes = ColunasFaltando(colIdx, Array("Matricula", "Nome", "Gestor", "Situação", "Status", _
                                                          "Data", "Extras", "Faltas", "Extra 100%"))
         If colunasFaltantes <> "" Then
             resumoAbasTrat = resumoAbasTrat & vbCrLf & "  " & wsTrat.Name & ": PULADA (faltam as colunas " & _
@@ -1143,7 +1192,7 @@ End Function
 
 ' Lista (separada por vírgula) dos cabeçalhos obrigatórios que NÃO
 ' existem no mapa de colunas da aba; "" = está tudo lá.
-Private Function ColunasFaltando_Csv(colIdx As Object, obrigatorias As Variant) As String
+Private Function ColunasFaltando(colIdx As Object, obrigatorias As Variant) As String
     Dim i As Long, faltando As String
     For i = LBound(obrigatorias) To UBound(obrigatorias)
         If Not colIdx.Exists(obrigatorias(i)) Then
@@ -1151,7 +1200,7 @@ Private Function ColunasFaltando_Csv(colIdx As Object, obrigatorias As Variant) 
             faltando = faltando & obrigatorias(i)
         End If
     Next i
-    ColunasFaltando_Csv = faltando
+    ColunasFaltando = faltando
 End Function
 
 ' Valor de texto guardado no dicionário para essa chave, ou "" se a chave
@@ -3123,10 +3172,8 @@ End Sub
 ' Nunca rodou no Excel: rode numa CÓPIA da planilha na primeira vez.
 ' ================================================================================
 
-Private Const NOME_RELATORIO As String = "Relatório da preparação"
 ' True quando a GerarCSVsDaPasta está rodando: a aba nova de um relatório SUBSTITUI a
 ' já formatada do mesmo mês/tipo (em vez de ficar como "(novo)").
-Private substituirAbas As Boolean
 
 Public Sub PrepararAbasDoMes()
     Dim wb As Workbook, abas As Collection, ws As Worksheet
@@ -3994,28 +4041,7 @@ End Function
 ' Modo automático (31/10): quando a macro PrepararAbasDoMes chama esta formatação
 ' (ConsolidarCartaoPontoDefinitivo_Auto), nenhuma mensagem aparece; o texto de cada aviso vai para msgAuto e
 ' volta para o relatório da preparação. Ver Aviso, no fim do módulo.
-Private modoAuto As Boolean
-Private msgAuto As String
 
-Private Const COL_MATRICULA As Integer = 1
-Private Const COL_NOME As Integer = 2
-Private Const COL_CARGO As Integer = 3
-Private Const COL_SETOR As Integer = 4
-Private Const COL_DT As Integer = 5
-Private Const COL_SEM As Integer = 6
-Private Const COL_COD_HORARIO As Integer = 7
-Private Const COL_HORARIO As Integer = 8
-Private Const COL_PONTO1 As Integer = 9          ' Ponto 1 a Ponto 6 = colunas 9 a 14
-Private Const COL_DESCRICAO As Integer = 15
-Private Const COL_TRABALHO As Integer = 16       ' Trabalho, BH, Just., Injus., 50%, 60%, 100%, 120%, Ad. Not. = 16 a 24
-Private Const COL_BH As Integer = 17
-Private Const COL_EXTRA50 As Integer = 20
-Private Const COL_EXTRA120 As Integer = 23
-Private Const COL_BANCO As Integer = 25
-Private Const COL_FALTANDO As Integer = 26
-Private Const COL_MAIS4 As Integer = 27
-Private Const COL_TOLERANCIA As Integer = 28
-Private Const COL_PROXIMOS As Integer = 29
 
 ' Macro principal (Desenvolvedor > Macros). Etapas: 1) cria/limpa a aba de
 ' destino; 2) descobre o período do relatório; 3) escreve o cabeçalho; 4) lê o
@@ -4818,8 +4844,6 @@ End Function
 ' Modo automático (31/10): quando a macro PrepararAbasDoMes chama esta formatação
 ' (FormatarPausasTermicas_Auto), nenhuma mensagem aparece; o texto de cada aviso
 ' vai para msgAuto e volta para o relatório da preparação. Ver Aviso, no fim.
-Private modoAuto_Pau As Boolean
-Private msgAuto_Pau As String
 
 ' ============================================================================
 ' FormatarPausasTermicas
@@ -5489,8 +5513,6 @@ End Function
 ' Modo automático (31/10): quando a macro PrepararAbasDoMes chama esta formatação
 ' (FormatarMarcacoesDigitadas_Auto), nenhuma mensagem aparece; o texto de cada aviso vai para msgAuto e
 ' volta para o relatório da preparação. Ver Aviso, no fim do módulo.
-Private modoAuto_Dig As Boolean
-Private msgAuto_Dig As String
 
 ' ============================================================================
 ' FormatarMarcacoesDigitadas
@@ -5540,7 +5562,6 @@ Private msgAuto_Dig As String
 ' ============================================================================
 
 ' Nome final da aba (o GerarCSVPonto não depende dele: acha a aba pelo cabeçalho).
-Private Const NOME_ABA_SAIDA As String = "Marcações Digitadas"
 
 ' Macro principal. Três etapas: 1) acha as colunas pelo cabeçalho do relatório;
 ' 2) monta a tabela na memória juntando motivos quebrados em duas linhas;
@@ -5880,8 +5901,6 @@ End Function
 ' Modo automático (31/10): quando a macro PrepararAbasDoMes chama esta formatação
 ' (FormatarAfastamentos_Auto), nenhuma mensagem aparece; o texto de cada aviso vai para msgAuto e
 ' volta para o relatório da preparação. Ver Aviso, no fim do módulo.
-Private modoAuto_Afa As Boolean
-Private msgAuto_Afa As String
 ' ============================================================================
 ' COMO ESTE MÓDULO SE LIGA AO RESTO DO PROJETO
 '   Ordem no mês: 1) exportar o HRCL006 do Senior; 2) abrir o arquivo e rodar
@@ -5935,7 +5954,6 @@ Private msgAuto_Afa As String
 
 ' Nome que a aba recebe no fim. O GerarCSVPonto NÃO depende deste nome (acha a
 ' aba pelo cabeçalho), então renomear depois não quebra nada.
-Private Const NOME_ABA_SAIDA_Afa As String = "Afastamentos"
 
 ' Macro principal (é a que aparece em Desenvolvedor > Macros). Três etapas:
 '   1) descobre em que coluna está cada informação do relatório;
@@ -6290,8 +6308,6 @@ End Function
 ' Modo automático (31/10): quando a macro PrepararAbasDoMes chama esta formatação
 ' (FormatarJornada_Auto), nenhuma mensagem aparece; o texto de cada aviso vai para msgAuto e
 ' volta para o relatório da preparação. Ver Aviso, no fim do módulo.
-Private modoAuto_Jor As Boolean
-Private msgAuto_Jor As String
 
 ' ============================================================================
 ' FormatarJornada
@@ -6891,8 +6907,6 @@ End Function
 ' Modo automático: quando a GerarCSVsDaPasta / PrepararAbasDoMes chama esta formatação
 ' (FormatarBancoHoras_Auto), nenhuma mensagem aparece; o texto de cada aviso vai para msgAuto e
 ' volta para o relatório da preparação. Ver Aviso, no fim do módulo.
-Private modoAuto_BH As Boolean
-Private msgAuto_BH As String
 ' ============================================================================
 ' FormatarBancoHoras  (04/11)
 '
@@ -6929,8 +6943,6 @@ Private msgAuto_BH As String
 ' Este módulo não depende de nenhum outro. Nunca rodou no Excel: rode numa CÓPIA.
 ' ============================================================================
 
-Private Const NOME_ABA_SAIDA_BH As String = "Banco de Horas"
-Private Const N_COLS_BH As Long = 16
 
 Private Sub FormatarBancoHoras()
     Dim ws As Worksheet
@@ -7236,800 +7248,3 @@ Private Function Aviso_BH(ByVal texto As String, Optional ByVal botoes As Long =
         Aviso_BH = MsgBox(texto, botoes, titulo)
     End If
 End Function
-
-' ============================================================================================================
-' PARTE: PuroParaEditado/PURO_Para_EDITADO.bas  (gerado por ferramentas/montar_modulo_unico.py; edite o .bas de origem)
-' ============================================================================================================
-
-' ================================================================================
-' MACRO: PURO_Para_EDITADO   (versão simples, 04/11)
-' --------------------------------------------------------------------------------
-' O QUE FAZ (e só isso)
-'   Pega as linhas da aba "PURO" e as joga nas abas que JÁ EXISTEM
-'   "Tratamento - Internos" e "Tratamento - Externos". Nada mais.
-'
-'   Passo a passo:
-'     1) Lê a aba PURO e monta a aba "EDITADO_<MES><AA>" (ex.: EDITADO_NOV26) com
-'        as colunas na ordem final, "X" virando "SIM" e sem espaços sobrando.
-'        Se a EDITADO desse mês já existe, ela é apagada e refeita.
-'     2) Olha a coluna "Tipo de trabalho" da aba ORG (achada pela matrícula; se a
-'        matrícula não estiver lá, pelo nome) para saber se a pessoa é interna ou
-'        externa.
-'     3) Pergunta onde colar: 1 = Internos e Externos, 2 = só Internos, 3 = só
-'        Externos (Cancelar = não cola nada). Cola as linhas EMBAIXO do que já
-'        existe em "Tratamento - Internos" / "Tratamento - Externos", coluna por
-'        coluna pelo NOME do cabeçalho.
-'
-'   O que a macro NÃO faz (pedido do Dimitri, 04/11):
-'     - não compara se o dia/pessoa já está colada: cola tudo o que está na PURO;
-'     - não cria aba de relatório, de aviso nem cópia "(2)";
-'     - não apaga nada das abas de Internos/Externos.
-'   Única abinha criada: a EDITADO_<MES><AA>.
-'
-'   Pessoa que não está no ORG (ou está sem "Tipo de trabalho") não tem como ser
-'   separada: a linha fica AMARELA na EDITADO, não é colada em nenhuma aba, e a
-'   mensagem final diz quantas foram.
-'
-' PREENCHIMENTO DAS COLUNAS NAS ABAS DE DESTINO
-'     Matricula, Nome, Situação, Data (<- Dt.Apuraç.), Status (<- Tratamento),
-'     Pontonet, Marcações ... Refeição fora de Escala -> vêm da EDITADO;
-'     Trabalho, Cargo, Gestor -> se a aba já tem FÓRMULA nessas colunas (ex.:
-'       PROCX no ORG), a fórmula é estendida para as linhas novas; se não tem,
-'       o valor vem do ORG (Tipo de trabalho, Cargo, GESTOR);
-'     Check -> fica em branco (o RH marca).
-'
-' COMO USAR
-'   1) Cole este código num módulo do VBA (Alt+F11). Prefira COPIAR/COLAR:
-'      "Importar Arquivo" lê o .bas como ANSI e estraga os acentos.
-'   2) Com a aba PURO na planilha, Alt+F8 > "PURO_Para_EDITADO" > Executar.
-'   Para refazer só a colagem a partir de uma EDITADO já pronta, deixe essa aba
-'   aberta e rode DistribuirEditadoNasAbasTratamento.
-'
-' COMO SE LIGA AO RESTO DO PROJETO
-'   aba PURO -> esta macro -> abas "Tratamento - Internos/Externos" -> o RH trata
-'   -> GerarAbaCSV lê essas abas pelos NOMES de cabeçalho. Por isso os nomes em
-'   targetHeaders não devem mudar sem conferir o GerarCSVPonto.
-'   Não depende de nenhum outro módulo (LimparTexto está no fim deste arquivo).
-' ================================================================================
-
-' Macro principal. Fluxo: 0) prepara o Excel; 1) acha a aba PURO; 2) mapeia os
-' cabeçalhos; 3) define o layout de saída; 4) avisa cabeçalhos faltando;
-' 5) descobre o mês para o nome da aba; 6) cria (ou refaz) a aba EDITADO;
-' 7) cabeçalho; 8) copia linha a linha; 9) aparência; 10) joga internos e
-' externos nas abas "Tratamento - Internos" / "Tratamento - Externos"
-' (DistribuirNasAbasTratamento). Os rótulos Finalizar/TratarErro, no fim,
-' garantem que o Excel volte ao normal mesmo se der erro.
-Public Sub PURO_Para_EDITADO()
-
-    Dim wbAtual As Workbook
-    Dim wsPuro As Worksheet
-    Dim wsEditado As Worksheet
-    Dim headerMap As Object          ' Dictionary: nome do cabeçalho (Trim) -> nº da coluna na PURO
-    Dim colunasFaltando As String    ' Acumula avisos de cabeçalhos não encontrados
-
-    Dim targetHeaders() As Variant   ' Cabeçalhos finais, na ordem exata da EDITADO
-    Dim sourceKeys() As Variant      ' Nome do cabeçalho correspondente na PURO ("" = coluna manual/em branco)
-    Dim convertFlag() As Variant     ' True = converter "X" -> "SIM" nesta coluna
-
-    Dim i As Long, r As Long, lastColPuro As Long, lastRowPuro As Long
-    Dim srcCol As Long
-    Dim valorOriginal As String
-    Dim statusBarAntes As Boolean
-
-    Dim colDataApuracao As Long
-    Dim dataReferencia As Date
-    Dim temDataValida As Boolean
-    Dim mesAno As String
-    Dim nomeAbaFinal As String
-    Dim monthAbbrev As Variant
-
-    ' Qualquer erro não previsto pula para TratarErro (fim da rotina), que mostra a
-    ' mensagem e restaura o Excel.
-    On Error GoTo TratarErro
-
-    ' ----------------------------------------------------------------------
-    ' 0) Preparação: desliga atualizações de tela/cálculo para performance
-    '    e para evitar "piscar" a tela durante a execução.
-    ' ----------------------------------------------------------------------
-    Application.ScreenUpdating = False
-    Application.Calculation = xlCalculationManual
-    Application.DisplayAlerts = False
-    statusBarAntes = Application.DisplayStatusBar
-    Application.DisplayStatusBar = True
-
-    Set wbAtual = ThisWorkbook
-
-    ' ----------------------------------------------------------------------
-    ' 1) Confirma que a aba PURO existe
-    ' ----------------------------------------------------------------------
-    On Error Resume Next
-    Set wsPuro = wbAtual.Sheets("PURO")
-    On Error GoTo TratarErro
-    If wsPuro Is Nothing Then
-        MsgBox "Não encontrei uma aba chamada 'PURO' nesta pasta de trabalho." & vbCrLf & _
-               "Verifique o nome da aba e tente novamente.", vbCritical, "Aba não encontrada"
-        GoTo Finalizar
-    End If
-
-    ' ----------------------------------------------------------------------
-    ' 2) Mapeia os cabeçalhos da PURO (linha 1) pelo NOME, ignorando espaços
-    '    extras no início/fim (a exportação do sistema costuma vir com
-    '    espaços de preenchimento nos nomes das colunas).
-    ' ----------------------------------------------------------------------
-    Set headerMap = CreateObject("Scripting.Dictionary")
-    lastColPuro = wsPuro.Cells(1, wsPuro.Columns.Count).End(xlToLeft).Column
-
-    Dim chave As String
-    For i = 1 To lastColPuro
-        chave = Trim(CStr(wsPuro.Cells(1, i).Value))
-        If chave <> "" Then
-            If Not headerMap.Exists(chave) Then
-                headerMap.Add chave, i
-            End If
-        End If
-    Next i
-
-    If Not headerMap.Exists("Nome") Then
-        MsgBox "Não encontrei a coluna 'Nome' no cabeçalho da PURO. Não é possível continuar.", _
-               vbCritical, "Cabeçalho obrigatório ausente"
-        GoTo Finalizar
-    End If
-
-    lastRowPuro = wsPuro.Cells(wsPuro.Rows.Count, headerMap("Nome")).End(xlUp).Row
-    If lastRowPuro < 2 Then
-        MsgBox "A aba PURO não tem linhas de dados (apenas cabeçalho).", vbExclamation, "Nada a processar"
-        GoTo Finalizar
-    End If
-
-    ' ----------------------------------------------------------------------
-    ' 3) Define o layout final: cabeçalho exato, de qual cabeçalho da PURO
-    '    ele vem, e se precisa converter X -> SIM.
-    '    (Ordem = ordem das colunas A, B, C... na aba final)
-    '
-    '    Estes 3 arrays trabalham em conjunto, posição a posição (targetHeaders(i)
-    '    corresponde a sourceKeys(i) corresponde a convertFlag(i)):
-    '      targetHeaders(i) = nome da coluna na aba EDITADO (o que vai ser ESCRITO)
-    '      sourceKeys(i)    = nome do cabeçalho a procurar na aba PURO (de ONDE vem o
-    '                         valor); string vazia "" = não existe na PURO, é uma coluna
-    '                         de preenchimento manual (Gestor/Situação/Tratamento/
-    '                         Pontonet) que fica em branco para o RH preencher depois
-    '      convertFlag(i)   = True nas colunas que guardam "marcação de intervalo"
-    '                         (Intra/Inter/Marcações Impares/Horas Excedentes/Extras e
-    '                         Faltas): a PURO grava "X" quando a condição ocorreu, e
-    '                         aqui isso é convertido para "SIM" (mais legível para quem
-    '                         só olha a planilha, sem precisar saber o código do sistema)
-    ' ----------------------------------------------------------------------
-    targetHeaders = Array( _
-        "Matricula", _
-        "Nome", _
-        "Gestor", _
-        "Situação", _
-        "Tratamento", _
-        "Pontonet", _
-        "Dt.Apuraç.", _
-        "Marcações", _
-        "Extras", _
-        "Faltas", _
-        "Extra 100%", _
-        "Qtd. Horas Pagas", _
-        "Intra", _
-        "Inter", _
-        "Marcações Impares", _
-        "Horas Excedentes", _
-        "Extras e Faltas", _
-        "Refeição fora de Escala")
-
-    ' As 4 strings vazias abaixo correspondem, nesta ordem, às colunas
-    ' Gestor, Situação, Tratamento e Pontonet - preenchimento manual,
-    ' sem coluna de origem na PURO.
-    sourceKeys = Array( _
-        "Cadastro", _
-        "Nome", _
-        "", _
-        "", _
-        "", _
-        "", _
-        "Dt.Apuraç.", _
-        "Marcações", _
-        "Extras", _
-        "Faltas", _
-        "Extra 100%", _
-        "Qtd. Horas Pagas", _
-        "Intrajornada", _
-        "Interjornada", _
-        "Marcações Impares", _
-        "Horas Excedentes", _
-        "Extras e Faltas", _
-        "Refeição fora de Escala")
-
-    convertFlag = Array(False, False, False, False, False, False, False, False, _
-                         False, False, False, False, True, True, True, True, True, False)
-
-    ' ----------------------------------------------------------------------
-    ' 4) Confere se todos os cabeçalhos esperados existem na PURO.
-    '    Se algum não existir, avisa (mas não trava) - a coluna ficará
-    '    em branco na aba final.
-    ' ----------------------------------------------------------------------
-    For i = 0 To UBound(sourceKeys)
-        If sourceKeys(i) <> "" Then
-            If Not headerMap.Exists(sourceKeys(i)) Then
-                colunasFaltando = colunasFaltando & "- """ & sourceKeys(i) & """ (esperado para a coluna """ & targetHeaders(i) & """)" & vbCrLf
-            End If
-        End If
-    Next i
-
-    If colunasFaltando <> "" Then
-        MsgBox "Atenção: os cabeçalhos abaixo NÃO foram encontrados na aba PURO." & vbCrLf & _
-               "As colunas correspondentes ficarão em branco na aba gerada:" & vbCrLf & vbCrLf & _
-               colunasFaltando, vbExclamation, "Cabeçalhos não encontrados"
-    End If
-
-    ' ----------------------------------------------------------------------
-    ' 5) Descobre a competência (mês/ano) para nomear a aba automaticamente,
-    '    usando a data de apuração MAIS RECENTE encontrada na PURO.
-    '    Isso evita depender da data do sistema (relógio do PC) e reflete
-    '    o período real dos dados importados.
-    ' ----------------------------------------------------------------------
-    monthAbbrev = Array("JAN", "FEV", "MAR", "ABR", "MAI", "JUN", _
-                         "JUL", "AGO", "SET", "OUT", "NOV", "DEZ")
-
-    temDataValida = False
-    If headerMap.Exists("Dt.Apuraç.") Then
-        colDataApuracao = headerMap("Dt.Apuraç.")
-        For r = 2 To lastRowPuro
-            If IsDate(wsPuro.Cells(r, colDataApuracao).Value) Then
-                If Not temDataValida Then
-                    dataReferencia = CDate(wsPuro.Cells(r, colDataApuracao).Value)
-                    temDataValida = True
-                ElseIf CDate(wsPuro.Cells(r, colDataApuracao).Value) > dataReferencia Then
-                    dataReferencia = CDate(wsPuro.Cells(r, colDataApuracao).Value)
-                End If
-            End If
-        Next r
-    End If
-
-    If temDataValida Then
-        mesAno = monthAbbrev(Month(dataReferencia) - 1) & Format(dataReferencia, "yy")
-    Else
-        ' Nenhuma data válida encontrada na PURO -> usa a data/hora atual do
-        ' sistema como último recurso, para garantir que a macro NUNCA trave
-        ' por falta de nome de aba.
-        mesAno = monthAbbrev(Month(Date) - 1) & Format(Date, "yy") & "_" & Format(Now, "hhmmss")
-    End If
-
-    nomeAbaFinal = "EDITADO_" & mesAno
-
-    ' ----------------------------------------------------------------------
-    ' 6) Cria a aba final. Se a EDITADO desse mês já existe (rodou de novo),
-    '    ela é apagada e refeita, sem perguntar e sem criar cópia.
-    ' ----------------------------------------------------------------------
-    Set wsEditado = Nothing
-    On Error Resume Next
-    Set wsEditado = wbAtual.Sheets(nomeAbaFinal)
-    On Error GoTo TratarErro
-
-    If Not wsEditado Is Nothing Then
-        If wsEditado.AutoFilterMode Then wsEditado.AutoFilterMode = False
-        wsEditado.Cells.Clear
-    Else
-        Set wsEditado = wbAtual.Sheets.Add(After:=wsPuro)
-        wsEditado.Name = nomeAbaFinal
-    End If
-
-    ' ----------------------------------------------------------------------
-    ' 7) Escreve o cabeçalho
-    ' ----------------------------------------------------------------------
-    For i = 0 To UBound(targetHeaders)
-        wsEditado.Cells(1, i + 1).Value = targetHeaders(i)
-    Next i
-    wsEditado.Rows(1).Font.Bold = True
-
-    ' ----------------------------------------------------------------------
-    ' 8) Copia e transforma linha a linha.
-    '    Como cada linha da PURO é tratada de forma independente (sem
-    '    depender de uma linha equivalente em execuções anteriores), a
-    '    macro já funciona corretamente mesmo com admissões/desligamentos
-    '    entre um mês e outro: simplesmente gera uma linha nova para cada
-    '    linha existente na PURO, sejam quantas forem.
-    ' ----------------------------------------------------------------------
-    Dim linhaDestino As Long
-    linhaDestino = 2
-
-    For r = 2 To lastRowPuro
-
-        Application.StatusBar = "Processando linha " & r & " de " & lastRowPuro & "..."
-
-        ' Para cada linha de dado da PURO (r), percorre a lista de colunas de destino (i) e, para
-        ' cada uma, escreve na aba EDITADO (linha "linhaDestino", coluna "i + 1") o valor
-        ' correspondente da PURO (linha r, coluna "srcCol" — descoberta via headerMap, o dicionário
-        ' "nome do cabeçalho -> nº da coluna" montado no passo 2). Ou seja: para cada colaborador
-        ' (linha), refaz a mesma correspondência coluna-a-coluna definida no passo 3 acima.
-        For i = 0 To UBound(sourceKeys)
-
-            If sourceKeys(i) = "" Then
-                ' Coluna manual (Gestor, Situação, Tratamento, Pontonet) -> fica em branco
-                ' (não faz nada aqui de propósito)
-            Else
-                If headerMap.Exists(sourceKeys(i)) Then
-                    srcCol = headerMap(sourceKeys(i))
-
-                    If convertFlag(i) Then
-                        ' -----------------------------------------------------
-                        ' Colunas de flag: valor é "" (vazio/espaços) ou
-                        ' começa com "X". Convertemos "X" -> "SIM" (sem os
-                        ' espaços de preenchimento que vinham depois do "X");
-                        ' qualquer outro valor sai sem espaços nas pontas, e
-                        ' célula só com espaços sai vazia de verdade.
-                        ' -----------------------------------------------------
-                        valorOriginal = CStr(LimparTexto(wsPuro.Cells(r, srcCol).Value))
-                        If Left(valorOriginal, 1) = "X" Then
-                            wsEditado.Cells(linhaDestino, i + 1).Value = "SIM"
-                        ElseIf valorOriginal <> "" Then
-                            wsEditado.Cells(linhaDestino, i + 1).Value = valorOriginal
-                        End If
-                    Else
-                        ' Cópia direta do valor (mantém tipo: data, hora e
-                        ' número continuam como estão; só TEXTO passa por
-                        ' LimparTexto, que tira os espaços do fim do nome,
-                        ' das marcações etc.)
-                        wsEditado.Cells(linhaDestino, i + 1).Value = LimparTexto(wsPuro.Cells(r, srcCol).Value)
-                        ' Copia também o formato de número (datas e horas)
-                        wsEditado.Cells(linhaDestino, i + 1).NumberFormat = _
-                            wsPuro.Cells(r, srcCol).NumberFormat
-                    End If
-                End If
-            End If
-
-        Next i
-
-        linhaDestino = linhaDestino + 1
-    Next r
-
-    ' ----------------------------------------------------------------------
-    ' 9) Ajustes finais de aparência
-    ' ----------------------------------------------------------------------
-    wsEditado.Columns.AutoFit
-    wsEditado.Rows(1).AutoFilter
-
-    ' ----------------------------------------------------------------------
-    ' 10) Joga as linhas nas abas que já existem: internos em "Tratamento -
-    '     Internos" e externos em "Tratamento - Externos" (pela coluna "Tipo de
-    '     trabalho" da aba ORG). Ver DistribuirNasAbasTratamento.
-    ' ----------------------------------------------------------------------
-    Dim resumoDistribuicao As String
-    resumoDistribuicao = DistribuirNasAbasTratamento(wbAtual, wsEditado)
-
-    Application.StatusBar = False
-    MsgBox "Concluído! " & (linhaDestino - 2) & " linha(s) da PURO na aba '" & _
-           wsEditado.Name & "'." & vbCrLf & vbCrLf & resumoDistribuicao, vbInformation, "Processo finalizado"
-
-Finalizar:
-    ' Restaura o Excel ao estado normal, mesmo se algo tiver falhado
-    Application.ScreenUpdating = True
-    Application.Calculation = xlCalculationAutomatic
-    Application.DisplayAlerts = True
-    Application.DisplayStatusBar = statusBarAntes
-    Application.StatusBar = False
-    Exit Sub
-
-' Rótulo de erro: só é alcançado via "On Error GoTo TratarErro". Mostra o erro e
-' a linha da PURO em que estava, e volta para Finalizar.
-TratarErro:
-    MsgBox "Ocorreu um erro inesperado durante o processamento." & vbCrLf & _
-           "Erro " & Err.Number & ": " & Err.Description & vbCrLf & _
-           "Linha aproximada: " & r, vbCritical, "Erro na macro"
-    Resume Finalizar
-
-End Sub
-
-' ================================================================================
-' LimparTexto
-' --------------------------------------------------------------------------------
-' Tira os espaços das pontas de um valor de TEXTO (inclusive o espaço
-' "não-quebrável", Chr(160)). Valores que não são texto (datas, horas, números)
-' voltam intactos. Texto que só tinha espaços vira Empty (célula vazia de verdade).
-' ================================================================================
-Private Function LimparTexto(ByVal valor As Variant) As Variant
-    Dim txt As String
-
-    If VarType(valor) <> vbString Then
-        LimparTexto = valor
-        Exit Function
-    End If
-
-    txt = Trim$(Replace(valor, Chr(160), " "))
-    If txt = "" Then
-        LimparTexto = Empty
-    Else
-        LimparTexto = txt
-    End If
-End Function
-
-' ================================================================================
-' DistribuirEditadoNasAbasTratamento  (pode ser rodada sozinha, Alt+F8)
-' --------------------------------------------------------------------------------
-' Refaz só o passo 10: com uma aba EDITADO_... aberta (aba ativa), joga os
-' internos e os externos nas abas de tratamento que já existem.
-' ================================================================================
-Public Sub DistribuirEditadoNasAbasTratamento()
-    Dim wsOrigem As Worksheet, resumoFinal As String
-    Set wsOrigem = ActiveSheet
-    If UCase$(Left$(wsOrigem.Name, 7)) <> "EDITADO" Then
-        MsgBox "Abra (clique) a aba EDITADO_... antes de rodar esta macro.", vbExclamation, "Aba errada"
-        Exit Sub
-    End If
-    On Error GoTo FalhouDistribuir
-    Application.ScreenUpdating = False
-    resumoFinal = DistribuirNasAbasTratamento(wsOrigem.Parent, wsOrigem)
-    Application.ScreenUpdating = True
-    MsgBox resumoFinal, vbInformation, "Abas de tratamento"
-    Exit Sub
-FalhouDistribuir:
-    Application.ScreenUpdating = True
-    MsgBox "Erro " & Err.Number & ": " & Err.Description, vbCritical, "Erro na macro"
-End Sub
-
-' ================================================================================
-' DistribuirNasAbasTratamento
-' --------------------------------------------------------------------------------
-' Separa as linhas da EDITADO em internos e externos (coluna "Tipo de trabalho"
-' do ORG) e cola cada grupo EMBAIXO do que já existe na sua aba de tratamento.
-' Pergunta só onde colar (1/2/3); sem checar repetidas, sem criar aba. Devolve o texto do resumo
-' para a mensagem final. Não trava se faltar alguma aba: só avisa no resumo.
-' ================================================================================
-Private Function DistribuirNasAbasTratamento(wb As Workbook, wsEd As Worksheet) As String
-    Dim wsOrg As Worksheet, wsInt As Worksheet, wsExt As Worksheet
-    Dim colEd As Object, colOrg As Object
-    Dim orgPorMat As Object, orgPorNome As Object
-    Dim linhasInt As Collection, linhasExt As Collection
-    Dim qtdSemTipo As Long
-    Dim ultEd As Long, r As Long, k As String, tipoTxt As String
-    Dim dadosOrg As Variant, infoOrg As Variant, achou As Boolean
-    Dim resumo As String
-
-    ' --- aba ORG: a primeira cujo nome começa com "ORG" e que tem Matricula e
-    '     "Tipo de trabalho" na linha 1
-    Dim ws As Worksheet
-    For Each ws In wb.Worksheets
-        If UCase$(Left$(Trim$(ws.Name), 3)) = "ORG" Then
-            Set colOrg = MapaCabecalhoNorm(ws)
-            If colOrg.Exists("MATRICULA") And ColunaTipoTrabalho(colOrg) > 0 Then
-                Set wsOrg = ws
-                Exit For
-            End If
-        End If
-    Next ws
-    If wsOrg Is Nothing Then
-        DistribuirNasAbasTratamento = "As abas de tratamento NÃO foram preenchidas: não achei a aba ORG " & _
-            "com as colunas ""Matricula"" e ""Tipo de trabalho"" na linha 1."
-        Exit Function
-    End If
-
-    ' --- abas de destino (já existentes; a macro não cria nenhuma)
-    Set wsInt = AchaAbaTratamento(wb, "INTERN", "- I")
-    Set wsExt = AchaAbaTratamento(wb, "EXTERN", "- E")
-    If Not wsInt Is Nothing Then LimparFiltroDaAba wsInt
-    If Not wsExt Is Nothing Then LimparFiltroDaAba wsExt
-
-    ' --- lê o ORG: matrícula -> Array(tipo de trabalho, cargo, gestor);
-    '     o mesmo pelo nome, para quem está com a matrícula em erro (#N/A).
-    '     Matrícula repetida: vale a primeira linha.
-    LimparFiltroDaAba wsOrg
-    Set orgPorMat = CreateObject("Scripting.Dictionary")
-    Set orgPorNome = CreateObject("Scripting.Dictionary")
-    Dim colOMat As Long, colONome As Long, colOTipo As Long, colOCargo As Long, colOGestor As Long
-    colOMat = colOrg("MATRICULA")
-    colONome = ValorOuZero(colOrg, "COLABORADOR")
-    colOTipo = ColunaTipoTrabalho(colOrg)
-    colOCargo = ValorOuZero(colOrg, "CARGO")
-    colOGestor = ValorOuZero(colOrg, "GESTOR")
-    Dim ultOrg As Long, cargoOrg As String, gestorOrg As String
-    ultOrg = UltimaLinhaDaAba(wsOrg)
-    For r = 2 To ultOrg
-        cargoOrg = "": gestorOrg = ""
-        If colOCargo > 0 Then cargoOrg = TextoDaCelula_Puro(wsOrg.Cells(r, colOCargo).Value)
-        If colOGestor > 0 Then gestorOrg = TextoDaCelula_Puro(wsOrg.Cells(r, colOGestor).Value)
-        dadosOrg = Array(TextoDaCelula_Puro(wsOrg.Cells(r, colOTipo).Value), cargoOrg, gestorOrg)
-        k = ChaveDaMatricula(wsOrg.Cells(r, colOMat).Value)
-        If k <> "" Then
-            If Not orgPorMat.Exists(k) Then orgPorMat.Add k, dadosOrg
-        End If
-        If colONome > 0 Then
-            k = NormTexto(TextoDaCelula_Puro(wsOrg.Cells(r, colONome).Value))
-            If k <> "" Then
-                If Not orgPorNome.Exists(k) Then orgPorNome.Add k, dadosOrg
-            End If
-        End If
-    Next r
-
-    ' --- separa as linhas da EDITADO em internos e externos
-    Set colEd = MapaCabecalhoNorm(wsEd)
-    Set linhasInt = New Collection
-    Set linhasExt = New Collection
-    ultEd = UltimaLinhaDaAba(wsEd)
-    For r = 2 To ultEd
-        achou = False
-        If colEd.Exists("MATRICULA") Then
-            k = ChaveDaMatricula(wsEd.Cells(r, colEd("MATRICULA")).Value)
-            If k <> "" Then
-                If orgPorMat.Exists(k) Then infoOrg = orgPorMat(k): achou = True
-            End If
-        End If
-        If Not achou And colEd.Exists("NOME") Then
-            k = NormTexto(TextoDaCelula_Puro(wsEd.Cells(r, colEd("NOME")).Value))
-            If k <> "" Then
-                If orgPorNome.Exists(k) Then infoOrg = orgPorNome(k): achou = True
-            End If
-        End If
-        tipoTxt = ""
-        If achou Then tipoTxt = NormTexto(CStr(infoOrg(0)))
-        If achou And InStr(tipoTxt, "EXTERN") > 0 Then
-            linhasExt.Add Array(r, infoOrg)
-        ElseIf achou And InStr(tipoTxt, "INTERN") > 0 Then
-            linhasInt.Add Array(r, infoOrg)
-        Else
-            ' fora do ORG ou sem "Tipo de trabalho": não cola, pinta de amarelo
-            wsEd.Rows(r).Interior.Color = RGB(255, 235, 156)
-            qtdSemTipo = qtdSemTipo + 1
-        End If
-    Next r
-
-    ' --- pergunta onde colar (04/11): 1 = Internos e Externos, 2 = só Internos,
-    '     3 = só Externos. Cancelar = não cola nada (a EDITADO fica pronta).
-    Dim escolha As String
-    Application.ScreenUpdating = True
-    Do
-        escolha = Trim$(InputBox("Onde colar as linhas?" & vbCrLf & vbCrLf & _
-            "1 = Internos e Externos   (" & (linhasInt.Count + linhasExt.Count) & " linha(s))" & vbCrLf & _
-            "2 = Só Internos   (" & linhasInt.Count & " linha(s))" & vbCrLf & _
-            "3 = Só Externos   (" & linhasExt.Count & " linha(s))" & vbCrLf & vbCrLf & _
-            "Cancelar = não colar nada", "Colar nas abas de tratamento", "1"))
-        If escolha = "" Or escolha = "1" Or escolha = "2" Or escolha = "3" Then Exit Do
-        MsgBox "Digite 1, 2 ou 3 (ou clique em Cancelar).", vbExclamation, "Opção inválida"
-    Loop
-    Application.ScreenUpdating = False
-    If escolha = "" Then
-        DistribuirNasAbasTratamento = "Nada foi colado nas abas de tratamento (você escolheu Cancelar)."
-        Exit Function
-    End If
-
-    ' --- cola na(s) aba(s) escolhida(s), embaixo do que já existe
-    If escolha = "3" Then
-        resumo = "Internos: não colados (você escolheu só externos)."
-    ElseIf wsInt Is Nothing Then
-        resumo = "Não achei a aba ""Tratamento - Internos"": " & linhasInt.Count & " interno(s) não foram colados."
-    Else
-        ColarLinhasNaAba wsEd, colEd, linhasInt, wsInt
-        resumo = linhasInt.Count & " interno(s) colado(s) na aba '" & wsInt.Name & "'."
-    End If
-    If escolha = "2" Then
-        resumo = resumo & vbCrLf & "Externos: não colados (você escolheu só internos)."
-    ElseIf wsExt Is Nothing Then
-        resumo = resumo & vbCrLf & "Não achei a aba ""Tratamento - Externos"": " & linhasExt.Count & " externo(s) não foram colados."
-    Else
-        ColarLinhasNaAba wsEd, colEd, linhasExt, wsExt
-        resumo = resumo & vbCrLf & linhasExt.Count & " externo(s) colado(s) na aba '" & wsExt.Name & "'."
-    End If
-    If qtdSemTipo > 0 Then
-        resumo = resumo & vbCrLf & vbCrLf & qtdSemTipo & " linha(s) NÃO foram coladas (em amarelo na aba '" & _
-            wsEd.Name & "'): a pessoa não está no ORG ou está sem ""Tipo de trabalho""."
-    End If
-    DistribuirNasAbasTratamento = resumo
-End Function
-
-' Cola as linhas escolhidas da EDITADO numa aba de tratamento, EMBAIXO das que
-' já existem (nunca apaga nada), coluna por coluna pelo nome do cabeçalho da
-' aba de destino (linha 1). Não compara com o que já está na aba. Funciona com a
-' aba em formato de Tabela do Excel (ListObject) ou sem tabela.
-Private Sub ColarLinhasNaAba(wsEd As Worksheet, colEd As Object, linhas As Collection, _
-                             wsDest As Worksheet)
-    Dim colDest As Object, lo As ListObject
-    Dim ultCol As Long, c As Long, i As Long, linhaIni As Long, lin As Long
-    Dim nomeCol As String, origemCol As String
-    Dim formulas() As String
-    Dim parLinha As Variant, rEd As Long, infoOrg As Variant
-
-    If linhas.Count = 0 Then Exit Sub
-
-    LimparFiltroDaAba wsDest
-    Set colDest = MapaCabecalhoNorm(wsDest)
-    ultCol = wsDest.Cells(1, wsDest.Columns.Count).End(xlToLeft).Column
-
-    ' Tabela do Excel com o cabeçalho na linha 1 (se houver)
-    For Each lo In wsDest.ListObjects
-        If lo.HeaderRowRange.Row = 1 Then Exit For
-    Next lo
-
-    ' Guarda as fórmulas da 1ª linha de dados (ex.: PROCX do Gestor/Cargo/
-    ' Trabalho), só das colunas que NÃO vêm da EDITADO, para estender às linhas novas.
-    ReDim formulas(1 To ultCol)
-    For c = 1 To ultCol
-        nomeCol = NormTexto(TextoDaCelula_Puro(wsDest.Cells(1, c).Value))
-        If ColunaDaEditado(nomeCol, colEd) = "" Then
-            If wsDest.Cells(2, c).HasFormula Then formulas(c) = wsDest.Cells(2, c).FormulaR1C1
-        End If
-    Next c
-
-    ' primeira linha livre: logo depois da última com Matricula/Nome preenchido
-    ' (se a Tabela do Excel já tem linhas vazias no fim, elas são aproveitadas)
-    linhaIni = UltimaLinhaDados(wsDest) + 1
-    If Not lo Is Nothing Then
-        If linhaIni < lo.HeaderRowRange.Row + 1 Then linhaIni = lo.HeaderRowRange.Row + 1
-    End If
-
-    lin = linhaIni
-    For i = 1 To linhas.Count
-        parLinha = linhas(i)
-        rEd = parLinha(0)
-        infoOrg = parLinha(1)
-        For c = 1 To ultCol
-            nomeCol = NormTexto(TextoDaCelula_Puro(wsDest.Cells(1, c).Value))
-            origemCol = ColunaDaEditado(nomeCol, colEd)
-            If origemCol <> "" Then
-                wsDest.Cells(lin, c).Value = wsEd.Cells(rEd, colEd(origemCol)).Value
-                wsDest.Cells(lin, c).NumberFormat = wsEd.Cells(rEd, colEd(origemCol)).NumberFormat
-            ElseIf formulas(c) <> "" Then
-                wsDest.Cells(lin, c).FormulaR1C1 = formulas(c)
-            ElseIf nomeCol = "TRABALHO" Or nomeCol = "TIPO DE TRABALHO" Then
-                wsDest.Cells(lin, c).Value = infoOrg(0)
-            ElseIf nomeCol = "CARGO" Then
-                wsDest.Cells(lin, c).Value = infoOrg(1)
-            ElseIf nomeCol = "GESTOR" Then
-                wsDest.Cells(lin, c).Value = infoOrg(2)
-            End If
-        Next c
-        lin = lin + 1
-    Next i
-
-    ' Tabela do Excel: estica a tabela até a última linha colada
-    If Not lo Is Nothing Then
-        If lin - 1 > lo.HeaderRowRange.Row + lo.ListRows.Count Then
-            lo.Resize wsDest.Range(lo.HeaderRowRange.Cells(1, 1), _
-                wsDest.Cells(lin - 1, lo.HeaderRowRange.Column + lo.HeaderRowRange.Columns.Count - 1))
-        End If
-    End If
-End Sub
-
-' De qual coluna da EDITADO (nome normalizado) vem a coluna da aba de
-' tratamento. "" = não vem da EDITADO (Check, Trabalho, Cargo, Gestor...).
-' Gestor da EDITADO só vale se alguém preencheu (normalmente está em branco).
-Private Function ColunaDaEditado(ByVal nomeDest As String, colEd As Object) As String
-    Dim alvo As String
-    Select Case nomeDest
-        Case "", "CHECK", "TRABALHO", "TIPO DE TRABALHO", "CARGO", "GESTOR": alvo = ""
-        Case "STATUS": alvo = "TRATAMENTO"
-        Case "DATA": alvo = "DT.APURAC."
-        Case Else: alvo = nomeDest
-    End Select
-    If alvo <> "" Then
-        If Not colEd.Exists(alvo) Then alvo = ""
-    End If
-    ColunaDaEditado = alvo
-End Function
-
-' Acha a aba de tratamento: nome começando com "Tratamento" e contendo
-' "Intern"/"Extern"; se não houver, uma aba cujo nome termina em "- I"/"- E".
-Private Function AchaAbaTratamento(wb As Workbook, ByVal trecho As String, ByVal fimNome As String) As Worksheet
-    Dim ws As Worksheet, nm As String
-    For Each ws In wb.Worksheets
-        nm = NormTexto(ws.Name)
-        If Left$(nm, 10) = "TRATAMENTO" And InStr(nm, trecho) > 0 Then
-            Set AchaAbaTratamento = ws
-            Exit Function
-        End If
-    Next ws
-    For Each ws In wb.Worksheets
-        nm = NormTexto(ws.Name)
-        If Right$(nm, Len(fimNome)) = fimNome Then
-            Set AchaAbaTratamento = ws
-            Exit Function
-        End If
-    Next ws
-End Function
-
-' Cabeçalho da linha 1 -> nº da coluna, com o nome sem acento, em maiúsculas
-' e sem espaços sobrando ("Situação" -> "SITUACAO"). Vale a primeira coluna
-' de cada nome.
-Private Function MapaCabecalhoNorm(ws As Worksheet) As Object
-    Dim d As Object, c As Long, ultCol As Long, nm As String
-    Set d = CreateObject("Scripting.Dictionary")
-    ultCol = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
-    For c = 1 To ultCol
-        nm = NormTexto(TextoDaCelula_Puro(ws.Cells(1, c).Value))
-        If nm <> "" Then
-            If Not d.Exists(nm) Then d.Add nm, c
-        End If
-    Next c
-    Set MapaCabecalhoNorm = d
-End Function
-
-' Coluna "Tipo de trabalho" do ORG (aceita também só "Trabalho").
-Private Function ColunaTipoTrabalho(colOrg As Object) As Long
-    If colOrg.Exists("TIPO DE TRABALHO") Then
-        ColunaTipoTrabalho = colOrg("TIPO DE TRABALHO")
-    ElseIf colOrg.Exists("TRABALHO") Then
-        ColunaTipoTrabalho = colOrg("TRABALHO")
-    End If
-End Function
-
-Private Function ValorOuZero(d As Object, ByVal chaveBusca As String) As Long
-    If d.Exists(chaveBusca) Then ValorOuZero = d(chaveBusca)
-End Function
-
-' Matrícula como texto comparável: número sem zeros à esquerda; erro (#N/A)
-' ou vazio = "".
-Private Function ChaveDaMatricula(ByVal v As Variant) As String
-    Dim t As String
-    t = TextoDaCelula_Puro(v)
-    If t = "" Then Exit Function
-    If IsNumeric(t) Then t = CStr(CDbl(t))
-    ChaveDaMatricula = t
-End Function
-
-' Texto de uma célula sem espaços nas pontas; erro do Excel (#N/A) vira "".
-Private Function TextoDaCelula_Puro(ByVal v As Variant) As String
-    If IsError(v) Then Exit Function
-    If IsEmpty(v) Then Exit Function
-    TextoDaCelula_Puro = Trim$(Replace(CStr(v), Chr(160), " "))
-End Function
-
-' Sem acento, maiúsculas, um espaço só entre as palavras.
-Private Function NormTexto(ByVal t As String) As String
-    Dim com As String, sem As String, i As Long
-    com = "áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ"
-    sem = "aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC"
-    For i = 1 To Len(com)
-        t = Replace(t, Mid$(com, i, 1), Mid$(sem, i, 1))
-    Next i
-    t = UCase$(Trim$(Replace(t, Chr(160), " ")))
-    Do While InStr(t, "  ") > 0
-        t = Replace(t, "  ", " ")
-    Loop
-    NormTexto = t
-End Function
-
-' Última linha com qualquer coisa escrita na aba (não usa End(xlUp), que para
-' na última linha VISÍVEL quando há filtro).
-Private Function UltimaLinhaDaAba(ws As Worksheet) As Long
-    Dim achado As Range
-    Set achado = ws.Cells.Find(What:="*", LookIn:=xlFormulas, SearchOrder:=xlByRows, _
-                               SearchDirection:=xlPrevious)
-    If achado Is Nothing Then
-        UltimaLinhaDaAba = 1
-    Else
-        UltimaLinhaDaAba = achado.Row
-    End If
-End Function
-
-' Última linha com Matricula ou Nome preenchido numa aba de tratamento. Olha
-' só essas duas colunas e só VALORES: se a aba tem fórmulas (PROCX do Gestor)
-' puxadas até a linha 1000, as linhas só com fórmula não contam como dados.
-Private Function UltimaLinhaDados(ws As Worksheet) As Long
-    Dim colDest As Object, nomes As Variant, i As Long, achado As Range
-    Set colDest = MapaCabecalhoNorm(ws)
-    nomes = Array("MATRICULA", "NOME")
-    UltimaLinhaDados = 1
-    For i = 0 To 1
-        If colDest.Exists(nomes(i)) Then
-            Set achado = ws.Columns(colDest(nomes(i))).Find(What:="*", LookIn:=xlValues, _
-                SearchOrder:=xlByRows, SearchDirection:=xlPrevious)
-            If Not achado Is Nothing Then
-                If achado.Row > UltimaLinhaDados Then UltimaLinhaDados = achado.Row
-            End If
-        End If
-    Next i
-End Function
-
-' Tira o filtro da aba e das tabelas dela (senão colar e apagar pulam as
-' linhas escondidas).
-Private Sub LimparFiltroDaAba(ws As Worksheet)
-    Dim lo As ListObject
-    On Error Resume Next
-    If ws.FilterMode Then ws.ShowAllData
-    For Each lo In ws.ListObjects
-        If Not lo.AutoFilter Is Nothing Then
-            If lo.AutoFilter.FilterMode Then lo.AutoFilter.ShowAllData
-        End If
-    Next lo
-    On Error GoTo 0
-End Sub

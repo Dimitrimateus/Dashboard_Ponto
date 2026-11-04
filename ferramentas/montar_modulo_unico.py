@@ -2,14 +2,18 @@
 
 Junta todas as macros (ConsolidarCartaoPonto, FormatarPausasTermicas, FormatarMarcacoesDigitadas,
 FormatarAfastamentos, FormatarJornada, FormatarBancoHoras, GerarCSVPonto, PrepararAbasDoMes com a GerarCSVsDaPasta e
-PURO_Para_EDITADO) num arquivo só, sem mudar os .bas de origem:
+sem a PURO_Para_EDITADO, que é de outro assunto e fica num .txt à parte desde 04/11) num arquivo
+só, sem mudar os .bas de origem:
   - tira "Attribute VB_Name" e "Option Explicit" de cada parte (o módulo final tem um só);
   - nomes de nível de módulo repetidos entre as partes (ex.: modoAuto, msgAuto, Aviso, helpers
     com o mesmo nome) ganham um sufixo da parte (modoAuto_Pau...), só fora de textos e comentários;
   - Application.Run("X_Auto") vira chamada direta (RodarMacroAuto): com o módulo único não
     depende de nome público e não fica "ambíguo" se os módulos antigos continuarem na planilha;
   - só ficam públicas (Alt+F8) as macras de usar: GerarCSVsDaPasta, PrepararAbasDoMes,
-    PURO_Para_EDITADO e DistribuirEditadoNasAbasTratamento. O resto vira Private.
+    (as do painel). O resto vira Private.
+  - (04/11) as declarações do nível do módulo (variáveis Private/Public/Dim, Const, Type, Enum)
+    de TODAS as partes vão para o TOPO do módulo: o VBA só aceita declaração antes da 1ª Sub/
+    Function. Deixadas no meio (onde cada parte começava) davam "Variável não definida" ao rodar.
 Cada troca pontual é conferida (o script para se não achar o texto esperado).
 
 Uso (na raiz do repositório): python3 ferramentas/montar_modulo_unico.py
@@ -28,9 +32,8 @@ PARTES = [  # (arquivo, sufixo para nomes repetidos)
     ("Afastamentos/FormatarAfastamentos.bas", "Afa"),
     ("Jornada/FormatarJornada.bas", "Jor"),
     ("BancoHoras/FormatarBancoHoras.bas", "BH"),
-    ("PuroParaEditado/PURO_Para_EDITADO.bas", "Puro"),
 ]
-PUBLICAS = {"gerarcsvsdapasta", "prepararabasdomes", "puro_para_editado", "distribuireditadonasabastratamento"}
+PUBLICAS = {"gerarcsvsdapasta", "prepararabasdomes"}
 MACROS_AUTO = ["ConsolidarCartaoPontoDefinitivo_Auto", "FormatarPausasTermicas_Auto", "FormatarMarcacoesDigitadas_Auto",
                "FormatarAfastamentos_Auto", "FormatarJornada_Auto", "FormatarBancoHoras_Auto", "GerarAbaCSV_Auto"]
 
@@ -144,6 +147,40 @@ def main():
         cab = "' " + "=" * 108 + "\n' PARTE: " + caminho + "  (gerado por ferramentas/montar_modulo_unico.py; edite o .bas de origem)\n' " + "=" * 108
         saida.append(cab + "\n\n" + s.strip("\n"))
 
+    # (04/11) declarações do nível do módulo -> topo. Percorre cada parte linha a linha, sabendo
+    # se está dentro de uma Sub/Function/Property; fora delas, linha que começa com Private/
+    # Public/Dim/Global (variável), Const, Type...End Type ou Enum...End Enum (com as
+    # continuações " _") sai do lugar e vai para o bloco de declarações.
+    re_ini = re.compile(r"^(?:Public\s+|Private\s+|Friend\s+)?(?:Static\s+)?(?:Sub|Function|Property\s+(?:Get|Let|Set))\s+\w+", re.I)
+    re_fim = re.compile(r"^End\s+(?:Sub|Function|Property)\b", re.I)
+    re_dec = re.compile(r"^(?:(?:Public|Private|Global)\s+(?:Const\s+)?\w+|Dim\s+\w+|Const\s+\w+)", re.I)
+    re_bloco = re.compile(r"^(?:Public\s+|Private\s+)?(Type|Enum)\s+\w+", re.I)
+    declaracoes = []
+    for i, parte in enumerate(saida):
+        fica, sobe, dentro, bloco, cont = [], [], False, None, False
+        for l in parte.split("\n"):
+            t = l.strip()
+            if cont or bloco:
+                sobe.append(l)
+                if bloco and re.match(r"^End\s+" + bloco + r"\b", t, re.I): bloco = None
+                cont = l.rstrip().endswith(" _")
+                continue
+            if not dentro:
+                if re_ini.match(t):
+                    dentro = True
+                elif re_bloco.match(t):
+                    bloco = re_bloco.match(t).group(1); sobe.append(l); continue
+                elif re_dec.match(t) and not re_ini.match(t):
+                    sobe.append(l); cont = l.rstrip().endswith(" _"); continue
+            elif re_fim.match(t):
+                dentro = False
+            fica.append(l)
+        saida[i] = "\n".join(fica)
+        if sobe:
+            nome = re.search(r"PARTE: (\S+)", parte).group(1)
+            declaracoes.append("' --- de " + nome + "\n" + "\n".join(sobe))
+    decl_txt = "' " + "=" * 108 + "\n' DECLARAÇÕES DE TODAS AS PARTES (o VBA só aceita antes da 1ª Sub/Function)\n' " + "=" * 108 + "\n" + "\n".join(declaracoes)
+
     casos = "\n".join('        Case "%s": RodarMacroAuto = %s()' % (m.lower(), m) for m in MACROS_AUTO)
     disp = '''' ============================================================================================================
 ' MÓDULO ÚNICO DO PAINEL DE PONTO (03/11)
@@ -154,8 +191,8 @@ def main():
 '   GerarCSVsDaPasta ............... a do mês: confere os 12 arquivos da pasta (11 + BH), pergunta onde salvar os
 '                                    CSVs, traz os relatórios, formata, gera a aba CSV e grava os CSVs
 '   PrepararAbasDoMes .............. só formata relatórios que você colou como abas (sem CSV)
-'   PURO_Para_EDITADO .............. a do dia a dia (aba PURO -> abas de tratamento)
-'   DistribuirEditadoNasAbasTratamento  refaz só a distribuição da aba EDITADO ativa
+' A PURO_Para_EDITADO (aba PURO -> abas de tratamento) NÃO está aqui: é de outro assunto e fica no
+' txt/PURO_Para_EDITADO.txt, num módulo separado.
 ' Este arquivo é montado por ferramentas/montar_modulo_unico.py a partir dos .bas de cada macro.
 ' ============================================================================================================
 
@@ -169,9 +206,17 @@ Private Function RodarMacroAuto(ByVal nome As String, Optional ByVal pasta As Va
     End Select
 End Function
 ''' % casos
-    corpo = "Option Explicit\n\n" + disp + "\n\n" + "\n\n".join(saida) + "\n"
+    corpo = "Option Explicit\n\n" + decl_txt + "\n\n" + disp + "\n\n" + "\n\n".join(saida) + "\n"
 
     # conferências
+    # depois da 1ª Sub/Function só pode haver procedimentos, comentários e linhas em branco
+    dentro, primeira = False, False
+    for n, l in enumerate(corpo.split("\n"), 1):
+        t = l.strip()
+        if re_ini.match(t): dentro = primeira = True; continue
+        if re_fim.match(t): dentro = False; continue
+        if primeira and not dentro and t and not t.startswith("'"):
+            sys.exit("ERRO: linha %d fora de procedimento depois da 1ª Sub/Function: %s" % (n, t))
     if any(cod and "Application.Run" in t for l in corpo.split("\n") for cod, t in partes_codigo(l)):
         sys.exit("ERRO: sobrou Application.Run fora de comentário")
     pubs = sorted(n.lower() for n in re.findall(r"^Public (?:Sub|Function) (\w+)", corpo, re.M))

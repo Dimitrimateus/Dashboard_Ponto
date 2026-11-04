@@ -537,3 +537,12 @@ As 15 ideias marcadas na página de ideias que ainda faltavam:
 - Ferramentas: `formatar_bh.py` (o mesmo da macro, em Python), simulador com as linhas de banco de
   horas (`BH_PKL`), conferência com 34 itens (o item de digitadas e os da jornada foram ajustados às
   mudanças de 03/11).
+
+### Correção (04/11, depois): erro "Variável não definida" no código único
+
+- O código único dava **"Erro de compilação: Variável não definida"** em `substituirAbas` ao rodar a
+  GerarCSVsDaPasta. Causa: ao juntar as macros, as declarações de cada parte (`Private ... As`,
+  `Const`) ficavam no meio do módulo, onde cada parte começava; o VBA só aceita declaração antes da
+  primeira Sub. Agora todas ficam no topo e o script de montagem confere.
+- A **PURO_Para_EDITADO saiu do código único**: é outro assunto (dia a dia do tratamento) e fica só no
+  `txt/PURO_Para_EDITADO.txt`, colado num módulo separado.

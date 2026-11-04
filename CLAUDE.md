@@ -69,7 +69,7 @@ aba PURO (exportação de ocorrências)   ──► PURO_Para_EDITADO      ─�
 | `BancoHoras/FormatarBancoHoras.bas` | (04/11) relatório de banco de horas HRES105 ("BH") → a mesma aba como tabela, renomeada "Banco de Horas" |
 | `Jornada/FormatarJornada.bas` | os 4 relatórios de limite de jornada (intra, inter, inter semanal, horas excedentes) → a mesma aba como tabela, renomeada pelo tipo |
 | `GerarCSVPonto/GerarCSVPonto.bas` | `GerarAbaCSV` (monta a aba CSV) e `ExportarCSVPorGestor` (grava os .csv) |
-| `ModuloUnico/PainelPonto_TudoEmUm.bas` (= `txt/PainelPonto_TudoEmUm.txt`) | (03/11) **o que o Dimitri cola**: todas as macros num módulo só, GERADO por `ferramentas/montar_modulo_unico.py` (não editar à mão; mude o .bas de origem e rode o script) |
+| `ModuloUnico/PainelPonto_TudoEmUm.bas` (= `txt/PainelPonto_TudoEmUm.txt`) | (03/11) **o que o Dimitri cola**: todas as macros do painel num módulo só (sem a PURO_Para_EDITADO, que fica à parte), GERADO por `ferramentas/montar_modulo_unico.py` (não editar à mão; mude o .bas de origem e rode o script) |
 | `PrepararAbas/PrepararAbasDoMes.bas` | (31/10) uma macro só que reconhece e formata TODOS os relatórios brutos colados na planilha e cria a aba "Relatório da preparação" |
 | `Dashboard/index.html` | O painel. Contém o logo em base64 (linha enorme, ~60 KB); não leia o arquivo inteiro de uma vez |
 | `txt/*.txt` | As mesmas macros em `.txt`, CRLF, prontas para colar |
@@ -239,11 +239,13 @@ conteúdo num módulo.
   duplo; .xlsx/.xls/.xlsm/.xlsb/.csv): Cartão ponto 1/2/3, Pausas térmicas 3 meses, Digitadas 3
   meses, Afastamentos 3 meses, Pontonet 3 meses, Excedentes/Intrajornada/Interjornada/Interjornada
   semanal 3 meses. Falta ou repetido = aviso com a lista e para sem mexer em nada. RE na pasta segue opcional.
-- **Módulo único** (03/11): `ferramentas/montar_modulo_unico.py` junta as 8 macros (inclusive a
-  PURO); nomes de módulo repetidos entre partes ou iguais a variável de outra parte ganham sufixo
+- **Módulo único** (03/11): `ferramentas/montar_modulo_unico.py` junta as macros do painel (desde
+  04/11 **sem a PURO_Para_EDITADO**, que é outro assunto e fica só no `txt/PURO_Para_EDITADO.txt`; e
+  com a FormatarBancoHoras). **Todas as declarações do nível do módulo vão para o topo** (o VBA não
+  aceita depois da 1ª Sub; no meio deram "Variável não definida" em `substituirAbas` no Excel do
+  Dimitri, 04/11); o script para se sobrar linha fora de procedimento; nomes de módulo repetidos entre partes ou iguais a variável de outra parte ganham sufixo
   (`Aviso_Pau`, `modoAuto_Jor`, `ColunasFaltando_Csv`...); `Application.Run` vira `RodarMacroAuto`
-  (Select Case, chamada direta); públicas só GerarCSVsDaPasta, PrepararAbasDoMes, PURO_Para_EDITADO e
-  DistribuirEditadoNasAbasTratamento. Conferir com `checar_colisoes_vba.py ModuloUnico/*.bas`.
+  (Select Case, chamada direta); públicas só GerarCSVsDaPasta e PrepararAbasDoMes. Conferir com `checar_colisoes_vba.py ModuloUnico/*.bas`.
 - **GerarCSVsDaPasta** (02/11, mesmo módulo): pede a pasta com os relatórios baixados e a pasta
   dos CSVs (`EscolherPastaAqui`, FileDialog 4); abre cada .xlsx/.xls/.xlsm/.csv (só leitura,
   `Local:=True`), copia as abas com conteúdo como "Importado n" (`ImportarArquivo`); RE (linha 1
@@ -595,6 +597,9 @@ Afastamentos (07/10, relatório HRCL006): 33 atestados, 105 dias, 21 pessoas; ci
    (`customXml`, `connections.xml`), comentários encadeados e tabelas. Só leitura (`data_only=True`).
 10. A tabela da aba ORG costuma estar filtrada (122 linhas ocultas) e o "Cartão atual" também já
     esteve: considere que qualquer aba pode ter filtro.
+12. **Declaração do nível do módulo (Private x As ..., Const) só antes da 1ª Sub/Function.** Ao juntar
+    vários módulos num só, elas ficavam no meio e o Excel dava "Variável não definida" (04/11). O
+    `montar_modulo_unico.py` sobe todas para o topo e confere.
 11. As planilhas têm dados pessoais reais (nome, matrícula, salário na RE): não publique nem
     envie esses dados para fora.
 
