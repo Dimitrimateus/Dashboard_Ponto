@@ -1,6 +1,6 @@
 # CONTEXTO DO PROJETO — Tratamento de Ponto e Painel de Ocorrências (AuroraCoop)
 
-> Arquivo de contexto para o Claude Code. Estado em **03/11/2026**. Leia inteiro antes de propor
+> Arquivo de contexto para o Claude Code. Estado em **04/11/2026**. Leia inteiro antes de propor
 > qualquer mudança: várias regras abaixo já foram discutidas e decididas com o Dimitri, e as
 > "armadilhas" já custaram retrabalho.
 >
@@ -134,23 +134,19 @@ conteúdo num módulo.
 - `LimparTexto`: tira os espaços das pontas de **todo texto** (o sistema completa com espaços até
   uma largura fixa); célula só com espaços vira vazia; datas, horas e números ficam intactos.
 - (29/10) Passo 10, `DistribuirNasAbasTratamento`: acha o ORG (aba "ORG..." com `Matricula` e
-  `Tipo de trabalho` na linha 1; colunas do ORG: Matricula, COLABORADOR, Descrição, Cargo, Tipo de
-  trabalho, Unidade, GESTOR), casa cada linha da EDITADO pela matrícula (depois pelo nome) e cola
+  `Tipo de trabalho` na linha 1), casa cada linha da EDITADO pela matrícula (depois pelo nome) e cola
   internos em "Tratamento - Internos" e externos em "Tratamento - Externos" (`AchaAbaTratamento`:
   nome começa com "Tratamento" e contém Intern/Extern; senão termina em "- I"/"- E"). Colunas
   achadas pelo nome normalizado (`MapaCabecalhoNorm`, `ColunaDaEditado`): Data ← Dt.Apuraç., Status
   ← Tratamento, o resto pelo mesmo nome (Pontonet só existe na de Externos). Trabalho/Cargo/Gestor:
   fórmula da 1ª linha de dados estendida (FormulaR1C1) ou, sem fórmula, valor do ORG. Check em
-  branco. **Uso diário**: nunca apaga nada das abas de tratamento, só cola embaixo. (30/10)
-  Pergunta por InputBox: 1 = Internos e Externos, 2 = só Internos, 3 = só Externos, Cancelar.
-  Repetidas por pessoa + dia (`ChaveDiaPessoa`: matrícula ou nome + data), contra a aba e dentro
-  da EDITADO: mesmas marcações → não cola (iguais); marcações diferentes → não cola e vai para o
-  relatório com as duas (difs). Funciona com e sem Tabela do Excel (ListObject, `lo.Resize`).
-  Fora do ORG/sem tipo: linha amarela na EDITADO. Aba **"Relatório PURO-EDITADO"** (substituiu a
-  "Avisos ORG"; `EscreverRelatorio`, refeita a cada execução): Matrícula, Nome, Dia, Aviso,
-  Detalhe, Foi colado? — falta no ORG (uma por pessoa) e dia repetido com marcações diferentes. `DistribuirEditadoNasAbasTratamento` (pública) refaz só isso na aba ativa.
-  Última linha com dados = Matricula/Nome com valor (`UltimaLinhaDados`), para fórmulas puxadas
-  até o fim da aba não contarem. **Nunca rodou no Excel.**
+  branco. Funciona com e sem Tabela do Excel (ListObject, `lo.Resize`). Nunca apaga nada das abas
+  de tratamento: cola embaixo da última linha com Matricula/Nome (`UltimaLinhaDados`).
+- **(04/11) SIMPLIFICADA a pedido do Dimitri — NÃO reintroduzir sem ele pedir:** a macro só (1)
+  cria a aba EDITADO_<MÊS><AA> (se já existe, apaga e refaz, sem perguntar) e (2) joga as linhas
+  nas abas de Internos/Externos que já existem. Saíram: pergunta 1/2/3 de onde colar, checagem de
+  repetidas pessoa+dia, aba "Relatório PURO-EDITADO", cópia "(2)". Fora do ORG/sem tipo: linha
+  amarela na EDITADO + contagem na mensagem final. **Nunca rodou no Excel.**
 
 ### 5.3b FormatarMarcacoesDigitadas (aba ativa = relatório bruto)
 - Dump de impressão: cabeçalho de página repetido ("Crachá | Colaborador | Cargo | Local | Ori. |
