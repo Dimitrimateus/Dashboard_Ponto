@@ -10,6 +10,7 @@ no fim, no CSV que alimenta o painel dos gestores.
 | `PuroParaEditado/` | `PURO_Para_EDITADO` | Aba `PURO` → nova aba `EDITADO_MESAA` |
 | `MarcacoesDigitadas/` | `FormatarMarcacoesDigitadas` | Relatório "Marcações digitadas" (aba ativa) → a mesma aba, como tabela (`Marcações Digitadas`) |
 | `Afastamentos/` | `FormatarAfastamentos` | Relatório "Histórico de Afastamentos" HRCL006 (aba ativa) → a mesma aba, como tabela (`Afastamentos`) |
+| `BancoHoras/` | `FormatarBancoHoras` | Relatório de banco de horas HRES105 ("BH", aba ativa) → a mesma aba, como tabela (`Banco de Horas`) |
 | `GerarCSVPonto/` | `GerarAbaCSV` / `ExportarCSVPorGestor` | Abas de Tratamento, RE, Cartão e Pausas → aba `CSV` → arquivos `.csv` |
 | `Dashboard/` | `index.html` | CSV → painel no navegador (gestores e supervisor) |
 
@@ -19,10 +20,11 @@ Contexto completo para o Claude Code em [`CLAUDE.md`](CLAUDE.md). As macros em `
 
 Cole **só** o `txt/PainelPonto_TudoEmUm.txt` num módulo da planilha de Tratamento (apague os módulos
 antigos) e rode **GerarCSVsDaPasta** (Alt+F8). Ela pede a pasta dos relatórios, confere se estão lá os
-11 arquivos (`Cartão ponto 1`, `Cartão ponto 2`, `Cartão ponto 3`, `Pausas térmicas 3 meses`,
+12 arquivos (`Cartão ponto 1`, `Cartão ponto 2`, `Cartão ponto 3`, `Pausas térmicas 3 meses`,
 `Digitadas 3 meses`, `Afastamentos 3 meses`, `Pontonet 3 meses`, `Excedentes 3 meses`,
-`Intrajornada 3 meses`, `Interjornada 3 meses`, `Interjornada semanal 3 meses`), avisa os que
-faltam, pergunta onde salvar os CSVs e faz o resto. O módulo é montado por
+`Intrajornada 3 meses`, `Interjornada 3 meses`, `Interjornada semanal 3 meses` e, desde 04/11, `BH`),
+avisa os que faltam, pergunta onde salvar os CSVs e faz o resto. Os CSVs saem com o **nome do gestor
+no começo** (`<GESTOR>.csv`) mais o `TODOS OS GESTORES.csv`. O módulo é montado por
 `ferramentas/montar_modulo_unico.py` a partir dos `.bas` de cada macro.
 
 ## Como instalar
@@ -508,3 +510,30 @@ As 15 ideias marcadas na página de ideias que ainda faltavam:
 
 > Estes macros foram escritos e revisados fora do Excel: a lógica foi conferida simulando-a em
 > Python sobre os arquivos reais. Rode sempre numa **cópia** da planilha na primeira vez.
+
+## Banco de horas e CSVs com o nome do gestor (04/11)
+
+- **Arquivo novo na pasta do mês: `BH`** (relatório de banco de horas HRES105 do sistema). A
+  `GerarCSVsDaPasta` agora confere **12** arquivos (os 11 de antes + `BH`) e para, sem mexer em nada,
+  se faltar algum.
+- **Macro nova `FormatarBancoHoras`** (pasta `BancoHoras/`, também dentro do módulo único): reescreve
+  o relatório como tabela, uma linha por pessoa: matrícula, nome, filial, local, início e fim do
+  período, quantos meses (ciclos de 28 a 27) o período tem, se o banco fechou, saldo anterior,
+  crédito, débito, horas anistiadas (perdoadas), horas pagas e saldo final. A aba vira `Banco de
+  Horas`. A `PrepararAbasDoMes`/`GerarCSVsDaPasta` reconhece o relatório sozinha.
+- **CSV com 44 colunas**: linhas novas `Banco de Horas Período` (uma por pessoa) com as colunas
+  `bh_inicio_periodo`, `bh_saldo_anterior_minutos`, `bh_credito_minutos`, `bh_debito_minutos`,
+  `bh_anistiadas_minutos`, `bh_pagas_minutos`, `bh_saldo_final_minutos`.
+- **Nomes dos arquivos**: `<GESTOR>.csv` (antes `dados_<gestor>.csv`) e `TODOS OS GESTORES.csv`
+  (antes `dados_TODOS.csv`).
+- **Painel, seção "Colaboradores em destaque"**, depois do saldo do mês: card **"Como cada pessoa
+  fechou o banco de horas"**. O banco fecha de 4 em 4 meses: o painel conta os meses do período do
+  relatório e, com 4, mostra o banco **fechado** (quem teve horas pagas, perdoadas ou fechou zerado,
+  com crédito e débito de cada pessoa); com menos de 4, mostra o banco **aberto** e o saldo até agora,
+  avisando que ainda pode mudar. Seletor "Mostrar", busca por nome, tela cheia e o resultado também
+  no card do colaborador.
+- Relatório de 28/06 a 27/10 (216 pessoas): crédito 4542h47, débito 4369h44; 65 pessoas com horas
+  pagas (196h15), 38 com horas perdoadas (23h12), 113 zeradas. Bate com o "Total Geral" do relatório.
+- Ferramentas: `formatar_bh.py` (o mesmo da macro, em Python), simulador com as linhas de banco de
+  horas (`BH_PKL`), conferência com 34 itens (o item de digitadas e os da jornada foram ajustados às
+  mudanças de 03/11).

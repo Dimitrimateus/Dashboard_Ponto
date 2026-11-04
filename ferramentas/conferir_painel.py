@@ -183,16 +183,16 @@ if 'ORG' in d and ui.get('orgResumo'):
 abaDig=next((n for n,rw in d.items() if rw and all(k in hdrmap(rw[0]) for k in ('Matrícula','Data','Hora','Motivo','Justificativa'))), None)
 if abaDig and ui.get('digKpis'):
     rw=d[abaDig]; hd=hdrmap(rw[0])
-    # o painel abre no mês das ocorrências (ciclo do Cartão atual): as digitadas de meses
-    # anteriores (relatório de 3 meses) só entram nas vistas de tendência
-    import simular_gerarcsv as _SIM
-    _fim=_SIM.dmax; _ini=(_fim.replace(day=1)-datetime.timedelta(days=1)).replace(day=28) if _fim.day<28 else _fim.replace(day=28)
+    # (04/11) desde 03/11 a seção mostra as digitadas dos 3 meses (seletor de ciclo vazio =
+    # todos os ciclos) e não segue mais o filtro de período: a fonte é a aba inteira (sem "E")
     linhasD=[r for r in rw[1:] if s(r[hd['Matrícula']]) and isinstance(r[hd['Data']],datetime.datetime)
-             and _ini<=r[hd['Data']]<=_fim and not ('Origem' in hd and s(r[hd['Origem']]).upper()=='E')]
+             and not ('Origem' in hd and s(r[hd['Origem']]).upper()=='E')]
     mot=C(s(r[hd['Motivo']]) for r in linhasD); pes=C(s(r[hd['Colaborador']]) for r in linhasD)
-    k=ui['digKpis'].split('\n')
-    okk=k[1]==str(len(linhasD)) and k[4]==str(len({s(r[hd['Matrícula']]) for r in linhasD})) and ui['digLinhas']==len(linhasD)
-    okm={a:int(b) for a,b in ui['digMotivo']}==dict(mot)
+    # números do topo: o valor vem logo depois do título (desde 29/10 há "?" e a linha 📅 no meio)
+    k=[x.replace('.','') for x in ui['digKpis'].split('\n')]   # "1.642" -> "1642" (milhar com ponto)
+    _v=lambda tit: k[k.index(tit)+1] if tit in k else None
+    okk=_v('MARCAÇÕES DIGITADAS')==str(len(linhasD)) and _v('COLABORADORES')==str(len({s(r[hd['Matrícula']]) for r in linhasD})) and ui['digLinhas']==len(linhasD)
+    okm={a:int(str(b).replace('.','')) for a,b in ui['digMotivo']}==dict(mot)
     gt=tips(ui['digTop']); corte=min(gt.values()) if gt else 0
     okt=all(pes[n]==v for n,v in gt.items()) and len(gt)==min(20,len(pes)) and all(v<=corte for n,v in pes.items() if n not in gt)
     chk('Marcações digitadas (total, pessoas, motivo, top 20)', okk and okm and okt,
@@ -269,7 +269,8 @@ for aba,colData in JOR.items():
         ult=m; jr.append((aba,m,r[h[colData]],r,h))
 if jr and ui.get('jorKpis'):
     k={x[0]:x for x in ui['jorKpis']}
-    nomeK={'Horas Excedentes':'Mais de 10h no dia','Intrajornada':'Intervalo de almoço curto','Interjornada Semanal':'Trabalho na folga ou feriado','Interjornada':'Menos de 11h de descanso'}
+    # (03/11) os números do topo usam os nomes técnicos (pedido do RH)
+    nomeK={'Horas Excedentes':'Horas excedentes','Intrajornada':'Intrajornada','Interjornada Semanal':'Interjornada semanal','Interjornada':'Interjornada'}
     ok=True; det=[]
     for t,nk in nomeK.items():
         l=[x for x in jr if x[0]==t]; pes=len({x[1] for x in l})
@@ -278,7 +279,7 @@ if jr and ui.get('jorKpis'):
     he=[x for x in jr if x[0]=='Horas Excedentes']
     acima=sum(max(0,mins(x[3][x[4]['Total']])-600) for x in he)
     semi=sum(1 for x in jr if x[0]=='Intrajornada' and not mins(x[3][x[4]['Intervalo total']]))
-    okh = fmt_h(acima) in k['Mais de 10h no dia'][2] and f"{semi} sem intervalo" in k['Intervalo de almoço curto'][2]
+    okh = fmt_h(acima) in k['Horas excedentes'][2] and f"{semi} sem intervalo" in k['Intrajornada'][2]
     chk('Jornada: números do topo (J1)', ok and okh, '; '.join(det) + f"; {fmt_h(acima)} acima de 10h; {semi} sem intervalo" if ok and okh else f"painel {ui['jorKpis']} / fonte {det} {fmt_h(acima)} {semi}")
     # J2: dias e minutos acima de 10h por pessoa (a lista inteira)
     porP=collections.defaultdict(lambda:[0,0,'']); 
@@ -378,7 +379,8 @@ if ui.get('tendUnidade'):
             x=a[1]
             while x<=a[2]: dd[ciclo_de(datetime.datetime(x.year,x.month,x.day))]+=1; x+=datetime.timedelta(days=1)
         esp['Dias de atestado']=[dd[c] for c in cic]
-    for aba,nome in (('Horas Excedentes','Dias com mais de 10h'),('Intrajornada','Intervalos de almoço curtos'),('Interjornada Semanal','Trabalho na folga ou feriado'),('Interjornada','Menos de 11h de descanso')):
+    # (03/11) nomes técnicos na Jornada, com a explicação entre parênteses
+    for aba,nome in (('Horas Excedentes','Horas excedentes (dias com mais de 10h)'),('Intrajornada','Intrajornada (intervalo de almoço curto)'),('Interjornada Semanal','Interjornada semanal (trabalho na folga ou feriado)'),('Interjornada','Interjornada (menos de 11h de descanso)')):
         esp[nome]=[sum(1 for x in jr if x[0]==aba and ciclo_de(x[2])==c) for c in cic]
     pz={}
     for aba,rw in d.items():
@@ -484,3 +486,20 @@ if ui.get('pnTempos'):
     esp={f"{MES[k[1]-1]}/{str(k[0])[2:]}":[str(len(v[1])),dt_(v[1]),dt_(v[2])] for k,v in cic.items()}
     got={r[0]:[x.replace('.','') for x in r[1:4]] for r in ui['pnTempos']}
     chk('PontoNet: aprovados e tempos por ciclo', got==esp, str(esp) if got==esp else f"painel {got} / fonte {esp}")
+
+# Banco de horas (04/11): o resumo do card "Como cada pessoa fechou o banco de horas"
+# comparado com o relatório do sistema (o .pkl do formatar_bh.py, BH_PKL): período, se
+# fechou (4 meses), pessoas, crédito/débito totais e quantos foram pagos/perdoados/zerados.
+if ui.get('bhResumo') and os.environ.get('BH_PKL'):
+    b=pickle.load(open(os.environ['BH_PKL'],'rb')); L=b['linhas']
+    def fh(m): h,mm=divmod(m,60); return (f"{h}h" if h else "")+(" " if h and mm else "")+(f"{mm:02d}min" if h and mm else (f"{mm}min" if mm else "")) or "0h"
+    pag=[l for l in L if l[13]>0]; per=[l for l in L if not l[13] and l[12]>0]; zer=len(L)-len(pag)-len(per)
+    t=ui['bhResumo']
+    esp=[("FECHADO" if b['meses']>=4 else "ABERTO"), b['ini'].strftime('%d/%m/%Y')+' a '+b['fim'].strftime('%d/%m/%Y'),
+         f"{len(L)} pessoa(s)", "crédito total "+fh(sum(l[10] for l in L)), "débito total "+fh(sum(l[11] for l in L))]
+    if b['meses']>=4:
+        esp+=[f"{len(pag)} tiveram horas pagas", f"({fh(sum(l[13] for l in pag))} no total)", f"{len(per)} tiveram horas perdoadas",
+              f"{fh(sum(l[12] for l in per))} no total", f"{zer} fecharam zerados"]
+    falta=[e for e in esp if e not in t.replace('\n',' ')]
+    chk('Banco de horas: fechamento (período, pessoas, pagas, perdoadas, zerados)', not falta,
+        '; '.join(esp) if not falta else f"não achei no painel: {falta} / painel {t!r}")

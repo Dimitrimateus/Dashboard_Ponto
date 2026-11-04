@@ -1,7 +1,7 @@
 """Monta o MÓDULO ÚNICO (pedido do Dimitri, 03/11: "quero colar um só código").
 
 Junta todas as macros (ConsolidarCartaoPonto, FormatarPausasTermicas, FormatarMarcacoesDigitadas,
-FormatarAfastamentos, FormatarJornada, GerarCSVPonto, PrepararAbasDoMes com a GerarCSVsDaPasta e
+FormatarAfastamentos, FormatarJornada, FormatarBancoHoras, GerarCSVPonto, PrepararAbasDoMes com a GerarCSVsDaPasta e
 PURO_Para_EDITADO) num arquivo só, sem mudar os .bas de origem:
   - tira "Attribute VB_Name" e "Option Explicit" de cada parte (o módulo final tem um só);
   - nomes de nível de módulo repetidos entre as partes (ex.: modoAuto, msgAuto, Aviso, helpers
@@ -27,11 +27,12 @@ PARTES = [  # (arquivo, sufixo para nomes repetidos)
     ("MarcacoesDigitadas/FormatarMarcacoesDigitadas.bas", "Dig"),
     ("Afastamentos/FormatarAfastamentos.bas", "Afa"),
     ("Jornada/FormatarJornada.bas", "Jor"),
+    ("BancoHoras/FormatarBancoHoras.bas", "BH"),
     ("PuroParaEditado/PURO_Para_EDITADO.bas", "Puro"),
 ]
 PUBLICAS = {"gerarcsvsdapasta", "prepararabasdomes", "puro_para_editado", "distribuireditadonasabastratamento"}
 MACROS_AUTO = ["ConsolidarCartaoPontoDefinitivo_Auto", "FormatarPausasTermicas_Auto", "FormatarMarcacoesDigitadas_Auto",
-               "FormatarAfastamentos_Auto", "FormatarJornada_Auto", "GerarAbaCSV_Auto"]
+               "FormatarAfastamentos_Auto", "FormatarJornada_Auto", "FormatarBancoHoras_Auto", "GerarAbaCSV_Auto"]
 
 
 def partes_codigo(linha):
@@ -150,7 +151,7 @@ def main():
 ' Cole SÓ este código num módulo da planilha de Tratamento (Alt+F11 > Inserir > Módulo > colar).
 ' Se a planilha ainda tiver os módulos antigos (um por macro), apague-os: este já tem tudo.
 ' Macros (Alt+F8):
-'   GerarCSVsDaPasta ............... a do mês: confere os 11 arquivos da pasta, pergunta onde salvar os
+'   GerarCSVsDaPasta ............... a do mês: confere os 12 arquivos da pasta (11 + BH), pergunta onde salvar os
 '                                    CSVs, traz os relatórios, formata, gera a aba CSV e grava os CSVs
 '   PrepararAbasDoMes .............. só formata relatórios que você colou como abas (sem CSV)
 '   PURO_Para_EDITADO .............. a do dia a dia (aba PURO -> abas de tratamento)

@@ -20,7 +20,7 @@ Option Explicit
 ' COMO USAR
 '   1) Cole na planilha os módulos de todas as macros (cada .txt num módulo):
 '      ConsolidarCartaoPonto, FormatarPausasTermicas, FormatarMarcacoesDigitadas,
-'      FormatarAfastamentos, FormatarJornada e este. (O GerarCSVPonto também, para
+'      FormatarAfastamentos, FormatarJornada, FormatarBancoHoras e este. (O GerarCSVPonto também, para
 '      o passo seguinte.)
 '   2) Para cada relatório baixado do sistema, copie a aba dele para dentro da
 '      planilha (botão direito na aba > Mover ou copiar > planilha de Tratamento,
@@ -38,6 +38,7 @@ Option Explicit
 '   semanal, horas excedentes) ..... "Registros de Ponto", "Horas Descansadas",
 '                                    "Horas DSR"/"Marcação Antes DSR" ou "Carga Hor."
 '   PontoNet (Ausência de marcação)  A1 começa com "Data falta"
+'   Banco de horas (HRES105, "BH") . títulos "Fechamento Banco" e "Hr. Anist." (04/11)
 '   Aba que já está formatada, ou que não é relatório (RE, ORG, Tratamento...),
 '   não é mexida.
 '
@@ -53,6 +54,8 @@ Option Explicit
 '     (ver FormatarPausasTermicas).
 '   - PontoNet: se o .csv veio todo na coluna A (separado por ";"), é separado em
 '     colunas; a aba vira "Pontonet".
+'   - Banco de horas: a FormatarBancoHoras deixa uma tabela por pessoa e renomeia
+'     a aba para "Banco de Horas" (04/11).
 '   Um erro numa aba não para as outras: fica anotado no relatório.
 '
 ' O RELATÓRIO (aba "Relatório da preparação", refeita a cada execução)
@@ -74,7 +77,7 @@ Sub PrepararAbasDoMes()
     Set wb = ThisWorkbook
 
     If MsgBox("Esta macro vai FORMATAR todas as abas de relatório do sistema que estão nesta planilha " & _
-              "(Cartão Ponto, Pausas Térmicas, Marcações digitadas, Afastamentos, Jornada e PontoNet)." & vbCrLf & vbCrLf & _
+              "(Cartão Ponto, Pausas Térmicas, Marcações digitadas, Afastamentos, Jornada, PontoNet e Banco de horas)." & vbCrLf & vbCrLf & _
               "As abas que já estão formatadas e as outras (RE, ORG, Tratamento...) não são mexidas." & vbCrLf & _
               "No fim, a aba """ & NOME_RELATORIO & """ mostra o que foi feito em cada uma." & vbCrLf & vbCrLf & _
               "Recomendado: rode numa CÓPIA da planilha na primeira vez. Continuar?", _
@@ -194,6 +197,8 @@ Private Function TipoDoRelatorioBruto(ws As Worksheet) As String
         TipoDoRelatorioBruto = "pontonet": Exit Function
     End If
     If InStr(tudo, "|CARTÃO PONTO|") > 0 And InStr(colA, "|EMPREGADO:|") > 0 Then TipoDoRelatorioBruto = "cartao": Exit Function
+    ' banco de horas (HRES105, 04/11): títulos "Fechamento Banco" e "Hr. Anist."
+    If InStr(tudo, "|FECHAMENTO BANCO|") > 0 And InStr(tudo, "|HR. ANIST.|") > 0 Then TipoDoRelatorioBruto = "bh": Exit Function
     If InStr(tudo, "PAUSAS TÉRMICAS") > 0 Then TipoDoRelatorioBruto = "pausas": Exit Function
     If InStr(tudo, "|CRACHÁ|") > 0 And InStr(tudo, "|COLETOR|") > 0 Then TipoDoRelatorioBruto = "digitadas": Exit Function
     If InStr(tudo, "HISTÓRICO DE AFASTAMENTOS") > 0 Or (InStr(tudo, "|PREV TÉRMINO|") > 0 And InStr(tudo, "|DT.TÉRMINO|") > 0) Then
@@ -213,6 +218,7 @@ Private Function NomeDoTipo(ByVal tipo As String) As String
         Case "afastamentos": NomeDoTipo = "Afastamentos"
         Case "jornada": NomeDoTipo = "Jornada (intra, inter, semanal ou horas excedentes)"
         Case "pontonet": NomeDoTipo = "PontoNet (ausência de marcação)"
+        Case "bh": NomeDoTipo = "Banco de horas (BH)"
     End Select
 End Function
 
@@ -224,6 +230,7 @@ Private Function MacroDoTipo(ByVal tipo As String) As String
         Case "afastamentos": MacroDoTipo = "FormatarAfastamentos_Auto"
         Case "jornada": MacroDoTipo = "FormatarJornada_Auto"
         Case "pontonet": MacroDoTipo = "(nenhuma: feito por esta macro)"
+        Case "bh": MacroDoTipo = "FormatarBancoHoras_Auto"
     End Select
 End Function
 
@@ -377,7 +384,7 @@ Private Sub EscreverRelatorio(wb As Workbook, linhas As Collection, vistos As Ob
     ws.Cells(r, 1).Value = "O que se espera num mês completo"
     ws.Cells(r, 1).Font.Bold = True
     r = r + 1
-    esperados = Array("cartao", "pausas", "digitadas", "afastamentos", "jornada", "pontonet")
+    esperados = Array("cartao", "pausas", "digitadas", "afastamentos", "jornada", "pontonet", "bh")
     For i = 0 To UBound(esperados)
         ws.Cells(r, 1).Value = NomeDoTipo(CStr(esperados(i)))
         If vistos.Exists(esperados(i)) Then
@@ -417,6 +424,7 @@ Private Function ExisteAbaFormatada(wb As Workbook, ByVal tipo As String) As Boo
             Case "afastamentos": If n = "afastamentos" Then ExisteAbaFormatada = True
             Case "jornada": If n = "intrajornada" Or n = "interjornada" Or n = "interjornada semanal" Or n = "horas excedentes" Then ExisteAbaFormatada = True
             Case "pontonet": If n = "pontonet" Then ExisteAbaFormatada = True
+            Case "bh": If n = "banco de horas" Then ExisteAbaFormatada = True
         End Select
     Next sh
 End Function
@@ -437,13 +445,14 @@ End Function
 ' MACRO: GerarCSVsDaPasta  (02/11)
 ' --------------------------------------------------------------------------------
 ' Faz o mês inteiro de uma vez, a partir de uma PASTA com os relatórios baixados:
-'   1) pede a pasta onde estão os arquivos do sistema e CONFERE se ela tem os 11
+'   1) pede a pasta onde estão os arquivos do sistema e CONFERE se ela tem os 12
 '      arquivos com estes nomes (03/11; maiúscula, acento e extensão .xlsx/.xls/.xlsm/
 '      .xlsb/.csv tanto faz): Cartão ponto 1, Cartão ponto 2, Cartão ponto 3 (1 = o
 '      mais antigo), Pausas térmicas 3 meses, Digitadas 3 meses, Afastamentos 3 meses,
 '      Pontonet 3 meses, Excedentes 3 meses, Intrajornada 3 meses, Interjornada 3
-'      meses e Interjornada semanal 3 meses. Se faltar algum, avisa quais e para sem
-'      mexer em nada. A RE nova pode ficar na pasta também (é opcional);
+'      meses, Interjornada semanal 3 meses e BH (banco de horas, desde 04/11). Se
+'      faltar algum, avisa quais e para sem mexer em nada. A RE nova pode ficar na
+'      pasta também (é opcional);
 '   2) só então pede a pasta onde os CSVs vão ser gravados;
 '   3) abre cada arquivo, traz as abas dele para esta planilha e fecha (os arquivos
 '      da pasta não são alterados);
@@ -451,8 +460,8 @@ End Function
 '      do mesmo relatório é SUBSTITUÍDA pela nova (ex.: "Marcações Digitadas",
 '      "Pausas Térmicas Outubro", "Cartão Outubro"), para rodar de novo no mês sem
 '      duplicar nada;
-'   5) roda a GerarAbaCSV e grava os CSVs (dados_<gestor>.csv + dados_TODOS.csv) na
-'      pasta escolhida;
+'   5) roda a GerarAbaCSV e grava os CSVs na pasta escolhida: um por gestor, com o
+'      NOME DO GESTOR no começo ("<GESTOR>.csv", 04/11), + "TODOS OS GESTORES.csv";
 '   6) deixa a aba "Relatório da preparação" com tudo o que aconteceu.
 ' Ficam na planilha (não vêm da pasta): ORG e as abas Tratamento - Internos/Externos.
 ' A RE pode vir na pasta: entra como "RE dd.mm" (data do arquivo) ANTES das REs que
@@ -469,7 +478,7 @@ Sub GerarCSVsDaPasta()
     pastaOrigem = EscolherPastaAqui("1 de 2: escolha a PASTA com os relatórios baixados do sistema")
     If pastaOrigem = "" Then Exit Sub
 
-    ' (03/11) Confere se a pasta tem os 11 arquivos com os nomes combinados ANTES de pedir a
+    ' (03/11) Confere se a pasta tem os 12 arquivos (11 + o BH desde 04/11) com os nomes combinados ANTES de pedir a
     ' pasta dos CSVs; se faltar algum, avisa quais e para sem mexer em nada.
     Dim faltando As String
     faltando = ConferirArquivosDaPasta(pastaOrigem)
@@ -590,12 +599,13 @@ Sub GerarCSVsDaPasta()
            IIf(nErros > 0, vbExclamation, vbInformation), "Gerar CSVs da pasta"
 End Sub
 
-' Os 11 arquivos que a pasta tem que ter (nome sem a extensão). A ordem dos Cartões não importa
+' Os 12 arquivos que a pasta tem que ter (nome sem a extensão). "BH" = relatório de banco de
+' horas (HRES105), entrou em 04/11. A ordem dos Cartões não importa
 ' para a macro (cada um vira "Cartão <mês>" pelo período dele), mas o combinado é 1 = o mais antigo.
 Private Function ArquivosObrigatorios() As Variant
     ArquivosObrigatorios = Array("Afastamentos 3 meses", "Cartão ponto 1", "Cartão ponto 2", "Cartão ponto 3", _
         "Excedentes 3 meses", "Interjornada 3 meses", "Interjornada semanal 3 meses", "Intrajornada 3 meses", _
-        "Digitadas 3 meses", "Pausas térmicas 3 meses", "Pontonet 3 meses")
+        "Digitadas 3 meses", "Pausas térmicas 3 meses", "Pontonet 3 meses", "BH")
 End Function
 
 ' Nome para comparar: minúsculas, sem acento e com espaços simples ("Cartão  Ponto 1" = "cartao ponto 1").
@@ -613,7 +623,7 @@ Private Function NomeComparavel(ByVal t As String) As String
     NomeComparavel = t
 End Function
 
-' "" se a pasta tem os 11 arquivos (Excel ou .csv, maiúsculas/acentos tanto faz); senão o texto
+' "" se a pasta tem os 12 arquivos (Excel ou .csv, maiúsculas/acentos tanto faz); senão o texto
 ' do aviso: os que faltam, os repetidos (mesmo nome com duas extensões) e os arquivos da pasta
 ' que não bateram com nenhum nome (para ver se é só um nome digitado diferente).
 Private Function ConferirArquivosDaPasta(ByVal pasta As String) As String
@@ -765,6 +775,7 @@ Private Function ApagarAbasQueSeraoSubstituidas(wb As Workbook, paraPreparar As 
             Case "digitadas": alvos.Add "Marcações Digitadas"
             Case "afastamentos": alvos.Add "Afastamentos"
             Case "pontonet": alvos.Add "Pontonet"
+            Case "bh": alvos.Add "Banco de Horas"
             Case "jornada": If SubtipoJornada(ws) <> "" Then alvos.Add SubtipoJornada(ws)
             Case "pausas"
                 For Each m In MesesDoRelatorioPausas(ws)

@@ -7,7 +7,7 @@ Option Explicit
 ' Cole SÓ este código num módulo da planilha de Tratamento (Alt+F11 > Inserir > Módulo > colar).
 ' Se a planilha ainda tiver os módulos antigos (um por macro), apague-os: este já tem tudo.
 ' Macros (Alt+F8):
-'   GerarCSVsDaPasta ............... a do mês: confere os 11 arquivos da pasta, pergunta onde salvar os
+'   GerarCSVsDaPasta ............... a do mês: confere os 12 arquivos da pasta (11 + BH), pergunta onde salvar os
 '                                    CSVs, traz os relatórios, formata, gera a aba CSV e grava os CSVs
 '   PrepararAbasDoMes .............. só formata relatórios que você colou como abas (sem CSV)
 '   PURO_Para_EDITADO .............. a do dia a dia (aba PURO -> abas de tratamento)
@@ -24,6 +24,7 @@ Private Function RodarMacroAuto(ByVal nome As String, Optional ByVal pasta As Va
         Case "formatarmarcacoesdigitadas_auto": RodarMacroAuto = FormatarMarcacoesDigitadas_Auto()
         Case "formatarafastamentos_auto": RodarMacroAuto = FormatarAfastamentos_Auto()
         Case "formatarjornada_auto": RodarMacroAuto = FormatarJornada_Auto()
+        Case "formatarbancohoras_auto": RodarMacroAuto = FormatarBancoHoras_Auto()
         Case "gerarabacsv_auto": RodarMacroAuto = GerarAbaCSV_Auto()
         Case "exportarcsvporgestor_napasta": RodarMacroAuto = ExportarCSVPorGestor_NaPasta(CStr(pasta))
         Case Else: Err.Raise vbObjectError + 513, , "Etapa desconhecida: " & nome
@@ -65,9 +66,10 @@ Private pastaFixaCSV As String
 '                            quiser (sempre limpa e reescreve a aba).
 '   2. ExportarCSVPorGestor - lê a aba "CSV" já pronta e salva arquivos
 '                            .csv de verdade em disco: um por gestor
-'                            (pra mandar só a parte de cada um) mais um
-'                            "dados_TODOS.csv" com tudo (esse último é
-'                            o que o RH sobe no painel).
+'                            (pra mandar só a parte de cada um, com o
+'                            nome do gestor no começo do arquivo) mais um
+'                            "TODOS OS GESTORES.csv" com tudo (esse último
+'                            é o que o RH sobe no painel).
 '
 ' -----------------------------------------------------------------
 ' DE ONDE CADA COISA VEM (abas de entrada, todas na MESMA planilha):
@@ -120,6 +122,12 @@ Private pastaFixaCSV As String
 '     "extra e falta no mesmo dia" dos últimos meses (ver
 '     "Auditoria de 3 meses" abaixo).
 '
+'   "Banco de Horas" (opcional, 04/11) — o relatório de banco de horas do
+'     sistema (HRES105, arquivo "BH" da pasta do mês) formatado pelo
+'     FormatarBancoHoras; achado pelo cabeçalho (Matrícula, Crédito, Débito,
+'     Horas pagas, Horas anistiadas, Fim do período). Uma linha por pessoa
+'     no CSV (ver GerarLinhasBancoHoras).
+'
 '   Pausas térmicas (opcional) — aba já formatada pelo macro irmão
 '     FormatarPausasTermicas (pasta PausasTermicas/ do repositório). Não
 '     importa o nome da aba: o macro procura, em todas as abas, a linha
@@ -139,7 +147,7 @@ Private pastaFixaCSV As String
 ' -----------------------------------------------------------------
 ' PRA ONDE CADA COISA VAI: A ABA "CSV" (formato de saída)
 '
-' Uma linha = um evento. O cabeçalho tem 37 colunas (ver
+' Uma linha = um evento. O cabeçalho tem 44 colunas (ver
 ' PrepararAbaCSV); a maioria das linhas só preenche as primeiras 13
 ' (ocorrência normal — extra, falta, hora extra 100%, curta etc.) e a
 ' 23ª ("grupo" = Interno/Externo, preenchida em toda linha cujo
@@ -178,6 +186,11 @@ Private pastaFixaCSV As String
 '     data_tratativa_pontonet = "Avaliado em:", colunas 33 a 37 = tipo da
 '     justificativa, avaliação, dias do colaborador, do gestor e do RH (GP).
 '     Ver GerarLinhasPontoNet.
+'   - tipo_ocorrencia = "Banco de Horas Período" → uma por pessoa da aba
+'     "Banco de Horas" (relatório HRES105; 04/11): data = fim do período,
+'     situacao = local, colunas 38 a 44 = início do período, saldo anterior,
+'     crédito, débito, horas anistiadas, horas pagas, saldo final (minutos).
+'     Ver GerarLinhasBancoHoras.
 '   - tipo_ocorrencia = "Resumo Horas Cartão" → preenche
 '     minutos_hora_extra_cartao / minutos_banco_horas_cartao (total do
 '     mês atual, direto do Cartão Ponto, ver GerarResumoHorasCartao).
@@ -293,17 +306,19 @@ Private pastaFixaCSV As String
 '   |     ambos usam MontarDiasCartao + CalcularEmendaFolga (folga encostada)
 '   |- EncontrarAbaDigitadas + GerarLinhasDigitadas -> "Marcação Digitada"
 '   |- GerarLinhasPontoNet (aba PontoNet, 3 meses) -> "Justificativa PontoNet"
+'   |- EncontrarAbaBancoHoras + GerarLinhasBancoHoras (MinutosBH) -> "Banco de Horas Período"
+'   |     (aba do FormatarBancoHoras; o painel decide se o banco fechou: 4 meses)
 '   |- EncontrarAbaJornada + GerarLinhasJornada (MinutosDaCelula,
 '   |     HorasMinutosTexto) -> "Intrajornada", "Interjornada",
 '   |     "Interjornada Semanal", "Horas Excedentes"
 '   |- GerarLinhasORG ........................ -> "Cadastro ORG"
 ' ExportarCSVPorGestor
 '   |- EscolherPasta, NomeArquivoSeguro
-'   |- ExportarLinhasParaCSV (TextoCelula, CampoCSV) -> dados_<gestor>.csv e
-'        dados_TODOS.csv, em UTF-8 com BOM, separador vírgula.
+'   |- ExportarLinhasParaCSV (TextoCelula, CampoCSV) -> <gestor>.csv e
+'        TODOS OS GESTORES.csv, em UTF-8 com BOM, separador vírgula.
 '
 ' QUEM DEPENDE DESTE MÓDULO: o painel Dashboard/index.html lê os .csv (nunca
-' o Excel). A ORDEM e os NOMES das 29 colunas (PrepararAbaCSV) e os textos de
+' o Excel). A ORDEM e os NOMES das 44 colunas (PrepararAbaCSV) e os textos de
 ' tipo_ocorrencia são o "contrato" com o painel: mudar aqui exige mudar lá
 ' (HEADER_ALIASES e as listas de tipos no JS). O simulador em Python
 ' (ferramentas/simular_gerarcsv.py) reproduz estas regras para conferência
@@ -875,6 +890,19 @@ ProximaAbaTratamento:
     End If
 
     ' =====================================================================
+    ' Banco de horas (04/11): uma linha "Banco de Horas Período" por pessoa da
+    ' aba "Banco de Horas" (relatório HRES105 formatado pelo FormatarBancoHoras),
+    ' com o período e as horas do fechamento. O painel decide se o banco já
+    ' fechou (4 meses) e mostra como cada pessoa fechou. Ver GerarLinhasBancoHoras.
+    ' =====================================================================
+    Dim qtdBH As Long, wsBH As Worksheet, msgBH As String
+    qtdBH = 0
+    Set wsBH = EncontrarAbaBancoHoras(wbTrat)
+    If Not wsBH Is Nothing Then
+        GerarLinhasBancoHoras wsBH, dictRE, dictGestorPorMatricula, dictGrupoPorMatricula, wsCSV, linhaSaida, qtdBH, msgBH
+    End If
+
+    ' =====================================================================
     ' Limites de jornada (abas formatadas pelo FormatarJornada, achadas pelo
     ' cabeçalho): uma linha por ocorrência de cada relatório, com o tipo
     ' "Intrajornada", "Interjornada", "Interjornada Semanal" ou "Horas
@@ -926,6 +954,11 @@ ProximaAbaTratamento:
     End If
     msgAuditoria = msgAuditoria & vbCrLf & IIf(wsAus Is Nothing, "PontoNet não encontrado: sem justificativas no painel.", _
         qtdPontoNet & " justificativa(s) do PontoNet.")
+    If wsBH Is Nothing Then
+        msgAuditoria = msgAuditoria & vbCrLf & "Aba Banco de Horas não encontrada: o fechamento do banco de horas não aparece no painel."
+    Else
+        msgAuditoria = msgAuditoria & vbCrLf & qtdBH & " pessoa(s) no banco de horas (aba " & wsBH.Name & ")" & msgBH & "."
+    End If
     If wsDigitadas Is Nothing Then
         msgAuditoria = msgAuditoria & vbCrLf & "Aba de Marcações Digitadas não encontrada; essa parte do painel fica vazia."
     Else
@@ -957,7 +990,7 @@ End Sub
 ' Sub: exporta a aba "CSV" em um arquivo por gestor + um arquivo geral
 ' Segunda macro do fluxo, rodada DEPOIS do GerarAbaCSV. Não recalcula nada: só
 ' copia a aba "CSV" para arquivos .csv na pasta escolhida. Os gestores recebem
-' o "dados_<nome>.csv" deles; o RH/supervisor usa o "dados_TODOS.csv". Esses
+' o "<nome do gestor>.csv" deles; o RH/supervisor usa o "TODOS OS GESTORES.csv". Esses
 ' arquivos são os que se abrem no painel (botão "Carregar dados").
 ' ---------------------------------------------------------------------
 Private Sub ExportarCSVPorGestor()
@@ -997,15 +1030,16 @@ Private Sub ExportarCSVPorGestor()
     Next r
 
     Dim k As Variant
-    ' Um arquivo por gestor distinto da coluna 4. Linhas sem gestor só vão para o
-    ' dados_TODOS.csv.
+    ' Um arquivo por gestor distinto da coluna 4, com o NOME DO GESTOR no começo do nome
+    ' do arquivo ("<GESTOR>.csv", pedido do RH em 04/11; antes era "dados_<gestor>.csv").
+    ' Linhas sem gestor só vão para o "TODOS OS GESTORES.csv" (antes "dados_TODOS.csv").
     For Each k In dictGestores.Keys
-        ExportarLinhasParaCSV wsCSV, pasta & "\dados_" & NomeArquivoSeguro(CStr(k)) & ".csv", CStr(k)
+        ExportarLinhasParaCSV wsCSV, pasta & "\" & NomeArquivoSeguro(CStr(k)) & ".csv", CStr(k)
     Next k
 
-    ExportarLinhasParaCSV wsCSV, pasta & "\dados_TODOS.csv", ""
+    ExportarLinhasParaCSV wsCSV, pasta & "\TODOS OS GESTORES.csv", ""
 
-    AvisoCSV dictGestores.Count & " arquivo(s) por gestor + 1 arquivo geral (dados_TODOS.csv) gerados em:" _
+    AvisoCSV dictGestores.Count & " arquivo(s) por gestor (<nome do gestor>.csv) + 1 arquivo geral (TODOS OS GESTORES.csv) gerados em:" _
         & vbNewLine & pasta, vbInformation, "Exportar CSV"
 End Sub
 
@@ -1669,6 +1703,98 @@ Private Function ContemAlgum(ByVal texto As String, ByVal lista As String) As Bo
         End If
     Next i
     ContemAlgum = False
+End Function
+
+' ---------------------------------------------------------------------
+' BANCO DE HORAS (aba do FormatarBancoHoras, 04/11)
+' ---------------------------------------------------------------------
+' Acha a aba "Banco de Horas" pelo cabeçalho da linha 1 (Matrícula, Crédito,
+' Débito, Horas pagas, Horas anistiadas, Fim do período). Nothing se não achar.
+Private Function EncontrarAbaBancoHoras(wb As Workbook) As Worksheet
+    Dim ws As Worksheet
+    For Each ws In wb.Worksheets
+        If ColunaPorCabecalho(ws, "Matrícula") > 0 And ColunaPorCabecalho(ws, "Crédito") > 0 And _
+           ColunaPorCabecalho(ws, "Débito") > 0 And ColunaPorCabecalho(ws, "Horas pagas") > 0 And _
+           ColunaPorCabecalho(ws, "Horas anistiadas") > 0 And ColunaPorCabecalho(ws, "Fim do período") > 0 Then
+            Set EncontrarAbaBancoHoras = ws
+            Exit Function
+        End If
+    Next ws
+End Function
+
+' Uma linha "Banco de Horas Período" por pessoa da aba Banco de Horas:
+'   data = fim do período; situacao = local do relatório; colunas 38 a 44 =
+'   início do período, saldo anterior (positivo − negativo), crédito, débito,
+'   horas anistiadas, horas pagas e saldo final (positivo − negativo), em minutos.
+' Não decide se o banco fechou: o painel faz essa conta pelo período (4 meses =
+' fechado). Gestor e grupo: dicionários (Tratamento, depois ORG); setor/cargo: RE.
+' msgPeriodo devolve o período lido, para a mensagem final.
+Private Sub GerarLinhasBancoHoras(ws As Worksheet, dictRE As Object, dictGestorPorMatricula As Object, _
+    dictGrupoPorMatricula As Object, wsCSV As Worksheet, ByRef linhaSaida As Long, ByRef qtdGerada As Long, _
+    ByRef msgPeriodo As String)
+
+    Dim colMat As Long, colNome As Long, colLocal As Long, colIni As Long, colFim As Long
+    Dim colAntPos As Long, colAntNeg As Long, colCred As Long, colDeb As Long
+    Dim colAnist As Long, colPagas As Long, colFinPos As Long, colFinNeg As Long
+    colMat = ColunaPorCabecalho(ws, "Matrícula")
+    colNome = ColunaPorCabecalho(ws, "Colaborador")
+    colLocal = ColunaPorCabecalho(ws, "Local")
+    colIni = ColunaPorCabecalho(ws, "Início do período")
+    colFim = ColunaPorCabecalho(ws, "Fim do período")
+    colAntPos = ColunaPorCabecalho(ws, "Saldo anterior positivo")
+    colAntNeg = ColunaPorCabecalho(ws, "Saldo anterior negativo")
+    colCred = ColunaPorCabecalho(ws, "Crédito")
+    colDeb = ColunaPorCabecalho(ws, "Débito")
+    colAnist = ColunaPorCabecalho(ws, "Horas anistiadas")
+    colPagas = ColunaPorCabecalho(ws, "Horas pagas")
+    colFinPos = ColunaPorCabecalho(ws, "Saldo final positivo")
+    colFinNeg = ColunaPorCabecalho(ws, "Saldo final negativo")
+    If colMat = 0 Or colFim = 0 Then Exit Sub
+
+    Dim ultimaLinha As Long, r As Long, mat As String, nomeBH As String
+    Dim vIni As Variant, vFim As Variant, setorNome As String, cargoNome As String, gestorBH As String
+    Dim primeiroIni As Variant, primeiroFim As Variant
+    ultimaLinha = UltimaLinhaPreenchida(ws, colMat)
+    For r = 2 To ultimaLinha
+        mat = TextoLimpo(ws.Cells(r, colMat).Value)
+        vFim = ws.Cells(r, colFim).Value
+        If mat = "" Or Not IsDate(vFim) Then GoTo ProximaBH
+        If IsNumeric(mat) Then mat = CStr(CLng(CDbl(mat)))
+        vIni = Empty
+        If colIni > 0 Then
+            If IsDate(ws.Cells(r, colIni).Value) Then vIni = ws.Cells(r, colIni).Value
+        End If
+        If IsEmpty(primeiroFim) Then primeiroFim = vFim: primeiroIni = vIni
+
+        nomeBH = TextoDaCelula(ws, r, colNome)
+        If nomeBH = "" Then nomeBH = "Matrícula " & mat
+        ObterSetorCargo dictRE, mat, setorNome, cargoNome
+        gestorBH = TextoDoDicionario(dictGestorPorMatricula, mat)
+
+        EscreverLinhaCSV wsCSV, linhaSaida, CDate(vFim), nomeBH, mat, gestorBH, setorNome, cargoNome, _
+            "Banco de Horas Período", TextoDaCelula(ws, r, colLocal), "Regularizado", 0, "", Empty, _
+            grupo:=TextoDoDicionario(dictGrupoPorMatricula, mat), bhInicio:=vIni, _
+            bhSaldoAnterior:=MinutosBH(ws, r, colAntPos) - MinutosBH(ws, r, colAntNeg), _
+            bhCredito:=MinutosBH(ws, r, colCred), bhDebito:=MinutosBH(ws, r, colDeb), _
+            bhAnistiadas:=MinutosBH(ws, r, colAnist), bhPagas:=MinutosBH(ws, r, colPagas), _
+            bhSaldoFinal:=MinutosBH(ws, r, colFinPos) - MinutosBH(ws, r, colFinNeg)
+        linhaSaida = linhaSaida + 1
+        qtdGerada = qtdGerada + 1
+ProximaBH:
+    Next r
+    If IsDate(primeiroFim) Then
+        msgPeriodo = ", período " & IIf(IsDate(primeiroIni), Format(CDate(primeiroIni), "dd/mm/yyyy") & " a ", "até ") & _
+            Format(CDate(primeiroFim), "dd/mm/yyyy")
+    End If
+End Sub
+
+' Minutos de uma hora da aba Banco de Horas ([h]:mm, fração de dia); 0 se a
+' coluna não existe ou a célula está vazia. Sempre positivo.
+Private Function MinutosBH(ws As Worksheet, ByVal r As Long, ByVal col As Long) As Long
+    Dim v As Variant
+    If col = 0 Then Exit Function
+    v = ws.Cells(r, col).Value2
+    If IsNumeric(v) And Not IsEmpty(v) And VarType(v) <> vbString Then MinutosBH = CLng(Round(Abs(CDbl(v)) * 1440, 0))
 End Function
 
 ' ---------------------------------------------------------------------
@@ -2686,7 +2812,7 @@ Private Function PrepararAbaCSV(wb As Workbook) As Worksheet
         ws.Cells.Clear
     End If
 
-    ' O CONTRATO COM O PAINEL: 37 colunas, nesta ordem (33 a 37 desde 27/10, PontoNet). O index.html acha cada
+    ' O CONTRATO COM O PAINEL: 44 colunas, nesta ordem (33 a 37 desde 27/10, PontoNet; 38 a 44 desde 04/11, banco de horas). O index.html acha cada
     ' coluna pelo nome (HEADER_ALIASES), mas o ExportarCSVPorGestor usa a posição 4
     ' para o gestor. Coluna nova: acrescente no FIM, aqui e em EscreverLinhaCSV.
     Dim cabecalhos As Variant, i As Long
@@ -2699,7 +2825,9 @@ Private Function PrepararAbaCSV(wb As Workbook) As Worksheet
                         "justificativa_marcacao", "origem_marcacao", _
                         "dias_ausencia", "emenda_folga", _
                         "minutos_trabalhados", "minutos_descanso", "marcacoes_dia", _
-                        "tipo_justificativa", "avaliacao_pontonet", "dias_colaborador", "dias_gestor", "dias_rh")
+                        "tipo_justificativa", "avaliacao_pontonet", "dias_colaborador", "dias_gestor", "dias_rh", _
+                        "bh_inicio_periodo", "bh_saldo_anterior_minutos", "bh_credito_minutos", "bh_debito_minutos", _
+                        "bh_anistiadas_minutos", "bh_pagas_minutos", "bh_saldo_final_minutos")
     For i = LBound(cabecalhos) To UBound(cabecalhos)
         ws.Cells(1, i + 1).Value = cabecalhos(i)
     Next i
@@ -2731,12 +2859,18 @@ Private Sub EscreverLinhaCSV(ws As Worksheet, linha As Long, dataOcorrencia As V
     Optional minutosDescanso As Variant = Empty, Optional marcacoesDia As String = "", _
     Optional tipoJustificativa As String = "", Optional avaliacaoPontoNet As String = "", _
     Optional diasColaborador As Variant = Empty, Optional diasGestor As Variant = Empty, _
-    Optional diasRH As Variant = Empty)
+    Optional diasRH As Variant = Empty, Optional bhInicio As Variant = Empty, _
+    Optional bhSaldoAnterior As Variant = Empty, Optional bhCredito As Variant = Empty, _
+    Optional bhDebito As Variant = Empty, Optional bhAnistiadas As Variant = Empty, _
+    Optional bhPagas As Variant = Empty, Optional bhSaldoFinal As Variant = Empty)
 
     ' Colunas 1 a 13: presentes em toda linha. 14/15: auditoria. 16 a 22: pausas.
     ' 23: grupo. 24/25: resumo de horas. 26/27: marcação digitada. 28/29:
     ' afastamento/absenteísmo. 30 a 32: jornada (trabalhado, descanso, batidas).
     ' 33 a 37: justificativa do PontoNet (tipo, avaliação, dias de cada etapa).
+    ' 38 a 44: banco de horas do período (04/11): início do período, saldo anterior,
+    ' crédito, débito, horas anistiadas, horas pagas e saldo final, em minutos
+    ' (saldos com sinal: negativo = a pessoa deve horas).
     ' Opcional não informado = célula vazia.
     ws.Cells(linha, 1).Value = CDate(dataOcorrencia)
     ws.Cells(linha, 2).Value = nome
@@ -2779,6 +2913,13 @@ Private Sub EscreverLinhaCSV(ws As Worksheet, linha As Long, dataOcorrencia As V
     If Not IsEmpty(diasColaborador) Then ws.Cells(linha, 35).Value = diasColaborador
     If Not IsEmpty(diasGestor) Then ws.Cells(linha, 36).Value = diasGestor
     If Not IsEmpty(diasRH) Then ws.Cells(linha, 37).Value = diasRH
+    If IsDate(bhInicio) Then ws.Cells(linha, 38).Value = CDate(bhInicio)
+    If Not IsEmpty(bhSaldoAnterior) Then ws.Cells(linha, 39).Value = bhSaldoAnterior
+    If Not IsEmpty(bhCredito) Then ws.Cells(linha, 40).Value = bhCredito
+    If Not IsEmpty(bhDebito) Then ws.Cells(linha, 41).Value = bhDebito
+    If Not IsEmpty(bhAnistiadas) Then ws.Cells(linha, 42).Value = bhAnistiadas
+    If Not IsEmpty(bhPagas) Then ws.Cells(linha, 43).Value = bhPagas
+    If Not IsEmpty(bhSaldoFinal) Then ws.Cells(linha, 44).Value = bhSaldoFinal
 End Sub
 
 ' Pede ao usuário a pasta de destino dos CSVs exportados por
@@ -2795,7 +2936,7 @@ Private Function EscolherPasta() As String
     End If
 End Function
 
-' Nome de gestor vira nome de arquivo ("dados_<gestor>.csv"), e nomes
+' Nome de gestor vira nome de arquivo ("<gestor>.csv"), e nomes
 ' de gestor podem ter caracteres que o Windows não aceita em nome de
 ' arquivo (ex.: "Fulano / Substituto"). Troca cada um desses caracteres
 ' por "_" pra garantir que Workbooks/ADODB.Stream não falhe ao salvar.
@@ -2937,7 +3078,7 @@ End Sub
 ' COMO USAR
 '   1) Cole na planilha os módulos de todas as macros (cada .txt num módulo):
 '      ConsolidarCartaoPonto, FormatarPausasTermicas, FormatarMarcacoesDigitadas,
-'      FormatarAfastamentos, FormatarJornada e este. (O GerarCSVPonto também, para
+'      FormatarAfastamentos, FormatarJornada, FormatarBancoHoras e este. (O GerarCSVPonto também, para
 '      o passo seguinte.)
 '   2) Para cada relatório baixado do sistema, copie a aba dele para dentro da
 '      planilha (botão direito na aba > Mover ou copiar > planilha de Tratamento,
@@ -2955,6 +3096,7 @@ End Sub
 '   semanal, horas excedentes) ..... "Registros de Ponto", "Horas Descansadas",
 '                                    "Horas DSR"/"Marcação Antes DSR" ou "Carga Hor."
 '   PontoNet (Ausência de marcação)  A1 começa com "Data falta"
+'   Banco de horas (HRES105, "BH") . títulos "Fechamento Banco" e "Hr. Anist." (04/11)
 '   Aba que já está formatada, ou que não é relatório (RE, ORG, Tratamento...),
 '   não é mexida.
 '
@@ -2970,6 +3112,8 @@ End Sub
 '     (ver FormatarPausasTermicas).
 '   - PontoNet: se o .csv veio todo na coluna A (separado por ";"), é separado em
 '     colunas; a aba vira "Pontonet".
+'   - Banco de horas: a FormatarBancoHoras deixa uma tabela por pessoa e renomeia
+'     a aba para "Banco de Horas" (04/11).
 '   Um erro numa aba não para as outras: fica anotado no relatório.
 '
 ' O RELATÓRIO (aba "Relatório da preparação", refeita a cada execução)
@@ -2991,7 +3135,7 @@ Public Sub PrepararAbasDoMes()
     Set wb = ThisWorkbook
 
     If MsgBox("Esta macro vai FORMATAR todas as abas de relatório do sistema que estão nesta planilha " & _
-              "(Cartão Ponto, Pausas Térmicas, Marcações digitadas, Afastamentos, Jornada e PontoNet)." & vbCrLf & vbCrLf & _
+              "(Cartão Ponto, Pausas Térmicas, Marcações digitadas, Afastamentos, Jornada, PontoNet e Banco de horas)." & vbCrLf & vbCrLf & _
               "As abas que já estão formatadas e as outras (RE, ORG, Tratamento...) não são mexidas." & vbCrLf & _
               "No fim, a aba """ & NOME_RELATORIO & """ mostra o que foi feito em cada uma." & vbCrLf & vbCrLf & _
               "Recomendado: rode numa CÓPIA da planilha na primeira vez. Continuar?", _
@@ -3111,6 +3255,8 @@ Private Function TipoDoRelatorioBruto(ws As Worksheet) As String
         TipoDoRelatorioBruto = "pontonet": Exit Function
     End If
     If InStr(tudo, "|CARTÃO PONTO|") > 0 And InStr(colA, "|EMPREGADO:|") > 0 Then TipoDoRelatorioBruto = "cartao": Exit Function
+    ' banco de horas (HRES105, 04/11): títulos "Fechamento Banco" e "Hr. Anist."
+    If InStr(tudo, "|FECHAMENTO BANCO|") > 0 And InStr(tudo, "|HR. ANIST.|") > 0 Then TipoDoRelatorioBruto = "bh": Exit Function
     If InStr(tudo, "PAUSAS TÉRMICAS") > 0 Then TipoDoRelatorioBruto = "pausas": Exit Function
     If InStr(tudo, "|CRACHÁ|") > 0 And InStr(tudo, "|COLETOR|") > 0 Then TipoDoRelatorioBruto = "digitadas": Exit Function
     If InStr(tudo, "HISTÓRICO DE AFASTAMENTOS") > 0 Or (InStr(tudo, "|PREV TÉRMINO|") > 0 And InStr(tudo, "|DT.TÉRMINO|") > 0) Then
@@ -3130,6 +3276,7 @@ Private Function NomeDoTipo(ByVal tipo As String) As String
         Case "afastamentos": NomeDoTipo = "Afastamentos"
         Case "jornada": NomeDoTipo = "Jornada (intra, inter, semanal ou horas excedentes)"
         Case "pontonet": NomeDoTipo = "PontoNet (ausência de marcação)"
+        Case "bh": NomeDoTipo = "Banco de horas (BH)"
     End Select
 End Function
 
@@ -3141,6 +3288,7 @@ Private Function MacroDoTipo(ByVal tipo As String) As String
         Case "afastamentos": MacroDoTipo = "FormatarAfastamentos_Auto"
         Case "jornada": MacroDoTipo = "FormatarJornada_Auto"
         Case "pontonet": MacroDoTipo = "(nenhuma: feito por esta macro)"
+        Case "bh": MacroDoTipo = "FormatarBancoHoras_Auto"
     End Select
 End Function
 
@@ -3294,7 +3442,7 @@ Private Sub EscreverRelatorio(wb As Workbook, linhas As Collection, vistos As Ob
     ws.Cells(r, 1).Value = "O que se espera num mês completo"
     ws.Cells(r, 1).Font.Bold = True
     r = r + 1
-    esperados = Array("cartao", "pausas", "digitadas", "afastamentos", "jornada", "pontonet")
+    esperados = Array("cartao", "pausas", "digitadas", "afastamentos", "jornada", "pontonet", "bh")
     For i = 0 To UBound(esperados)
         ws.Cells(r, 1).Value = NomeDoTipo(CStr(esperados(i)))
         If vistos.Exists(esperados(i)) Then
@@ -3334,6 +3482,7 @@ Private Function ExisteAbaFormatada(wb As Workbook, ByVal tipo As String) As Boo
             Case "afastamentos": If n = "afastamentos" Then ExisteAbaFormatada = True
             Case "jornada": If n = "intrajornada" Or n = "interjornada" Or n = "interjornada semanal" Or n = "horas excedentes" Then ExisteAbaFormatada = True
             Case "pontonet": If n = "pontonet" Then ExisteAbaFormatada = True
+            Case "bh": If n = "banco de horas" Then ExisteAbaFormatada = True
         End Select
     Next sh
 End Function
@@ -3354,13 +3503,14 @@ End Function
 ' MACRO: GerarCSVsDaPasta  (02/11)
 ' --------------------------------------------------------------------------------
 ' Faz o mês inteiro de uma vez, a partir de uma PASTA com os relatórios baixados:
-'   1) pede a pasta onde estão os arquivos do sistema e CONFERE se ela tem os 11
+'   1) pede a pasta onde estão os arquivos do sistema e CONFERE se ela tem os 12
 '      arquivos com estes nomes (03/11; maiúscula, acento e extensão .xlsx/.xls/.xlsm/
 '      .xlsb/.csv tanto faz): Cartão ponto 1, Cartão ponto 2, Cartão ponto 3 (1 = o
 '      mais antigo), Pausas térmicas 3 meses, Digitadas 3 meses, Afastamentos 3 meses,
 '      Pontonet 3 meses, Excedentes 3 meses, Intrajornada 3 meses, Interjornada 3
-'      meses e Interjornada semanal 3 meses. Se faltar algum, avisa quais e para sem
-'      mexer em nada. A RE nova pode ficar na pasta também (é opcional);
+'      meses, Interjornada semanal 3 meses e BH (banco de horas, desde 04/11). Se
+'      faltar algum, avisa quais e para sem mexer em nada. A RE nova pode ficar na
+'      pasta também (é opcional);
 '   2) só então pede a pasta onde os CSVs vão ser gravados;
 '   3) abre cada arquivo, traz as abas dele para esta planilha e fecha (os arquivos
 '      da pasta não são alterados);
@@ -3368,8 +3518,8 @@ End Function
 '      do mesmo relatório é SUBSTITUÍDA pela nova (ex.: "Marcações Digitadas",
 '      "Pausas Térmicas Outubro", "Cartão Outubro"), para rodar de novo no mês sem
 '      duplicar nada;
-'   5) roda a GerarAbaCSV e grava os CSVs (dados_<gestor>.csv + dados_TODOS.csv) na
-'      pasta escolhida;
+'   5) roda a GerarAbaCSV e grava os CSVs na pasta escolhida: um por gestor, com o
+'      NOME DO GESTOR no começo ("<GESTOR>.csv", 04/11), + "TODOS OS GESTORES.csv";
 '   6) deixa a aba "Relatório da preparação" com tudo o que aconteceu.
 ' Ficam na planilha (não vêm da pasta): ORG e as abas Tratamento - Internos/Externos.
 ' A RE pode vir na pasta: entra como "RE dd.mm" (data do arquivo) ANTES das REs que
@@ -3386,7 +3536,7 @@ Public Sub GerarCSVsDaPasta()
     pastaOrigem = EscolherPastaAqui("1 de 2: escolha a PASTA com os relatórios baixados do sistema")
     If pastaOrigem = "" Then Exit Sub
 
-    ' (03/11) Confere se a pasta tem os 11 arquivos com os nomes combinados ANTES de pedir a
+    ' (03/11) Confere se a pasta tem os 12 arquivos (11 + o BH desde 04/11) com os nomes combinados ANTES de pedir a
     ' pasta dos CSVs; se faltar algum, avisa quais e para sem mexer em nada.
     Dim faltando As String
     faltando = ConferirArquivosDaPasta(pastaOrigem)
@@ -3507,12 +3657,13 @@ Public Sub GerarCSVsDaPasta()
            IIf(nErros > 0, vbExclamation, vbInformation), "Gerar CSVs da pasta"
 End Sub
 
-' Os 11 arquivos que a pasta tem que ter (nome sem a extensão). A ordem dos Cartões não importa
+' Os 12 arquivos que a pasta tem que ter (nome sem a extensão). "BH" = relatório de banco de
+' horas (HRES105), entrou em 04/11. A ordem dos Cartões não importa
 ' para a macro (cada um vira "Cartão <mês>" pelo período dele), mas o combinado é 1 = o mais antigo.
 Private Function ArquivosObrigatorios() As Variant
     ArquivosObrigatorios = Array("Afastamentos 3 meses", "Cartão ponto 1", "Cartão ponto 2", "Cartão ponto 3", _
         "Excedentes 3 meses", "Interjornada 3 meses", "Interjornada semanal 3 meses", "Intrajornada 3 meses", _
-        "Digitadas 3 meses", "Pausas térmicas 3 meses", "Pontonet 3 meses")
+        "Digitadas 3 meses", "Pausas térmicas 3 meses", "Pontonet 3 meses", "BH")
 End Function
 
 ' Nome para comparar: minúsculas, sem acento e com espaços simples ("Cartão  Ponto 1" = "cartao ponto 1").
@@ -3530,7 +3681,7 @@ Private Function NomeComparavel(ByVal t As String) As String
     NomeComparavel = t
 End Function
 
-' "" se a pasta tem os 11 arquivos (Excel ou .csv, maiúsculas/acentos tanto faz); senão o texto
+' "" se a pasta tem os 12 arquivos (Excel ou .csv, maiúsculas/acentos tanto faz); senão o texto
 ' do aviso: os que faltam, os repetidos (mesmo nome com duas extensões) e os arquivos da pasta
 ' que não bateram com nenhum nome (para ver se é só um nome digitado diferente).
 Private Function ConferirArquivosDaPasta(ByVal pasta As String) As String
@@ -3682,6 +3833,7 @@ Private Function ApagarAbasQueSeraoSubstituidas(wb As Workbook, paraPreparar As 
             Case "digitadas": alvos.Add "Marcações Digitadas"
             Case "afastamentos": alvos.Add "Afastamentos"
             Case "pontonet": alvos.Add "Pontonet"
+            Case "bh": alvos.Add "Banco de Horas"
             Case "jornada": If SubtipoJornada(ws) <> "" Then alvos.Add SubtipoJornada(ws)
             Case "pausas"
                 For Each m In MesesDoRelatorioPausas(ws)
@@ -6730,6 +6882,359 @@ Private Function Aviso_Jor(ByVal texto As String, Optional ByVal botoes As Long 
         Aviso_Jor = vbYes
     Else
         Aviso_Jor = MsgBox(texto, botoes, titulo)
+    End If
+End Function
+
+' ============================================================================================================
+' PARTE: BancoHoras/FormatarBancoHoras.bas  (gerado por ferramentas/montar_modulo_unico.py; edite o .bas de origem)
+' ============================================================================================================
+
+' Modo automático: quando a GerarCSVsDaPasta / PrepararAbasDoMes chama esta formatação
+' (FormatarBancoHoras_Auto), nenhuma mensagem aparece; o texto de cada aviso vai para msgAuto e
+' volta para o relatório da preparação. Ver Aviso, no fim do módulo.
+Private modoAuto_BH As Boolean
+Private msgAuto_BH As String
+' ============================================================================
+' FormatarBancoHoras  (04/11)
+'
+' DE ONDE VEM: a aba ATIVA, com o relatório de banco de horas do sistema (HRES105,
+'   o arquivo "BH" da pasta do mês), exportado como "dump" de impressão:
+'     - cabeçalho de página repetido: "Filial: <filial>   Período: <início> a <fim>",
+'       os títulos "Período Anterior | Movimento Mensal | Fechamento Banco | Saldo
+'       Final" e embaixo "Locais | Positivo | Negativo | Credito | Débito | Hr. Anist.
+'       | Hr. Pagas | Positivo | Negativo";
+'     - uma linha com o local ("Aurora, Unid Vendas ..., Setor X, Ativ. X");
+'     - uma linha por pessoa: matrícula (coluna A), nome (coluna B) e as 8 horas;
+'     - linhas de subtotal (só o nome do local na coluna A, sem nome de pessoa) e o
+'       rodapé "HRES105.GER - data - hora", que são ignorados.
+'   As horas vêm como hora do Excel (fração de dia, ex.: 1,0701389 = 25:41) ou como
+'   texto com o sinal no fim quando são negativas ("25:40-", sempre na coluna Débito).
+'
+' O QUE SIGNIFICA CADA COLUNA (o banco de horas fecha de 4 em 4 meses):
+'   Saldo anterior ... o que a pessoa trazia de antes do período (positivo/negativo)
+'   Crédito .......... horas a mais trabalhadas no período (entraram no banco)
+'   Débito ........... horas a menos (atraso, saída antes, folga tirada do banco)
+'   Horas anistiadas . no fechamento, o saldo NEGATIVO que a empresa perdoou
+'   Horas pagas ...... no fechamento, o saldo POSITIVO que a empresa pagou
+'   Saldo final ...... o que sobra no banco depois do fechamento (zero quando fecha)
+'   Num período de 4 meses (fechado): crédito − débito = horas pagas − horas anistiadas.
+'   Num período menor, o banco ainda não fechou e o saldo final é parcial.
+'
+' PARA ONDE VAI: reescreve a MESMA aba como uma tabela (cabeçalho na linha 1, uma
+'   linha por pessoa) e renomeia a aba para "Banco de Horas". As horas ficam em
+'   formato [h]:mm, sempre POSITIVAS (o lado diz o sinal: débito, saldo negativo).
+'   O GerarCSVPonto acha esta aba pelo cabeçalho (Matrícula + Crédito + Horas pagas)
+'   e gera uma linha "Banco de Horas Período" por pessoa no CSV; o painel mostra
+'   na seção "Colaboradores em destaque" como cada pessoa fechou o banco.
+'
+' Este módulo não depende de nenhum outro. Nunca rodou no Excel: rode numa CÓPIA.
+' ============================================================================
+
+Private Const NOME_ABA_SAIDA_BH As String = "Banco de Horas"
+Private Const N_COLS_BH As Long = 16
+
+Private Sub FormatarBancoHoras()
+    Dim ws As Worksheet
+    Set ws = ActiveSheet
+
+    ' Lê da A1 até a última célula usada (o relatório pode ter colunas vazias no começo).
+    Dim ultLin As Long, ultCol As Long
+    ultLin = ws.UsedRange.Row + ws.UsedRange.Rows.Count - 1
+    ultCol = ws.UsedRange.Column + ws.UsedRange.Columns.Count - 1
+    If ultLin < 3 Or ultCol < 2 Then
+        Aviso_BH "Nenhum dado encontrado na aba ativa.", vbExclamation, "Formatar Banco de Horas"
+        Exit Sub
+    End If
+    If ultCol < 14 Then ultCol = 14
+    Dim dados As Variant
+    dados = ws.Range(ws.Cells(1, 1), ws.Cells(ultLin, ultCol)).Value2
+
+    ' ------------------------------------------------------------
+    ' 1) Colunas das horas, pela linha de títulos "Locais | Positivo | Negativo |
+    '    Credito | Débito | Hr. Anist. | Hr. Pagas | Positivo | Negativo".
+    '    O 1º Positivo/Negativo é o saldo anterior; o 2º, o saldo final.
+    '    Reserva: as posições do relatório de 03/11 (E a L).
+    ' ------------------------------------------------------------
+    Dim cAntPos As Long, cAntNeg As Long, cCred As Long, cDeb As Long
+    Dim cAnist As Long, cPagas As Long, cFinPos As Long, cFinNeg As Long
+    cAntPos = 5: cAntNeg = 6: cCred = 7: cDeb = 8: cAnist = 9: cPagas = 10: cFinPos = 11: cFinNeg = 12
+    Dim r As Long, c As Long, t As String, achouTitulos As Boolean
+    For r = 1 To ultLin
+        If TextoSimples_BH(Celula_BH(dados, r, 1)) = "LOCAIS" Then
+            Dim nPos As Long, nNeg As Long
+            nPos = 0: nNeg = 0
+            For c = 2 To ultCol
+                t = TextoSimples_BH(Celula_BH(dados, r, c))
+                Select Case t
+                    Case "POSITIVO"
+                        nPos = nPos + 1
+                        If nPos = 1 Then cAntPos = c Else cFinPos = c
+                    Case "NEGATIVO"
+                        nNeg = nNeg + 1
+                        If nNeg = 1 Then cAntNeg = c Else cFinNeg = c
+                    Case "CREDITO": cCred = c
+                    Case "DEBITO": cDeb = c
+                    Case "HR. ANIST.", "HR ANIST", "HR. ANIST": cAnist = c
+                    Case "HR. PAGAS", "HR PAGAS": cPagas = c
+                End Select
+            Next c
+            achouTitulos = True
+            Exit For
+        End If
+    Next r
+    If Not achouTitulos Then
+        Aviso_BH "Não encontrei a linha de títulos ""Locais | Positivo | Negativo | Credito | Débito..."" " & _
+              "do relatório de banco de horas. A aba ativa é mesmo o relatório HRES105?", vbCritical, "Formatar Banco de Horas"
+        Exit Sub
+    End If
+
+    ' ------------------------------------------------------------
+    ' 2) Percorre o relatório: guarda o período, a filial e o local correntes e
+    '    monta uma linha por pessoa (matrícula numérica na coluna A + nome na B).
+    ' ------------------------------------------------------------
+    Dim saida() As Variant, nSaida As Long
+    ReDim saida(1 To ultLin, 1 To N_COLS_BH)
+    Dim iniPer As Double, fimPer As Double, filial As String, localAtual As String
+    Dim v As Variant, k As Long
+    For r = 1 To ultLin
+        ' "Período:" e "Filial:" (cabeçalho de cada página)
+        For c = 1 To ultCol
+            t = TextoSimples_BH(Celula_BH(dados, r, c))
+            If t = "PERIODO:" Then
+                For k = c + 1 To ultCol
+                    v = Celula_BH(dados, r, k)
+                    If EhNumero_BH(v) Then
+                        If v > 30000 And v < 80000 Then
+                            If iniPer = 0 Or v < iniPer Then iniPer = v
+                            If v > fimPer Then fimPer = v
+                        End If
+                    End If
+                Next k
+            ElseIf t = "FILIAL:" Then
+                For k = c + 1 To ultCol
+                    If TextoCel_BH(Celula_BH(dados, r, k)) <> "" Then filial = TextoCel_BH(Celula_BH(dados, r, k)): Exit For
+                Next k
+            End If
+        Next c
+
+        v = Celula_BH(dados, r, 1)
+        t = TextoCel_BH(v)
+        If Left$(TextoSimples_BH(v), 7) = "AURORA," Then
+            ' linha do local: fica a última parte ("Ativ. Faturamento")
+            localAtual = Trim$(Mid$(t, InStrRev(t, ",") + 1))
+        ElseIf UCase$(t) = "AURORA" Or Left$(UCase$(t), 7) = "AURORA " Then
+            localAtual = t
+        ElseIf PareceNumero_BH(v) And TextoCel_BH(Celula_BH(dados, r, 2)) <> "" Then
+            nSaida = nSaida + 1
+            saida(nSaida, 1) = CStr(CLng(CDbl(t)))
+            saida(nSaida, 2) = TextoCel_BH(Celula_BH(dados, r, 2))
+            saida(nSaida, 3) = filial
+            saida(nSaida, 4) = localAtual
+            saida(nSaida, 9) = HoraBH(Celula_BH(dados, r, cAntPos))
+            saida(nSaida, 10) = HoraBH(Celula_BH(dados, r, cAntNeg))
+            saida(nSaida, 11) = HoraBH(Celula_BH(dados, r, cCred))
+            saida(nSaida, 12) = HoraBH(Celula_BH(dados, r, cDeb))
+            saida(nSaida, 13) = HoraBH(Celula_BH(dados, r, cAnist))
+            saida(nSaida, 14) = HoraBH(Celula_BH(dados, r, cPagas))
+            saida(nSaida, 15) = HoraBH(Celula_BH(dados, r, cFinPos))
+            saida(nSaida, 16) = HoraBH(Celula_BH(dados, r, cFinNeg))
+        End If
+    Next r
+
+    If nSaida = 0 Then
+        Aviso_BH "Não encontrei nenhuma pessoa no relatório de banco de horas (linhas com matrícula na " & _
+              "coluna A e nome na coluna B).", vbCritical, "Formatar Banco de Horas"
+        Exit Sub
+    End If
+    If iniPer = 0 Or fimPer = 0 Then
+        Aviso_BH "Não encontrei o período (linha ""Período: ... a ..."") no relatório de banco de horas.", _
+              vbCritical, "Formatar Banco de Horas"
+        Exit Sub
+    End If
+
+    ' Período: início, fim, quantos meses (ciclos de 28 a 27) e se o banco fechou
+    ' (fecha de 4 em 4 meses: com 4 meses ou mais no relatório, está fechado).
+    Dim meses As Long, fechado As String
+    meses = MesesDoPeriodo(CDate(iniPer), CDate(fimPer))
+    fechado = IIf(meses >= 4, "Sim", "Não")
+    For r = 1 To nSaida
+        saida(r, 5) = CDate(iniPer)
+        saida(r, 6) = CDate(fimPer)
+        saida(r, 7) = meses
+        saida(r, 8) = fechado
+    Next r
+
+    ' ------------------------------------------------------------
+    ' 3) Reescreve a aba
+    ' ------------------------------------------------------------
+    Application.ScreenUpdating = False
+    On Error Resume Next
+    If ws.AutoFilterMode Then ws.AutoFilterMode = False
+    ws.Cells.UnMerge
+    On Error GoTo 0
+    ws.Cells.Clear
+
+    ' Estes nomes são o que o GerarCSVPonto procura: não mude sem mudar lá.
+    Dim cab As Variant
+    cab = Array("Matrícula", "Colaborador", "Filial", "Local", "Início do período", "Fim do período", _
+                "Meses do período", "Banco fechado", "Saldo anterior positivo", "Saldo anterior negativo", _
+                "Crédito", "Débito", "Horas anistiadas", "Horas pagas", "Saldo final positivo", "Saldo final negativo")
+    For c = 0 To N_COLS_BH - 1
+        ws.Cells(1, c + 1).Value = cab(c)
+    Next c
+    ws.Range(ws.Cells(2, 1), ws.Cells(nSaida + 1, 1)).NumberFormat = "@"
+    ws.Range(ws.Cells(2, 5), ws.Cells(nSaida + 1, 6)).NumberFormat = "dd/mm/yyyy"
+    ws.Range(ws.Cells(2, 9), ws.Cells(nSaida + 1, 16)).NumberFormat = "[h]:mm"
+
+    Dim bloco() As Variant
+    ReDim bloco(1 To nSaida, 1 To N_COLS_BH)
+    For r = 1 To nSaida
+        For c = 1 To N_COLS_BH
+            bloco(r, c) = saida(r, c)
+        Next c
+    Next r
+    ws.Range(ws.Cells(2, 1), ws.Cells(nSaida + 1, N_COLS_BH)).Value = bloco
+
+    With ws.Range(ws.Cells(1, 1), ws.Cells(1, N_COLS_BH))
+        .Font.Bold = True
+        .Interior.Color = RGB(217, 217, 217)
+        .HorizontalAlignment = xlCenter
+        .VerticalAlignment = xlCenter
+        .WrapText = True
+    End With
+    With ws.Range(ws.Cells(1, 1), ws.Cells(nSaida + 1, N_COLS_BH))
+        .Borders.LineStyle = xlContinuous
+        .Borders.Weight = xlThin
+        .AutoFilter
+    End With
+    ws.Cells.Font.Name = "Calibri"
+    ws.Cells.Font.Size = 10
+    ws.Columns("A").ColumnWidth = 10
+    ws.Columns("B").ColumnWidth = 36
+    ws.Columns("C").ColumnWidth = 16
+    ws.Columns("D").ColumnWidth = 30
+    ws.Columns("E:P").ColumnWidth = 11
+    ws.Range("E:P").HorizontalAlignment = xlCenter
+
+    Dim renomeada As Boolean
+    On Error Resume Next
+    ws.Name = NOME_ABA_SAIDA_BH
+    renomeada = (Err.Number = 0)
+    Err.Clear
+    On Error GoTo 0
+
+    ws.Activate
+    ActiveWindow.FreezePanes = False
+    ws.Rows(2).Select
+    ActiveWindow.FreezePanes = True
+    ws.Cells(1, 1).Select
+    Application.ScreenUpdating = True
+
+    Aviso_BH "Formatação concluída." & vbCrLf & _
+          nSaida & " pessoa(s) no banco de horas, período de " & Format(CDate(iniPer), "dd/mm/yyyy") & _
+          " a " & Format(CDate(fimPer), "dd/mm/yyyy") & " (" & meses & " mês(es): " & _
+          IIf(fechado = "Sim", "banco FECHADO", "banco ainda NÃO fechou, o saldo é parcial") & ")." & vbCrLf & _
+          IIf(renomeada, "Aba renomeada para """ & NOME_ABA_SAIDA_BH & """.", _
+              "A aba não foi renomeada (já existe uma aba """ & NOME_ABA_SAIDA_BH & """)."), _
+          vbInformation, "Formatar Banco de Horas"
+End Sub
+
+' ----------------------------------------------------------------------------
+' FUNÇÕES DE APOIO (só deste módulo)
+' ----------------------------------------------------------------------------
+' Hora do relatório -> hora do Excel (fração de dia), sempre positiva.
+' Número = já é hora do Excel; texto "25:40-" ou "-25:40" = 25h40 (o "-" só diz
+' que é negativo, e o lado da coluna já diz isso); vazio = 0.
+Private Function HoraBH(v As Variant) As Double
+    Dim t As String, p As Long, h As Double, m As Double
+    If IsError(v) Or IsEmpty(v) Then Exit Function
+    If VarType(v) <> vbString Then
+        If IsNumeric(v) Then HoraBH = Abs(CDbl(v))
+        Exit Function
+    End If
+    t = Replace(Replace(Trim$(CStr(v)), "-", ""), " ", "")
+    If t = "" Then Exit Function
+    p = InStr(t, ":")
+    If p = 0 Then
+        If IsNumeric(t) Then HoraBH = Abs(CDbl(t))
+        Exit Function
+    End If
+    If IsNumeric(Left$(t, p - 1)) Then h = CDbl(Left$(t, p - 1))
+    If IsNumeric(Mid$(t, p + 1)) Then m = CDbl(Mid$(t, p + 1))
+    HoraBH = (h * 60 + m) / 1440
+End Function
+
+' Quantos meses (ciclos de 28 a 27) o período cobre: 28/06 a 27/10 = 4
+' (julho, agosto, setembro e outubro). Dia 28 em diante já é do ciclo seguinte.
+Private Function MesesDoPeriodo(ByVal ini As Date, ByVal fim As Date) As Long
+    Dim a As Long, b As Long
+    a = Year(ini) * 12 + Month(ini) + IIf(Day(ini) >= 28, 1, 0)
+    b = Year(fim) * 12 + Month(fim) + IIf(Day(fim) >= 28, 1, 0)
+    MesesDoPeriodo = b - a + 1
+End Function
+
+Private Function Celula_BH(dados As Variant, ByVal r As Long, ByVal c As Long) As Variant
+    If c < 1 Or c > UBound(dados, 2) Or r < 1 Or r > UBound(dados, 1) Then
+        Celula_BH = Empty
+    Else
+        Celula_BH = dados(r, c)
+    End If
+End Function
+
+Private Function EhNumero_BH(v As Variant) As Boolean
+    If IsError(v) Or IsEmpty(v) Then
+        EhNumero_BH = False
+    ElseIf VarType(v) = vbString Then
+        EhNumero_BH = False
+    Else
+        EhNumero_BH = IsNumeric(v)
+    End If
+End Function
+
+Private Function PareceNumero_BH(v As Variant) As Boolean
+    Dim t As String
+    t = TextoCel_BH(v)
+    PareceNumero_BH = (t <> "" And IsNumeric(t))
+End Function
+
+Private Function TextoCel_BH(v As Variant) As String
+    If IsError(v) Or IsEmpty(v) Then
+        TextoCel_BH = ""
+    Else
+        TextoCel_BH = Trim$(Replace(Replace(Replace(CStr(v), vbCr, " "), vbLf, " "), Chr(160), " "))
+    End If
+End Function
+
+Private Function TextoSimples_BH(v As Variant) As String
+    Dim t As String, com As String, sem As String, i As Long
+    t = UCase$(TextoCel_BH(v))
+    com = "ÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ"
+    sem = "AAAAAEEEEIIIIOOOOOUUUUC"
+    For i = 1 To Len(com)
+        t = Replace(t, Mid$(com, i, 1), Mid$(sem, i, 1))
+    Next i
+    TextoSimples_BH = t
+End Function
+
+' ----------------------------------------------------------------------------
+' Modo automático. FormatarBancoHoras_Auto é chamada pela PrepararAbasDoMes /
+' GerarCSVsDaPasta com a aba do relatório ativa: roda sem caixa de mensagem e
+' devolve o texto (com "ERRO: " na frente quando o aviso é de erro).
+' ----------------------------------------------------------------------------
+Private Function FormatarBancoHoras_Auto() As String
+    modoAuto_BH = True: msgAuto_BH = ""
+    FormatarBancoHoras
+    modoAuto_BH = False
+    FormatarBancoHoras_Auto = msgAuto_BH
+End Function
+
+Private Function Aviso_BH(ByVal texto As String, Optional ByVal botoes As Long = vbInformation, Optional ByVal titulo As String = "") As VbMsgBoxResult
+    If modoAuto_BH Then
+        If (botoes And 16) = 16 Then texto = "ERRO: " & texto
+        msgAuto_BH = msgAuto_BH & IIf(msgAuto_BH = "", "", " ") & Replace(Replace(texto, vbCrLf, " "), vbLf, " ")
+        Aviso_BH = vbYes
+    Else
+        Aviso_BH = MsgBox(texto, botoes, titulo)
     End If
 End Function
 

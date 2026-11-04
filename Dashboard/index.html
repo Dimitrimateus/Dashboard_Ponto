@@ -925,7 +925,7 @@
         <div class="como-usar">
           <h3>Como usar o painel</h3>
           <ol>
-            <li><strong>Pegue o arquivo do mês.</strong> O RH envia um arquivo <code>dados_&lt;seu nome&gt;.csv</code> (só a sua equipe) ou <code>dados_TODOS.csv</code> (todas as equipes). Salve no computador ou no celular; não precisa abrir no Excel.</li>
+            <li><strong>Pegue o arquivo do mês.</strong> O RH envia um arquivo com o <strong>seu nome</strong> (<code>&lt;seu nome&gt;.csv</code>, só a sua equipe) ou o <code>TODOS OS GESTORES.csv</code> (todas as equipes). Salve no computador ou no celular; não precisa abrir no Excel.</li>
             <li><strong>Abra o arquivo aqui.</strong> No bloco “Carregar dados” (à direita; no celular, no alto da tela), clique para escolher o arquivo ou arraste-o para cima do bloco. Dá para abrir <strong>mais de um arquivo de uma vez</strong> (por exemplo, o de dois gestores): o painel junta os dois, e o filtro de gestor mostra os dois para você escolher um ou ambos. Depois de aberto, “Juntar mais um arquivo” acrescenta outro. O arquivo é lido só no seu navegador: nada é enviado para a internet.</li>
             <li><strong>Escolha a seção.</strong> O botão <strong>&#9776;</strong> no canto superior esquerdo troca de seção: Ocorrências, Marcações digitadas, Afastamentos, Jornada, Colaboradores em destaque, Pausas térmicas, PontoNet, Tendências, Lista de colaboradores e Histórico. A última opção mostra tudo numa página só.</li>
             <li><strong>Filtre.</strong> Em “Filtros” escolha gestor, cargo, colaborador, tipo de ocorrência ou período. Tudo no painel muda junto. “Limpar filtros” volta ao arquivo inteiro; “Esconder filtros”, no topo, dá mais espaço aos gráficos.</li>
@@ -1310,6 +1310,20 @@
             <div class="card-fonte"><span class="fonte-origem">De onde vem: o espelho de ponto deste mês, somado por pessoa</span><p>A mesma conta do card ao lado (<strong>horas extras − horas descontadas do banco</strong>), mostrando as pessoas com o saldo <strong>negativo</strong> mais alto: as que mais ficaram devendo horas no mês, mesmo depois de contar a hora extra que fizeram. Vale o mês inteiro do espelho de ponto, sem depender do filtro de período. Clique no nome para ver a pessoa.</p></div>
             <div class="card-body" id="chartSaldoNegativo"></div>
             <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="saldoNeg" id="btnSaldoNegTodos" hidden>Mostrar todos</button></div>
+          </div>
+          <!-- Fechamento do banco de horas (pedido do RH, 04/11): como cada pessoa fechou o
+               banco no período de 4 meses. Fonte: linhas "Banco de Horas Período" do CSV
+               (relatório de banco de horas do sistema). O painel decide sozinho se o banco
+               já fechou (4 meses no período) ou se ainda está aberto (saldo parcial).
+               Desenhado por renderFechamentoBH. -->
+          <div class="card wide" id="cardFechamentoBH">
+            <div class="card-title">Como cada pessoa fechou o banco de horas</div>
+            <div class="card-hint" id="hintFechamentoBH">O banco de horas fecha de 4 em 4 meses</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de banco de horas do sistema de ponto</span><p>O banco de horas junta, durante <strong>4 meses</strong>, as horas que a pessoa trabalhou <strong>a mais</strong> (crédito, em verde) e as que ficou <strong>devendo</strong> por atraso, saída antes ou folga tirada do banco (débito, em vermelho). No fim dos 4 meses o banco <strong>fecha</strong>: se sobrou saldo positivo, a empresa <strong>paga</strong> essas horas; se sobrou saldo negativo, as horas são <strong>perdoadas</strong> (o sistema chama de “anistiadas”); se uma coisa compensou a outra, fica <strong>zerado</strong>. O painel olha o período do relatório: com 4 meses, o banco está fechado e à direita aparece como cada pessoa fechou; com menos de 4 meses, o banco ainda está aberto e à direita aparece o saldo até agora, que ainda pode mudar. Clique no nome para ver a pessoa.</p></div>
+            <div class="abs-resumo-caixa" id="bhResumo"></div>
+            <div class="org-toolbar"><select id="bhMostrar" aria-label="Quem mostrar no fechamento do banco de horas"></select><input type="text" id="bhBusca" placeholder="Buscar colaborador pelo nome..." aria-label="Buscar colaborador no fechamento do banco de horas"><span id="bhBuscaCount" style="font-size:12px;color:var(--c-muted);"></span></div>
+            <div class="card-body" id="chartFechamentoBH"></div>
+            <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="fechBH" id="btnFechBHTodos" hidden>Mostrar todos</button></div>
           </div>
         </section>
 
@@ -1824,7 +1838,8 @@
        digitadas), "Afastamento"/"Absenteísmo" (afastamentos e atestados) e
        "Resumo Horas Cartão" (horas do mês) e os limites de jornada
        ("Intrajornada", "Interjornada", "Interjornada Semanal", "Horas
-       Excedentes", isTipoJornada). Todas entram em
+       Excedentes", isTipoJornada) e o banco de horas do período ("Banco de
+       Horas Período", isTipoBancoHoras, 04/11). Todas entram em
        isTipoNaoOcorrencia e ficam fora dos gráficos gerais.
      
      O QUE APARECE NA TELA -> QUEM DESENHA -> DE ONDE VÊM OS DADOS
@@ -1862,6 +1877,9 @@
                    extra e falta ........ extraFaltaAuditoria ..... linhas "Auditoria Extra e Falta"
                    ocorrências curtas ... curtasPorColaborador .... getCurtasRecords
                    banco de horas ....... horasCartaoPorColaborador "Resumo Horas Cartão"
+                   fechamento do banco de horas (4 meses, 04/11) renderFechamentoBH ... "Banco de Horas Período"
+                     (periodoBH decide se fechou: 4 ciclos de 28 a 27 no período; situacaoBH;
+                      seletor #bhMostrar, busca #bhBusca; também no card do colaborador)
        "pausas": tabela ................ pausasTermicasResumo .... "Resumo Pausas Térmicas" do mês mais recente
                  números do topo, acima de 1h40, por gestor/cargo, evolução (T1/T3/T4/T9)
                                          renderPausas ............ getPausasTermicasRecords / getPausasTodosMeses
@@ -1967,7 +1985,15 @@
     avaliacaoPontoNet: ["avaliacao_pontonet"],
     diasColaborador: ["dias_colaborador"],
     diasGestor: ["dias_gestor"],
-    diasRH: ["dias_rh"]
+    diasRH: ["dias_rh"],
+    // banco de horas do período (04/11): relatório HRES105 ("BH"), uma linha por pessoa
+    bhInicio: ["bh_inicio_periodo"],
+    bhSaldoAnterior: ["bh_saldo_anterior_minutos"],
+    bhCredito: ["bh_credito_minutos"],
+    bhDebito: ["bh_debito_minutos"],
+    bhAnistiadas: ["bh_anistiadas_minutos"],
+    bhPagas: ["bh_pagas_minutos"],
+    bhSaldoFinal: ["bh_saldo_final_minutos"]
   };
 
   // Situações que o painel ignora mesmo que venham no CSV (o GerarCSV
@@ -2032,6 +2058,15 @@
   // padrão (cobrem 3 meses).
   var TIPOS_JORNADA = ["Intrajornada", "Interjornada", "Interjornada Semanal", "Horas Excedentes"];
   function isTipoJornada(tipo){ return TIPOS_JORNADA.indexOf(tipo) !== -1; }
+  // Banco de horas (04/11): uma linha por pessoa do relatório de banco de horas do
+  // sistema (GerarLinhasBancoHoras do macro), com o período (bhInicio .. data) e as horas
+  // do período. O banco FECHA de 4 em 4 meses: com 4 meses (ciclos de 28 a 27) no
+  // período, está fechado e as horas pagas/anistiadas dizem como cada pessoa fechou;
+  // com menos, ainda está aberto e o saldo final é parcial. Card próprio na seção
+  // "Colaboradores em destaque" (renderFechamentoBH).
+  var TIPO_BANCO_HORAS = "Banco de Horas Período";
+  var MESES_FECHAMENTO_BH = 4;
+  function isTipoBancoHoras(tipo){ return tipo === TIPO_BANCO_HORAS; }
   function isAtestado(r){
     if (r.tipo === TIPO_ABSENTEISMO) return true;
     var t = stripAccents(r.situacao).toLowerCase();
@@ -2130,7 +2165,7 @@
     if (!TIPOS_CONHECIDOS){
       TIPOS_CONHECIDOS = {};
       [TIPO_AUDITORIA_EXTRA_FALTA, TIPO_RESUMO_PAUSAS_TERMICAS, TIPO_RESUMO_HORAS_CARTAO, TIPO_CADASTRO_ORG,
-       TIPO_MARCACAO_DIGITADA, TIPO_PAUSA_DIA, TIPO_PONTONET, TIPO_ABSENTEISMO, TIPO_AFASTAMENTO]
+       TIPO_MARCACAO_DIGITADA, TIPO_PAUSA_DIA, TIPO_PONTONET, TIPO_ABSENTEISMO, TIPO_AFASTAMENTO, TIPO_BANCO_HORAS]
         .concat(TIPOS_JORNADA, TIPOS_CURTAS, TIPOS_HORA_EXTRA).forEach(function(k){
           TIPOS_CONHECIDOS["a:" + chaveTipo(k)] = k;
           TIPOS_CONHECIDOS["b:" + chaveTipo(k, true)] = k;
@@ -2140,7 +2175,7 @@
   }
 
   function isTipoNaoOcorrencia(tipo){
-    return isTipoResumo(tipo) || isTipoCurta(tipo) || isTipoHoraExtra(tipo) || isTipoDigitada(tipo) || isTipoAbsenteismo(tipo) || isTipoJornada(tipo) || isTipoPausaDia(tipo) || isTipoPontoNet(tipo);
+    return isTipoResumo(tipo) || isTipoCurta(tipo) || isTipoHoraExtra(tipo) || isTipoDigitada(tipo) || isTipoAbsenteismo(tipo) || isTipoJornada(tipo) || isTipoPausaDia(tipo) || isTipoPontoNet(tipo) || isTipoBancoHoras(tipo);
   }
 
   // Estado global do painel inteiro — de propósito, um único objeto
@@ -2445,7 +2480,9 @@
       //   minHoraExtraCartao/minBancoHorasCartao (resumo de horas),
       //   justificativaMarcacao/origemMarcacao (digitadas),
       //   diasAusencia/emendaFolga (afastamentos),
-      //   minutosTrabalhados/minutosDescanso/marcacoesDia (limites de jornada).
+      //   minutosTrabalhados/minutosDescanso/marcacoesDia (limites de jornada),
+      //   bh* (banco de horas do período: início, saldo anterior, crédito, débito,
+      //   anistiadas, pagas, saldo final).
       // textoCampo() troca erros do Excel ("#N/A", "Erro 2042") por vazio.
       var rec = {
         data: dt,
@@ -2487,7 +2524,15 @@
         avaliacaoPontoNet: idx.avaliacaoPontoNet != null ? textoCampo(r[idx.avaliacaoPontoNet]) : "",
         diasColaborador: idx.diasColaborador != null && textoCampo(r[idx.diasColaborador]) !== "" ? parseNumber(r[idx.diasColaborador]) : null,
         diasGestor: idx.diasGestor != null && textoCampo(r[idx.diasGestor]) !== "" ? parseNumber(r[idx.diasGestor]) : null,
-        diasRH: idx.diasRH != null && textoCampo(r[idx.diasRH]) !== "" ? parseNumber(r[idx.diasRH]) : null
+        diasRH: idx.diasRH != null && textoCampo(r[idx.diasRH]) !== "" ? parseNumber(r[idx.diasRH]) : null,
+        // banco de horas do período (04/11): minutos; saldos com sinal (negativo = deve horas)
+        bhInicio: idx.bhInicio != null && textoCampo(r[idx.bhInicio]) ? parseDate(r[idx.bhInicio]) : null,
+        bhSaldoAnterior: idx.bhSaldoAnterior != null ? parseNumber(r[idx.bhSaldoAnterior]) : 0,
+        bhCredito: idx.bhCredito != null ? parseNumber(r[idx.bhCredito]) : 0,
+        bhDebito: idx.bhDebito != null ? parseNumber(r[idx.bhDebito]) : 0,
+        bhAnistiadas: idx.bhAnistiadas != null ? parseNumber(r[idx.bhAnistiadas]) : 0,
+        bhPagas: idx.bhPagas != null ? parseNumber(r[idx.bhPagas]) : 0,
+        bhSaldoFinal: idx.bhSaldoFinal != null ? parseNumber(r[idx.bhSaldoFinal]) : 0
       };
       rec._linha = r.join("\u0001");   // a linha inteira: tira repetidas ao juntar vários arquivos
       out.push(rec);
@@ -2706,20 +2751,26 @@
     if (min === 0) return "0h";
     return (min > 0 ? "+" : "\u2212") + formatHoras(min);
   }
-  function renderSaldoH(container, items){
+  // opts (04/11, fechamento do banco de horas): leg1/leg2 = legendas do verde e do
+  // vermelho, titDir = título da coluna da direita, it.texto/it.cor = texto e cor da
+  // direita (padrão: o saldo), it.dica = balão.
+  function renderSaldoH(container, items, opts){
+    opts = opts || {};
     container.innerHTML = "";
     if (!items.length){ container.appendChild(emptyMsg()); return; }
     var max = niceMax(Math.max.apply(null, items.map(function(i){ return i.extra + i.banco; })));
-    var rowH = 24, gap = 9, leftW = 128, rightW = 92, topPad = 4, legendH = 22;
+    var rowH = 24, gap = 9, leftW = 128, rightW = opts.rightW || 92, topPad = 4, legendH = 22;
     var W = containerWidth(container, 520);
     var H = legendH + topPad*2 + items.length*(rowH+gap) - gap;
     var svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, class:"chart-svg" });
     var plotW = W - leftW - rightW;
     svg.appendChild(svgEl("rect", { x:leftW, y:1, width:10, height:10, fill: COR_EXTRA, rx:2 }));
-    var t1 = svgEl("text", { x:leftW+14, y:10, class:"axis-label" }); t1.textContent = "Hora extra"; svg.appendChild(t1);
-    svg.appendChild(svgEl("rect", { x:leftW+86, y:1, width:10, height:10, fill: COR_BANCO, rx:2 }));
-    var t2 = svgEl("text", { x:leftW+100, y:10, class:"axis-label" }); t2.textContent = "Banco de horas"; svg.appendChild(t2);
-    var t3 = svgEl("text", { x:W-4, y:10, class:"axis-label", "text-anchor":"end" }); t3.textContent = "Saldo"; svg.appendChild(t3);
+    var leg1 = opts.leg1 || "Hora extra", leg2 = opts.leg2 || "Banco de horas";
+    var t1 = svgEl("text", { x:leftW+14, y:10, class:"axis-label" }); t1.textContent = leg1; svg.appendChild(t1);
+    var x2 = leftW + 30 + leg1.length * 6;
+    svg.appendChild(svgEl("rect", { x:x2, y:1, width:10, height:10, fill: COR_BANCO, rx:2 }));
+    var t2 = svgEl("text", { x:x2+14, y:10, class:"axis-label" }); t2.textContent = leg2; svg.appendChild(t2);
+    var t3 = svgEl("text", { x:W-4, y:10, class:"axis-label", "text-anchor":"end" }); t3.textContent = opts.titDir || "Saldo"; svg.appendChild(t3);
 
     items.forEach(function(it, idx){
       var y = legendH + topPad + idx*(rowH+gap);
@@ -2727,7 +2778,7 @@
       var wb = max ? (it.banco/max) * plotW : 0;
       if (it.extra > 0) we = Math.max(we, 2);
       if (it.banco > 0) wb = Math.max(wb, 2);
-      var dica = it.label + " · Hora extra: " + formatHoras(it.extra) + " · Banco de horas: " + formatHoras(it.banco) + " · Saldo: " + formatSaldo(it.extra - it.banco);
+      var dica = it.dica || (it.label + " · Hora extra: " + formatHoras(it.extra) + " · Banco de horas: " + formatHoras(it.banco) + " · Saldo: " + formatSaldo(it.extra - it.banco));
       var label = svgEl("text", { x: leftW-8, y: y+rowH/2+4, class:"chart-label", "text-anchor":"end", "data-colab": it.label });
       label.textContent = truncate(it.label, 15);
       svg.appendChild(label);
@@ -2736,12 +2787,119 @@
       if (it.banco > 0) svg.appendChild(svgEl("rect", { x:leftW+we, y:y, width:wb, height:rowH, fill: COR_BANCO, rx:3, "data-colab": it.label, "data-tooltip": dica }));
       var saldo = it.extra - it.banco;
       var val = svgEl("text", { x: W-4, y: y+rowH/2+4, class:"chart-value", "text-anchor":"end", "data-colab": it.label,
-        style: "fill:" + (saldo > 0 ? "#2E7D32" : (saldo < 0 ? "#C62828" : "var(--c-muted)")) });
-      val.textContent = formatSaldo(saldo);
+        style: "fill:" + (it.cor || (saldo > 0 ? "#2E7D32" : (saldo < 0 ? "#C62828" : "var(--c-muted)"))) });
+      val.textContent = it.texto != null ? it.texto : formatSaldo(saldo);
       svg.appendChild(val);
     });
     container.appendChild(svg);
     wireTooltips(svg);
+  }
+
+  // ---------- Fechamento do banco de horas (04/11) ----------
+  // Ciclo de 28 a 27 de uma data: 28/06 já é do ciclo de julho. Número contínuo
+  // (ano*12 + mês) para contar quantos meses um período cobre.
+  function numCicloBH(d){ return d.getFullYear()*12 + d.getMonth() + (d.getDate() >= 28 ? 1 : 0); }
+  // Período do banco de horas no arquivo: o mais recente (se juntar arquivos de dois
+  // períodos, vale o último). meses = ciclos cobertos; fechado = 4 meses ou mais.
+  function periodoBH(){
+    var fim = null, ini = null;
+    state.records.forEach(function(r){
+      if (isTipoBancoHoras(r.tipo) && (!fim || r.data > fim)){ fim = r.data; ini = r.bhInicio; }
+    });
+    if (!fim) return null;
+    var meses = ini ? numCicloBH(fim) - numCicloBH(ini) + 1 : null;
+    return { ini: ini, fim: fim, meses: meses, fechado: meses != null && meses >= MESES_FECHAMENTO_BH };
+  }
+  // Como a pessoa fechou: "pago" (saldo positivo pago), "perdoado" (saldo negativo
+  // anistiado), "zerado" (uma coisa compensou a outra). Com o banco aberto: "positivo",
+  // "negativo" ou "zerado" pelo saldo até agora.
+  function situacaoBH(r, fechado){
+    if (fechado){
+      if (r.bhPagas > 0) return "pago";
+      if (r.bhAnistiadas > 0) return "perdoado";
+      return "zerado";
+    }
+    return r.bhSaldoFinal > 0 ? "positivo" : (r.bhSaldoFinal < 0 ? "negativo" : "zerado");
+  }
+  var BH_OPCOES = {
+    fechado: [["", "Todos (maiores primeiro)"], ["pago", "Só quem teve horas pagas"], ["perdoado", "Só quem teve horas perdoadas"], ["zerado", "Só quem fechou zerado"]],
+    aberto: [["", "Todos (maiores primeiro)"], ["positivo", "Só saldo positivo"], ["negativo", "Só saldo negativo"], ["zerado", "Só saldo zerado"]]
+  };
+  function renderFechamentoBH(){
+    var card = $("cardFechamentoBH");
+    var per = periodoBH();
+    if (!per){
+      card.hidden = true; state.bhPeriodo = null;
+      return;
+    }
+    card.hidden = false;
+    var fechado = per.fechado;
+    var perTxt = (per.ini ? formatDateBR(per.ini) + " a " : "até ") + formatDateBR(per.fim);
+    state.bhPeriodo = "Período do banco de horas: " + perTxt + " (não segue o filtro de período)";
+    // pessoas do período mais recente, com os filtros de gestor/grupo/cargo/colaborador
+    var linhas = getResumoRecords(TIPO_BANCO_HORAS).filter(function(r){ return r.data.getTime() === per.fim.getTime(); });
+
+    // seletor "Mostrar": opções do fechado ou do aberto (guarda a escolha se ainda existir)
+    var sel = $("bhMostrar"), modo = fechado ? "fechado" : "aberto", atual = sel.value;
+    if (sel.dataset.modo !== modo){
+      sel.innerHTML = BH_OPCOES[modo].map(function(o){ return '<option value="'+o[0]+'">'+o[1]+'</option>'; }).join("");
+      sel.dataset.modo = modo;
+      if (BH_OPCOES[modo].some(function(o){ return o[0] === atual; })) sel.value = atual;
+    }
+
+    // resumo em frases
+    var cont = { pago:[], perdoado:[], zerado:[], positivo:[], negativo:[] };
+    linhas.forEach(function(r){ cont[situacaoBH(r, fechado)].push(r); });
+    function soma(lista, campo){ return lista.reduce(function(a, r){ return a + Math.abs(r[campo] || 0); }, 0); }
+    var mesesTxt = per.meses != null ? per.meses + (per.meses === 1 ? " mês" : " meses") : "período sem data de início";
+    var html = '<div class="arc-titulo">' + (fechado ? "Banco de horas FECHADO" : "Banco de horas ainda ABERTO") + '</div><ul>';
+    html += '<li>Período: <b>' + perTxt + '</b> (' + mesesTxt + ')' +
+      (fechado ? ' &middot; o banco fecha de 4 em 4 meses, então este período já fechou.'
+               : ' &middot; o banco fecha de 4 em 4 meses: ' + (per.meses != null ? 'faltam <b>' + Math.max(MESES_FECHAMENTO_BH - per.meses, 0) + '</b> mês(es); ' : '') + 'o saldo abaixo é <b>parcial</b> e ainda pode mudar.') + '</li>';
+    html += '<li><b>' + formatNum(linhas.length) + '</b> pessoa(s) no relatório &middot; crédito total <b>' + formatHoras(soma(linhas, "bhCredito")) +
+      '</b>, débito total <b>' + formatHoras(soma(linhas, "bhDebito")) + '</b>.</li>';
+    if (fechado){
+      html += '<li><b style="color:#2E7D32">' + formatNum(cont.pago.length) + '</b> tiveram horas <b>pagas</b> no fechamento (' + formatHoras(soma(cont.pago, "bhPagas")) + ' no total).</li>';
+      html += '<li><b style="color:#C62828">' + formatNum(cont.perdoado.length) + '</b> tiveram horas <b>perdoadas</b> (anistiadas: ficaram devendo e a empresa não descontou; ' + formatHoras(soma(cont.perdoado, "bhAnistiadas")) + ' no total).</li>';
+      html += '<li><b>' + formatNum(cont.zerado.length) + '</b> fecharam <b>zerados</b> (o que fizeram a mais compensou o que ficaram devendo).</li>';
+    } else {
+      html += '<li><b style="color:#2E7D32">' + formatNum(cont.positivo.length) + '</b> com saldo positivo até agora (' + formatHoras(soma(cont.positivo, "bhSaldoFinal")) + ' no total); ' +
+        '<b style="color:#C62828">' + formatNum(cont.negativo.length) + '</b> com saldo negativo (' + formatHoras(soma(cont.negativo, "bhSaldoFinal")) + '); ' +
+        '<b>' + formatNum(cont.zerado.length) + '</b> zerados.</li>';
+    }
+    $("bhResumo").innerHTML = html + '</ul>';
+    $("hintFechamentoBH").innerHTML = fechado
+      ? "Período fechado (" + mesesTxt + ") &middot; verde = crédito (horas a mais), vermelho = débito (horas devidas), à direita como fechou"
+      : "Banco ainda aberto (" + mesesTxt + " de 4) &middot; verde = crédito, vermelho = débito, à direita o saldo até agora";
+
+    // barras: verde = crédito, vermelho = débito; à direita o resultado
+    var filtro = sel.value, busca = chaveNome($("bhBusca").value);
+    // no celular (gráfico estreito) a palavra "pagas"/"perdoadas" sai do texto da direita
+    // para sobrar espaço para as barras; a cor e o balão continuam dizendo o que é
+    var estreito = containerWidth($("chartFechamentoBH"), 520) < 600;
+    var itens = linhas.filter(function(r){
+      return (!filtro || situacaoBH(r, fechado) === filtro) && (!busca || chaveNome(r.colaborador).indexOf(busca) > -1);
+    }).map(function(r){
+      var sit = situacaoBH(r, fechado), texto, cor, peso;
+      if (fechado){
+        if (sit === "pago"){ texto = "+" + formatHoras(r.bhPagas) + (estreito ? "" : " pagas"); cor = "#2E7D32"; peso = r.bhPagas; }
+        else if (sit === "perdoado"){ texto = "−" + formatHoras(r.bhAnistiadas) + (estreito ? "" : " perdoadas"); cor = "#C62828"; peso = r.bhAnistiadas; }
+        else { texto = "zerado"; cor = "var(--c-muted)"; peso = 0; }
+      } else {
+        texto = formatSaldo(r.bhSaldoFinal); cor = r.bhSaldoFinal > 0 ? "#2E7D32" : (r.bhSaldoFinal < 0 ? "#C62828" : "var(--c-muted)");
+        peso = Math.abs(r.bhSaldoFinal);
+      }
+      var dica = r.colaborador + " · Crédito: " + formatHoras(r.bhCredito) + " · Débito: " + formatHoras(r.bhDebito) +
+        (r.bhSaldoAnterior ? " · Saldo que trazia de antes: " + formatSaldo(r.bhSaldoAnterior) : "") +
+        (fechado ? " · Fechamento: " + (sit === "pago" ? formatHoras(r.bhPagas) + " pagas" : sit === "perdoado" ? formatHoras(r.bhAnistiadas) + " perdoadas" : "zerado")
+                 : " · Saldo até agora: " + formatSaldo(r.bhSaldoFinal));
+      return { label: r.colaborador, extra: r.bhCredito || 0, banco: r.bhDebito || 0, texto: texto, cor: cor, dica: dica, peso: peso };
+    }).sort(function(a, b){ return b.peso - a.peso || (b.extra + b.banco) - (a.extra + a.banco) || a.label.localeCompare(b.label, "pt-BR"); });
+    var lista = busca ? itens : limitarLista(itens, "fechBH", 10, "btnFechBHTodos");
+    if (busca) $("btnFechBHTodos").hidden = true;
+    $("bhBuscaCount").textContent = busca ? formatNum(itens.length) + " pessoa(s) com esse nome" : "";
+    renderSaldoH($("chartFechamentoBH"), lista, { leg1:"Crédito", leg2:"Débito",
+      titDir: fechado ? "Fechamento" : (estreito ? "Saldo" : "Saldo até agora"), rightW: fechado && !estreito ? 128 : 92 });
   }
 
   // Barras verticais com eixo Y (linhas de grade em 0/50%/100% do
@@ -3621,7 +3779,7 @@
     // o absenteísmo, a jornada, as pausas e as digitadas podem cobrir 3 meses:
     // ficam fora do período padrão, que é o mês das ocorrências (o mês atual).
     // Sem nenhuma ocorrência no arquivo, as digitadas voltam a valer (CSV só de digitadas).
-    var fora = function(r){ return r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS || isTipoPausaDia(r.tipo) || isTipoPontoNet(r.tipo) || isTipoAbsenteismo(r.tipo) || isTipoJornada(r.tipo); };
+    var fora = function(r){ return r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS || isTipoPausaDia(r.tipo) || isTipoPontoNet(r.tipo) || isTipoAbsenteismo(r.tipo) || isTipoJornada(r.tipo) || isTipoBancoHoras(r.tipo); };
     var recs = state.records.filter(function(r){ return !fora(r) && !isTipoDigitada(r.tipo); });
     if (!recs.length) recs = state.records.filter(function(r){ return !fora(r); });
     if (!recs.length) return null;
@@ -3815,6 +3973,7 @@
       .sort(function(a,b){ return b.value - a.value || a.label.localeCompare(b.label,"pt-BR"); });
     renderBarH($("chartSaldoPositivo"), limitarLista(positivos, "saldoPos", limiteBanco, "btnSaldoPosTodos"), { colab:true, rightW:100 });
     renderBarH($("chartSaldoNegativo"), limitarLista(negativos, "saldoNeg", limiteBanco, "btnSaldoNegTodos"), { colab:true, rightW:100 });
+    renderFechamentoBH();
     $("hintBancoHoras").innerHTML = horas.doCartao
       ? "Mês atual do espelho de ponto &middot; verde = hora extra, vermelho = banco de horas, à direita o saldo (extra &minus; banco)"
       : "Arquivo antigo, sem o total do mês do espelho de ponto: aqui aparecem só os dias que viraram ocorrência";
@@ -4038,6 +4197,8 @@
   }
   $("digBusca").addEventListener("input", debounce(applyFilters, 200));
   $("bancoBusca").addEventListener("input", debounce(applyFilters, 200));
+  $("bhBusca").addEventListener("input", debounce(applyFilters, 200));
+  $("bhMostrar").addEventListener("change", applyFilters);
   /* ---------- Esquecimento crônico (P10) ----------
      Batidas digitadas por esquecimento, por pessoa e por ciclo (28 a 27),
      com a tendência do penúltimo para o último ciclo. Usa os filtros de
@@ -5619,7 +5780,7 @@
   // o painel num estado inconsistente.
   // Vários arquivos de uma vez (28/10): por exemplo, o de dois gestores. Lê
   // todos, junta as linhas e tira as repetidas (a mesma linha que vem em dois
-  // arquivos, como no dados_TODOS + o de um gestor, conta uma vez só).
+  // arquivos, como no TODOS OS GESTORES + o de um gestor, conta uma vez só).
   // adicionar = true: junta aos arquivos já abertos ("Juntar mais um arquivo").
   state.arquivos = [];
   function lerArquivo(file){
@@ -5849,7 +6010,7 @@
     var total = periodoCompleto();
     $("fDataIni").value = total ? total.ini : "";
     $("fDataFim").value = total ? total.fim : "";
-    $("historySearch").value = ""; $("bancoBusca").value = "";
+    $("historySearch").value = ""; $("bancoBusca").value = ""; $("bhBusca").value = ""; $("bhMostrar").value = "";
     $("orgBusca").value = ""; $("orgMostrar").value = ""; $("digBusca").value = "";
     $("absCiclo").value = ""; $("absAgrupar").value = "gestor"; $("absMostrar").value = "";
     $("jorCiclo").value = ""; $("digCiclo").value = ""; $("gestorMedida").value = ""; $("pauAgrupar").value = "gestor"; $("tendIndicador").value = "";
@@ -6022,6 +6183,23 @@
     var periodoTxt = (dIni ? formatDateBR(dIni) : "início") + " a " + (dFim ? formatDateBR(dFim) : "fim");
     var saldo = horas ? (horas.minHoraExtraCartao - horas.minBancoHorasCartao) : 0;
     var cFaltas = curtas.filter(function(r){ return r.tipo === "Falta < 15min"; }).length;
+    // banco de horas do período (04/11): como a pessoa fechou (ou o saldo até agora)
+    var perBH = periodoBH();
+    var bh = perBH ? todas.filter(function(r){ return isTipoBancoHoras(r.tipo) && r.data.getTime() === perBH.fim.getTime(); })[0] : null;
+    var bhValor = "&ndash;", bhSub = perBH ? "fora do relatório de banco de horas" : "", bhCls = "";
+    if (bh){
+      var bhSit = situacaoBH(bh, perBH.fechado);
+      if (perBH.fechado){
+        bhValor = bhSit === "pago" ? "+" + formatHoras(bh.bhPagas) : bhSit === "perdoado" ? "&minus;" + formatHoras(bh.bhAnistiadas) : "Zerado";
+        bhSub = (bhSit === "pago" ? "horas pagas" : bhSit === "perdoado" ? "horas perdoadas" : "fechou sem saldo") + " no fechamento &middot; crédito " +
+          formatHoras(bh.bhCredito) + ", débito " + formatHoras(bh.bhDebito);
+        bhCls = bhSit === "pago" ? "pos" : (bhSit === "perdoado" ? "neg" : "");
+      } else {
+        bhValor = formatSaldo(bh.bhSaldoFinal);
+        bhSub = "saldo até agora (banco aberto, " + (perBH.meses || "?") + " de 4 meses)";
+        bhCls = bh.bhSaldoFinal > 0 ? "pos" : (bh.bhSaldoFinal < 0 ? "neg" : "");
+      }
+    }
     // Corpo do card: mini-cards de números (ocorrências, horas do Cartão, saldo,
     // extra e falta, curtas, demora, pausas) e, abaixo, as tabelas de
     // afastamentos, digitadas e ocorrências da pessoa.
@@ -6030,6 +6208,7 @@
       tile("Hora extra", horas ? formatHoras(horas.minHoraExtraCartao) : "&ndash;", "espelho de ponto do mês") +
       tile("Banco de horas", horas ? formatHoras(horas.minBancoHorasCartao) : "&ndash;", "espelho de ponto do mês") +
       tile("Saldo", horas ? formatSaldo(saldo) : "&ndash;", "extra &minus; banco", horas ? (saldo > 0 ? "pos" : (saldo < 0 ? "neg" : "")) : "") +
+      (perBH ? tile(perBH.fechado ? "Fechamento do banco de horas" : "Banco de horas (4 meses)", bhValor, bhSub, bhCls) : "") +
       tile("Extra e falta no mesmo dia", aud ? (aud.extraFaltaMesAtual + " / " + aud.extraFaltaTotal3Meses) : "0", "este mês / 3 meses",
            aud && aud.extraFaltaTotal3Meses >= LIMITE_AUDITORIA_EXTRA_FALTA ? "alerta" : "") +
       tile("Ocorrências curtas", formatNum(curtas.length), cFaltas + " falta(s) &middot; " + (curtas.length - cFaltas) + " extra(s)") +
@@ -6398,7 +6577,7 @@
              "historySection"],
     digCiclo: ["chartDigMotivo","chartDigDiaSemana","chartDigData","chartDigTop","chartDigGestor","chartDigHora",
              "tableDigJust","tableDigLista"],
-    cartao: ["chartBancoHoras","chartSaldoPositivo","chartSaldoNegativo"], cartao3: ["tableExtraFalta"], pausas: ["tablePausasTermicas","chartPauAcima","tablePauAcimaGestor","chartPauGrupo"],
+    cartao: ["chartBancoHoras","chartSaldoPositivo","chartSaldoNegativo"], cartao3: ["tableExtraFalta"], bh: ["chartFechamentoBH"], pausas: ["tablePausasTermicas","chartPauAcima","tablePauAcimaGestor","chartPauGrupo"],
     pausasMeses: ["chartPauEvolucao"],
     pauBat: ["chartPauHora","chartPauDiaSemana","chartPauPrimeira","chartPauSemPausa","chartPauMaior","pauHeat"],
     absEvol: ["chartAbsEvolucao"], absCiclo: ["chartAbsGrupo","chartAbsDiaSemana","tableAbsEmendas"], abs3m: ["tableAbsRanking","tableAbsMesmoDia","tableAbsSegSex","tableAbsFerias"],
@@ -6434,7 +6613,8 @@
         intervaloBR(cicloInicioFim(c[0]).ini, cicloInicioFim(c[c.length-1]).fim) + " (não segue o filtro de período)" : null; })(),
       pnTodos: state.pnPeriodo && state.pnPeriodo.todos, pnCiclo: state.pnPeriodo && state.pnPeriodo.ciclo,
       jorTodos: state.jorPeriodo && state.jorPeriodo.todos, jorCiclo: state.jorPeriodo && state.jorPeriodo.ciclo,
-      digCiclo: state.digPeriodo
+      digCiclo: state.digPeriodo,
+      bh: state.bhPeriodo
     };
     Object.keys(PERIODO_DOS_CARDS).forEach(function(tipo){
       PERIODO_DOS_CARDS[tipo].forEach(function(id){

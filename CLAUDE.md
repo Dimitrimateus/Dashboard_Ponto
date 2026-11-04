@@ -1,6 +1,6 @@
 # CONTEXTO DO PROJETO — Tratamento de Ponto e Painel de Ocorrências (AuroraCoop)
 
-> Arquivo de contexto para o Claude Code. Estado em **04/11/2026**. Leia inteiro antes de propor
+> Arquivo de contexto para o Claude Code. Estado em **04/11/2026** (fim do dia). Leia inteiro antes de propor
 > qualquer mudança: várias regras abaixo já foram discutidas e decididas com o Dimitri, e as
 > "armadilhas" já custaram retrabalho.
 >
@@ -34,6 +34,7 @@ HRCL006 Histórico de Afastamentos      ──► FormatarAfastamentos   ──�
 Intrajornada (HRES108), Interjornada,
 Interjornada semanal, Horas excedentes ──► FormatarJornada (1 macro, acha o tipo) ──► abas "Intrajornada",
                                            "Interjornada", "Interjornada Semanal", "Horas Excedentes"
+HRES105 banco de horas ("BH", 04/11)   ──► FormatarBancoHoras     ──► aba "Banco de Horas"
 aba PURO (exportação de ocorrências)   ──► PURO_Para_EDITADO      ──► aba EDITADO_MESAA ─► (Dimitri trata) ─► "Tratamento - Internos" / "Tratamento - Externos"
                                                          todas as abas ──► GerarAbaCSV ──► aba "CSV" ──► ExportarCSVPorGestor ──► dados_<gestor>.csv + dados_TODOS.csv
                                                                                                                                   └──► index.html (abre no navegador)
@@ -65,6 +66,7 @@ aba PURO (exportação de ocorrências)   ──► PURO_Para_EDITADO      ─�
 | `PuroParaEditado/PURO_Para_EDITADO.bas` | aba `PURO` → `EDITADO_MESAA` (reordena, X→SIM, tira espaços) |
 | `MarcacoesDigitadas/FormatarMarcacoesDigitadas.bas` | relatório "Marcações digitadas" → a mesma aba como tabela (renomeada "Marcações Digitadas") |
 | `Afastamentos/FormatarAfastamentos.bas` | relatório HRCL006 "Histórico de Afastamentos" → a mesma aba como tabela (renomeada "Afastamentos") |
+| `BancoHoras/FormatarBancoHoras.bas` | (04/11) relatório de banco de horas HRES105 ("BH") → a mesma aba como tabela, renomeada "Banco de Horas" |
 | `Jornada/FormatarJornada.bas` | os 4 relatórios de limite de jornada (intra, inter, inter semanal, horas excedentes) → a mesma aba como tabela, renomeada pelo tipo |
 | `GerarCSVPonto/GerarCSVPonto.bas` | `GerarAbaCSV` (monta a aba CSV) e `ExportarCSVPorGestor` (grava os .csv) |
 | `ModuloUnico/PainelPonto_TudoEmUm.bas` (= `txt/PainelPonto_TudoEmUm.txt`) | (03/11) **o que o Dimitri cola**: todas as macros num módulo só, GERADO por `ferramentas/montar_modulo_unico.py` (não editar à mão; mude o .bas de origem e rode o script) |
@@ -201,6 +203,23 @@ conteúdo num módulo.
 - Arquivos de 09/10 (28/06 a 27/09): intra 21 ocorrências/18 pessoas; inter 1; semanal 11/8;
   excedentes 72/34. Horas arredondadas ao minuto (o sistema grava 10:05:00,96).
 
+### 5.3f FormatarBancoHoras (04/11; aba ativa = HRES105 bruto, o arquivo "BH")
+- Dump de impressão por página: "Filial: <filial>  Período: <ini> a <fim>" (datas seriais), títulos
+  "Período Anterior | Movimento Mensal | Fechamento Banco | Saldo Final" e "Locais | Positivo |
+  Negativo | Credito | Débito | Hr. Anist. | Hr. Pagas | Positivo | Negativo" (colunas achadas por essa
+  linha; reserva E..L); linha do local "Aurora, Unid..., Setor X, Ativ. X" (fica a última parte);
+  pessoa = matrícula numérica em A + nome em B; subtotais (só texto em A) e rodapé "HRES105.GER" são
+  ignorados. Horas: número = fração de dia; texto "25:40-" = negativo (sempre no Débito). Tudo vira
+  positivo na tabela.
+- Saída: `Matrícula, Colaborador, Filial, Local, Início do período, Fim do período, Meses do período,
+  Banco fechado, Saldo anterior positivo, Saldo anterior negativo, Crédito, Débito, Horas anistiadas,
+  Horas pagas, Saldo final positivo, Saldo final negativo` ([h]:mm). Meses = ciclos 28→27
+  (`MesesDoPeriodo`); fechado = 4+ meses (o banco fecha de 4 em 4 meses, regra do Dimitri).
+- Relatório de 03/11 (28/06 a 27/10, 4 meses, 216 pessoas, filiais Recife/Cabo, Teresina, Cash
+  Nordeste): crédito 4542:47, débito 4369:44, anistiadas 23:12 (38 pessoas), pagas 196:15 (65); saldo
+  anterior e final zerados. Em todas as pessoas: anterior + crédito − débito − pagas + anistiadas =
+  saldo final. Python: `ferramentas/formatar_bh.py`.
+
 ### 5.3e PrepararAbasDoMes (31/10)
 - Percorre as abas, reconhece cada relatório bruto pelo conteúdo (`TipoDoRelatorioBruto`: "Cartão
   Ponto"+"Empregado:", "PAUSAS TÉRMICAS", "Crachá"+"Coletor", "Histórico de Afastamentos", marcadores
@@ -212,6 +231,9 @@ conteúdo num módulo.
   automático = erro, sem InputBox). PontoNet: TextToColumns por ";" se veio numa coluna, renomeia
   "Pontonet". Aba "Relatório da preparação" (1ª aba): aba original, tipo, OK/Deu erro, aba(s)
   gerada(s), detalhes + lista do que se espera no mês (FALTOU em vermelho). **Nunca rodou no Excel.**
+- (04/11) Reconhece também o banco de horas (`TipoDoRelatorioBruto` = "bh": "FECHAMENTO BANCO" +
+  "HR. ANIST."; `FormatarBancoHoras_Auto`; substitui a aba "Banco de Horas"). A pasta tem **12
+  arquivos**: os 11 abaixo + **`BH`**.
 - (03/11) **GerarCSVsDaPasta confere os 11 arquivos** antes de pedir a pasta dos CSVs
   (`ArquivosObrigatorios`, `ConferirArquivosDaPasta`, `NomeComparavel`: sem maiúscula/acento/espaço
   duplo; .xlsx/.xls/.xlsm/.xlsb/.csv): Cartão ponto 1/2/3, Pausas térmicas 3 meses, Digitadas 3
@@ -258,6 +280,8 @@ conteúdo num módulo.
 - A tabela de pausas, achada em qualquer aba pela linha que tem `Matrícula` + `Pausa corretas`.
 - **Marcações Digitadas**: aba com `Matrícula, Data, Hora, Motivo, Justificativa` na linha 1.
 - **Afastamentos**: aba com `Matrícula, Situação, Início, Término` na linha 1.
+- **Banco de Horas** (04/11): aba com `Matrícula, Crédito, Débito, Horas pagas, Horas anistiadas, Fim do
+  período` na linha 1 (`EncontrarAbaBancoHoras`).
 - **ORG** (relação colaborador × gestor): aba que começa com "ORG" com `Matricula`, `COLABORADOR`,
   `Descrição`, `Cargo`, `Unidade`, `GESTOR` na linha 1 (busca de cabeçalho sem acento/maiúscula,
   `ColunaSemAcento`). A coluna Matricula do ORG é fórmula e às vezes dá `#N/A`.
@@ -311,6 +335,10 @@ conteúdo num módulo.
      "Sem intervalo"/"Intervalo de 0:55" (intra), a Ocorrência (inter e semanal), "Total de 12:40
      no dia" (excedentes); duracao_minutos = extras (só excedentes); colunas 30/31/32 =
      minutos_trabalhados / minutos_descanso / marcacoes_dia. Sem Tratamento nem Check.
+   - "Banco de Horas Período" (04/11, `GerarLinhasBancoHoras`): uma por pessoa da aba Banco de Horas;
+     data = fim do período; situacao = local; colunas 38–44 = início do período, saldo anterior
+     (pos − neg), crédito, débito, anistiadas, pagas, saldo final (pos − neg), em minutos. O CSV não diz
+     se fechou: o painel calcula pelo período.
    - "Cadastro ORG": uma por pessoa do ORG (matrícula repetida = 1ª linha; matrícula `#N/A` entra
      sem matrícula, salvo se o nome já existe com matrícula válida); situacao = área do ORG.
    Gestor e grupo dessas linhas vêm do primeiro gestor/grupo visto para a matrícula na Tratamento;
@@ -319,7 +347,7 @@ conteúdo num módulo.
    `UltimaLinhaPreenchida` (não usa `End(xlUp)`).
 10. `TextoLimpo`: erro do Excel (`#N/A`) vira "", quebras de linha viram espaço.
 
-**Saída: contrato do CSV (37 colunas, nesta ordem):**
+**Saída: contrato do CSV (44 colunas, nesta ordem):**
 ```
 data, colaborador, matricula, gestor, setor, cargo, tipo_ocorrencia, situacao, status,
 duracao_minutos, destino_horas_extra, data_tratativa_pontonet, horas_excedentes,
@@ -328,17 +356,20 @@ pausas_menor_20min, pausas_maior_20min, trabalho_correto_140, trabalho_maior_140
 trabalho_menor_140, pausas_marcacoes_impares, grupo,
 minutos_hora_extra_cartao, minutos_banco_horas_cartao, justificativa_marcacao, origem_marcacao,
 dias_ausencia, emenda_folga, minutos_trabalhados, minutos_descanso, marcacoes_dia,
-tipo_justificativa, avaliacao_pontonet, dias_colaborador, dias_gestor, dias_rh   (33-37 desde 27/10)
+tipo_justificativa, avaliacao_pontonet, dias_colaborador, dias_gestor, dias_rh,  (33-37 desde 27/10)
+bh_inicio_periodo, bh_saldo_anterior_minutos, bh_credito_minutos, bh_debito_minutos,
+bh_anistiadas_minutos, bh_pagas_minutos, bh_saldo_final_minutos                    (38-44 desde 04/11)
 ```
 (24/25 só na "Resumo Horas Cartão"; 26/27 só na "Marcação Digitada" (26 também na "Justificativa
 PontoNet"); 28/29 na "Absenteísmo" e na "Afastamento"; 30/31/32 nas 4 de jornada; 32 também na
-"Pausa Térmica Dia"; 33 a 37 só na "Justificativa PontoNet")
+"Pausa Térmica Dia"; 33 a 37 só na "Justificativa PontoNet"; 38 a 44 só na "Banco de Horas Período")
 - Separador **vírgula**; campo com vírgula/aspas/quebra vai entre aspas (RFC 4180); UTF-8 com BOM
   (`ADODB.Stream`); datas `dd/mm/aaaa` (`dd/mm/aaaa hh:mm` quando tem hora); duração em minutos
   inteiros (negativo = falta); `grupo` = Interno/Externo pelo nome da aba (vazio na planilha antiga).
 - `destino_horas_extra` sai sempre vazio: a Tratamento não separa banco de horas × pagamento (o
   painel trata vazio como "Pagamento"). REGRA ainda não confirmada.
-- `ExportarCSVPorGestor`: um `dados_<gestor>.csv` por gestor + `dados_TODOS.csv`.
+- `ExportarCSVPorGestor`: um `<GESTOR>.csv` por gestor (nome do gestor no começo, pedido de 04/11;
+  antes `dados_<gestor>.csv`) + `TODOS OS GESTORES.csv` (antes `dados_TODOS.csv`).
 
 > ⚠️ O documento de contexto antigo (planejamento de 30/09, com `Base_Ocorrencias`/`Base_Excecoes`,
 > separador `;`, datas ISO e flags 1/0) descrevia um **plano que não foi seguido**. O que vale é o
@@ -501,6 +532,16 @@ PontoNet"); 28/29 na "Absenteísmo" e na "Afastamento"; 30/31/32 nas 4 de jornad
   explica em palavras simples. (3) **Digitadas dos 3 meses**: a seção não segue mais o filtro de
   período; seletor `#digCiclo` (vazio = todos os ciclos), `state.digPeriodo`, selo `digCiclo` em
   `PERIODO_DOS_CARDS`/`KPI_PERIODO`. A lista de equipes conta as digitadas do ciclo escolhido.
+- **04/11 — Fechamento do banco de horas** (seção Colaboradores em destaque, depois do saldo do mês,
+  card `#cardFechamentoBH`, `renderFechamentoBH`): linhas "Banco de Horas Período" (`isTipoBancoHoras`,
+  fora das vistas gerais e do `periodoCompleto`). `periodoBH` pega o período mais recente e conta os
+  ciclos 28→27 (`numCicloBH`); **4+ = fechado** (`MESES_FECHAMENTO_BH`). Fechado: à direita "+X pagas" /
+  "−X perdoadas" / "zerado" (`situacaoBH`); aberto: saldo final parcial ("Saldo até agora"). Barras
+  verde = crédito, vermelho = débito (`renderSaldoH` com opts leg1/leg2/titDir/it.texto/it.cor/it.dica;
+  no celular sem a palavra "pagas"). Resumo em frases `#bhResumo`, seletor `#bhMostrar` (opções mudam
+  entre fechado e aberto), busca `#bhBusca`, top 10 + tela cheia (`btnFechBHTodos`), selo 📅 `bh`.
+  Card do colaborador: número "Fechamento do banco de horas" (ou "Banco de horas (4 meses)" aberto).
+  Sem as linhas no CSV, o card some.
 - Paleta: laranja `#F7931E`, vermelho `#E31E24`, amarelo `#FFC72C`, preto `#1A1A1A`, cinzas.
 
 ## 7. Conferência feita (01/10/2026)
@@ -592,7 +633,9 @@ python3 ferramentas/formatar_pausas.py "pausa_termica.xlsx" pausas.pkl       # -
 python3 ferramentas/ler_pontonet_csv.py "Ausência de marcação.csv" pontonet.pkl   # relatório do PontoNet (3 meses)
 python3 ferramentas/adicionar_aba_xlsx.py in.xlsx out.xlsx pontonet.pkl pontonet "Pontonet" --substituir
 python3 ferramentas/adicionar_aba_xlsx.py in.xlsx out.xlsx dig3.pkl marcacoes "Marcações Digitadas" --substituir  # troca o conteúdo
-PYTHONPATH=ferramentas python3 ferramentas/conferir_painel.py painel.json   # OK/FALHA item a item (hoje 33 itens)
+PYTHONPATH=ferramentas python3 ferramentas/formatar_bh.py "BH.xlsx" bh.pkl     # banco de horas (04/11)
+BH_PKL=bh.pkl python3 ferramentas/simular_gerarcsv.py                    # simulador com as linhas de banco de horas
+BH_PKL=bh.pkl PYTHONPATH=ferramentas python3 ferramentas/conferir_painel.py painel.json   # OK/FALHA item a item (hoje 34 itens)
 python3 ferramentas/checar_colisoes_vba.py */*.bas                         # antes de entregar VBA
 ```
 Os scripts foram escritos para a planilha de 28/08 a 27/09 (nomes de aba fixos: "Tratamento",
@@ -845,14 +888,26 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   Testado com CSV inventado (37 colunas, com e sem acento estragado): 10 seções, 1400/390 px, sem
   erro de JS, NaN ou rolagem lateral. `conferir_painel.py` não rodou (sem a planilha nesta sessão);
   o item de digitadas pode precisar de ajuste porque elas não seguem mais o período.
+- 04/11: versionamento organizado (main = oficial; ver regra no topo). PURO_Para_EDITADO simplificada
+  (só cria a EDITADO e cola nas abas Internos/Externos; voltou só a escolha 1/2/3; seção 5.3). Depois,
+  pedido do Dimitri (foto + 3 arquivos: `BH.xlsx`, `Dashboard.zip`, `Arquivos_atuais_DASH.zip`):
+  **banco de horas** — macro FormatarBancoHoras (5.3f), arquivo `BH` obrigatório na pasta (12 arquivos),
+  CSV com 44 colunas ("Banco de Horas Período"), card "Como cada pessoa fechou o banco de horas" no
+  painel (seção 6) e **CSVs com o nome do gestor no começo** (`<GESTOR>.csv`, `TODOS OS GESTORES.csv`).
+  O zip "Arquivos atuais" traz os 11 relatórios com os nomes exatos da `ArquivosObrigatorios` (28/07 a
+  27/10). Os CSVs por gestor que ele gerou no Excel com as macros de 27/10 batem com o CSV de
+  referência (7.858 linhas com gestor + 120 sem = 7.978): **a GerarCSV de 27/10 rodou no Excel dele**.
+  Conferência com a planilha de 27/10 + BH simulado: **34/34** (o script foi ajustado: digitadas dos
+  3 meses e nomes técnicos da jornada, que quebraram em 03/11). As macros novas de 04/11 não rodaram
+  no Excel.
 
-## 12. Estado atual e como continuar (29/10/2026)
+## 12. Estado atual e como continuar (04/11/2026)
 
-**Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`. ⚠️ A **branch padrão do GitHub é
-`claude/new-session-69o070` (08/10, velha)**: confira com `git fetch` e `git log --all` qual branch é a
-mais nova ANTES de mexer. Em 03/11: `main` = 29/10; `ccr-50df95d0-4nvt7n` = 02/11; o trabalho de 03/11
-está em `ccr-ed849798-y33xdr` (em cima da de 02/11). Pedido ao Dimitri: juntar na `main` e trocar a
-branch padrão para `main`.
+**Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`, branch **`main`** (desde 04/11 tudo
+foi juntado nela; ver a regra de versões no topo). As branches antigas (`ccr-*`, `claude/*`) já estão
+contidas na `main`; o ambiente não deixou apagá-las (403) e foi pedido ao Dimitri que apague no GitHub
+e troque a branch padrão (`claude/new-session-69o070`, velha) para `main`. Confira com `git fetch` e
+`git branch -r` se alguma branch está à frente da `main` antes de mexer.
 `Dashboard/index.html` é o painel (≈470 KB, logo em base64 numa linha: nunca ler inteiro; use
 `grep -n` e `sed -n`); macros em `<Pasta>/<Macro>.bas` e `txt/<Macro>.txt` (iguais, CRLF no txt).
 
@@ -863,6 +918,9 @@ PontoNet.xlsx`, do pacote de 27/10) ou os relatórios do sistema, e monte de nov
 Sem planilha dá para testar o painel com um CSV inventado (cabeçalho do contrato da seção 5.4).
 
 **O que o Dimitri tem em mãos (mais recente primeiro).**
+- 04/11: `PURO_Para_EDITADO.txt` simplificado (com a escolha 1/2/3); depois o pacote do banco de horas
+  (módulo único, macros `.txt` e `index.html` com o card de fechamento). Pasta do mês = 12 arquivos
+  (11 de antes + `BH`); CSVs com o nome do gestor no começo.
 - 28/10: dois `index.html` avulsos (PontoNet só com aprovados + demora que segue o mês + topo com
   período no meio + Tendências depois de PontoNet; depois, abrir vários CSVs juntos).
 - 27/10: pacote `Teste Ponto 27-10.zip` com TUDO: 7 macros `.txt` (mudou a GerarCSVPonto: linhas
@@ -872,8 +930,8 @@ Sem planilha dá para testar o painel com um CSV inventado (cabeçalho do contra
 - 18/10, 19/10 e 26/10: pacotes/índex anteriores (tendências, batidas das pausas, ordem das
   seções, "?" por card). Detalhes na seção 11.
 
-**Números esperados com a planilha de 27/10** (CSV de referência simulado): CSV com **37 colunas e
-7.978 linhas**; 138 ocorrências, 72 colaboradores; 1.642 digitadas "D" (674/552/416 em jul/ago/set);
+**Números esperados com a planilha de 27/10** (CSV de referência simulado; com o BH de 03/11 são 44
+colunas e +216 linhas "Banco de Horas Período" = 8.194): CSV com **37 colunas e 7.978 linhas**; 138 ocorrências, 72 colaboradores; 1.642 digitadas "D" (674/552/416 em jul/ago/set);
 283 afastamentos (33 atestados, 105 dias); 210 no ORG; 163 com horas no Cartão; jornada 21/1/11/72;
 3.002 dias de batidas de pausa (958/1.105/939); 156 linhas de resumo de pausas (52/53/51);
 **1.894 justificativas do PontoNet** (769 aprovadas: 230/239/300; 696 canceladas; 429 achadas no
@@ -916,6 +974,11 @@ reunião é por gestor ou com todos e se pode usar salário (só o total da equi
 - Seletor que comanda vários cards fica numa caixa laranja (`.grupo-sel`) junto com eles.
 - PontoNet: só os pedidos aprovados; a demora segue o mês do seletor da seção. Sem B12.
 - O painel abre um ou vários CSVs juntos; linhas repetidas entre arquivos contam uma vez.
+- (04/11) Banco de horas fecha de 4 em 4 meses: o painel decide pelo período do relatório (4 ciclos =
+  fechado; menos = aberto, saldo parcial). Card logo depois do saldo do mês, em Colaboradores em destaque.
+- (04/11) CSVs com o nome do gestor no começo do arquivo; pasta do mês com 12 arquivos (inclui `BH`).
+- (04/11) PURO_Para_EDITADO só cria a EDITADO e cola nas abas existentes (escolha 1/2/3), sem
+  checagem de repetidas, sem aba de relatório.
 - (29/10) Topo sem o nome do painel; sem card "Demora média no PontoNet" (média numa linha); todo
   número diz o período (📅); no calendário do período só dias com informação.
 

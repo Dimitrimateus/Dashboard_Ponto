@@ -41,6 +41,8 @@ const { chromium } = require('playwright');
       histCount: txt('historyCount'), fileStatus: txt('fileStatus'),
       chipsTipo: [...document.querySelectorAll('#fTipo .ms-op')].map(c=>c.textContent),   // opções do filtro de tipo
       digKpis: $('digKpis') ? $('digKpis').innerText : null,
+      // fechamento do banco de horas (04/11): o resumo em frases e as barras (balões)
+      bhResumo: $('bhResumo') && !$('cardFechamentoBH').hidden ? $('bhResumo').innerText : null,
       digMotivo: [...document.querySelectorAll('#chartDigMotivo .legend-row')].map(r=>[r.querySelector('.legend-label').textContent, r.querySelector('.legend-value').textContent]),
       digTop: tips('chartDigTop'), digLinhas: document.querySelectorAll('#tableDigLista tbody tr').length,
       absEvol: table('tableAbsEvolucao'), absEmenda: txt('absEmendaResumo'), absRankN: document.querySelectorAll('#tableAbsRanking tbody tr').length,

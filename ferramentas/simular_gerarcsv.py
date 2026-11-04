@@ -334,6 +334,28 @@ for r in P[1:]:
       'Justificativa PontoNet',s(r[ph['Situação atual']]),'Pendente',0,av if isinstance(av,datetime.datetime) else None,
       just=s(r[ph['Justificativa']]),tjus=s(r[ph['Tipo justificativa']]),aval=s(r[ph['Avaliação']]),
       dcol=_dias(r[ph['Dias colaborador']]),dges=_dias(r[ph['Dias gestor']]),drh=_dias(r[ph['Dias GP']]))
+# Banco de horas (04/11, GerarLinhasBancoHoras): uma linha "Banco de Horas Período" por pessoa.
+# Fonte: a aba "Banco de Horas" da planilha (FormatarBancoHoras; horas como fração de dia) ou, se
+# a planilha ainda não tiver a aba, o .pkl do ferramentas/formatar_bh.py (BH_PKL; horas em minutos).
+def _bh_linhas():
+    for n in d:
+        if d[n] and all(c in hdrmap(d[n][0]) for c in ('Matrícula','Crédito','Horas pagas','Fim do período')):
+            h=hdrmap(d[n][0]); mn=lambda r,c: vround(abs(nz(r[h[c]]))*1440) if c in h else 0
+            for r in d[n][1:]:
+                if s(r[h['Matrícula']]) and isinstance(r[h['Fim do período']],datetime.datetime):
+                    yield (s(r[h['Matrícula']]),s(r[h['Colaborador']]),s(r[h['Local']]),r[h['Início do período']],r[h['Fim do período']],
+                           mn(r,'Saldo anterior positivo')-mn(r,'Saldo anterior negativo'),mn(r,'Crédito'),mn(r,'Débito'),
+                           mn(r,'Horas anistiadas'),mn(r,'Horas pagas'),mn(r,'Saldo final positivo')-mn(r,'Saldo final negativo'))
+            return
+    if os.environ.get('BH_PKL'):
+        b=pickle.load(open(os.environ['BH_PKL'],'rb'))
+        dt=lambda x: datetime.datetime(x.year,x.month,x.day)
+        for l in b['linhas']:
+            yield (l[0],l[1],l[3],dt(l[4]),dt(l[5]),l[8]-l[9],l[10],l[11],l[12],l[13],l[14]-l[15])
+for m,nm,loc,ini,fim,ant,cred,deb,anist,pagas,fin in _bh_linhas():
+    se,ca=setorcargo(m)
+    W(fim,nm or 'Matrícula '+m,m,gestorPor.get(m,''),se,ca,'Banco de Horas Período',loc,'Regularizado',0,
+      bhi=ini,bha=ant,bhc=cred,bhd=deb,bhan=anist,bhp=pagas,bhf=fin)
 for m,nm,ar,ca,g in listaORG:
     se,caRE=setorcargo(m) if m else ('Sem setor','')
     if se=='Sem setor' and ar: se=ar
@@ -347,7 +369,7 @@ print('cartoes',cards); print(len(out), collections.Counter(o['tipo'] for o in o
 
 def exportar_csv(linhas, caminho='dados_TODOS.csv'):
     """Mesmo formato do ExportarLinhasParaCSV: vírgula, UTF-8 com BOM, datas dd/mm/aaaa."""
-    cab=["data","colaborador","matricula","gestor","setor","cargo","tipo_ocorrencia","situacao","status","duracao_minutos","destino_horas_extra","data_tratativa_pontonet","horas_excedentes","ocorrencias_extra_falta_mes_atual","ocorrencias_extra_falta_3_meses","pausas_corretas","pausas_menor_20min","pausas_maior_20min","trabalho_correto_140","trabalho_maior_140","trabalho_menor_140","pausas_marcacoes_impares","grupo","minutos_hora_extra_cartao","minutos_banco_horas_cartao","justificativa_marcacao","origem_marcacao","dias_ausencia","emenda_folga","minutos_trabalhados","minutos_descanso","marcacoes_dia","tipo_justificativa","avaliacao_pontonet","dias_colaborador","dias_gestor","dias_rh"]
+    cab=["data","colaborador","matricula","gestor","setor","cargo","tipo_ocorrencia","situacao","status","duracao_minutos","destino_horas_extra","data_tratativa_pontonet","horas_excedentes","ocorrencias_extra_falta_mes_atual","ocorrencias_extra_falta_3_meses","pausas_corretas","pausas_menor_20min","pausas_maior_20min","trabalho_correto_140","trabalho_maior_140","trabalho_menor_140","pausas_marcacoes_impares","grupo","minutos_hora_extra_cartao","minutos_banco_horas_cartao","justificativa_marcacao","origem_marcacao","dias_ausencia","emenda_folga","minutos_trabalhados","minutos_descanso","marcacoes_dia","tipo_justificativa","avaliacao_pontonet","dias_colaborador","dias_gestor","dias_rh","bh_inicio_periodo","bh_saldo_anterior_minutos","bh_credito_minutos","bh_debito_minutos","bh_anistiadas_minutos","bh_pagas_minutos","bh_saldo_final_minutos"]
     def t(v):
         if v is None: return ''
         if isinstance(v,datetime.datetime): return v.strftime('%d/%m/%Y') if v.hour==0 and v.minute==0 else v.strftime('%d/%m/%Y %H:%M')
@@ -356,7 +378,7 @@ def exportar_csv(linhas, caminho='dados_TODOS.csv'):
     q=lambda x: '"'+x.replace('"','""')+'"' if (',' in x or '"' in x or '\n' in x) else x
     out=[','.join(cab)]
     for o in linhas:
-        v=[o['data'],o['colaborador'],o['matricula'],o['gestor'],o['setor'],o['cargo'],o['tipo'],o['situacao'],o['status'],o['duracao'],'',o['tratativa'],'',o.get('mesAtual'),o.get('total3'),o.get('pc'),o.get('pm'),o.get('pM'),o.get('tc'),o.get('tM'),o.get('tm'),o.get('imp'),o.get('grupo',''),o.get('hx'),o.get('hb'),o.get('just'),o.get('orig'),o.get('diasAus'),o.get('emenda'),o.get('trab'),o.get('desc'),o.get('marc'),o.get('tjus'),o.get('aval'),o.get('dcol'),o.get('dges'),o.get('drh')]
+        v=[o['data'],o['colaborador'],o['matricula'],o['gestor'],o['setor'],o['cargo'],o['tipo'],o['situacao'],o['status'],o['duracao'],'',o['tratativa'],'',o.get('mesAtual'),o.get('total3'),o.get('pc'),o.get('pm'),o.get('pM'),o.get('tc'),o.get('tM'),o.get('tm'),o.get('imp'),o.get('grupo',''),o.get('hx'),o.get('hb'),o.get('just'),o.get('orig'),o.get('diasAus'),o.get('emenda'),o.get('trab'),o.get('desc'),o.get('marc'),o.get('tjus'),o.get('aval'),o.get('dcol'),o.get('dges'),o.get('drh'),o.get('bhi'),o.get('bha'),o.get('bhc'),o.get('bhd'),o.get('bhan'),o.get('bhp'),o.get('bhf')]
         out.append(','.join(q(t(x)) for x in v))
     open(caminho,'w',encoding='utf-8-sig').write('\n'.join(out)+'\n')
 
