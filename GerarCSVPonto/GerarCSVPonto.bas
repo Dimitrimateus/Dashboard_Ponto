@@ -1244,7 +1244,7 @@ Private Function ContarExtraFaltaMesmoDia(ws As Worksheet, dictNomes As Object) 
                 End If
             End If
             If Not dictNomes.Exists(mat) Then
-                nome = IIf(colNome > 0, TextoLimpo(ws.Cells(r, colNome).Value), "")
+                nome = TextoDaCelula(ws, r, colNome)
                 If nome <> "" Then dictNomes.Add mat, nome
             End If
         End If
@@ -1286,7 +1286,7 @@ Private Sub GerarOcorrenciasCurtasDoCartao(ws As Worksheet, dictRE As Object, di
         dt = ws.Cells(r, colData).Value
         If mat = "" Or Not IsDate(dt) Then GoTo ProximaLinhaCurta
 
-        nome = IIf(colNome > 0, TextoLimpo(ws.Cells(r, colNome).Value), "")
+        nome = TextoDaCelula(ws, r, colNome)
         If nome = "" Then nome = "Matrícula " & mat
 
         Dim setorNome As String, cargoNome As String
@@ -1301,9 +1301,9 @@ Private Sub GerarOcorrenciasCurtasDoCartao(ws As Worksheet, dictRE As Object, di
         ' Minutos do dia: falta = BH; extra = 50% + 100%. Falta sai NEGATIVA no CSV
         ' (convenção do campo duracao_minutos: negativo = falta, positivo = extra).
         Dim minFaltaBH As Double, minExtra As Double
-        minFaltaBH = IIf(colBH > 0, NzNum(ws.Cells(r, colBH).Value), 0) * 24 * 60
-        minExtra = (IIf(col50 > 0, NzNum(ws.Cells(r, col50).Value), 0) _
-                  + IIf(col100 > 0, NzNum(ws.Cells(r, col100).Value), 0)) * 24 * 60
+        minFaltaBH = NzNum(ValorDaCelula(ws, r, colBH)) * 24 * 60
+        minExtra = (NzNum(ValorDaCelula(ws, r, col50)) _
+                  + NzNum(ValorDaCelula(ws, r, col100))) * 24 * 60
 
         If InStr(1, tol, "Falta", vbTextCompare) > 0 Then
             EscreverLinhaCSV wsCSV, linhaSaida, dt, nome, mat, gestor, setorNome, cargoNome, _
@@ -1359,15 +1359,15 @@ Private Sub GerarResumoHorasCartao(ws As Worksheet, dictRE As Object, dictGestor
     For r = 3 To ultimaLinha
         mat = TextoLimpo(ws.Cells(r, colMat).Value)
         If mat <> "" Then
-            minExtraDia = (IIf(col50 > 0, NzNum(ws.Cells(r, col50).Value), 0) _
-                         + IIf(col100 > 0, NzNum(ws.Cells(r, col100).Value), 0)) * 24 * 60
-            minBancoDia = IIf(colBH > 0, NzNum(ws.Cells(r, colBH).Value), 0) * 24 * 60
+            minExtraDia = (NzNum(ValorDaCelula(ws, r, col50)) _
+                         + NzNum(ValorDaCelula(ws, r, col100))) * 24 * 60
+            minBancoDia = NzNum(ValorDaCelula(ws, r, colBH)) * 24 * 60
             If dictHoras.Exists(mat) Then
                 somaAtual = dictHoras(mat)
                 dictHoras(mat) = Array(somaAtual(0) + minExtraDia, somaAtual(1) + minBancoDia)
             Else
                 dictHoras(mat) = Array(minExtraDia, minBancoDia)
-                dictNomesHoras(mat) = IIf(colNome > 0, TextoLimpo(ws.Cells(r, colNome).Value), "")
+                dictNomesHoras(mat) = TextoDaCelula(ws, r, colNome)
             End If
         End If
     Next r
@@ -2392,6 +2392,13 @@ Private Sub GerarResumoPausasTermicas(ws As Worksheet, linhaCabecalho As Long, d
     Loop
 End Sub
 
+' Valor da célula (r, col); Empty se a coluna não existe (col = 0). (04/11) Substitui o
+' IIf(col > 0, ws.Cells(r, col).Value, ...): o IIf calcula os DOIS lados, então com col = 0
+' ele lia ws.Cells(r, 0) e dava erro, mesmo "escolhendo" o outro valor.
+Private Function ValorDaCelula(ws As Worksheet, ByVal r As Long, ByVal col As Long) As Variant
+    If col > 0 Then ValorDaCelula = ws.Cells(r, col).Value
+End Function
+
 ' Texto (sem espaços nas pontas) da célula (r, col); "" se a coluna não
 ' existir (col = 0 — ColunaPorCabecalho não achou o cabeçalho).
 Private Function TextoDaCelula(ws As Worksheet, r As Long, col As Long) As String
@@ -2473,8 +2480,8 @@ Private Function MontarDicionarioRE(ws As Worksheet) As Object
         mat = TextoLimpo(ws.Cells(r, colMat).Value)
         If mat <> "" And Not dict.Exists(mat) Then
             dict.Add mat, Array( _
-                IIf(colUnidadeNome > 0, TextoLimpo(ws.Cells(r, colUnidadeNome).Value), ""), _
-                IIf(colCargo > 0, TextoLimpo(ws.Cells(r, colCargo).Value), ""))
+                TextoDaCelula(ws, r, colUnidadeNome), _
+                TextoDaCelula(ws, r, colCargo))
         End If
     Next r
     Set MontarDicionarioRE = dict
@@ -2537,9 +2544,9 @@ Private Function MontarDicionarioCartao(ws As Worksheet) As Object
         dt = ws.Cells(r, colData).Value
         If mat <> "" And IsDate(dt) Then
             chave = mat & "|" & Format(CDate(dt), "yyyy-mm-dd")
-            bhMin = IIf(colBH > 0, NzNum(ws.Cells(r, colBH).Value), 0) * 24 * 60
-            extra50Min = IIf(col50 > 0, NzNum(ws.Cells(r, col50).Value), 0) * 24 * 60
-            extra100Min = IIf(col100 > 0, NzNum(ws.Cells(r, col100).Value), 0) * 24 * 60
+            bhMin = NzNum(ValorDaCelula(ws, r, colBH)) * 24 * 60
+            extra50Min = NzNum(ValorDaCelula(ws, r, col50)) * 24 * 60
+            extra100Min = NzNum(ValorDaCelula(ws, r, col100)) * 24 * 60
             ' se a matrícula tiver mais de uma linha no mesmo dia, soma os minutos
             If dict.Exists(chave) Then
                 Dim antigo As Variant
@@ -2624,8 +2631,8 @@ Private Function MontarDicionarioAusencia(ws As Worksheet) As Object
                 If dict(chave)(2) = True Then GoTo ProximaAusencia
             End If
             dict(chave) = Array( _
-                IIf(colJustificativa > 0, TextoLimpo(ws.Cells(r, colJustificativa).Value), ""), _
-                IIf(colAvaliado > 0, ws.Cells(r, colAvaliado).Value, Empty), _
+                TextoDaCelula(ws, r, colJustificativa), _
+                ValorDaCelula(ws, r, colAvaliado), _
                 integrado)
         End If
 ProximaAusencia:

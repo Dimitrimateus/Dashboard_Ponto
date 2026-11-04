@@ -784,10 +784,15 @@ Private Function ApagarAbasQueSeraoSubstituidas(wb As Workbook, paraPreparar As 
         End Select
     Next elem
     Application.DisplayAlerts = False
+    ' (04/11) dois If separados: o VBA avalia os DOIS lados de um "And", então
+    ' wb.Worksheets(nome) era chamado mesmo quando a aba não existia (ex.: a primeira vez
+    ' com o BH, sem aba "Banco de Horas") e dava "Subscrito fora do intervalo" (erro 9).
     For Each a In alvos
-        If AbaExisteAqui(wb, CStr(a)) And Not EstaNaLista(wb.Worksheets(CStr(a)), paraPreparar) Then
-            wb.Worksheets(CStr(a)).Delete
-            t = t & IIf(t = "", "", ", ") & a
+        If AbaExisteAqui(wb, CStr(a)) Then
+            If Not EstaNaLista(wb.Worksheets(CStr(a)), paraPreparar) Then
+                wb.Worksheets(CStr(a)).Delete
+                t = t & IIf(t = "", "", ", ") & a
+            End If
         End If
     Next a
     Application.DisplayAlerts = True

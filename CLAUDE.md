@@ -604,6 +604,10 @@ Afastamentos (07/10, relatório HRCL006): 33 atestados, 105 dias, 21 pessoas; ci
     `MesesDoRelatorioPausas`). O `checar_colisoes_vba.py` passou a acusar. Peça ao Dimitri para
     rodar **Depurar > Compilar VBAProject** depois de colar: mostra os erros de compilação de uma vez,
     em vez de um por execução (o Excel compila cada parte só quando ela é chamada).
+14. **VBA não para no meio de um `And`/`Or` nem do `IIf`**: avalia os dois lados. `If AbaExiste(x) And
+    Not EstaNaLista(wb.Worksheets(x), ...)` deu erro 9 quando a aba não existia (04/11); `IIf(col > 0,
+    ws.Cells(r, col).Value, 0)` lê `Cells(r, 0)` com col = 0. Use dois `If` ou `ValorDaCelula`/
+    `TextoDaCelula` (devolvem vazio com col = 0).
 11. As planilhas têm dados pessoais reais (nome, matrícula, salário na RE): não publique nem
     envie esses dados para fora.
 
