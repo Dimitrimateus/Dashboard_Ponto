@@ -448,7 +448,7 @@ As 15 ideias marcadas na página de ideias que ainda faltavam:
   internos, 3 = só externos, Cancelar = nada (30/10). Checa repetidas por pessoa + dia (30/10).
   **SIMPLIFICADA em 04/11 (pedido do Dimitri):** a macro só cria a aba `EDITADO_<MÊS><AA>` e joga
   as linhas nas abas `Tratamento - Internos` / `Tratamento - Externos` que já existem, embaixo do
-  que já está lá. Não pergunta onde colar, não compara se o dia já foi colado, não cria aba de
+  que já está lá. Só pergunta onde colar (1 = internos e externos, 2 = só internos, 3 = só externos; escolha de 04/11), não compara se o dia já foi colado, não cria aba de
   relatório nem cópia "(2)" (se a EDITADO do mês já existe, é apagada e refeita). Quem não está no
   ORG (ou está sem "Tipo de trabalho") fica amarelo na EDITADO, não é colado, e a mensagem final diz
   quantos são. `DistribuirEditadoNasAbasTratamento` refaz só a colagem (com a aba EDITADO aberta).

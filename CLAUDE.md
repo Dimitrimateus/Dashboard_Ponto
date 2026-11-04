@@ -144,7 +144,7 @@ conteúdo num módulo.
   de tratamento: cola embaixo da última linha com Matricula/Nome (`UltimaLinhaDados`).
 - **(04/11) SIMPLIFICADA a pedido do Dimitri — NÃO reintroduzir sem ele pedir:** a macro só (1)
   cria a aba EDITADO_<MÊS><AA> (se já existe, apaga e refaz, sem perguntar) e (2) joga as linhas
-  nas abas de Internos/Externos que já existem. Saíram: pergunta 1/2/3 de onde colar, checagem de
+  nas abas de Internos/Externos que já existem. Voltou (04/11, pedido dele) só a pergunta 1/2/3 (internos e externos / só internos / só externos). Saíram: checagem de
   repetidas pessoa+dia, aba "Relatório PURO-EDITADO", cópia "(2)". Fora do ORG/sem tipo: linha
   amarela na EDITADO + contagem na mensagem final. **Nunca rodou no Excel.**
 

@@ -14,13 +14,14 @@ Option Explicit
 '     2) Olha a coluna "Tipo de trabalho" da aba ORG (achada pela matrícula; se a
 '        matrícula não estiver lá, pelo nome) para saber se a pessoa é interna ou
 '        externa.
-'     3) Cola as linhas EMBAIXO do que já existe em "Tratamento - Internos" e em
-'        "Tratamento - Externos", coluna por coluna pelo NOME do cabeçalho.
+'     3) Pergunta onde colar: 1 = Internos e Externos, 2 = só Internos, 3 = só
+'        Externos (Cancelar = não cola nada). Cola as linhas EMBAIXO do que já
+'        existe em "Tratamento - Internos" / "Tratamento - Externos", coluna por
+'        coluna pelo NOME do cabeçalho.
 '
 '   O que a macro NÃO faz (pedido do Dimitri, 04/11):
 '     - não compara se o dia/pessoa já está colada: cola tudo o que está na PURO;
 '     - não cria aba de relatório, de aviso nem cópia "(2)";
-'     - não pergunta onde colar: vai sempre nas duas abas;
 '     - não apaga nada das abas de Internos/Externos.
 '   Única abinha criada: a EDITADO_<MES><AA>.
 '
@@ -432,7 +433,7 @@ End Sub
 ' --------------------------------------------------------------------------------
 ' Separa as linhas da EDITADO em internos e externos (coluna "Tipo de trabalho"
 ' do ORG) e cola cada grupo EMBAIXO do que já existe na sua aba de tratamento.
-' Sem perguntas, sem checar repetidas, sem criar aba. Devolve o texto do resumo
+' Pergunta só onde colar (1/2/3); sem checar repetidas, sem criar aba. Devolve o texto do resumo
 ' para a mensagem final. Não trava se faltar alguma aba: só avisa no resumo.
 ' ================================================================================
 Private Function DistribuirNasAbasTratamento(wb As Workbook, wsEd As Worksheet) As String
@@ -532,14 +533,37 @@ Private Function DistribuirNasAbasTratamento(wb As Workbook, wsEd As Worksheet) 
         End If
     Next r
 
-    ' --- cola nas duas abas
-    If wsInt Is Nothing Then
+    ' --- pergunta onde colar (04/11): 1 = Internos e Externos, 2 = só Internos,
+    '     3 = só Externos. Cancelar = não cola nada (a EDITADO fica pronta).
+    Dim escolha As String
+    Application.ScreenUpdating = True
+    Do
+        escolha = Trim$(InputBox("Onde colar as linhas?" & vbCrLf & vbCrLf & _
+            "1 = Internos e Externos   (" & (linhasInt.Count + linhasExt.Count) & " linha(s))" & vbCrLf & _
+            "2 = Só Internos   (" & linhasInt.Count & " linha(s))" & vbCrLf & _
+            "3 = Só Externos   (" & linhasExt.Count & " linha(s))" & vbCrLf & vbCrLf & _
+            "Cancelar = não colar nada", "Colar nas abas de tratamento", "1"))
+        If escolha = "" Or escolha = "1" Or escolha = "2" Or escolha = "3" Then Exit Do
+        MsgBox "Digite 1, 2 ou 3 (ou clique em Cancelar).", vbExclamation, "Opção inválida"
+    Loop
+    Application.ScreenUpdating = False
+    If escolha = "" Then
+        DistribuirNasAbasTratamento = "Nada foi colado nas abas de tratamento (você escolheu Cancelar)."
+        Exit Function
+    End If
+
+    ' --- cola na(s) aba(s) escolhida(s), embaixo do que já existe
+    If escolha = "3" Then
+        resumo = "Internos: não colados (você escolheu só externos)."
+    ElseIf wsInt Is Nothing Then
         resumo = "Não achei a aba ""Tratamento - Internos"": " & linhasInt.Count & " interno(s) não foram colados."
     Else
         ColarLinhasNaAba wsEd, colEd, linhasInt, wsInt
         resumo = linhasInt.Count & " interno(s) colado(s) na aba '" & wsInt.Name & "'."
     End If
-    If wsExt Is Nothing Then
+    If escolha = "2" Then
+        resumo = resumo & vbCrLf & "Externos: não colados (você escolheu só internos)."
+    ElseIf wsExt Is Nothing Then
         resumo = resumo & vbCrLf & "Não achei a aba ""Tratamento - Externos"": " & linhasExt.Count & " externo(s) não foram colados."
     Else
         ColarLinhasNaAba wsEd, colEd, linhasExt, wsExt
