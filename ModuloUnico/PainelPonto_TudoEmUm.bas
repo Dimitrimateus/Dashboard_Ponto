@@ -3929,20 +3929,22 @@ End Function
 ' Meses (ciclos de 28 a 27, pelo dia 27 que fecha cada um) do período do relatório de
 ' pausas, lidos na linha "Período:" (as datas dessa linha).
 Private Function MesesDoRelatorioPausas(ws As Worksheet) As Collection
-    Dim r As Long, c As Long, v As Variant, ini As Double, fim As Double, d As Date, f As Date
+    Dim r As Long, c As Long, k As Long, v As Variant, ini As Double, fim As Double, d As Date, f As Date
     Set MesesDoRelatorioPausas = New Collection
     For r = 1 To 15
         For c = 1 To 20
             If Trim$(CStr(ws.Cells(r, c).Text)) = "Período:" Then
-                For c = 1 To 30
-                    v = ws.Cells(r, c).Value2
+                ' (04/11) "k" e não "c": o VBA não deixa reusar a variável do For de fora
+                ' ("Variável de controle For já em uso")
+                For k = 1 To 30
+                    v = ws.Cells(r, k).Value2
                     If VarType(v) = vbDouble Then
                         If v > 40000 And v < 80000 Then
                             If ini = 0 Or v < ini Then ini = v
                             If v > fim Then fim = v
                         End If
                     End If
-                Next c
+                Next k
                 Exit For
             End If
         Next c

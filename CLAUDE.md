@@ -600,6 +600,10 @@ Afastamentos (07/10, relatório HRCL006): 33 atestados, 105 dias, 21 pessoas; ci
 12. **Declaração do nível do módulo (Private x As ..., Const) só antes da 1ª Sub/Function.** Ao juntar
     vários módulos num só, elas ficavam no meio e o Excel dava "Variável não definida" (04/11). O
     `montar_modulo_unico.py` sobe todas para o topo e confere.
+13. **For dentro de For com a mesma variável** dá "Variável de controle For já em uso" (04/11, em
+    `MesesDoRelatorioPausas`). O `checar_colisoes_vba.py` passou a acusar. Peça ao Dimitri para
+    rodar **Depurar > Compilar VBAProject** depois de colar: mostra os erros de compilação de uma vez,
+    em vez de um por execução (o Excel compila cada parte só quando ela é chamada).
 11. As planilhas têm dados pessoais reais (nome, matrícula, salário na RE): não publique nem
     envie esses dados para fora.
 
