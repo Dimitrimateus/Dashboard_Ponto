@@ -4,6 +4,14 @@
 > qualquer mudança: várias regras abaixo já foram discutidas e decididas com o Dimitri, e as
 > "armadilhas" já custaram retrabalho.
 >
+> **REGRA DE VERSÕES (leia primeiro):** a versão oficial é sempre o branch **`main`**.
+> 1. Todo chat novo começa com `git fetch origin` e `git log origin/main -3`, e parte do `main`
+>    (`git checkout -B <branch-do-chat> origin/main`), nunca do branch que o ambiente criou.
+>    Confira também `git branch -r`: se houver branch mais novo que o `main`, avise o Dimitri.
+> 2. Todo chat termina com **commit + push + merge no `main`** (ou peça a ele para liberar),
+>    e avisa em qual commit o `main` ficou.
+> 3. Não deixe branches soltos: depois de juntar no `main`, apague o branch.
+>
 > **Chegou agora, sem histórico?** Comece pela seção **12 (Estado atual e como continuar)**: ela diz
 > onde está o código, o que o Dimitri está testando, o que falta decidir e como trabalhar com ele.
 
