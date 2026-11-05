@@ -111,7 +111,7 @@ for th,gT,r in LINHAS_TRAT:
     status=mapst(st); sitF = jus or sit
     if chk.upper()=='S': continue
     if sit in ('','Sem alteração'): continue
-    if norm(sit)=='problema horario': continue
+    if norm(sit) in ('problema horario','jussara'): continue
     if f100>0:
         W(dt,nome,mat,gestor,setor,cargo,'Hora Extra 100%',sitF,status,vround(f100))
     me=nz(r[th['Extras']])*1440; m100=nz(r[th['Extra 100%']])*1440; mf=nz(r[th['Faltas']])*1440

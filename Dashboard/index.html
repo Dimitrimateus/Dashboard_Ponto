@@ -1999,7 +1999,7 @@
   // Situações que o painel ignora mesmo que venham no CSV (o GerarCSV
   // já não as gera; isto protege contra um CSV antigo). Comparação sem
   // acento e sem maiúscula — ver normalizeHeader.
-  var TIPOS_IGNORADOS = ["problema_horario"];
+  var TIPOS_IGNORADOS = ["problema_horario", "jussara"];   // (05/11) nome da analista na coluna Situação
   function isTipoIgnorado(tipo){ return TIPOS_IGNORADOS.indexOf(normalizeHeader(tipo)) !== -1; }
   // Valor de erro do Excel que vaza pro CSV quando um PROCX não acha o
   // gestor ("Erro 2042", "#N/D", "#N/A"...) — tratado como vazio.
@@ -3544,9 +3544,12 @@
     var f = filtroPessoas(), per = periodoFiltro();
     var tipoSet = msSetOf("fTipo"), statusSet = msSetOf("fStatus");
     return state.records.filter(function(r){
-      // linhas-resumo, curtas, digitadas, afastamentos e jornada não contam
-      // como ocorrência normal: têm suas próprias vistas dedicadas.
-      if (isTipoResumo(r.tipo) || isTipoCurta(r.tipo) || isTipoDigitada(r.tipo) || isTipoAbsenteismo(r.tipo) || isTipoJornada(r.tipo) || isTipoPausaDia(r.tipo) || isTipoPontoNet(r.tipo)) return false;
+      // linhas-resumo, curtas, digitadas, afastamentos, jornada, PontoNet e banco de horas
+      // não contam como ocorrência normal: têm suas próprias vistas dedicadas. A Hora Extra
+      // continua aqui (entra nas horas, mas não na contagem). (05/11) Usa isTipoNaoOcorrencia
+      // em vez de uma lista à parte: a lista à parte não tinha o "Banco de Horas Período", que
+      // aparecia como 216 ocorrências.
+      if (isTipoNaoOcorrencia(r.tipo) && !isTipoHoraExtra(r.tipo)) return false;
       if (!passaPessoa(r, f)) return false;
       if (tipoSet && !tipoSet[r.tipo]) return false;
       return noPeriodoFiltro(r, per);

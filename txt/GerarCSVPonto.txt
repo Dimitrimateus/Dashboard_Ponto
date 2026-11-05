@@ -307,7 +307,9 @@ Private Const DESTINO_HORA_EXTRA_PADRAO As String = ""
 ' Situações da Tratamento que NÃO entram no CSV, separadas por "|".
 ' A comparação ignora acento e maiúscula ("Problema horario" e
 ' "Problema Horário" caem na mesma regra) — ver SituacaoIgnorada.
-Private Const SITUACOES_IGNORAR As String = "problema horario"
+' (05/11) "jussara": na planilha de outubro a coluna Situação veio com o nome da analista
+' ("JUSSARA") em 9 linhas; não é tipo de ocorrência e aparecia como um tipo no painel.
+Private Const SITUACOES_IGNORAR As String = "problema horario|jussara"
 ' Absenteísmo: o que procurar na coluna "Descrição Marcação" dos Cartões
 ' (contém, sem acento e sem maiúscula, separado por "|"). Por enquanto só
 ' ATESTADOS (pedido do RH, 06/10: "Atestado ate 15 dias", "... Noturno",

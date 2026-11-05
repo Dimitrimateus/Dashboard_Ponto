@@ -11,7 +11,7 @@ Private pastaFixaCSV As String
 Private Const INCLUIR_SEM_ALTERACAO As Boolean = False
 Private Const VALOR_CHECK_IGNORAR As String = "S"
 Private Const DESTINO_HORA_EXTRA_PADRAO As String = ""
-Private Const SITUACOES_IGNORAR As String = "problema horario"
+Private Const SITUACOES_IGNORAR As String = "problema horario|jussara"
 Private Const ABSENTEISMO_CONTEM As String = "atest"
 Private Const FOLGA_CONTEM As String = "dsr|compensado|folga|feriado"
 ' --- de PrepararAbas/PrepararAbasDoMes.bas
@@ -394,6 +394,8 @@ End Function
 ' Situações da Tratamento que NÃO entram no CSV, separadas por "|".
 ' A comparação ignora acento e maiúscula ("Problema horario" e
 ' "Problema Horário" caem na mesma regra) — ver SituacaoIgnorada.
+' (05/11) "jussara": na planilha de outubro a coluna Situação veio com o nome da analista
+' ("JUSSARA") em 9 linhas; não é tipo de ocorrência e aparecia como um tipo no painel.
 ' Absenteísmo: o que procurar na coluna "Descrição Marcação" dos Cartões
 ' (contém, sem acento e sem maiúscula, separado por "|"). Por enquanto só
 ' ATESTADOS (pedido do RH, 06/10: "Atestado ate 15 dias", "... Noturno",
@@ -4350,7 +4352,12 @@ Private Sub ConsolidarCartaoPontoDefinitivo()
         If flagPodeCapturar Then
             If celA <> "" And celB <> "" And celA <> "DT" And IsNumeric(celA) Then
 
-                diaAtual = CInt(celA)
+                ' (05/11) O dia vem do NÚMERO da célula, não do texto que ela mostra. O sistema grava
+                ' o dia como uma data de 1901 com formato "dd" (28/09 = 394, que aparece "28"). Quando a
+                ' GerarCSVsDaPasta traz o arquivo, o Excel perde esse formato e o texto vira "394":
+                ' a data saía como "dia 394 de setembro" = outubro de 2027. Ver DiaDoMesDaCelula.
+                diaAtual = DiaDoMesDaCelula(wsOrigem.Cells(i, 1))
+                If diaAtual < 1 Or diaAtual > 31 Then GoTo ContinuarLoop
                 semSenior = celB
 
                 ' --------------------------------------------------------------------------------
@@ -4629,6 +4636,24 @@ End Sub
 ' esse método corrige sozinho qualquer erro de mês.
 ' Devolve 0 se não conseguir resolver (aí o código principal usa a lógica sequencial).
 ' ==============================================================================================================
+' (05/11) Dia do mês (1 a 31) da coluna "DT" do relatório: 1 a 31 = o próprio número;
+' acima de 60 = número de data do Excel (ex.: 394 = 28/01/1901, dia 28). 0 = não é dia.
+Private Function DiaDoMesDaCelula(c As Range) As Integer
+    Dim v As Variant
+    v = c.Value2
+    If VarType(v) = vbDouble Then
+        If v >= 1 And v <= 31 Then
+            DiaDoMesDaCelula = CInt(v)
+        ElseIf v >= 61 And v < 2958466 Then
+            DiaDoMesDaCelula = Day(CDate(v))
+        End If
+    ElseIf VarType(v) = vbString Then
+        If IsNumeric(v) Then
+            If CDbl(v) >= 1 And CDbl(v) <= 31 Then DiaDoMesDaCelula = CInt(v)
+        End If
+    End If
+End Function
+
 Private Function ResolverDataPorDiaSemana(ByVal dia As Integer, ByVal semTexto As String, _
                                           ByVal dtIni As Date, ByVal dtFim As Date) As Date
 
@@ -4988,7 +5013,11 @@ Private Sub FormatarPausasTermicas()
         b1 = ws.Cells(r, 2).Value
         f1 = ws.Cells(r, 6).Value
 
-        If UCase(ws.Cells(r, 1).NumberFormat) = "DD/MM/YYYY" And IsNumeric(a1) And Len(Trim(CStr(a1))) > 0 Then
+        ' (05/11) A linha do dia é reconhecida pelo CONTEÚDO: data na coluna A (número de data,
+        ' .Value2) e a 1ª batida (hora) ou nada na coluna B. Antes era pelo formato "DD/MM/YYYY"
+        ' da célula, que o Excel PERDE quando o arquivo do sistema (com estilos defeituosos) é
+        ' trazido pela GerarCSVsDaPasta: nenhuma batida era lida e só saía um mês.
+        If EhLinhaDeDia(ws, r) Then
             ' ---------------- Linha de marcações do dia (uma data + as batidas de ponto daquele
             ' dia, nas colunas B, D, F...) ----------------
             ' Os totais (Pausa corretas/menor/maior, Trabalho correto/maior/menor, Marcações
@@ -4998,7 +5027,7 @@ Private Sub FormatarPausasTermicas()
             If curMatricula <> "" Then GuardarBatidasDoDia ws, r, curMatricula, curNome, batidas
             r = r + 1
 
-        ElseIf IsNumeric(a1) And ws.Cells(r, 1).NumberFormat <> "DD/MM/YYYY" _
+        ElseIf IsNumeric(a1) And Not IsEmpty(a1) _
                 And Len(Trim(CStr(b1))) > 0 And Not IsNumeric(b1) _
                 And Len(Trim(CStr(f1))) > 0 Then
             ' ---------------- Linha de identificação do colaborador ----------------
@@ -5068,9 +5097,14 @@ Private Sub FormatarPausasTermicas()
             If Trim$(CStr(ws.Cells(rp, cp).Value)) = "Período:" Then achouPeriodo = True
         Next cp
         If achouPeriodo Then
+            ' (05/11) pelo número da data (.Value2), com ou sem formato de data na célula
+            Dim vp As Variant
             For cp = 1 To 20
-                If IsDate(ws.Cells(rp, cp).Value) And Not IsEmpty(ws.Cells(rp, cp).Value) Then
-                    If VarType(ws.Cells(rp, cp).Value) = vbDate Then fimPeriodo = ws.Cells(rp, cp).Value
+                vp = ws.Cells(rp, cp).Value2
+                If VarType(vp) = vbDouble Then
+                    If vp > 36526 And vp < 73415 Then
+                        If CDate(vp) > fimPeriodo Then fimPeriodo = CDate(vp)
+                    End If
                 End If
             Next cp
             Exit For
@@ -5165,6 +5199,22 @@ End Sub
 ' por batida em "batidas": matrícula, nome, data, hora (fração do dia), nº da
 ' batida no dia, letra e exceções. Batida depois da meia-noite continua na
 ' data da linha (é o mesmo turno).
+' (05/11) Linha de dia do relatório: coluna A = data (número de data entre 2000 e 2100) e
+' coluna B = a 1ª batida (hora, número menor que 1) ou vazia. A linha da pessoa tem o nome
+' (texto) na coluna B; a do "Total do Colaborador", números pequenos na coluna A.
+Private Function EhLinhaDeDia(ws As Worksheet, ByVal r As Long) As Boolean
+    Dim a As Variant, b As Variant
+    a = ws.Cells(r, 1).Value2
+    If VarType(a) <> vbDouble Then Exit Function
+    If a <= 36526 Or a >= 73415 Then Exit Function
+    b = ws.Cells(r, 2).Value2
+    If IsEmpty(b) Then
+        EhLinhaDeDia = True
+    ElseIf VarType(b) = vbDouble Then
+        EhLinhaDeDia = (b >= 0 And b < 1)
+    End If
+End Function
+
 Private Sub GuardarBatidasDoDia(ws As Worksheet, ByVal r As Long, ByVal mat As String, ByVal nome As String, batidas As Collection)
     Dim vals As Variant, c As Long, seq As Long, v As Variant, letra As String, excecoes As String
     vals = ws.Range(ws.Cells(r, 1), ws.Cells(r, 45)).Value2

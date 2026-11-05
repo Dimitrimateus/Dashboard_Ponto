@@ -135,7 +135,11 @@ Sub FormatarPausasTermicas()
         b1 = ws.Cells(r, 2).Value
         f1 = ws.Cells(r, 6).Value
 
-        If UCase(ws.Cells(r, 1).NumberFormat) = "DD/MM/YYYY" And IsNumeric(a1) And Len(Trim(CStr(a1))) > 0 Then
+        ' (05/11) A linha do dia é reconhecida pelo CONTEÚDO: data na coluna A (número de data,
+        ' .Value2) e a 1ª batida (hora) ou nada na coluna B. Antes era pelo formato "DD/MM/YYYY"
+        ' da célula, que o Excel PERDE quando o arquivo do sistema (com estilos defeituosos) é
+        ' trazido pela GerarCSVsDaPasta: nenhuma batida era lida e só saía um mês.
+        If EhLinhaDeDia(ws, r) Then
             ' ---------------- Linha de marcações do dia (uma data + as batidas de ponto daquele
             ' dia, nas colunas B, D, F...) ----------------
             ' Os totais (Pausa corretas/menor/maior, Trabalho correto/maior/menor, Marcações
@@ -145,7 +149,7 @@ Sub FormatarPausasTermicas()
             If curMatricula <> "" Then GuardarBatidasDoDia ws, r, curMatricula, curNome, batidas
             r = r + 1
 
-        ElseIf IsNumeric(a1) And ws.Cells(r, 1).NumberFormat <> "DD/MM/YYYY" _
+        ElseIf IsNumeric(a1) And Not IsEmpty(a1) _
                 And Len(Trim(CStr(b1))) > 0 And Not IsNumeric(b1) _
                 And Len(Trim(CStr(f1))) > 0 Then
             ' ---------------- Linha de identificação do colaborador ----------------
@@ -215,9 +219,14 @@ Sub FormatarPausasTermicas()
             If Trim$(CStr(ws.Cells(rp, cp).Value)) = "Período:" Then achouPeriodo = True
         Next cp
         If achouPeriodo Then
+            ' (05/11) pelo número da data (.Value2), com ou sem formato de data na célula
+            Dim vp As Variant
             For cp = 1 To 20
-                If IsDate(ws.Cells(rp, cp).Value) And Not IsEmpty(ws.Cells(rp, cp).Value) Then
-                    If VarType(ws.Cells(rp, cp).Value) = vbDate Then fimPeriodo = ws.Cells(rp, cp).Value
+                vp = ws.Cells(rp, cp).Value2
+                If VarType(vp) = vbDouble Then
+                    If vp > 36526 And vp < 73415 Then
+                        If CDate(vp) > fimPeriodo Then fimPeriodo = CDate(vp)
+                    End If
                 End If
             Next cp
             Exit For
@@ -312,6 +321,22 @@ End Sub
 ' por batida em "batidas": matrícula, nome, data, hora (fração do dia), nº da
 ' batida no dia, letra e exceções. Batida depois da meia-noite continua na
 ' data da linha (é o mesmo turno).
+' (05/11) Linha de dia do relatório: coluna A = data (número de data entre 2000 e 2100) e
+' coluna B = a 1ª batida (hora, número menor que 1) ou vazia. A linha da pessoa tem o nome
+' (texto) na coluna B; a do "Total do Colaborador", números pequenos na coluna A.
+Private Function EhLinhaDeDia(ws As Worksheet, ByVal r As Long) As Boolean
+    Dim a As Variant, b As Variant
+    a = ws.Cells(r, 1).Value2
+    If VarType(a) <> vbDouble Then Exit Function
+    If a <= 36526 Or a >= 73415 Then Exit Function
+    b = ws.Cells(r, 2).Value2
+    If IsEmpty(b) Then
+        EhLinhaDeDia = True
+    ElseIf VarType(b) = vbDouble Then
+        EhLinhaDeDia = (b >= 0 And b < 1)
+    End If
+End Function
+
 Private Sub GuardarBatidasDoDia(ws As Worksheet, ByVal r As Long, ByVal mat As String, ByVal nome As String, batidas As Collection)
     Dim vals As Variant, c As Long, seq As Long, v As Variant, letra As String, excecoes As String
     vals = ws.Range(ws.Cells(r, 1), ws.Cells(r, 45)).Value2

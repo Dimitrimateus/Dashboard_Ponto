@@ -394,7 +394,12 @@ Sub ConsolidarCartaoPontoDefinitivo()
         If flagPodeCapturar Then
             If celA <> "" And celB <> "" And celA <> "DT" And IsNumeric(celA) Then
 
-                diaAtual = CInt(celA)
+                ' (05/11) O dia vem do NÚMERO da célula, não do texto que ela mostra. O sistema grava
+                ' o dia como uma data de 1901 com formato "dd" (28/09 = 394, que aparece "28"). Quando a
+                ' GerarCSVsDaPasta traz o arquivo, o Excel perde esse formato e o texto vira "394":
+                ' a data saía como "dia 394 de setembro" = outubro de 2027. Ver DiaDoMesDaCelula.
+                diaAtual = DiaDoMesDaCelula(wsOrigem.Cells(i, 1))
+                If diaAtual < 1 Or diaAtual > 31 Then GoTo ContinuarLoop
                 semSenior = celB
 
                 ' --------------------------------------------------------------------------------
@@ -673,6 +678,24 @@ End Sub
 ' esse método corrige sozinho qualquer erro de mês.
 ' Devolve 0 se não conseguir resolver (aí o código principal usa a lógica sequencial).
 ' ==============================================================================================================
+' (05/11) Dia do mês (1 a 31) da coluna "DT" do relatório: 1 a 31 = o próprio número;
+' acima de 60 = número de data do Excel (ex.: 394 = 28/01/1901, dia 28). 0 = não é dia.
+Private Function DiaDoMesDaCelula(c As Range) As Integer
+    Dim v As Variant
+    v = c.Value2
+    If VarType(v) = vbDouble Then
+        If v >= 1 And v <= 31 Then
+            DiaDoMesDaCelula = CInt(v)
+        ElseIf v >= 61 And v < 2958466 Then
+            DiaDoMesDaCelula = Day(CDate(v))
+        End If
+    ElseIf VarType(v) = vbString Then
+        If IsNumeric(v) Then
+            If CDbl(v) >= 1 And CDbl(v) <= 31 Then DiaDoMesDaCelula = CInt(v)
+        End If
+    End If
+End Function
+
 Private Function ResolverDataPorDiaSemana(ByVal dia As Integer, ByVal semTexto As String, _
                                           ByVal dtIni As Date, ByVal dtFim As Date) As Date
 

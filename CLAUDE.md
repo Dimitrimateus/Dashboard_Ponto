@@ -608,6 +608,14 @@ Afastamentos (07/10, relatório HRCL006): 33 atestados, 105 dias, 21 pessoas; ci
     Not EstaNaLista(wb.Worksheets(x), ...)` deu erro 9 quando a aba não existia (04/11); `IIf(col > 0,
     ws.Cells(r, col).Value, 0)` lê `Cells(r, 0)` com col = 0. Use dois `If` ou `ValorDaCelula`/
     `TextoDaCelula` (devolvem vazio com col = 0).
+15. **Os relatórios do Senior perdem o formato das células quando a GerarCSVsDaPasta os traz** (estilos
+    defeituosos). Nunca reconhecer linha/valor pelo `.Text` ou `.NumberFormat`: use `.Value2` e o
+    conteúdo. Em 05/11 o Cartão saiu com datas de **2027** (o dia "28" virou o número 394 → "dia 394 de
+    setembro") e as pausas sem nenhuma batida (linha de dia reconhecida pelo formato "DD/MM/YYYY").
+16. **Teste o painel com linhas novas DENTRO do período das ocorrências.** Em 04/11 o "Banco de Horas
+    Período" foi testado com ocorrências de setembro e BH de outubro: o `getFilteredRecords` tinha uma
+    lista própria de tipos excluídos (sem o BH) e as 216 linhas viraram ocorrência no arquivo real.
+    Agora ele usa `isTipoNaoOcorrencia` (menos a Hora Extra).
 11. As planilhas têm dados pessoais reais (nome, matrícula, salário na RE): não publique nem
     envie esses dados para fora.
 
@@ -914,7 +922,20 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   3 meses e nomes técnicos da jornada, que quebraram em 03/11). As macros novas de 04/11 não rodaram
   no Excel.
 
-## 12. Estado atual e como continuar (04/11/2026)
+- 05/11: **primeira execução completa no Excel do Dimitri** (GerarCSVsDaPasta + 12 arquivos; pacote dele
+  com `TODOS OS GESTORES.csv` de 44 colunas, 5.243 linhas). Erros de compilação/execução corrigidos no
+  caminho (declarações no topo do módulo único, For aninhado, erro 9 do And, IIf com coluna 0). Problemas
+  no CSV gerado: (1) linhas do Cartão com ano 2027 (resumo de horas, curtas, auditoria, ORG e pausas
+  usam a data do Cartão) → período "28/09/2026 a 28/10/2027" e só 3 assuntos em Tendências; causa:
+  `.Text` do dia sem o formato "dd" → `DiaDoMesDaCelula` (Value2); (2) nenhuma "Pausa Térmica Dia" e só
+  1 mês de pausas: `EhLinhaDeDia` (Value2) no lugar do NumberFormat, e o fim do período por Value2;
+  (3) "Banco de Horas Período" contado como ocorrência (299 = 83 + 216) → `getFilteredRecords` com
+  `isTipoNaoOcorrencia`; (4) Situação "JUSSARA" (9 linhas de Externos) virava tipo → ignorada
+  (`SITUACOES_IGNORAR`, `TIPOS_IGNORADOS`, simulador; confirmar com o Dimitri o que essa marca quer
+  dizer). Com as datas consertadas na mão, o CSV dele volta a ter os 12 assuntos de Tendências e 74
+  ocorrências. **A PURO_Para_EDITADO saiu do módulo único** (pedido dele: outro assunto).
+
+## 12. Estado atual e como continuar (05/11/2026)
 
 **Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`, branch **`main`** (desde 04/11 tudo
 foi juntado nela; ver a regra de versões no topo). As branches antigas (`ccr-*`, `claude/*`) já estão
