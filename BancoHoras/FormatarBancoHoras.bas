@@ -26,11 +26,12 @@ Private msgAuto As String
 '   Saldo anterior ... o que a pessoa trazia de antes do período (positivo/negativo)
 '   Crédito .......... horas a mais trabalhadas no período (entraram no banco)
 '   Débito ........... horas a menos (atraso, saída antes, folga tirada do banco)
-'   Horas anistiadas . no fechamento, o saldo NEGATIVO que a empresa perdoou
+'   Horas anistiadas . no fechamento, o saldo NEGATIVO que fica zerado (na análise do RH de
+'                      05/11, é o que vai como desconto na folha)
 '   Horas pagas ...... no fechamento, o saldo POSITIVO que a empresa pagou
 '   Saldo final ...... o que sobra no banco depois do fechamento (zero quando fecha)
-'   Num período de 4 meses (fechado): crédito − débito = horas pagas − horas anistiadas.
-'   Num período menor, o banco ainda não fechou e o saldo final é parcial.
+'   Num período que inclui um fechamento: crédito − débito = horas pagas − horas anistiadas.
+'   Os períodos são fixos: novembro a fevereiro, março a junho, julho a outubro (05/11).
 '
 ' PARA ONDE VAI: reescreve a MESMA aba como uma tabela (cabeçalho na linha 1, uma
 '   linha por pessoa) e renomeia a aba para "Banco de Horas". As horas ficam em
@@ -164,11 +165,14 @@ Sub FormatarBancoHoras()
         Exit Sub
     End If
 
-    ' Período: início, fim, quantos meses (ciclos de 28 a 27) e se o banco fechou
-    ' (fecha de 4 em 4 meses: com 4 meses ou mais no relatório, está fechado).
+    ' Período: início, fim, quantos meses (ciclos de 28 a 27) e se o banco fechou.
+    ' (05/11) Na Aurora o banco tem 3 períodos fixos de 4 meses: novembro a fevereiro,
+    ' março a junho e julho a outubro; o fechamento é no último mês de cada um
+    ' (fevereiro, junho e outubro). O relatório pode ter 1 mês, 2, o período todo ou o
+    ' ano: está "fechado" quando inclui o mês de um fechamento.
     Dim meses As Long, fechado As String
     meses = MesesDoPeriodo(CDate(iniPer), CDate(fimPer))
-    fechado = IIf(meses >= 4, "Sim", "Não")
+    fechado = IIf(FechamentosNoPeriodo(CDate(iniPer), CDate(fimPer)) > 0, "Sim", "Não")
     For r = 1 To nSaida
         saida(r, 5) = CDate(iniPer)
         saida(r, 6) = CDate(fimPer)
@@ -245,7 +249,7 @@ Sub FormatarBancoHoras()
     Aviso "Formatação concluída." & vbCrLf & _
           nSaida & " pessoa(s) no banco de horas, período de " & Format(CDate(iniPer), "dd/mm/yyyy") & _
           " a " & Format(CDate(fimPer), "dd/mm/yyyy") & " (" & meses & " mês(es): " & _
-          IIf(fechado = "Sim", "banco FECHADO", "banco ainda NÃO fechou, o saldo é parcial") & ")." & vbCrLf & _
+          IIf(fechado = "Sim", "inclui o fechamento do banco", "sem fechamento: o saldo é parcial") & ")." & vbCrLf & _
           IIf(renomeada, "Aba renomeada para """ & NOME_ABA_SAIDA & """.", _
               "A aba não foi renomeada (já existe uma aba """ & NOME_ABA_SAIDA & """)."), _
           vbInformation, "Formatar Banco de Horas"
@@ -283,6 +287,18 @@ Private Function MesesDoPeriodo(ByVal ini As Date, ByVal fim As Date) As Long
     a = Year(ini) * 12 + Month(ini) + IIf(Day(ini) >= 28, 1, 0)
     b = Year(fim) * 12 + Month(fim) + IIf(Day(fim) >= 28, 1, 0)
     MesesDoPeriodo = b - a + 1
+End Function
+
+' (05/11) Quantos fechamentos de banco (meses de outubro, fevereiro e junho, pelo
+' ciclo de 28 a 27) o período inclui.
+Private Function FechamentosNoPeriodo(ByVal ini As Date, ByVal fim As Date) As Long
+    Dim a As Long, b As Long, k As Long, mes As Long
+    a = Year(ini) * 12 + Month(ini) + IIf(Day(ini) >= 28, 1, 0)
+    b = Year(fim) * 12 + Month(fim) + IIf(Day(fim) >= 28, 1, 0)
+    For k = a To b
+        mes = ((k - 1) Mod 12) + 1
+        If mes = 10 Or mes = 2 Or mes = 6 Then FechamentosNoPeriodo = FechamentosNoPeriodo + 1
+    Next k
 End Function
 
 Private Function Celula(dados As Variant, ByVal r As Long, ByVal c As Long) As Variant

@@ -1,6 +1,6 @@
 # CONTEXTO DO PROJETO — Tratamento de Ponto e Painel de Ocorrências (AuroraCoop)
 
-> Arquivo de contexto para o Claude Code. Estado em **04/11/2026** (fim do dia). Leia inteiro antes de propor
+> Arquivo de contexto para o Claude Code. Estado em **05/11/2026**. Leia inteiro antes de propor
 > qualquer mudança: várias regras abaixo já foram discutidas e decididas com o Dimitri, e as
 > "armadilhas" já custaram retrabalho.
 >
@@ -220,6 +220,9 @@ conteúdo num módulo.
   anterior e final zerados. Em todas as pessoas: anterior + crédito − débito − pagas + anistiadas =
   saldo final. Python: `ferramentas/formatar_bh.py`.
 
+- (05/11) "Banco fechado" = o período inclui um mês de fechamento (out, fev, jun: `FechamentosNoPeriodo`),
+  e não mais "4 meses". O relatório pode ter 1 mês, o período ou o ano (exportação mensal prevista).
+
 ### 5.3e PrepararAbasDoMes (31/10)
 - Percorre as abas, reconhece cada relatório bruto pelo conteúdo (`TipoDoRelatorioBruto`: "Cartão
   Ponto"+"Empregado:", "PAUSAS TÉRMICAS", "Crachá"+"Coletor", "Histórico de Afastamentos", marcadores
@@ -341,6 +344,13 @@ conteúdo num módulo.
      data = fim do período; situacao = local; colunas 38–44 = início do período, saldo anterior
      (pos − neg), crédito, débito, anistiadas, pagas, saldo final (pos − neg), em minutos. O CSV não diz
      se fechou: o painel calcula pelo período.
+   - "BH Dia" (05/11, `GerarLinhasBHDia`): uma por pessoa e dia com movimento no banco, de todos
+     os Cartões lidos (até 3): colunas 24/25 = crédito (coluna **50%**; a 100% é paga à parte — conferido:
+     somar a 100% passa do crédito do HRES105 em 10 casos) / débito (coluna **BH**). Pessoa+dia repetido
+     em dois Cartões: vale o 1º. Ex.: Cartões 28/07–27/10: 4.747 linhas.
+   - "Justificativa PontoNet" (05/11): **só gestores do ORG** (`dictGestoresORG` = coluna GESTOR do
+     ORG; gestor da linha = Tratamento/ORG, senão o do relatório). Fora do ORG = linha não entra (no CSV
+     de 04/11: 1.031 de 2.307, de 7 gestores). Sem ORG, entra tudo.
    - "Cadastro ORG": uma por pessoa do ORG (matrícula repetida = 1ª linha; matrícula `#N/A` entra
      sem matrícula, salvo se o nome já existe com matrícula válida); situacao = área do ORG.
    Gestor e grupo dessas linhas vêm do primeiro gestor/grupo visto para a matrícula na Tratamento;
@@ -544,6 +554,25 @@ PontoNet"); 28/29 na "Absenteísmo" e na "Afastamento"; 30/31/32 nas 4 de jornad
   entre fechado e aberto), busca `#bhBusca`, top 10 + tela cheia (`btnFechBHTodos`), selo 📅 `bh`.
   Card do colaborador: número "Fechamento do banco de horas" (ou "Banco de horas (4 meses)" aberto).
   Sem as linhas no CSV, o card some.
+- **05/11 — Seção "Banco de horas"** (`data-pagina="bancohoras"`, menu logo depois de Colaboradores em
+  destaque; `renderBancoHoras`), pedida com base na planilha "Análise de compensação do BH" do Dimitri
+  (aba Diário: saldo inicial do HRES105 + extras − faltas dia a dia). Períodos fixos da Aurora:
+  **nov–fev, mar–jun, jul–out**; fechamento no último mês (`ehFechamentoBH`, 🔒); depois dele o banco
+  recomeça do zero. Quadro laranja: equipe `#bhEquipe`, colaborador `#bhColab` (vazio = soma), meses
+  `#bhMeses` (caixinhas; padrão = meses do período mais recente). `dadosBH` (cache por arquivo),
+  `saldosBH` = saldo no fim de cada dia, por período de 4 meses, ancorado em: (1) o relatório HRES105
+  que termina no período e dentro do alcance do espelho (saldo anterior + crédito − débito no fim dele;
+  anda para trás/frente com os "BH Dia"), (2) zero no começo do período se o espelho começa nele, (3)
+  "relativo" (zero no 1º dia do espelho, avisado). Conferido com a planilha dele: 97470 = −3:29 em 27/09
+  e −0:06 em 27/10. Números `#bhKpis`, linha `renderLinhaSaldoBH` (negativo, área verde/vermelha,
+  tracejado no fechamento), tabela `#tableBHPessoas` (começo, crédito, débito, fim, menor saldo, dias,
+  folgas, resumo em frase). Os cards "Crédito e débito no banco por colaborador" (era "Banco de horas e
+  hora extra") e "Quem colocou/tirou mais do banco" saíram de Destaque e seguem os meses escolhidos
+  (`horasBancoPorColaborador`; sem "BH Dia" = CSV antigo, volta ao mês do espelho). O fechamento
+  (`renderFechamentoBH`) também mudou para lá: relatórios de qualquer tamanho (`relatoriosBH`,
+  `#bhRelatorio` com 2+), "com fechamento" se o período inclui fev/jun/out; **Hr. Anist. = "descontadas
+  na folha"** (a análise dele trata assim; antes o painel dizia "perdoadas" — confirmar com ele).
+  Card do colaborador: "Saldo do banco no último dia". Botões "?" laranja (pedido de 05/11).
 - Paleta: laranja `#F7931E`, vermelho `#E31E24`, amarelo `#FFC72C`, preto `#1A1A1A`, cinzas.
 
 ## 7. Conferência feita (01/10/2026)
@@ -935,6 +964,13 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   dizer). Com as datas consertadas na mão, o CSV dele volta a ter os 12 assuntos de Tendências e 74
   ocorrências. **A PURO_Para_EDITADO saiu do módulo único** (pedido dele: outro assunto).
 
+- 05/11 (depois): pedidos do Dimitri (foto + `Analise_Compensacao_BH_Out2026_2.xlsx`): PontoNet só
+  com gestores do ORG (macro, simulador, painel e conferência); "?" laranja; banco de horas com os 3
+  períodos fixos e relatório de qualquer tamanho; seção "Banco de horas" com o saldo dia a dia (linhas
+  "BH Dia" novas no CSV) e os cards de banco de horas movidos para ela. Conferência 34/34 (item do banco
+  agora com todos os Cartões, 50% e BH; PontoNet com o filtro do ORG). A análise dele traz também
+  "Valor do desconto (R$)" (salário): não foi para o painel (salário segue em aberto).
+
 ## 12. Estado atual e como continuar (05/11/2026)
 
 **Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`, branch **`main`** (desde 04/11 tudo
@@ -1002,7 +1038,10 @@ reunião é por gestor ou com todos e se pode usar salário (só o total da equi
 - Sem "Entenda o painel" no topo; "?" em cada card e "Entenda esta seção". Topo: ☰ + logo |
   período no meio | nome do painel + "Esconder filtros" (abaixo de 1180 px vira uma fila).
 - Ordem do menu: Ocorrências, Marcações digitadas, Afastamentos, Jornada, Colaboradores em
-  destaque, Pausas térmicas, PontoNet, Tendências, Lista de colaboradores, Histórico, Todas.
+  destaque, **Banco de horas** (05/11), Pausas térmicas, PontoNet, Tendências, Lista de colaboradores,
+  Histórico, Todas.
+- (05/11) Banco de horas: períodos fixos nov–fev, mar–jun, jul–out, fechamento no último mês;
+  crédito = hora extra 50%, débito = BH; PontoNet só de gestores do ORG; botões "?" laranja.
 - Ordem base dos gráficos em toda seção: números do topo → mês a mês → o quê → quando → por
   gestor → por pessoa → mapa → sinais de atenção → tendências → lista. Card novo segue essa ordem.
 - Seletor que comanda vários cards fica numa caixa laranja (`.grupo-sel`) junto com eles.

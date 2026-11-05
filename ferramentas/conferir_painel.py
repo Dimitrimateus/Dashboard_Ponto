@@ -6,6 +6,14 @@ import pickle,json,collections,datetime,sys,unicodedata,os
 from simular_gerarcsv import nz,s,hdrmap
 d=pickle.load(open(os.environ.get('PLANILHA_PKL','planilha.pkl'),'rb'))
 ui=json.load(open(sys.argv[1]))
+# (05/11) PontoNet só dos gestores que estão no ORG (mesma regra do GerarCSV e do painel)
+import simular_gerarcsv as _S0
+if 'Pontonet' in d and _S0._gestORG:
+    _ph=hdrmap(d['Pontonet'][0])
+    def _gpn(r):
+        m=s(r[_ph['Matrícula']]); g=_S0.gestorPor.get(m,'') or s(r[_ph['Gestor']])
+        return unicodedata.normalize('NFD',g).encode('ascii','ignore').decode().lower().strip().upper()
+    d=dict(d); d['Pontonet']=[d['Pontonet'][0]]+[r for r in d['Pontonet'][1:] if _gpn(r) in _S0._gestORG]
 C=collections.Counter
 def norm(t): return unicodedata.normalize('NFD',t).encode('ascii','ignore').decode().lower().strip()
 # E = as ocorrências "esperadas", recalculadas direto da aba Tratamento com as mesmas regras
@@ -69,12 +77,17 @@ def hm(t):
         if p.endswith('min'): m=int(p[:-3])
         elif p.endswith('h'): h=int(p[:-1])
     return h*60+m
+# (05/11) o card mudou para a seção "Banco de horas": crédito (50%) e débito (BH) de todos os
+# Cartões do arquivo (os meses escolhidos por padrão = o período mais recente; nesta planilha,
+# os 3 Cartões são do mesmo período Jul a Out)
 src=collections.defaultdict(lambda:[0.0,0.0]); nomeMat={}
-for r in cur[2:]:
-    m=s(r[ch['Matrícula']])
-    if not m: continue
-    src[m][0]+=(nz(r[ch['50%']])+nz(r[ch['100%']]))*1440; src[m][1]+=nz(r[ch['BH']])*1440
-    nomeMat.setdefault(m, s(r[ch['Nome']]))
+for _,_nc in _S0.cards:
+    _rc=d[_nc]; _h=hdrmap(_rc[1])
+    for r in _rc[2:]:
+        m=s(r[_h['Matrícula']])
+        if not m or not isinstance(r[_h['DT']],datetime.datetime): continue
+        src[m][0]+=round(nz(r[_h['50%']])*1440); src[m][1]+=round(nz(r[_h['BH']])*1440)
+        nomeMat.setdefault(m, s(r[_h['Nome']]))
 fonte={nomeMat[m]:(round(v[0]),round(v[1])) for m,v in src.items() if round(v[0])>0 or round(v[1])>0}
 gotb={}
 for t in ui['banco']:
@@ -84,7 +97,7 @@ okv=all(fonte.get(k)==v[:2] for k,v in gotb.items())
 oks=all((v[0]-v[1]==0 and v[2]=='0h') or (v[2].startswith('+')==(v[0]>v[1]) and hm(v[2])==abs(v[0]-v[1])) for v in gotb.values())
 corte=min(sum(v[:2]) for v in gotb.values()) if gotb else 0
 okt=len(gotb)==min(10,len(fonte)) and all(sum(v)<=corte for k,v in fonte.items() if k not in gotb)
-chk('Banco de horas e hora extra por colaborador (Cartão atual)', okv and oks and okt,
+chk('Banco de horas: crédito e débito por colaborador (todos os Cartões)', okv and oks and okt,
     f"top {len(gotb)} de {len(fonte)} colaboradores; extra, banco e saldo batem com o Cartão" if okv and oks and okt else f"painel {gotb} / fonte {sorted(fonte.items(), key=lambda kv:-sum(kv[1]))[:10]}")
 # extra e falta mesmo dia
 cards=['Cartão atual','Cartão Agosto','Cartão Julho']; tot=C(); mes=C(); nomes={}
@@ -495,11 +508,13 @@ if ui.get('bhResumo') and os.environ.get('BH_PKL'):
     def fh(m): h,mm=divmod(m,60); return (f"{h}h" if h else "")+(" " if h and mm else "")+(f"{mm:02d}min" if h and mm else (f"{mm}min" if mm else "")) or "0h"
     pag=[l for l in L if l[13]>0]; per=[l for l in L if not l[13] and l[12]>0]; zer=len(L)-len(pag)-len(per)
     t=ui['bhResumo']
-    esp=[("FECHADO" if b['meses']>=4 else "ABERTO"), b['ini'].strftime('%d/%m/%Y')+' a '+b['fim'].strftime('%d/%m/%Y'),
+    import formatar_bh as _FB
+    _tem=_FB.fechamentos(b['ini'], b['fim'])>0   # (05/11) períodos fixos: fecha em fev, jun e out
+    esp=[("COM FECHAMENTO" if _tem else "SEM FECHAMENTO"), b['ini'].strftime('%d/%m/%Y')+' a '+b['fim'].strftime('%d/%m/%Y'),
          f"{len(L)} pessoa(s)", "crédito total "+fh(sum(l[10] for l in L)), "débito total "+fh(sum(l[11] for l in L))]
-    if b['meses']>=4:
-        esp+=[f"{len(pag)} tiveram horas pagas", f"({fh(sum(l[13] for l in pag))} no total)", f"{len(per)} tiveram horas perdoadas",
+    if _tem:
+        esp+=[f"{len(pag)} tiveram horas pagas", f"({fh(sum(l[13] for l in pag))} no total)", f"{len(per)} fecharam devendo",
               f"{fh(sum(l[12] for l in per))} no total", f"{zer} fecharam zerados"]
     falta=[e for e in esp if e not in t.replace('\n',' ')]
-    chk('Banco de horas: fechamento (período, pessoas, pagas, perdoadas, zerados)', not falta,
+    chk('Banco de horas: fechamento (período, pessoas, pagas, descontadas, zerados)', not falta,
         '; '.join(esp) if not falta else f"não achei no painel: {falta} / painel {t!r}")

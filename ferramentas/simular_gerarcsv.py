@@ -181,6 +181,19 @@ for m,(ex,bh) in hrs.items():
     if vround(ex)>0 or vround(bh)>0:
         se,ca=setorcargo(m)
         W(dmax,nomesH[m] or 'Matrícula '+m,m,gestorPor.get(m,''),se,ca,'Resumo Horas Cartão','','Pendente',0,hx=vround(ex),hb=vround(bh))
+# BH Dia (05/11, GerarLinhasBHDia): uma por pessoa e dia com movimento no banco, de todos os
+# Cartões (até 3): hx = crédito (50%), hb = débito (BH); pessoa+dia repetidos: vale o 1º.
+_vistosBH=set()
+for _,nc in cards:
+    rc,hc=cart(nc)
+    for r in rc[2:]:
+        m=s(r[hc['Matrícula']]); dt=r[hc['DT']]
+        if not m or not isinstance(dt,datetime.datetime): continue
+        cr=vround(nz(r[hc['50%']])*1440); db=vround(nz(r[hc['BH']])*1440)
+        if (cr>0 or db>0) and (m,dt) not in _vistosBH:
+            _vistosBH.add((m,dt)); se,ca=setorcargo(m)
+            W(dt,s(r[hc['Nome']]) or 'Matrícula '+m,m,gestorPor.get(m,''),se,ca,'BH Dia',
+              s(r[hc['Descrição Marcação']]) if 'Descrição Marcação' in hc else '','Regularizado',0,hx=cr,hb=db)
 # pausas: toda aba com a tabela de pausas (Matrícula + Pausa corretas na linha 1), uma por
 # mês (GerarCSV: CabecalhoPausasNaAba/MesNoNomeDaAba/DataDoMesDaAba). Aba sem mês no nome
 # = mês atual (dmax); com o mês no nome = dia 27 daquele mês; mês repetido = ignorada.
@@ -322,9 +335,12 @@ for tipoJ,exig in EXIGE.items():
 def _dias(v):
     if v is None or (isinstance(v,str) and not v.strip()): return None
     return int(float(v))
+# (05/11) só gestores que estão no ORG (coluna GESTOR); sem ORG, entra tudo
+_gestORG={norm(g).upper() for *_x,g in listaORG if g}
 for r in P[1:]:
     m=s(r[ph['Matrícula']]); dt=r[ph['Data falta']]
     if not m or not isinstance(dt,datetime.datetime): continue
+    if _gestORG and norm(gestorPor.get(m,'') or s(r[ph['Gestor']])).upper() not in _gestORG: continue
     h=r[ph['Hora justificada']] if 'Hora justificada' in ph else None
     dth=datetime.datetime(dt.year,dt.month,dt.day)
     if isinstance(h,datetime.time): dth=dth.replace(hour=h.hour,minute=h.minute)

@@ -156,6 +156,9 @@ Private pastaFixaCSV As String
 '     situacao = local, colunas 38 a 44 = início do período, saldo anterior,
 '     crédito, débito, horas anistiadas, horas pagas, saldo final (minutos).
 '     Ver GerarLinhasBancoHoras.
+'   - tipo_ocorrencia = "BH Dia" (05/11) → uma por pessoa e dia com movimento no
+'     banco nos Cartões: colunas 24/25 = crédito (50%) / débito (BH) do dia.
+'     Ver GerarLinhasBHDia.
 '   - tipo_ocorrencia = "Resumo Horas Cartão" → preenche
 '     minutos_hora_extra_cartao / minutos_banco_horas_cartao (total do
 '     mês atual, direto do Cartão Ponto, ver GerarResumoHorasCartao).
@@ -272,6 +275,7 @@ Private pastaFixaCSV As String
 '   |- EncontrarAbaDigitadas + GerarLinhasDigitadas -> "Marcação Digitada"
 '   |- GerarLinhasPontoNet (aba PontoNet, 3 meses) -> "Justificativa PontoNet"
 '   |- EncontrarAbaBancoHoras + GerarLinhasBancoHoras (MinutosBH) -> "Banco de Horas Período"
+'   |- GerarLinhasBHDia (todos os Cartões) .... -> "BH Dia" (crédito 50% e débito BH de cada dia, 05/11)
 '   |     (aba do FormatarBancoHoras; o painel decide se o banco fechou: 4 meses)
 '   |- EncontrarAbaJornada + GerarLinhasJornada (MinutosDaCelula,
 '   |     HorasMinutosTexto) -> "Intrajornada", "Interjornada",
@@ -634,10 +638,15 @@ ProximaAbaTratamento:
     Dim listaORG As Collection
     Set listaORG = LerListaORG(wsORG)
     Dim itemORG As Variant
+    ' (05/11) dictGestoresORG = os gestores que aparecem na coluna GESTOR do ORG (sem
+    ' acento, maiúsculas). O PontoNet só entra para esses gestores (pedido do RH).
+    Dim dictGestoresORG As Object
+    Set dictGestoresORG = CreateObject("Scripting.Dictionary")
     For Each itemORG In listaORG
         If itemORG(0) <> "" And itemORG(4) <> "" Then
             If Not dictGestorPorMatricula.Exists(CStr(itemORG(0))) Then dictGestorPorMatricula.Add CStr(itemORG(0)), CStr(itemORG(4))
         End If
+        If CStr(itemORG(4)) <> "" Then dictGestoresORG(SemAcento(UCase$(Trim$(CStr(itemORG(4)))))) = True
     Next itemORG
 
     ' =====================================================================
@@ -763,6 +772,20 @@ ProximaAbaTratamento:
     End If
 
     ' =====================================================================
+    ' Banco de horas dia a dia (05/11): uma linha "BH Dia" por pessoa e dia
+    ' com movimento no banco, de TODOS os Cartões lidos (até 3 meses):
+    ' crédito = hora extra 50% (vai para o banco; a 100% é paga à parte) e
+    ' débito = coluna BH. O painel soma dia a dia e desenha o saldo, ancorado
+    ' no relatório de banco de horas (aba Banco de Horas). Ver GerarLinhasBHDia.
+    ' =====================================================================
+    Dim qtdBHDia As Long
+    qtdBHDia = 0
+    If abasCartao.Count > 0 Then
+        GerarLinhasBHDia abasCartao, dictRE, dictGestorPorMatricula, dictGrupoPorMatricula, _
+            wsCSV, linhaSaida, qtdBHDia
+    End If
+
+    ' =====================================================================
     ' Resumo de Pausas Térmicas por colaborador (se a aba existir)
     ' ---------------------------------------------------------------------
     ' Usa a tabela de colaboradores que o macro FormatarPausasTermicas já
@@ -850,10 +873,12 @@ ProximaAbaTratamento:
     ' justificativa e os dias que cada etapa levou (colaborador, gestor, RH).
     ' Alimenta a seção PontoNet do painel mês a mês. Ver GerarLinhasPontoNet.
     ' =====================================================================
-    Dim qtdPontoNet As Long
+    Dim qtdPontoNet As Long, qtdPontoNetForaORG As Long
     qtdPontoNet = 0
+    qtdPontoNetForaORG = 0
     If Not wsAus Is Nothing Then
-        GerarLinhasPontoNet wsAus, dictRE, dictGestorPorMatricula, dictGrupoPorMatricula, wsCSV, linhaSaida, qtdPontoNet
+        GerarLinhasPontoNet wsAus, dictRE, dictGestorPorMatricula, dictGrupoPorMatricula, wsCSV, linhaSaida, qtdPontoNet, _
+            dictGestoresORG, qtdPontoNetForaORG
     End If
 
     ' =====================================================================
@@ -912,6 +937,7 @@ ProximaAbaTratamento:
     End If
     msgAuditoria = msgAuditoria & vbCrLf & qtdCurtas & " ocorrência(s) curta(s) (<15min) direto do Cartão Ponto."
     msgAuditoria = msgAuditoria & vbCrLf & qtdResumoHoras & " colaborador(es) com hora extra ou banco de horas no Cartão Ponto do mês atual."
+    msgAuditoria = msgAuditoria & vbCrLf & qtdBHDia & " dia(s) com movimento no banco de horas (crédito 50% ou débito BH) nos Cartões."
     If Not wsAfast Is Nothing Then
         msgAuditoria = msgAuditoria & vbCrLf & qtdAfastamentos & " afastamento(s) da aba " & wsAfast.Name & _
             ", dos quais " & qtdAbsAtestados & " atestado(s) somando " & qtdAbsDias & " dia(s)."
@@ -920,7 +946,7 @@ ProximaAbaTratamento:
             " atestado(s), somando " & qtdAbsDias & " dia(s), tirados dos Cartões."
     End If
     msgAuditoria = msgAuditoria & vbCrLf & IIf(wsAus Is Nothing, "PontoNet não encontrado: sem justificativas no painel.", _
-        qtdPontoNet & " justificativa(s) do PontoNet.")
+        qtdPontoNet & " justificativa(s) do PontoNet (" & qtdPontoNetForaORG & " de gestores que não estão no ORG ficaram de fora).")
     If wsBH Is Nothing Then
         msgAuditoria = msgAuditoria & vbCrLf & "Aba Banco de Horas não encontrada: o fechamento do banco de horas não aparece no painel."
     Else
@@ -1673,6 +1699,60 @@ Private Function ContemAlgum(ByVal texto As String, ByVal lista As String) As Bo
 End Function
 
 ' ---------------------------------------------------------------------
+' BANCO DE HORAS DIA A DIA (05/11)
+' ---------------------------------------------------------------------
+' Uma linha "BH Dia" por pessoa e dia com movimento no banco de horas, lida de
+' cada aba de Cartão (até 3 meses): data = o dia; situacao = descrição do dia
+' ("Trabalhando", "Falta (Banco Horas)"...); minutos_hora_extra_cartao (24) =
+' crédito no banco = coluna 50%; minutos_banco_horas_cartao (25) = débito =
+' coluna BH. A hora extra 100% não entra: é paga à parte (conferido com o
+' relatório de banco de horas). Dia sem crédito nem débito não gera linha.
+' Mesma pessoa e mesmo dia em duas abas (Cartões que se sobrepõem): vale a 1ª.
+Private Sub GerarLinhasBHDia(abasCartao As Collection, dictRE As Object, dictGestorPorMatricula As Object, _
+    dictGrupoPorMatricula As Object, wsCSV As Worksheet, ByRef linhaSaida As Long, ByRef qtdGerada As Long)
+
+    Dim vistos As Object, elem As Variant, ws As Worksheet
+    Dim colMat As Long, colNome As Long, colDT As Long, colDesc As Long, col50 As Long, colBH As Long
+    Dim ultimaLinha As Long, r As Long, mat As String, vData As Variant, chave As String
+    Dim cred As Long, deb As Long, nomeBH As String, setorNome As String, cargoNome As String
+    Set vistos = CreateObject("Scripting.Dictionary")
+    For Each elem In abasCartao
+        Set ws = elem
+        colMat = ColunaPorCabecalho(ws, "Matrícula", 2)
+        colNome = ColunaPorCabecalho(ws, "Nome", 2)
+        colDT = ColunaPorCabecalho(ws, "DT", 2)
+        colDesc = ColunaPorCabecalho(ws, "Descrição Marcação", 2)
+        col50 = ColunaPorCabecalho(ws, "50%", 2)
+        colBH = ColunaPorCabecalho(ws, "BH", 2)
+        If colMat > 0 And colDT > 0 Then
+            ultimaLinha = UltimaLinhaPreenchida(ws, colMat)
+            For r = 3 To ultimaLinha
+                mat = TextoLimpo(ws.Cells(r, colMat).Value)
+                vData = ws.Cells(r, colDT).Value
+                If mat <> "" And IsDate(vData) Then
+                    cred = CLng(Round(NzNum(ValorDaCelula(ws, r, col50)) * 1440, 0))
+                    deb = CLng(Round(NzNum(ValorDaCelula(ws, r, colBH)) * 1440, 0))
+                    chave = mat & "|" & CLng(CDate(vData))
+                    If (cred > 0 Or deb > 0) And Not vistos.Exists(chave) Then
+                        vistos.Add chave, True
+                        nomeBH = TextoDaCelula(ws, r, colNome)
+                        If nomeBH = "" Then nomeBH = "Matrícula " & mat
+                        ObterSetorCargo dictRE, mat, setorNome, cargoNome
+                        EscreverLinhaCSV wsCSV, linhaSaida, CDate(vData), nomeBH, mat, _
+                            TextoDoDicionario(dictGestorPorMatricula, mat), setorNome, cargoNome, _
+                            "BH Dia", TextoDaCelula(ws, r, colDesc), "Regularizado", 0, "", Empty, _
+                            grupo:=TextoDoDicionario(dictGrupoPorMatricula, mat), _
+                            minHoraExtraCartao:=cred, minBancoHorasCartao:=deb
+                        linhaSaida = linhaSaida + 1
+                        qtdGerada = qtdGerada + 1
+                    End If
+                End If
+            Next r
+        End If
+    Next elem
+End Sub
+
+' ---------------------------------------------------------------------
 ' BANCO DE HORAS (aba do FormatarBancoHoras, 04/11)
 ' ---------------------------------------------------------------------
 ' Acha a aba "Banco de Horas" pelo cabeçalho da linha 1 (Matrícula, Crédito,
@@ -1997,7 +2077,8 @@ End Sub
 ' Dia em branco (ex.: RH numa justificativa cancelada) fica em branco.
 ' Gestor: o da Tratamento/ORG; sem ele, o do próprio relatório.
 Private Sub GerarLinhasPontoNet(ws As Worksheet, dictRE As Object, dictGestorPorMatricula As Object, _
-    dictGrupoPorMatricula As Object, wsCSV As Worksheet, ByRef linhaSaida As Long, ByRef qtdGerada As Long)
+    dictGrupoPorMatricula As Object, wsCSV As Worksheet, ByRef linhaSaida As Long, ByRef qtdGerada As Long, _
+    dictGestoresORG As Object, ByRef qtdForaORG As Long)
 
     Dim colMat As Long, colData As Long, colHora As Long, colNome As Long, colFuncao As Long, colGestor As Long
     Dim colSit As Long, colTipo As Long, colJust As Long, colAval As Long, colAvaliado As Long
@@ -2044,6 +2125,14 @@ Private Sub GerarLinhasPontoNet(ws As Worksheet, dictRE As Object, dictGestorPor
         If cargoNome = "" Then cargoNome = TextoDaCelula(ws, r, colFuncao)
         gestorPN = TextoDoDicionario(dictGestorPorMatricula, mat)
         If gestorPN = "" Then gestorPN = TextoDaCelula(ws, r, colGestor)
+        ' (05/11) só gestores que estão no ORG: os de fora, e as pessoas das equipes
+        ' deles, não entram (pedido do RH). Sem ORG na planilha, entra tudo.
+        If dictGestoresORG.Count > 0 Then
+            If Not dictGestoresORG.Exists(SemAcento(UCase$(Trim$(gestorPN)))) Then
+                qtdForaORG = qtdForaORG + 1
+                GoTo ProximaPontoNet
+            End If
+        End If
         vAvaliado = Empty
         If colAvaliado > 0 Then
             If IsDate(ws.Cells(r, colAvaliado).Value) Then vAvaliado = ws.Cells(r, colAvaliado).Value

@@ -40,6 +40,13 @@ def meses_do_periodo(ini, fim):
     return b - a + 1
 
 
+def fechamentos(ini, fim):
+    """Quantos fechamentos (ciclos de outubro, fevereiro e junho) o período inclui (05/11)."""
+    a = ini.year * 12 + ini.month + (1 if ini.day >= 28 else 0)
+    b = fim.year * 12 + fim.month + (1 if fim.day >= 28 else 0)
+    return sum(1 for k in range(a, b + 1) if ((k - 1) % 12) + 1 in (10, 2, 6))
+
+
 def formatar(linhas):
     # colunas pela linha "Locais | Positivo | Negativo | Credito | Débito | Hr. Anist. | Hr. Pagas | Positivo | Negativo"
     pos = dict(antpos=5, antneg=6, cred=7, deb=8, anist=9, pagas=10, finpos=11, finneg=12)
@@ -84,7 +91,7 @@ def formatar(linhas):
     di = BASE + datetime.timedelta(days=int(ini)); df = BASE + datetime.timedelta(days=int(fim))
     meses = meses_do_periodo(di, df)
     for l in saida:
-        l[4], l[5], l[6], l[7] = di, df, meses, "Sim" if meses >= 4 else "Não"
+        l[4], l[5], l[6], l[7] = di, df, meses, "Sim" if fechamentos(di, df) else "Não"
     return dict(ini=di, fim=df, meses=meses, linhas=saida)
 
 
@@ -92,7 +99,7 @@ if __name__ == "__main__":
     res = formatar(ler_planilha(sys.argv[1]))
     L = res["linhas"]
     print("Período %s a %s (%d meses, %s); %d pessoas" % (res["ini"].strftime("%d/%m/%Y"), res["fim"].strftime("%d/%m/%Y"),
-          res["meses"], "fechado" if res["meses"] >= 4 else "aberto", len(L)))
+          res["meses"], "com fechamento" if fechamentos(res["ini"], res["fim"]) else "sem fechamento", len(L)))
     tot = lambda i: sum(l[i] for l in L)
     h = lambda m: "%d:%02d" % divmod(m, 60)
     print("Crédito %s · Débito %s · Anistiadas %s (%d pessoas) · Pagas %s (%d pessoas)" % (

@@ -546,3 +546,21 @@ As 15 ideias marcadas na página de ideias que ainda faltavam:
   primeira Sub. Agora todas ficam no topo e o script de montagem confere.
 - A **PURO_Para_EDITADO saiu do código único**: é outro assunto (dia a dia do tratamento) e fica só no
   `txt/PURO_Para_EDITADO.txt`, colado num módulo separado.
+
+## Banco de horas dia a dia, períodos fixos e PontoNet só do ORG (05/11)
+
+- **Seção nova "Banco de horas"** (depois de "Colaboradores em destaque"): escolha a equipe, a pessoa e os
+  meses; o gráfico mostra o saldo do banco no fim de cada dia (a soma da equipe, ou a pessoa), com o
+  fechamento marcado. Embaixo, uma tabela por pessoa (saldo no começo e no fim, crédito, débito, menor
+  saldo, dias com extra e com débito, folgas no banco e um resumo em frase), os cards de crédito e débito
+  por colaborador (vieram de "Colaboradores em destaque") e o fechamento do banco.
+- O saldo parte do relatório de banco de horas (HRES105) e anda dia a dia com o espelho de ponto:
+  **crédito = hora extra 50%**, **débito = coluna BH** (a 100% é paga à parte). Conferido com a
+  "Análise de compensação do BH" do RH.
+- **Períodos do banco**: novembro a fevereiro, março a junho e julho a outubro; fecha no último mês. O
+  relatório de banco de horas pode ter 1 mês, 2, 3, o período ou o ano: o painel diz se ele inclui um
+  fechamento. No fechamento, o saldo negativo (coluna "Hr. Anist.") aparece como **descontado na folha**.
+- CSV: linhas novas **"BH Dia"** (uma por pessoa e dia com movimento no banco; colunas 24/25).
+- **PontoNet só dos gestores que estão no ORG** (macro e painel); as equipes deles também saem.
+- Botões **"?"** em laranja.
+
