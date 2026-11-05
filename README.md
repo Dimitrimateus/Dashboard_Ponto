@@ -583,3 +583,19 @@ As 15 ideias marcadas na página de ideias que ainda faltavam:
 - **GerarCSVPonto**: as linhas "BH Dia" vêm dos **4** Cartões mais recentes (antes 3). No último mês do
   período (fevereiro, junho, outubro), coloque na pasta também o **"Cartão ponto 4"** (o 1º mês do
   período); a pasta não exige esse arquivo, mas sem ele o painel avisa que falta o mês.
+
+## Pedidos de 05/11 (foto): topo, banco de horas e janelas de detalhe
+
+- Topo **sem o período**; o **logo da Aurora** fica no meio. Ao abrir os arquivos, o painel vai para
+  **"Arquivos carregados"**.
+- Em toda a tela, **"cartão ponto"** no lugar de "espelho de ponto".
+- Cada seção diz **quem está sendo mostrado**, conforme os filtros ("👥 Mostrando: 22 pessoas na equipe de
+  FULANO", "34 pessoas nas equipes dos 2 gestores").
+- **Banco de horas:** "horas extras" e "horas falta" (sem crédito/débito); sem a conta horas extras − horas
+  falta (saíram os cards "Quem colocou/tirou mais" e o saldo à direita do gráfico por colaborador); no
+  fechamento, só "fecharam devendo" (sem falar em desconto); os textos dizem se você está vendo o **período
+  inteiro** ou só parte dele; os **meses escolhidos são sempre seguidos**; o gráfico tem uma **linha no fim de
+  cada mês** (a do fechamento em marrom); com um mês só aparecem **todos os dias**, e **clicar num dia** abre o
+  resumo dele (quem fez hora extra, quem teve hora falta e o banco de cada um no fim do dia).
+- **Janelas de detalhe** ("de onde vem" e o card da pessoa): nenhum texto cortado, barras de rolagem visíveis;
+  os nomes de cima ficam numa caixa com busca e "Ver todos os nomes" (antes, com muita gente, ocupavam a janela).

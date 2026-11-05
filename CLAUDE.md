@@ -588,6 +588,22 @@ PontoNet"); 28/29 na "Absenteísmo" e na "Afastamento"; 30/31/32 nas 4 de jornad
   em `state.arquivos[i].fontes` ao abrir; e geral, `geralFontes`), `SECOES_FONTES` (precisa × também usa),
   `problemasFonte`/`problemasBH` ("Falta o arquivo X", "Falta Jul/26 em X", "Falta o espelho de ponto de
   Jul/26"). Links `.arq-ir` levam à seção. Sem filtro (é do arquivo inteiro).
+- **05/11 (depois 3) — pedidos do Dimitri (foto):** topo **sem o período**, logo da Aurora no meio
+  (`.topbar-logo`; `#topbarPeriod` fica escondido com `display:none`); arquivo aberto vai para **"Arquivos
+  carregados"**; **"cartão ponto" no lugar de "espelho de ponto"** em toda a tela; faixa **"👥 Mostrando: 22
+  pessoas na equipe de FULANO"** embaixo do título de cada seção (`atualizarRecorteSecoes`, `fraseRecorte`,
+  a partir de `equipeDoFiltro`); banco de horas: **"horas extras" e "horas falta"** (nunca crédito/débito),
+  sem o resultado extra − falta em nenhum lugar da seção (saíram os cards "Quem colocou/tirou mais" e o saldo
+  à direita do gráfico por colaborador: `renderSaldoH` com `semDireita`), fechamento sem "descontado"
+  ("fecharam devendo"), textos que mudam com o recorte de meses (`infoMesesBH`: período inteiro, parte dele,
+  dois períodos; rótulos "Banco no começo do período"/"Banco em dd/mm", "Banco no fechamento"/"Banco em dd/mm"),
+  **meses sempre seguidos** (handler de `#bhMeses`: marcar longe preenche o meio; desmarcar no meio deixa os
+  de antes), gráfico com **linha tracejada no fim de cada mês** (marrom = fechamento), com 1 mês **todos os
+  dias** no eixo (+ letra do dia da semana) e faixa de clique por dia (`.bh-dia-alvo`, `data-bh-dia`) que abre
+  o **resumo do dia** (`abrirResumoDiaBH` → `abrirOrigem` tipo `bhDia`, `recs.tipoOrigem`). Janelas de
+  detalhe: texto das células quebra linha (nada de "..."), barras de rolagem visíveis, cabeçalho com
+  `flex:none`; nomes da janela "de onde vem" numa caixa com busca, ~3 linhas e "Ver todos os nomes"
+  (`#origemPessoasBox`, `#origemBusca`, `#origemExpandir`).
 - Paleta: laranja `#F7931E`, vermelho `#E31E24`, amarelo `#FFC72C`, preto `#1A1A1A`, cinzas.
 
 ## 7. Conferência feita (01/10/2026)
@@ -993,6 +1009,10 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   1400/390/360 px, com 1 arquivo, 2 juntos e sem banco de horas. `conferir_painel.py` não rodou (sem a
   planilha nesta sessão). A macro mudada (4 Cartões) não rodou no Excel.
 
+- 05/11 (depois 3): pedidos do Dimitri (foto, 12 itens; ver seção 6). Testado com o CSV inventado: varredura
+  sem erro de JS, NaN ou rolagem lateral (1400/390/360 px), 25 janelas "de onde vem" + card da pessoa sem
+  texto cortado. `conferir_painel.py` ajustado aos nomes novos do fechamento (não rodou: sem planilha).
+
 ## 12. Estado atual e como continuar (05/11/2026)
 
 **Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`, branch **`main`** (desde 04/11 tudo
@@ -1044,7 +1064,11 @@ reunião é por gestor ou com todos e se pode usar salário (só o total da equi
   Afastamentos mostram todos os tipos por cor; "Mostrar": todos, só atestados ou só um tipo
   (doação de sangue é grupo próprio, 19/10).
 - O relatório de digitadas não diz quem digitou (colaborador × RH).
-- Filtros da lateral sempre visíveis ao abrir; arquivo carregado abre na seção Ocorrências.
+- Filtros da lateral sempre visíveis ao abrir; arquivo carregado abre em **"Arquivos carregados"** (05/11).
+- (05/11) Sem período no topo (logo no meio). "Cartão ponto", nunca "espelho de ponto". Banco de horas: "horas
+  extras"/"horas falta", sem crédito/débito, sem o resultado extra − falta, sem falar em desconto ("fecharam
+  devendo"); meses sempre seguidos; textos dizem se é o período inteiro ou parte dele. Toda seção diz o recorte
+  de pessoas ("Mostrando: ..."). Janelas de detalhe: tudo visível, sem texto cortado.
 - Filtro da legenda vale só para o gráfico clicado e não mexe nos números do topo.
 - Listas longas inteiras só em tela cheia.
 - Clique na barra/fatia/ponto/quadrado abre "de onde vem"; os nomes de cima dessa janela são

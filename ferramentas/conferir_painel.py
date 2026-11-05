@@ -511,10 +511,10 @@ if ui.get('bhResumo') and os.environ.get('BH_PKL'):
     import formatar_bh as _FB
     _tem=_FB.fechamentos(b['ini'], b['fim'])>0   # (05/11) períodos fixos: fecha em fev, jun e out
     esp=[("COM FECHAMENTO" if _tem else "SEM FECHAMENTO"), b['ini'].strftime('%d/%m/%Y')+' a '+b['fim'].strftime('%d/%m/%Y'),
-         f"{len(L)} pessoa(s)", "crédito total "+fh(sum(l[10] for l in L)), "débito total "+fh(sum(l[11] for l in L))]
+         f"{len(L)} pessoa(s)", "horas extras "+fh(sum(l[10] for l in L)), "horas falta "+fh(sum(l[11] for l in L))]   # (05/11) sem "crédito/débito"
     if _tem:
         esp+=[f"{len(pag)} tiveram horas pagas", f"({fh(sum(l[13] for l in pag))} no total)", f"{len(per)} fecharam devendo",
-              f"{fh(sum(l[12] for l in per))} no total", f"{zer} fecharam zerados"]
+              f"{zer} fecharam zerados"]   # (05/11) o painel não fala mais em horas descontadas
     falta=[e for e in esp if e not in t.replace('\n',' ')]
     chk('Banco de horas: fechamento (período, pessoas, pagas, descontadas, zerados)', not falta,
         '; '.join(esp) if not falta else f"não achei no painel: {falta} / painel {t!r}")
