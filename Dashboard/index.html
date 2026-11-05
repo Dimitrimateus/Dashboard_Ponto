@@ -241,6 +241,13 @@
     padding:10px 14px; margin-bottom:14px; font-size:13px; line-height:1.5; }
   .abs-resumo-caixa .arc-titulo{ font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#8A4B12; margin-bottom:4px; }
   .abs-resumo-caixa ul{ margin:0; padding-left:18px; }
+  /* Arquivos carregados (05/11) */
+  .arq-bloco{ margin-bottom:18px; }
+  .arq-bloco:last-child{ margin-bottom:0; }
+  .arq-nome{ font-weight:800; font-size:14px; margin:0 0 6px; word-break:break-word; }
+  .arq-nome span{ font-weight:500; color:var(--c-muted); font-size:12.5px; margin-left:6px; }
+  .arq-nao{ font-size:12.5px; color:var(--c-muted); margin-top:6px; }
+  #bhConfResumo, #arqResumo{ margin-bottom:12px; }
   .abs-resumo-caixa li{ margin:2px 0; }
   .abs-resumo-caixa b{ color:var(--c-navy-dark); }
   .heat-wrap{ overflow-x:auto; border:1px solid var(--c-line); border-radius:var(--radius-card); }
@@ -565,6 +572,11 @@
   table.data-table.tabela-compacta th{ white-space:normal; line-height:1.25; vertical-align:bottom; }
   table.data-table.tabela-compacta th:nth-child(n+3), table.data-table.tabela-compacta td:nth-child(n+3){ text-align:center; }
   #tablePausasTermicas .table-scroll{ max-height:none; }
+  /* Arquivos carregados e conferência do banco (05/11): tabela inteira, texto quebra a linha */
+  #arqPorArquivo .table-scroll, #arqPorSecao .table-scroll{ max-height:none; }
+  #arqPorArquivo table.data-table td, #arqPorSecao table.data-table td, #tableBHConf table.data-table td{ white-space:normal; overflow:visible; line-height:1.3; }
+  #arqPorSecao table.data-table td:nth-child(n+3), #arqPorSecao table.data-table th:nth-child(n+3), #arqPorArquivo table.data-table td:nth-child(n+4), #arqPorArquivo table.data-table th:nth-child(n+4){ text-align:left; }
+  #arqPorSecao tr.row-alert td:nth-child(-n+3){ color:inherit; }
   /* tabela do banco de horas por pessoa (05/11): nome, gestor e resumo quebram linha */
   #tableBHPessoas table.data-table td{ white-space:normal; overflow:visible; line-height:1.3; }
   table.data-table tr.row-sel td{ font-weight:700; }
@@ -905,7 +917,7 @@
        aqui + uma <div class="pagina" data-pagina="..."> no conteúdo. -->
   <nav class="menu-secoes" id="menuSecoes" hidden aria-label="Seções do painel">
     <div class="menu-titulo">Seções do painel</div>
-    <button type="button" data-pagina="geral">Ocorrências</button><button type="button" data-pagina="digitadas">Marcações digitadas</button><button type="button" data-pagina="afastamentos">Afastamentos</button><button type="button" data-pagina="jornada">Jornada</button><button type="button" data-pagina="destaque">Colaboradores em destaque</button><button type="button" data-pagina="bancohoras">Banco de horas</button><button type="button" data-pagina="pausas">Pausas térmicas</button><button type="button" data-pagina="demora">PontoNet</button><button type="button" data-pagina="tendencias">Tendências</button><button type="button" data-pagina="org">Lista de colaboradores</button><button type="button" data-pagina="historico">Histórico</button>
+    <button type="button" data-pagina="arquivos">Arquivos carregados</button><button type="button" data-pagina="geral">Ocorrências</button><button type="button" data-pagina="digitadas">Marcações digitadas</button><button type="button" data-pagina="afastamentos">Afastamentos</button><button type="button" data-pagina="jornada">Jornada</button><button type="button" data-pagina="destaque">Colaboradores em destaque</button><button type="button" data-pagina="bancohoras">Banco de horas</button><button type="button" data-pagina="pausas">Pausas térmicas</button><button type="button" data-pagina="demora">PontoNet</button><button type="button" data-pagina="tendencias">Tendências</button><button type="button" data-pagina="org">Lista de colaboradores</button><button type="button" data-pagina="historico">Histórico</button>
     <button type="button" data-pagina="todas" class="menu-todas">Todas as seções numa página só</button>
   </nav>
 
@@ -969,6 +981,29 @@
       <!-- Corpo do painel: uma .pagina por seção do menu. Cada card tem título,
            dica, o texto "De onde vem" (.card-fonte) e um contêiner vazio com id
            que o JS preenche (chart* = gráfico SVG, table* = tabela). -->
+      <!-- Seção "Arquivos carregados" (05/11, pedido do RH): quais arquivos CSV foram abertos,
+           que informação do sistema cada um traz e de que período, que seções cada informação
+           alimenta e o que está faltando (com o nome do arquivo que falta). Desenhado por
+           renderArquivos (FONTES_ARQ, SECOES_FONTES, resumoFontes). -->
+      <div class="pagina" data-pagina="arquivos">
+        <h3 class="section-title">Arquivos carregados</h3>
+        <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: os arquivos que você abriu no painel</span><p>Cada arquivo do painel junta várias informações que o RH tira do sistema de ponto: o espelho de ponto (cartão ponto) de cada mês, o relatório de banco de horas, as pausas térmicas, as marcações digitadas, os afastamentos, o PontoNet, os relatórios de jornada e a lista de quem é gestor de quem. Esta seção mostra <strong>o que veio em cada arquivo e de que período</strong>, <strong>que seção do painel usa cada informação</strong> e, quando falta alguma coisa, <strong>o nome do arquivo que falta</strong>. Se faltar um mês, dá para abrir junto o arquivo do mês anterior pelo botão “+ Juntar mais um arquivo”: as linhas repetidas contam uma vez só.</p></div>
+        <div class="abs-resumo-caixa" id="arqResumo"></div>
+        <section class="grid">
+          <div class="card wide">
+            <div class="card-title">O que veio em cada arquivo</div>
+            <div class="card-hint">Uma tabela por arquivo aberto &middot; informação, arquivo do sistema de onde ela vem, período e meses</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: as linhas de cada arquivo aberto</span><p>Para cada arquivo aberto, o painel separa as linhas pela informação de onde elas vêm e mostra a <strong>primeira e a última data</strong> e os <strong>meses</strong> (sempre de 28 a 27) que aparecem. “Arquivo do sistema” é o nome do relatório que o RH baixa do sistema de ponto e coloca na pasta do mês. Informação que não está na tabela não veio naquele arquivo.</p></div>
+            <div class="card-body" id="arqPorArquivo"></div>
+          </div>
+          <div class="card wide">
+            <div class="card-title">O que cada seção do painel usa</div>
+            <div class="card-hint">Somando todos os arquivos abertos &middot; em vermelho, o que falta e o nome do arquivo</div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: as informações de todos os arquivos abertos, juntas</span><p>Cada seção do painel depende de uma ou mais informações. <strong>Precisa</strong> = sem ela a seção fica vazia. <strong>Também usa</strong> = a seção funciona, mas uma parte dela (um aviso, uma coluna, um gráfico) fica de fora. Os relatórios de 3 meses são conferidos mês a mês: se um mês não veio, o painel diz qual. No banco de horas o painel confere se há o espelho de ponto de <strong>todos os meses</strong> do período do banco, porque o saldo é calculado dia a dia a partir do zero.</p></div>
+            <div class="card-body" id="arqPorSecao"></div>
+          </div>
+        </section>
+      </div>
       <div class="pagina" data-pagina="geral">
         <h3 class="section-title">Ocorrências</h3>
         <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: as ocorrências de ponto do mês, conferidas pelo RH</span><p>Ocorrência é um dia em que o ponto de alguém teve um problema: faltou a batida de entrada ou de saída, o dia ficou sem nenhuma batida, a batida saiu repetida e assim por diante. Todo mês o RH recebe essa lista do sistema de ponto e confere cada caso. Esta seção mostra quantas foram, de que tipo, em que dias, em que equipes e em que cargos. Segue todos os filtros da direita, inclusive o de período.</p></div>
@@ -1320,7 +1355,7 @@
             <div class="card wide">
               <div class="card-title">Saldo do banco de horas dia a dia</div>
               <div class="card-hint" id="hintBHLinha">Quanto havia no banco ao fim de cada dia &middot; acima da linha do zero = horas a favor da pessoa; abaixo = horas devidas</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: o espelho de ponto de cada dia e o relatório de banco de horas</span><p>Cada ponto é o saldo do banco <strong>ao fim do dia</strong>. O painel parte do saldo que o relatório de banco de horas informa e anda dia a dia somando a hora extra que foi para o banco e tirando as horas devidas de cada dia do espelho de ponto. Com uma equipe escolhida (e nenhuma pessoa), a linha é a <strong>soma</strong> do saldo de todas as pessoas da equipe. A linha tracejada marca o <strong>fechamento</strong> do banco (fim de fevereiro, junho e outubro): no dia seguinte o banco recomeça do zero. Passe o mouse sobre um ponto para ver o dia, o crédito, o débito e o saldo.</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o espelho de ponto de cada dia e o relatório de banco de horas</span><p>Cada ponto é o saldo do banco <strong>ao fim do dia</strong>. No começo do período do banco <strong>todo mundo está zerado</strong>; o painel anda dia a dia somando a hora extra que foi para o banco e tirando as horas devidas de cada dia do espelho de ponto. Para isso ele precisa do espelho de ponto de <strong>todos os meses do período</strong>; se faltar um mês, o aviso do quadro laranja diz qual e o saldo passa a partir do relatório de banco de horas. Com uma equipe escolhida (e nenhuma pessoa), a linha é a <strong>soma</strong> do saldo de todas as pessoas da equipe. A linha tracejada marca o <strong>fechamento</strong> do banco (fim de fevereiro, junho e outubro): no dia seguinte o banco recomeça do zero. Passe o mouse sobre um ponto para ver o dia, o crédito, o débito e o saldo.</p></div>
               <div class="card-body" id="chartBHLinha"></div>
             </div>
             <div class="card wide">
@@ -1329,6 +1364,17 @@
               <div class="card-fonte"><span class="fonte-origem">De onde vem: o espelho de ponto de cada dia e o relatório de banco de horas</span><p><strong>Saldo no começo</strong> = o que a pessoa tinha no banco no dia anterior ao primeiro mês escolhido. <strong>Crédito</strong> e <strong>débito</strong> = as horas que entraram e saíram nesses meses. <strong>Saldo no fim</strong> = o que sobrou no último dia. <strong>Menor saldo</strong> = o momento em que a pessoa mais ficou devendo (ou com menos horas). <strong>Folgas de dia inteiro</strong> = dias marcados como falta paga com o banco. Clique no nome para ver a pessoa.</p></div>
               <div class="card-body" id="tableBHPessoas"></div>
               <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="bhPessoas" id="btnBHPessoasTodos" hidden>Mostrar todos</button></div>
+            </div>
+            <!-- Conferência (05/11 depois, pedido do RH): o saldo calculado dia a dia com os espelhos
+                 de ponto, partindo do zero no começo do período, tem que bater com o relatório de
+                 banco de horas do último mês disponível do período. renderConferenciaBH. -->
+            <div class="card wide">
+              <div class="card-title">Conferência: espelho de ponto &times; relatório de banco de horas</div>
+              <div class="card-hint" id="hintBHConf">O saldo calculado dia a dia tem que bater com o relatório de banco de horas &middot; diferenças primeiro</div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o espelho de ponto de cada mês do período e o relatório de banco de horas</span><p>No começo de cada período do banco (novembro, março e julho) <strong>todo mundo começa zerado</strong>. O painel soma, dia a dia, a hora extra que foi para o banco e tira as horas devidas, usando o espelho de ponto de <strong>todos os meses</strong> do período até o fim do relatório de banco de horas. No último dia do relatório, essa conta tem que dar o mesmo saldo que o sistema informa. <strong>Bate</strong> = diferença de até 1 minuto. Quando não bate, a linha fica em vermelho: pode ser um dia que o sistema mudou depois de o espelho ser tirado, ou um lançamento feito direto no banco. Se faltar o espelho de algum mês, o painel diz qual e não confere.</p></div>
+              <div class="abs-resumo-caixa" id="bhConfResumo"></div>
+              <div class="card-body" id="tableBHConf"></div>
+              <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="bhConf" id="btnBHConfTodos" hidden>Mostrar todos</button></div>
             </div>
             <div class="card">
               <div class="card-title">Crédito e débito no banco de horas por colaborador</div>
@@ -1918,6 +1964,9 @@
          "Filtrar o painel por ..." (M4) ... aplicarFiltroDoGrafico (opts.filtro/filtroSeg)
          (registros guardados por empilhar/anexarOrigem/legendaSerie/ocorrenciasPorData,
          marcarOrigem no contêiner, data-drill no elemento; janela #origemOverlay)
+       "arquivos" (05/11) .............. renderArquivos .......... o que veio em cada arquivo aberto (state.arquivos[i].fontes =
+                 resumoFontes por arquivo; _arq em cada linha), o que cada seção usa (SECOES_FONTES) e o
+                 que falta, com o nome do arquivo do sistema (FONTES_ARQ, problemasFonte, problemasBH)
        "geral": por tipo/dia/data/gestor/cargo  renderDonut/BarV/Line/BarH + ocorrenciasPor*
                                                  ................. getFilteredRecords sem Hora Extra
        "tendencias" .................... renderTendencias ........ INDICADORES (ciclosTendencia: 3 ciclos)
@@ -1928,8 +1977,10 @@
        "bancohoras" (05/11) ............ renderBancoHoras ........ "BH Dia" (crédito 50% / débito BH de cada dia)
                                                                   + "Banco de Horas Período" (relatório do sistema)
                  seletores #bhEquipe/#bhColab/#bhMeses (state.bhMeses), números #bhKpis, linha do saldo
-                 renderLinhaSaldoBH (saldosBH: âncora no relatório, ou zero no começo do período, ou
-                 "relativo"), tabela por pessoa #tableBHPessoas, crédito/débito por colaborador e saldo dos
+                 renderLinhaSaldoBH (saldosBH: zero no começo do período quando há o espelho de todos os
+                 meses, senão âncora no relatório, ou "relativo"; cada mês do espelho vem do arquivo mais
+                 novo que o tem: dadosBH/donoCiclo), tabela por pessoa #tableBHPessoas, conferência
+                 espelho x relatório renderConferenciaBH (#tableBHConf, relatorioDoPeriodoBH), crédito/débito por colaborador e saldo dos
                  meses (horasBancoPorColaborador; sem "BH Dia" volta ao mês do espelho) e o fechamento
                  renderFechamentoBH (relatoriosBH/#bhRelatorio; períodos fixos nov-fev, mar-jun, jul-out,
                  fecha em fev/jun/out: ehFechamentoBH; "descontado" = Hr. Anist.).
@@ -3017,9 +3068,25 @@
   function dadosBH(){
     if (state.bhDados && state.bhDados.recs === state.records) return state.bhDados;
     var pessoas = {}, minT = null, maxT = null, ciclos = {};
+    // (05/11 depois) cada mês do espelho de ponto vem de UM arquivo só: o mais novo que tem
+    // aquele mês (o que vai mais longe). Ex.: o CSV de outubro (espelhos de ago, set, out) +
+    // o de setembro (jul, ago, set): jul vem do de setembro; ago, set e out, do de outubro.
+    // Assim um dia que o sistema mudou entre uma exportação e outra não conta duas vezes.
+    var fimArq = {}, donoCiclo = {};
+    state.records.forEach(function(r){
+      if (!isTipoBHDia(r.tipo)) return;
+      var a = r._arq || 0, t = diaT(r.data);
+      if (!(fimArq[a] >= t)) fimArq[a] = t;
+    });
+    state.records.forEach(function(r){
+      if (!isTipoBHDia(r.tipo)) return;
+      var a = r._arq || 0, n = numCicloBH(r.data);
+      if (donoCiclo[n] === undefined || fimArq[a] > fimArq[donoCiclo[n]]) donoCiclo[n] = a;
+    });
     state.records.forEach(function(r){
       var dia = isTipoBHDia(r.tipo), rel = isTipoBancoHoras(r.tipo);
       if (!dia && !rel) return;
+      if (dia && donoCiclo[numCicloBH(r.data)] !== (r._arq || 0)) return;
       var k = chavePessoa(r), p = pessoas[k] || (pessoas[k] = { chave:k, nome:r.colaborador, ref:r, dias:{}, rels:[] });
       if (dia){
         var t = diaT(r.data), x = p.dias[t] || (p.dias[t] = { c:0, d:0, desc:r.situacao });
@@ -3039,16 +3106,38 @@
     var lista = Object.keys(ciclos).map(Number).sort(function(a, b){ return a - b; });
     if (lista.length) minT = Math.min(minT, inicioDoCicloBH(lista[0]).getTime());
     if (lista.length) maxT = Math.max(maxT, fimDoCicloBH(lista[lista.length - 1]).getTime());
-    state.bhDados = { recs:state.records, pessoas:pessoas, minT:minT, maxT:maxT, ciclos:lista };
+    var tem = {}; lista.forEach(function(n){ tem[n] = true; });
+    state.bhDados = { recs:state.records, pessoas:pessoas, minT:minT, maxT:maxT, ciclos:lista, temCiclo:tem };
     return state.bhDados;
   }
+  // Meses do período do banco (q = 1º mês do período) que faltam no espelho de ponto, do
+  // 1º mês até "ate" (o último mês que precisa: o do fim do relatório de banco de horas ou o
+  // último espelho do arquivo dentro do período). Sem nenhum, o saldo pode partir do zero.
+  function ciclosFaltandoBH(q, ate, base){
+    base = base || dadosBH();
+    var falta = [];
+    for (var n = q; n <= Math.min(ate, q + 3); n++) if (!base.temCiclo[n]) falta.push(n);
+    return falta;
+  }
+  // último mês que o período q precisa: o maior entre o último espelho do arquivo dentro do
+  // período e o fim do relatório de banco de horas mais recente dentro do período
+  function ultimoCicloPrecisoBH(q, base){
+    base = base || dadosBH();
+    var ult = null;
+    base.ciclos.forEach(function(n){ if (n >= q && n <= q + 3 && (ult === null || n > ult)) ult = n; });
+    relatoriosBH().forEach(function(p){ var b = numCicloBH(p.fim); if (b >= q && b <= q + 3 && (ult === null || b > ult)) ult = b; });
+    return ult === null ? q : ult;
+  }
   // Saldo de uma pessoa no FIM de cada dia de "dias" (lista de diaT em ordem). Em cada período
-  // de 4 meses a conta parte de uma âncora:
-  //   1) "relatorio": o saldo do relatório de banco de horas que termina dentro do período e
-  //      dentro do alcance do espelho (saldo anterior + crédito − débito, no último dia dele);
-  //      dali para trás tira o movimento de cada dia, para frente soma;
-  //   2) "zero": sem relatório, mas o espelho começa no 1º mês do período: começa do zero
-  //      (o banco recomeça zerado depois de cada fechamento);
+  // de 4 meses a conta parte de uma âncora (ordem decidida pelo RH em 05/11):
+  //   1) "zero": o arquivo tem o espelho de ponto de TODOS os meses do período, do 1º até o
+  //      último que precisa (ciclosFaltandoBH vazio): todo mundo começa o período zerado e o
+  //      saldo é só a soma dos dias. O relatório de banco de horas serve para CONFERIR o fim
+  //      (card "Conferência", renderConferenciaBH): as duas contas têm que bater;
+  //   2) "relatorio": falta algum mês do espelho: parte do saldo do relatório de banco de horas
+  //      que termina dentro do período e dentro do alcance do espelho (saldo anterior + crédito
+  //      − débito, no último dia dele); dali para trás tira o movimento de cada dia, para frente
+  //      soma (avisado na tela, com o mês que falta);
   //   3) "relativo": nenhum dos dois: começa do zero no 1º dia do espelho e mostra só o que
   //      mudou desde então (avisado na tela).
   function saldosBH(p, dias, base){
@@ -3057,17 +3146,17 @@
     Object.keys(porQ).forEach(function(qs){
       var q = +qs, qIni = inicioDoCicloBH(q).getTime(), qFim = fimDoCicloBH(q + 3).getTime();
       var anc = null;
-      p.rels.forEach(function(r){
+      var memo = base.faltaQ || (base.faltaQ = {});   // a conta é a mesma para todas as pessoas
+      if (!memo[q]) memo[q] = ciclosFaltandoBH(q, ultimoCicloPrecisoBH(q, base), base);
+      if (!memo[q].length) anc = { t:qIni - DIA_MS, v:0, tipo:"zero" };
+      if (!anc) p.rels.forEach(function(r){
         if (!r.ini) return;
         var tf = diaT(r.fim), ti = diaT(r.ini);
         if (ti < qIni || tf > qFim) return;
         if (base.minT === null || tf < base.minT - DIA_MS || tf > base.maxT + DIA_MS) return;
         if (!anc || tf > anc.t) anc = { t:tf, v:r.ant + r.c - r.d, tipo:"relatorio", rel:r };
       });
-      if (!anc){
-        if (base.minT !== null && base.minT <= qIni) anc = { t:qIni - DIA_MS, v:0, tipo:"zero" };
-        else anc = { t:Math.max(qIni, base.minT || qIni) - DIA_MS, v:0, tipo:"relativo" };
-      }
+      if (!anc) anc = { t:Math.max(qIni, base.minT || qIni) - DIA_MS, v:0, tipo:"relativo" };
       tipos[q] = anc;
       var movs = Object.keys(p.dias).map(Number).filter(function(t){ return t >= qIni && t <= qFim; });
       porQ[q].forEach(function(t){
@@ -3169,9 +3258,14 @@
     });
     // aviso sobre de onde parte o saldo
     var aviso = [];
-    if (tiposAnc.relatorio) aviso.push("o saldo parte do <b>relatório de banco de horas</b>" + (tiposAnc.relatorio < porPessoa.length ? " (de quem está no relatório)" : ""));
-    if (tiposAnc.zero) aviso.push("sem relatório de banco de horas para o período, o saldo parte do <b>zero</b> no começo do período (o banco recomeça zerado depois de cada fechamento)");
-    if (tiposAnc.relativo) aviso.push("para " + formatNum(tiposAnc.relativo) + " pessoa(s)/período(s) sem relatório de banco de horas, o saldo parte do zero no 1º dia do espelho de ponto do arquivo e mostra <b>só o que mudou desde então</b>");
+    // meses do espelho de ponto que faltam nos períodos escolhidos (o nome do arquivo que falta)
+    var faltaTxt = escolhidos.map(inicioPeriodoBH).filter(function(q, i, a){ return a.indexOf(q) === i; }).map(function(q){
+      var f = ciclosFaltandoBH(q, ultimoCicloPrecisoBH(q, base), base);
+      return f.length ? f.map(nomeCicloBH).join(", ") : "";
+    }).filter(Boolean);
+    if (tiposAnc.zero) aviso.push("todo mundo começa o período com o banco <b>zerado</b> e o saldo é a soma dos dias do espelho de ponto de todos os meses do período; o relatório de banco de horas serve para <b>conferir</b> o resultado (card “Conferência” abaixo)");
+    if (tiposAnc.relatorio) aviso.push("<b style=\"color:#C62828\">falta o espelho de ponto (arquivo Cartão ponto) de " + faltaTxt.join(", ") + "</b>: sem ele não dá para partir do zero, então o saldo parte do <b>relatório de banco de horas</b>" + (tiposAnc.relatorio < porPessoa.length ? " (de quem está no relatório)" : "") + ". Abra junto o arquivo do mês anterior para completar");
+    if (tiposAnc.relativo) aviso.push((faltaTxt.length && !tiposAnc.relatorio ? "<b style=\"color:#C62828\">falta o espelho de ponto (arquivo Cartão ponto) de " + faltaTxt.join(", ") + "</b>; " : "") + "para " + formatNum(tiposAnc.relativo) + " pessoa(s)/período(s) sem relatório de banco de horas (arquivo BH), o saldo parte do zero no 1º dia do espelho de ponto do arquivo e mostra <b>só o que mudou desde então</b>");
     $("bhAviso").innerHTML = escolhidos.length ? "Períodos do banco: " + escolhidos.map(inicioPeriodoBH).filter(function(q, i, a){ return a.indexOf(q) === i; }).map(nomePeriodoBH).join(", ") +
       " (🔒 = mês do fechamento)." + (aviso.length ? " Neste recorte, " + aviso.join("; ") + "." : "") : "";
 
@@ -3234,6 +3328,257 @@
       limitarLista(linhas, "bhPessoas", LIMITE_LISTA, "btnBHPessoasTodos"),
       { tableClass:"tabela-compacta", rowClass:function(r){ return r.fim < 0 ? "row-alert" : ""; } });
   }
+
+  // ---------- Conferência do banco de horas (05/11 depois, pedido do RH) ----------
+  // "Para as visões de BH é preciso só UM relatório de banco de horas (o do último mês
+  // disponível do período), mas o espelho de ponto de TODOS os meses do período: no começo
+  // do período todo mundo está zerado e o fim do relatório é o fim; as contas feitas com os
+  // espelhos têm que bater com o resultado final."
+  // Relatório usado: o que está dentro do período dos meses escolhidos (começa no período ou
+  // depois e termina até o fechamento) e termina mais tarde. Saldo do relatório = saldo anterior
+  // + crédito − débito (antes do pagamento/desconto do fechamento, que zera o banco).
+  function relatorioDoPeriodoBH(q){
+    var qIni = inicioDoCicloBH(q).getTime(), qFim = fimDoCicloBH(q + 3).getTime();
+    return relatoriosBH().filter(function(p){
+      return p.ini && diaT(p.ini) >= qIni && diaT(p.fim) <= qFim;
+    }).sort(function(a, b){ return b.fim - a.fim; })[0] || null;
+  }
+  function renderConferenciaBH(){
+    var base = dadosBH(), escolhidos = mesesBHEscolhidos(), caixa = $("bhConfResumo");
+    var html = '<div class="arc-titulo">Conferência com o relatório de banco de horas</div><ul>';
+    state.bhConfPeriodo = null;
+    if (!escolhidos.length){
+      caixa.innerHTML = html + '<li>O arquivo não traz o espelho de ponto dia a dia: não há o que conferir.</li></ul>';
+      renderTableSimple($("tableBHConf"), [], []); $("btnBHConfTodos").hidden = true; return;
+    }
+    var q = inicioPeriodoBH(escolhidos[escolhidos.length - 1]);
+    var rel = relatorioDoPeriodoBH(q);
+    if (!rel){
+      caixa.innerHTML = html + '<li>Não há relatório de banco de horas do período <b>' + escapeHtml(nomePeriodoBH(q)) +
+        '</b> no arquivo. <b style="color:#C62828">Falta o arquivo BH</b> (relatório de banco de horas do sistema, do começo do período até o último mês fechado).</li></ul>';
+      renderTableSimple($("tableBHConf"), [], []); $("btnBHConfTodos").hidden = true; return;
+    }
+    var tIni = diaT(rel.ini), tFim = diaT(rel.fim), qIni = inicioDoCicloBH(q).getTime();
+    state.bhConfPeriodo = "Relatório de banco de horas: " + formatDateBR(rel.ini) + " a " + formatDateBR(rel.fim) + " (não segue o filtro de período)";
+    var falta = ciclosFaltandoBH(q, numCicloBH(rel.fim), base);
+    html += '<li>Período do banco: <b>' + escapeHtml(nomePeriodoBH(q)) + '</b>, começando zerado em ' + formatDateBR(new Date(qIni)) +
+      '. Relatório de banco de horas usado: <b>' + formatDateBR(rel.ini) + ' a ' + formatDateBR(rel.fim) + '</b>.</li>';
+    if (falta.length){
+      caixa.innerHTML = html + '<li><b style="color:#C62828">Não dá para conferir: falta o espelho de ponto (arquivo Cartão ponto) de ' +
+        falta.map(nomeCicloBH).join(", ") + '.</b> Para a conta partir do zero, o painel precisa do espelho de todos os meses de ' +
+        formatDateBR(new Date(qIni)) + ' até ' + formatDateBR(rel.fim) + '. Abra junto o arquivo do mês anterior (botão “+ Juntar mais um arquivo”) ou gere os arquivos com o Cartão ponto que falta na pasta.</li></ul>';
+      renderTableSimple($("tableBHConf"), [], []); $("btnBHConfTodos").hidden = true; return;
+    }
+    if (tIni > qIni) html += '<li>O relatório começa depois do começo do período: o saldo dele inclui o que a pessoa trazia de antes (saldo anterior); a conferência compara o <b>saldo no fim</b>.</li>';
+    var linhas = pessoasBH(true).map(function(p){
+      var r = p.rels.filter(function(x){ return x.ini && diaT(x.ini) === tIni && diaT(x.fim) === tFim; })[0];
+      var c = 0, d = 0;
+      Object.keys(p.dias).forEach(function(k){ var t = +k; if (t >= tIni && t <= tFim){ c += p.dias[k].c; d += p.dias[k].d; } });
+      var calc = saldosBH(p, [tFim], base).saldo[tFim] || 0;
+      if (!r && !c && !d && !calc) return null;
+      var sr = r ? r.ant + r.c - r.d : null;
+      var dif = r ? calc - sr : null;
+      return { colaborador:p.nome, gestor:p.ref.gestor, c:c, d:d, calc:calc, rc:r ? r.c : null, rd:r ? r.d : null, rs:sr, dif:dif,
+               bate: r ? Math.abs(dif) <= 1 : false, semRel: !r };
+    }).filter(Boolean);
+    var batem = linhas.filter(function(l){ return l.bate; }).length, semRel = linhas.filter(function(l){ return l.semRel; }).length;
+    var naoBatem = linhas.length - batem - semRel;
+    html += '<li><b style="color:#2E7D32">' + formatNum(batem) + '</b> de ' + formatNum(linhas.length - semRel) + ' pessoa(s) do relatório <b>batem</b> (saldo calculado = saldo do relatório)' +
+      (naoBatem ? '; <b style="color:#C62828">' + formatNum(naoBatem) + (naoBatem > 1 ? ' não batem' : ' não bate') + '</b> (em vermelho na tabela)' : '') + '.</li>';
+    if (semRel) html += '<li>' + formatNum(semRel) + ' pessoa(s) têm banco no espelho de ponto, mas não estão no relatório de banco de horas.</li>';
+    caixa.innerHTML = html + '</ul>';
+    linhas.sort(function(a, b){ return (a.bate - b.bate) || Math.abs(b.dif || 0) - Math.abs(a.dif || 0) || a.colaborador.localeCompare(b.colaborador, "pt-BR"); });
+    var hm = function(v){ return v == null ? "&ndash;" : formatHoras(v); };
+    var sn = function(v){ return v == null ? "&ndash;" : '<span style="color:' + (v > 0 ? "#2E7D32" : (v < 0 ? "#C62828" : "inherit")) + '">' + formatSaldo(v) + '</span>'; };
+    renderTableSimple($("tableBHConf"),
+      [{label:"Colaborador", render:function(r){ return colabLink(r.colaborador); }},
+       {label:"Gestor", render:function(r){ return escapeHtml(r.gestor); }},
+       {label:"Crédito no espelho", html:"Crédito<br>espelho", width:"74px", render:function(r){ return hm(r.c); }},
+       {label:"Crédito no relatório", html:"Crédito<br>relatório", width:"74px", render:function(r){ return hm(r.rc); }},
+       {label:"Débito no espelho", html:"Débito<br>espelho", width:"74px", render:function(r){ return hm(r.d); }},
+       {label:"Débito no relatório", html:"Débito<br>relatório", width:"74px", render:function(r){ return hm(r.rd); }},
+       {label:"Saldo calculado", html:"Saldo<br>calculado", width:"80px", render:function(r){ return sn(r.calc); }},
+       {label:"Saldo do relatório", html:"Saldo do<br>relatório", width:"80px", render:function(r){ return sn(r.rs); }},
+       {label:"Resultado", width:"120px", render:function(r){
+         return r.semRel ? "não está no relatório" : (r.bate ? '<span style="color:#2E7D32;font-weight:700">bate</span>'
+           : '<strong style="color:#C62828">diferença de ' + formatSaldo(r.dif) + '</strong>'); }}],
+      limitarLista(linhas, "bhConf", LIMITE_LISTA, "btnBHConfTodos"),
+      { tableClass:"tabela-compacta", rowClass:function(r){ return !r.bate && !r.semRel ? "row-alert" : ""; } });
+  }
+
+  // ---------- Arquivos carregados (05/11 depois, pedido do RH) ----------
+  // Cada linha do CSV vem de uma informação do sistema (o relatório que o RH baixa e põe na
+  // pasta do mês, com o nome que a macro GerarCSVsDaPasta confere). FONTES_ARQ diz, pelo tipo
+  // da linha, de onde ela veio; resumoFontes junta por informação (linhas, 1ª e última data,
+  // meses de 28 a 27); SECOES_FONTES diz o que cada seção precisa. meses3 = relatório de 3
+  // meses: o painel confere se veio cada um dos 3 meses que terminam no mês do espelho.
+  var FONTES_ARQ = [
+    { id:"trat", nome:"Ocorrências do mês", arquivo:"planilha de ocorrências do RH (internos e externos)", teste:function(t){ return !isTipoNaoOcorrencia(t) || isTipoHoraExtra(t); } },
+    { id:"cartao", nome:"Espelho de ponto", arquivo:"Cartão ponto (um por mês)", meses3:true, teste:function(t){ return isTipoBHDia(t) || t === TIPO_RESUMO_HORAS_CARTAO || t === TIPO_AUDITORIA_EXTRA_FALTA || isTipoCurta(t) || t === TIPO_ABSENTEISMO; } },
+    { id:"bh", nome:"Banco de horas", arquivo:"BH", teste:isTipoBancoHoras },
+    { id:"pausas", nome:"Pausas térmicas", arquivo:"Pausas térmicas 3 meses", meses3:true, teste:function(t){ return t === TIPO_RESUMO_PAUSAS_TERMICAS || isTipoPausaDia(t); } },
+    { id:"dig", nome:"Marcações digitadas", arquivo:"Digitadas 3 meses", meses3:true, teste:isTipoDigitada },
+    { id:"afast", nome:"Afastamentos", arquivo:"Afastamentos 3 meses", teste:function(t){ return t === TIPO_AFASTAMENTO; } },
+    { id:"pontonet", nome:"PontoNet", arquivo:"Pontonet 3 meses", meses3:true, teste:isTipoPontoNet },
+    { id:"exced", nome:"Horas excedentes", arquivo:"Excedentes 3 meses", teste:function(t){ return t === "Horas Excedentes"; } },
+    { id:"intra", nome:"Intrajornada", arquivo:"Intrajornada 3 meses", teste:function(t){ return t === "Intrajornada"; } },
+    { id:"inter", nome:"Interjornada", arquivo:"Interjornada 3 meses", teste:function(t){ return t === "Interjornada"; } },
+    { id:"intersem", nome:"Interjornada semanal", arquivo:"Interjornada semanal 3 meses", teste:function(t){ return t === "Interjornada Semanal"; } },
+    { id:"org", nome:"Lista de equipes", arquivo:"lista de quem é gestor de quem (planilha do RH)", semPeriodo:true, teste:function(t){ return t === TIPO_CADASTRO_ORG; } }
+  ];
+  function fonteArq(id){ return FONTES_ARQ.filter(function(f){ return f.id === id; })[0]; }
+  var SECOES_FONTES = [
+    { pag:"geral", precisa:["trat"], usa:["org"] },
+    { pag:"digitadas", precisa:["dig"], usa:["trat"] },
+    { pag:"afastamentos", precisa:["afast"], usa:["cartao"] },
+    { pag:"jornada", precisa:["exced","intra","inter","intersem"], usa:["org"] },
+    { pag:"destaque", precisa:["cartao"], usa:["trat"] },
+    { pag:"bancohoras", precisa:["cartao","bh"], usa:[] },
+    { pag:"pausas", precisa:["pausas"], usa:[] },
+    { pag:"demora", precisa:["pontonet"], usa:["afast","org","trat"] },
+    { pag:"tendencias", precisa:[], usa:["trat","dig","afast","exced","intra","inter","intersem","pausas","pontonet"] },
+    { pag:"org", precisa:["org"], usa:["trat","dig","cartao"] },
+    { pag:"historico", precisa:["trat"], usa:[] }
+  ];
+  function resumoFontes(records){
+    var out = {};
+    records.forEach(function(r){
+      for (var i = 0; i < FONTES_ARQ.length; i++){
+        var f = FONTES_ARQ[i];
+        if (!f.teste(r.tipo)) continue;
+        var x = out[f.id] || (out[f.id] = { n:0, min:null, max:null, ciclos:{}, rels:{}, pessoas:{} });
+        x.n++;
+        if (r.data && !f.semPeriodo){
+          var t = diaT(r.data);
+          if (x.min === null || t < x.min) x.min = t;
+          if (x.max === null || t > x.max) x.max = t;
+          x.ciclos[numCicloBH(r.data)] = true;
+        }
+        if (f.id === "bh" && r.bhInicio) x.rels[toISODate(r.bhInicio) + "|" + toISODate(r.data)] = { ini:r.bhInicio, fim:r.data };
+        if (f.id === "org") x.pessoas[chavePessoa(r)] = true;
+        break;
+      }
+    });
+    return out;
+  }
+  function listaCiclos(x){ return Object.keys(x.ciclos).map(Number).sort(function(a, b){ return a - b; }); }
+  // texto do período de uma informação: "28/07/2026 a 27/10/2026" ou, no banco de horas, os relatórios
+  function periodoFonteTxt(id, x){
+    if (id === "org") return formatNum(Object.keys(x.pessoas).length) + " pessoa(s) (não tem período)";
+    if (id === "bh"){
+      var rels = Object.keys(x.rels).map(function(k){ return x.rels[k]; }).sort(function(a, b){ return a.fim - b.fim; });
+      return rels.length ? rels.map(function(p){ return "relatório de " + formatDateBR(p.ini) + " a " + formatDateBR(p.fim); }).join("; ")
+        : (x.max !== null ? "até " + formatDateBR(new Date(x.max)) : "");
+    }
+    return x.min !== null ? formatDateBR(new Date(x.min)) + " a " + formatDateBR(new Date(x.max)) : "";
+  }
+  function mesesFonteTxt(id, x){
+    if (id === "org" || id === "afast") return "&ndash;";   // afastamentos: férias programadas esticam as datas
+    if (id === "bh"){
+      var ms = []; Object.keys(x.rels).forEach(function(k){ var p = x.rels[k];
+        for (var n = numCicloBH(p.ini); n <= numCicloBH(p.fim); n++) if (ms.indexOf(n) < 0) ms.push(n); });
+      return ms.sort(function(a, b){ return a - b; }).map(nomeCicloBH).join(", ") || "&ndash;";
+    }
+    return listaCiclos(x).map(nomeCicloBH).join(", ") || "&ndash;";
+  }
+  // mês de referência: o último mês do espelho de ponto (ou o fim do período padrão)
+  function cicloReferenciaArq(geral){
+    var c = geral.cartao ? listaCiclos(geral.cartao) : [];
+    if (c.length) return c[c.length - 1];
+    var tot = periodoCompleto();
+    return tot ? numCicloBH(new Date(tot.fim + "T00:00:00")) : null;
+  }
+  // problemas de uma informação no conjunto dos arquivos: [] = tudo certo
+  function problemasFonte(id, geral, ref){
+    var f = fonteArq(id), x = geral[id];
+    if (!x) return ["Falta o arquivo <b>" + escapeHtml(f.arquivo) + "</b>"];
+    if (f.meses3 && ref !== null){
+      var falta = [ref - 2, ref - 1, ref].filter(function(n){ return !x.ciclos[n]; });
+      if (falta.length) return ["Falta " + falta.map(nomeCicloBH).join(", ") + " em <b>" + escapeHtml(f.arquivo) + "</b>"];
+    }
+    return [];
+  }
+  // banco de horas: o relatório mais recente e o espelho de ponto de todos os meses do período
+  function problemasBH(geral){
+    var out = [], base = dadosBH();
+    if (!geral.cartao) out.push("Falta o arquivo <b>Cartão ponto</b>");
+    if (!geral.bh) out.push("Falta o arquivo <b>BH</b> (relatório de banco de horas)");
+    var ult = base.ciclos.length ? base.ciclos[base.ciclos.length - 1] : null;
+    var rels = relatoriosBH();
+    if (rels.length && (ult === null || numCicloBH(rels[0].fim) > ult)) ult = numCicloBH(rels[0].fim);
+    if (ult === null) return out;
+    var q = inicioPeriodoBH(ult), f = ciclosFaltandoBH(q, ultimoCicloPrecisoBH(q, base), base);
+    if (geral.cartao && f.length) out.push("Falta o espelho de ponto de " + f.map(nomeCicloBH).join(", ") + " (arquivo <b>Cartão ponto</b> do mês): o banco do período " +
+      escapeHtml(nomePeriodoBH(q)) + " começa zerado em " + formatDateBR(inicioDoCicloBH(q)) + " e a conta precisa de todos os meses");
+    if (geral.bh && !relatorioDoPeriodoBH(q)) out.push("O relatório de banco de horas (arquivo <b>BH</b>) não é do período " + escapeHtml(nomePeriodoBH(q)) + ": não dá para conferir o saldo");
+    return out;
+  }
+  function geralFontes(){
+    if (state.arqGeral && state.arqGeral.recs === state.records) return state.arqGeral.r;
+    state.arqGeral = { recs:state.records, r:resumoFontes(state.records) };
+    return state.arqGeral.r;
+  }
+  function renderArquivos(){
+    var geral = geralFontes(), ref = cicloReferenciaArq(geral), arqs = state.arquivos || [];
+    // por arquivo
+    var cont = $("arqPorArquivo"); cont.innerHTML = "";
+    arqs.forEach(function(a, i){
+      var fontes = a.fontes || {};
+      var h = document.createElement("div"); h.className = "arq-bloco";
+      h.innerHTML = '<div class="arq-nome">' + (arqs.length > 1 ? (i + 1) + ". " : "") + escapeHtml(a.nome) + ' <span>' + formatNum(a.linhas) + ' linhas</span></div>';
+      var corpo = document.createElement("div"); h.appendChild(corpo);
+      var linhas = FONTES_ARQ.filter(function(f){ return fontes[f.id]; }).map(function(f){ return { f:f, x:fontes[f.id] }; });
+      renderTableSimple(corpo,
+        [{label:"Informação", width:"22%", render:function(r){ return '<strong>' + escapeHtml(r.f.nome) + '</strong>'; }},
+         {label:"Arquivo do sistema", width:"24%", render:function(r){ return escapeHtml(r.f.arquivo); }},
+         {label:"Linhas", width:"64px", render:function(r){ return formatNum(r.x.n); }},
+         {label:"Período", render:function(r){ return escapeHtml(periodoFonteTxt(r.f.id, r.x)); }},
+         {label:"Meses (28 a 27)", html:"Meses<br>(28 a 27)", width:"20%", render:function(r){ return mesesFonteTxt(r.f.id, r.x); }}],
+        linhas, { tableClass:"tabela-compacta" });
+      var nao = FONTES_ARQ.filter(function(f){ return !fontes[f.id]; }).map(function(f){ return f.nome; });
+      if (nao.length){ var p = document.createElement("div"); p.className = "arq-nao"; p.textContent = "Não veio neste arquivo: " + nao.join(", ") + "."; h.appendChild(p); }
+      cont.appendChild(h);
+    });
+    // por seção
+    var linhasSec = SECOES_FONTES.map(function(sf){
+      var probs = [], avisos = [];
+      sf.precisa.forEach(function(id){ probs = probs.concat(problemasFonte(id, geral, ref)); });
+      if (sf.pag === "bancohoras"){ probs = problemasBH(geral); }
+      sf.usa.forEach(function(id){ if (!geral[id]) avisos.push("Sem <b>" + escapeHtml(fonteArq(id).arquivo) + "</b>: a parte que usa " + escapeHtml(fonteArq(id).nome.toLowerCase()) + " fica de fora"); });
+      if (sf.pag === "tendencias"){
+        var tem = sf.usa.filter(function(id){ return geral[id]; });
+        if (!tem.length) probs.push("Nenhum relatório de 3 meses no arquivo");
+        avisos = sf.usa.filter(function(id){ return !geral[id]; }).map(function(id){ return "Sem <b>" + escapeHtml(fonteArq(id).arquivo) + "</b>"; });
+      }
+      return { sf:sf, probs:probs, avisos:avisos };
+    });
+    var nomeF = function(id){ return escapeHtml(fonteArq(id).nome); };
+    renderTableSimple($("arqPorSecao"),
+      [{label:"Seção", width:"18%", render:function(r){ return '<a href="#" class="arq-ir" data-ir-pagina="' + r.sf.pag + '">' + escapeHtml(nomePagina(r.sf.pag)) + '</a>'; }},
+       {label:"Precisa", width:"22%", render:function(r){ return r.sf.precisa.map(nomeF).join(", ") || "&ndash;"; }},
+       {label:"Também usa", width:"22%", render:function(r){ return r.sf.usa.map(nomeF).join(", ") || "&ndash;"; }},
+       {label:"Situação", render:function(r){
+         var h = r.probs.length ? r.probs.map(function(t){ return '<div style="color:#C62828">&#9888; ' + t + '</div>'; }).join("")
+                                : '<div style="color:#2E7D32;font-weight:700">&#10003; tudo certo</div>';
+         return h + r.avisos.map(function(t){ return '<div style="color:var(--c-muted)">' + t + '</div>'; }).join(""); }}],
+      linhasSec, { tableClass:"tabela-compacta", rowClass:function(r){ return r.probs.length ? "row-alert" : ""; } });
+    // resumo em frases
+    var html = '<div class="arc-titulo">Resumo dos arquivos abertos</div><ul>';
+    html += '<li><b>' + formatNum(arqs.length) + '</b> arquivo(s) aberto(s) com <b>' + formatNum(state.records.length) + '</b> linhas' +
+      (state.repetidas ? ' (' + formatNum(state.repetidas) + ' repetida(s) entre os arquivos contada(s) uma vez só)' : '') + '.</li>';
+    if (geral.cartao) html += '<li>Espelho de ponto: <b>' + listaCiclos(geral.cartao).map(nomeCicloBH).join(", ") + '</b> (' + escapeHtml(periodoFonteTxt("cartao", geral.cartao)) + ').</li>';
+    if (geral.bh) html += '<li>Banco de horas: ' + escapeHtml(periodoFonteTxt("bh", geral.bh)) + '.</li>';
+    var comProb = linhasSec.filter(function(l){ return l.probs.length; });
+    html += comProb.length ? '<li><b style="color:#C62828">' + formatNum(comProb.length) + ' seção(ões) com informação faltando:</b> ' +
+      comProb.map(function(l){ return escapeHtml(nomePagina(l.sf.pag)); }).join(", ") + ' (detalhes na tabela “O que cada seção do painel usa”).</li>'
+      : '<li><b style="color:#2E7D32">Nenhuma seção com informação faltando.</b></li>';
+    $("arqResumo").innerHTML = html + '</ul>';
+  }
+  document.addEventListener("click", function(e){
+    var a = e.target.closest("a.arq-ir[data-ir-pagina]");
+    if (!a) return;
+    e.preventDefault(); irParaPagina(a.getAttribute("data-ir-pagina"));
+  });
 
   // Gráfico de linha do saldo (pode ser negativo): linha do zero mais grossa, área verde acima
   // e vermelha abaixo, tracejado no último dia de cada período (fechamento) e balão em cada ponto.
@@ -4350,6 +4695,8 @@
     // (05/11) seção "Banco de horas": seletores, números, linha do saldo e tabela por pessoa;
     // os cards de crédito/débito abaixo seguem os meses escolhidos lá
     renderBancoHoras();
+    renderConferenciaBH();
+    renderArquivos();
     var horas = horasBancoPorColaborador(records);
     var limiteBanco = 10;
     var bancoCheio = emTelaCheia($("chartBancoHoras"));
@@ -6227,16 +6574,19 @@
       // duas batidas digitadas no mesmo minuto) e ficam as duas.
       var base = adicionar ? state.records.slice() : [];
       var vistas = new Set(base.map(function(r){ return r._linha; }));
-      var repetidas = 0;
-      bons.forEach(function(l){
+      var repetidas = 0, primeiroArq = adicionar ? state.arquivos.length : 0;
+      bons.forEach(function(l, i){
         var desteArquivo = [];
+        // _arq = de qual arquivo a linha veio (seção "Arquivos carregados" e banco de horas:
+        // o mesmo dia de uma pessoa em dois arquivos vale o do arquivo mais novo)
+        l.res.records.forEach(function(r){ r._arq = primeiroArq + i; });
         l.res.records.forEach(function(r){
           if (vistas.has(r._linha)){ repetidas++; return; }
           desteArquivo.push(r);
         });
         desteArquivo.forEach(function(r){ vistas.add(r._linha); base.push(r); });
       });
-      state.arquivos = (adicionar ? state.arquivos : []).concat(bons.map(function(l){ return { nome:l.nome, linhas:l.res.records.length }; }));
+      state.arquivos = (adicionar ? state.arquivos : []).concat(bons.map(function(l){ return { nome:l.nome, linhas:l.res.records.length, fontes:resumoFontes(l.res.records) }; }));
       state.repetidas = (adicionar ? (state.repetidas || 0) : 0) + repetidas;
       abrirDados(base);
     });
@@ -7010,7 +7360,7 @@
              "historySection"],
     digCiclo: ["chartDigMotivo","chartDigDiaSemana","chartDigData","chartDigTop","chartDigGestor","chartDigHora",
              "tableDigJust","tableDigLista"],
-    cartao: [], cartao3: ["tableExtraFalta"], bh: ["chartFechamentoBH"],
+    cartao: [], cartao3: ["tableExtraFalta"], bh: ["chartFechamentoBH"], bhConf: ["tableBHConf"],
     bhSel: ["chartBHLinha","tableBHPessoas","chartBancoHoras","chartSaldoPositivo","chartSaldoNegativo"], pausas: ["tablePausasTermicas","chartPauAcima","tablePauAcimaGestor","chartPauGrupo"],
     pausasMeses: ["chartPauEvolucao"],
     pauBat: ["chartPauHora","chartPauDiaSemana","chartPauPrimeira","chartPauSemPausa","chartPauMaior","pauHeat"],
@@ -7048,7 +7398,7 @@
       pnTodos: state.pnPeriodo && state.pnPeriodo.todos, pnCiclo: state.pnPeriodo && state.pnPeriodo.ciclo,
       jorTodos: state.jorPeriodo && state.jorPeriodo.todos, jorCiclo: state.jorPeriodo && state.jorPeriodo.ciclo,
       digCiclo: state.digPeriodo,
-      bh: state.bhPeriodo, bhSel: state.bhSelPeriodo
+      bh: state.bhPeriodo, bhSel: state.bhSelPeriodo, bhConf: state.bhConfPeriodo
     };
     Object.keys(PERIODO_DOS_CARDS).forEach(function(tipo){
       PERIODO_DOS_CARDS[tipo].forEach(function(id){

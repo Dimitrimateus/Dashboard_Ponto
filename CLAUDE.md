@@ -344,8 +344,8 @@ conteúdo num módulo.
      data = fim do período; situacao = local; colunas 38–44 = início do período, saldo anterior
      (pos − neg), crédito, débito, anistiadas, pagas, saldo final (pos − neg), em minutos. O CSV não diz
      se fechou: o painel calcula pelo período.
-   - "BH Dia" (05/11, `GerarLinhasBHDia`): uma por pessoa e dia com movimento no banco, de todos
-     os Cartões lidos (até 3): colunas 24/25 = crédito (coluna **50%**; a 100% é paga à parte — conferido:
+   - "BH Dia" (05/11, `GerarLinhasBHDia`): uma por pessoa e dia com movimento no banco, dos **4**
+     Cartões mais recentes (`MAXIMO_MESES_BANCO`; o resto do CSV continua com 3): colunas 24/25 = crédito (coluna **50%**; a 100% é paga à parte — conferido:
      somar a 100% passa do crédito do HRES105 em 10 casos) / débito (coluna **BH**). Pessoa+dia repetido
      em dois Cartões: vale o 1º. Ex.: Cartões 28/07–27/10: 4.747 linhas.
    - "Justificativa PontoNet" (05/11): **só gestores do ORG** (`dictGestoresORG` = coluna GESTOR do
@@ -573,6 +573,21 @@ PontoNet"); 28/29 na "Absenteísmo" e na "Afastamento"; 30/31/32 nas 4 de jornad
   `#bhRelatorio` com 2+), "com fechamento" se o período inclui fev/jun/out; **Hr. Anist. = "descontadas
   na folha"** (a análise dele trata assim; antes o painel dizia "perdoadas" — confirmar com ele).
   Card do colaborador: "Saldo do banco no último dia". Botões "?" laranja (pedido de 05/11).
+- **05/11 (depois) — Banco a partir do zero + conferência** (pedido do Dimitri): `saldosBH` agora parte do
+  **zero no 1º dia do período** sempre que o arquivo tem o espelho de todos os meses do período até o último
+  que precisa (`ciclosFaltandoBH`, `ultimoCicloPrecisoBH`: o maior entre o último espelho e o fim do relatório
+  no período; memo em `base.faltaQ`); só se faltar mês volta à âncora no relatório (aviso vermelho com o mês).
+  Card **"Conferência: espelho de ponto × relatório de banco de horas"** (`renderConferenciaBH`, `#tableBHConf`,
+  `#bhConfResumo`, selo `bhConf`): relatório = `relatorioDoPeriodoBH(q)` (dentro do período dos meses
+  escolhidos, o que termina mais tarde); saldo do relatório = anterior + crédito − débito; bate = diferença
+  ≤ 1 min. `dadosBH`: cada mês do espelho vem de UM arquivo (`donoCiclo` = o arquivo cujo "BH Dia" vai mais
+  longe), para CSV deste mês + do anterior não somarem um dia duas vezes. Linha tem `_arq` (índice do arquivo).
+- **05/11 (depois) — Seção "Arquivos carregados"** (`data-pagina="arquivos"`, 1ª do menu, antes de
+  Ocorrências; `renderArquivos`): `FONTES_ARQ` (tipo da linha → informação + nome do arquivo da pasta do mês;
+  `meses3` = confere os 3 meses que terminam no último mês do espelho), `resumoFontes` (por arquivo, guardado
+  em `state.arquivos[i].fontes` ao abrir; e geral, `geralFontes`), `SECOES_FONTES` (precisa × também usa),
+  `problemasFonte`/`problemasBH` ("Falta o arquivo X", "Falta Jul/26 em X", "Falta o espelho de ponto de
+  Jul/26"). Links `.arq-ir` levam à seção. Sem filtro (é do arquivo inteiro).
 - Paleta: laranja `#F7931E`, vermelho `#E31E24`, amarelo `#FFC72C`, preto `#1A1A1A`, cinzas.
 
 ## 7. Conferência feita (01/10/2026)
@@ -971,6 +986,13 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   agora com todos os Cartões, 50% e BH; PontoNet com o filtro do ORG). A análise dele traz também
   "Valor do desconto (R$)" (salário): não foi para o painel (salário segue em aberto).
 
+- 05/11 (depois 2): pedido do Dimitri (foto): seção "Arquivos carregados" e banco de horas a partir do
+  zero com conferência pelo relatório BH (ver seção 6); "BH Dia" dos 4 Cartões mais recentes ("Cartão ponto
+  4" opcional na pasta no último mês do período). Testado com CSV inventado (dois "meses" de exportação,
+  diferença proposital de 25 min numa pessoa: achada): sem erro de JS, NaN ou rolagem lateral em
+  1400/390/360 px, com 1 arquivo, 2 juntos e sem banco de horas. `conferir_painel.py` não rodou (sem a
+  planilha nesta sessão). A macro mudada (4 Cartões) não rodou no Excel.
+
 ## 12. Estado atual e como continuar (05/11/2026)
 
 **Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`, branch **`main`** (desde 04/11 tudo
@@ -1037,11 +1059,14 @@ reunião é por gestor ou com todos e se pode usar salário (só o total da equi
 - Sem status (Regularizado/Pendente): o painel é feito depois do fim do mês.
 - Sem "Entenda o painel" no topo; "?" em cada card e "Entenda esta seção". Topo: ☰ + logo |
   período no meio | nome do painel + "Esconder filtros" (abaixo de 1180 px vira uma fila).
-- Ordem do menu: Ocorrências, Marcações digitadas, Afastamentos, Jornada, Colaboradores em
+- Ordem do menu: **Arquivos carregados** (05/11), Ocorrências, Marcações digitadas, Afastamentos, Jornada, Colaboradores em
   destaque, **Banco de horas** (05/11), Pausas térmicas, PontoNet, Tendências, Lista de colaboradores,
   Histórico, Todas.
 - (05/11) Banco de horas: períodos fixos nov–fev, mar–jun, jul–out, fechamento no último mês;
   crédito = hora extra 50%, débito = BH; PontoNet só de gestores do ORG; botões "?" laranja.
+- (05/11 depois) Banco de horas: todo mundo começa o período ZERADO; o saldo vem só dos espelhos de ponto
+  de todos os meses do período; o relatório BH (um só, o do último mês disponível do período) é para
+  conferir — as duas contas têm que bater. Seção "Arquivos carregados" é a 1ª do menu.
 - Ordem base dos gráficos em toda seção: números do topo → mês a mês → o quê → quando → por
   gestor → por pessoa → mapa → sinais de atenção → tendências → lista. Card novo segue essa ordem.
 - Seletor que comanda vários cards fica numa caixa laranja (`.grupo-sel`) junto com eles.

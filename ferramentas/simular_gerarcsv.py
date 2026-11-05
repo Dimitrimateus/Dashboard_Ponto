@@ -63,7 +63,7 @@ for n in d:
         if 'Matrícula' in h and 'DT' in h:
             mx=max((r[h['DT']] for r in rows[2:] if isinstance(r[h['DT']],datetime.datetime)),default=None)
             cards.append((mx,n))
-cards.sort(reverse=True); cards=cards[:3]
+cards.sort(reverse=True); cardsBH=cards[:4]; cards=cards[:3]   # BH Dia: até 4 (período do banco, 05/11)
 cur=cards[0][1]; rows,h=cart(cur)
 dictCart={}
 for r in rows[2:]:
@@ -182,9 +182,10 @@ for m,(ex,bh) in hrs.items():
         se,ca=setorcargo(m)
         W(dmax,nomesH[m] or 'Matrícula '+m,m,gestorPor.get(m,''),se,ca,'Resumo Horas Cartão','','Pendente',0,hx=vround(ex),hb=vround(bh))
 # BH Dia (05/11, GerarLinhasBHDia): uma por pessoa e dia com movimento no banco, de todos os
-# Cartões (até 3): hx = crédito (50%), hb = débito (BH); pessoa+dia repetidos: vale o 1º.
+# Cartões (até os 4 mais recentes: um período inteiro do banco): hx = crédito (50%), hb = débito (BH);
+# pessoa+dia repetidos: vale o 1º.
 _vistosBH=set()
-for _,nc in cards:
+for _,nc in cardsBH:
     rc,hc=cart(nc)
     for r in rc[2:]:
         m=s(r[hc['Matrícula']]); dt=r[hc['DT']]

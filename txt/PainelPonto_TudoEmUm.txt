@@ -246,7 +246,8 @@ End Function
 '     crédito, débito, horas anistiadas, horas pagas, saldo final (minutos).
 '     Ver GerarLinhasBancoHoras.
 '   - tipo_ocorrencia = "BH Dia" (05/11) → uma por pessoa e dia com movimento no
-'     banco nos Cartões: colunas 24/25 = crédito (50%) / débito (BH) do dia.
+'     banco nos Cartões (até os 4 mais recentes: um período inteiro do banco):
+'     colunas 24/25 = crédito (50%) / débito (BH) do dia.
 '     Ver GerarLinhasBHDia.
 '   - tipo_ocorrencia = "Resumo Horas Cartão" → preenche
 '     minutos_hora_extra_cartao / minutos_banco_horas_cartao (total do
@@ -856,15 +857,21 @@ ProximaAbaTratamento:
 
     ' =====================================================================
     ' Banco de horas dia a dia (05/11): uma linha "BH Dia" por pessoa e dia
-    ' com movimento no banco, de TODOS os Cartões lidos (até 3 meses):
+    ' com movimento no banco, dos Cartões da planilha (até os 4 mais recentes,
+    ' 05/11 depois: o período do banco tem 4 meses e começa zerado, então no
+    ' último mês do período — fev, jun, out — o painel precisa dos 4 espelhos
+    ' para calcular o saldo e conferir com o relatório de banco de horas):
     ' crédito = hora extra 50% (vai para o banco; a 100% é paga à parte) e
     ' débito = coluna BH. O painel soma dia a dia e desenha o saldo, ancorado
     ' no relatório de banco de horas (aba Banco de Horas). Ver GerarLinhasBHDia.
     ' =====================================================================
     Dim qtdBHDia As Long
     qtdBHDia = 0
-    If abasCartao.Count > 0 Then
-        GerarLinhasBHDia abasCartao, dictRE, dictGestorPorMatricula, dictGrupoPorMatricula, _
+    Const MAXIMO_MESES_BANCO As Long = 4
+    Dim abasCartaoBH As Collection
+    Set abasCartaoBH = AbasMaisRecentes(EncontrarAbasCartao(wbTrat), MAXIMO_MESES_BANCO)
+    If abasCartaoBH.Count > 0 Then
+        GerarLinhasBHDia abasCartaoBH, dictRE, dictGestorPorMatricula, dictGrupoPorMatricula, _
             wsCSV, linhaSaida, qtdBHDia
     End If
 
@@ -1785,7 +1792,7 @@ End Function
 ' BANCO DE HORAS DIA A DIA (05/11)
 ' ---------------------------------------------------------------------
 ' Uma linha "BH Dia" por pessoa e dia com movimento no banco de horas, lida de
-' cada aba de Cartão (até 3 meses): data = o dia; situacao = descrição do dia
+' cada aba de Cartão (até as 4 mais recentes): data = o dia; situacao = descrição do dia
 ' ("Trabalhando", "Falta (Banco Horas)"...); minutos_hora_extra_cartao (24) =
 ' crédito no banco = coluna 50%; minutos_banco_horas_cartao (25) = débito =
 ' coluna BH. A hora extra 100% não entra: é paga à parte (conferido com o
@@ -3654,7 +3661,10 @@ End Function
 '      Pontonet 3 meses, Excedentes 3 meses, Intrajornada 3 meses, Interjornada 3
 '      meses, Interjornada semanal 3 meses e BH (banco de horas, desde 04/11). Se
 '      faltar algum, avisa quais e para sem mexer em nada. A RE nova pode ficar na
-'      pasta também (é opcional);
+'      pasta também (é opcional). (05/11) No último mês do período do banco de horas
+'      (fevereiro, junho, outubro) coloque também o "Cartão ponto 4" (o 1º mês do
+'      período): a pasta não exige, mas o painel precisa do espelho dos 4 meses para
+'      calcular o saldo do banco a partir do zero e conferir com o BH;
 '   2) só então pede a pasta onde os CSVs vão ser gravados;
 '   3) abre cada arquivo, traz as abas dele para esta planilha e fecha (os arquivos
 '      da pasta não são alterados);

@@ -564,3 +564,22 @@ As 15 ideias marcadas na página de ideias que ainda faltavam:
 - **PontoNet só dos gestores que estão no ORG** (macro e painel); as equipes deles também saem.
 - Botões **"?"** em laranja.
 
+
+## Arquivos carregados e banco de horas a partir do zero (05/11, depois)
+
+- **Seção nova "Arquivos carregados"** (a primeira do menu, antes de Ocorrências): para cada CSV aberto,
+  que informação do sistema veio nele (espelho de ponto, BH, pausas, digitadas, afastamentos, PontoNet,
+  jornada, lista de equipes), com o **período** e os **meses** (28 a 27); e, somando os arquivos, o que
+  **cada seção usa** e o que **falta**, com o nome do arquivo da pasta do mês (ex.: "Falta Jul/26 em
+  Digitadas 3 meses", "Falta o espelho de ponto de Jul/26 (arquivo Cartão ponto)").
+- **Banco de horas a partir do zero**: no começo do período (nov, mar, jul) todo mundo está zerado. Com o
+  espelho de ponto de **todos os meses do período** no arquivo, o saldo é só a soma dos dias; o relatório
+  de banco de horas (um só: o do último mês fechado do período) serve para **conferir**. Card novo
+  **"Conferência: espelho de ponto × relatório de banco de horas"**: crédito, débito e saldo de cada pessoa
+  pelos dois lados; diferença em vermelho. Faltando um mês do espelho, o painel diz qual e o saldo volta a
+  partir do relatório.
+- Dá para abrir junto o CSV do mês anterior para completar os meses: cada mês do espelho vem de um
+  arquivo só (o mais novo que tem aquele mês), para um dia que o sistema mudou não contar duas vezes.
+- **GerarCSVPonto**: as linhas "BH Dia" vêm dos **4** Cartões mais recentes (antes 3). No último mês do
+  período (fevereiro, junho, outubro), coloque na pasta também o **"Cartão ponto 4"** (o 1º mês do
+  período); a pasta não exige esse arquivo, mas sem ele o painel avisa que falta o mês.

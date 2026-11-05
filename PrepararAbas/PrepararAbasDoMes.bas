@@ -452,7 +452,10 @@ End Function
 '      Pontonet 3 meses, Excedentes 3 meses, Intrajornada 3 meses, Interjornada 3
 '      meses, Interjornada semanal 3 meses e BH (banco de horas, desde 04/11). Se
 '      faltar algum, avisa quais e para sem mexer em nada. A RE nova pode ficar na
-'      pasta também (é opcional);
+'      pasta também (é opcional). (05/11) No último mês do período do banco de horas
+'      (fevereiro, junho, outubro) coloque também o "Cartão ponto 4" (o 1º mês do
+'      período): a pasta não exige, mas o painel precisa do espelho dos 4 meses para
+'      calcular o saldo do banco a partir do zero e conferir com o BH;
 '   2) só então pede a pasta onde os CSVs vão ser gravados;
 '   3) abre cada arquivo, traz as abas dele para esta planilha e fecha (os arquivos
 '      da pasta não são alterados);
