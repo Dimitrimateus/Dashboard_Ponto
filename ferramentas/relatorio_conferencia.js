@@ -92,14 +92,17 @@ corpo.push(new Table({ width: { size: 9900, type: WidthType.DXA }, columnWidths:
       cel([pequeno(ok === l.length ? '✓ todos conferem' : (l.length - ok) + ' diferente(s)', { bold: true, color: ok === l.length ? VERDE : VERMELHO })], W2[2])] }); })
 ] }));
 corpo.push(p('', { spacing: { after: 200 } }));
-corpo.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [run('Correção feita durante a conferência')] }));
+corpo.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [run('Correções feitas durante a conferência')] }));
 corpo.push(p('A primeira rodada achou uma diferença real no painel, já corrigida: no tamanho da equipe ("de N pessoas", usado nos números do topo e na faixa "Mostrando" de cada seção), uma pessoa que está na lista de equipes SEM matrícula (a lista às vezes traz "#N/A" na matrícula) e que tem ocorrência COM matrícula era contada duas vezes, aumentando o tamanho da equipe em 1. Agora o painel reconhece que é a mesma pessoa pelo nome. Não mudava nenhuma contagem, só o "de N pessoas".'));
+corpo.push(p('Com o arquivo real apareceu uma segunda, de texto, também corrigida: na seção Banco de horas, os números do topo diziam "220 pessoas na lista de equipes". O 220 está certo, mas é o número de pessoas com banco de horas (216 do relatório do sistema + 4 que só aparecem no cartão ponto); a lista de equipes tem 216. Agora o texto diz "220 pessoas com banco de horas".'));
 corpo.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [run('Pontos de atenção (não são erros, mas é bom saber como lê)')] }));
 [
   'Afastamentos, "Ranking de atestados": a coluna Dias soma os dias de ausência informados pelo sistema. No gráfico de evolução e no mapa, todo afastamento conta no mínimo 1 dia (um registro com 0 dias aparece como 1 dia). Por isso, se o sistema mandar um atestado com 0 dias, o ranking e a evolução podem diferir em 1.',
   'Afastamentos, seletor "Últimos 3 meses": mostra todos os ciclos do arquivo com algum dia de afastamento até o fim do cartão ponto. Com o relatório de 3 meses, um afastamento que começou antes (ex.: férias iniciadas no mês anterior) pode criar um 4º ciclo na tabela.',
   'PontoNet, "Tempo do gestor para avaliar, por gestor": um gestor cujos pedidos aprovados não trazem a contagem de dias do gestor aparece com 0 dias, e não "sem dado".',
   'Afastamentos e atestados da tabela de evolução contam no ciclo em que COMEÇAM; os dias contam no ciclo em que cada dia cai. Um atestado de 25/10 a 30/10 conta como 1 atestado em outubro, com 3 dias em outubro e 3 em novembro.',
+  'PontoNet, "Por motivo": o painel escreve os motivos em palavras simples e junta os que falam de esquecimento, inclusive "Esquecimento crachá", em "Esquecimento". Se o RH preferir o crachá separado, é uma mudança simples.',
+  'Banco de horas, conferência com o relatório do sistema: nas pessoas em que o banco calculado pelo cartão ponto não bate com o relatório de banco de horas, a diferença está nos dados de origem (o cartão ponto e o relatório não dizem a mesma coisa), não numa conta do painel. O painel mostra essas pessoas em vermelho para o RH conferir no sistema.',
   'Banco de horas: o painel só parte do zero no começo do período (nov–fev, mar–jun, jul–out) quando o arquivo tem o cartão ponto de todos os meses do período. Faltando um mês, ele se ancora no relatório de banco de horas do sistema e avisa em vermelho.'
 ].forEach(t => corpo.push(bullet(t)));
 

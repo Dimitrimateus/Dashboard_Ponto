@@ -1054,6 +1054,15 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   conferência ajustados. Teste com o CSV inventado: 73/73 no `auditar_csv_painel.py`; varredura sem erro de JS, NaN
   ou rolagem lateral (1400/390/360 px); card da pessoa e "Não mostrar de novo" testados. Macro não rodou no Excel.
 
+- 11/11 (depois 2): **conferência com o CSV real** do Dimitri (`TODOS OS GESTORES.csv` gerado em 11/11 já sem as
+  linhas da Tratamento: 13.488 linhas, 44 colunas, cartão ponto Jul–Out/26, BH 28/06–27/10): **74/74** no
+  `auditar_csv_painel.py` (item novo: conferência cartão ponto × relatório BH, 205 batem, 11 não batem, 4 fora do
+  relatório). Corrigido no painel: os números do topo do banco de horas diziam "220 pessoas na lista de equipes"
+  (220 = pessoas com banco; a lista tem 216) → "pessoas com banco de horas". Conferidor ajustado ao formato da tela
+  ("–" = 0, "08min", demora < 1 dia em horas, milhar na legenda, só os ciclos mostrados nos afastamentos, motivos
+  do PontoNet com a regra `nomeTipoPN`, que junta "Esquecimento crachá" em "Esquecimento"). Relatório em Word/PDF
+  entregue a ele (com nomes: fica fora do repositório). Varredura sem erro de JS/NaN/rolagem com o CSV real.
+
 ## 12. Estado atual e como continuar (05/11/2026)
 
 **Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`, branch **`main`** (desde 04/11 tudo

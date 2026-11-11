@@ -203,7 +203,7 @@ def dur_txt(m):
     """Minutos -> '5h 40min' (como o painel)."""
     m = int(round(abs(m)))
     h, mi = divmod(m, 60)
-    if h and mi: return "%dh %dmin" % (h, mi)
+    if h and mi: return "%dh %02dmin" % (h, mi)
     if h: return "%dh" % h
     return "%dmin" % mi
 
@@ -252,9 +252,15 @@ def analisa_batidas(txt):
 
 
 def nome_tipo_pn(t):
-    """Motivo do PontoNet com a primeira letra maiúscula ('ATIVIDADE EXTERNA' -> 'Atividade externa')."""
-    t = (t or "").strip().lower()
-    return (t[:1].upper() + t[1:]) if t else "Sem motivo"
+    """Motivo do PontoNet em palavras simples (regra combinada para a tela): dispositivo -> 'Problema no
+    relógio de ponto'; externa -> 'Atividade externa'; esquec... -> 'Esquecimento'; exclus... -> 'Exclusão de
+    batida errada'; o resto com a 1ª letra maiúscula."""
+    n = sem_acento(t or "").lower()
+    if not n.strip(): return "Sem motivo"
+    for chave, nome in (("dispositivo", "Problema no relógio de ponto"), ("externa", "Atividade externa"),
+                        ("esquec", "Esquecimento"), ("exclus", "Exclusão de batida errada")):
+        if chave in n: return nome
+    t = t.strip(); return t[:1].upper() + t[1:].lower()
 
 # ------------------------------------------------------------------ 3. registro dos resultados
 RES = []
@@ -455,7 +461,7 @@ def conferir(J, R):
     compara_dict(S, "Por gestor", "Ocorrências por gestor", "Ocorrências de jornada pelo gestor da pessoa.",
                  Counter(r["gestor"] for r in jor), tips(J, "chartJorGestor"), so_chaves_do_painel=True)
     t = tabela(J, "tableJorGestor")
-    pain = {row[0]: tuple(int_br(x) for x in row[1:7]) for row in t["rows"]}
+    pain = {row[0]: tuple(int_br(x) or 0 for x in row[1:7]) for row in t["rows"]}   # "–" = 0
     esp = {}
     for g in pain:
         lst = [r for r in jor if r["gestor"] == g]
@@ -571,7 +577,8 @@ def conferir(J, R):
                 if h >= 0: dem[r["gestor"]].append(h)
         t = tabela(J, "tableDemoraGestor")
         pain = {row[0]: (int_br(row[1]), row[2], row[3]) for row in t["rows"]}
-        esp = {g: (len(dem[g]), fmt_dec(sum(dem[g]) / len(dem[g])) + " dias", fmt_dec(max(dem[g])) + " dias") if dem[g] else None for g in pain}
+        dtxt = lambda dd: fmt_dec(dd * 24) + "h" if dd < 1 else fmt_dec(dd) + " dias"   # menos de 1 dia: em horas
+        esp = {g: (len(dem[g]), dtxt(sum(dem[g]) / len(dem[g])), dtxt(max(dem[g]))) if dem[g] else None for g in pain}
         item(S, "Demora por gestor", "Aprovadas, demora média e maior demora",
              "Do dia e hora da batida que faltou até a data em que o pedido foi aprovado, em dias, no ciclo escolhido.", esp, pain)
 
@@ -672,15 +679,18 @@ def conferir(J, R):
              "Por pessoa, nos dias com algum trecho acima de 1h40: o maior trecho de trabalho seguido e quantos dias.", esp, pain,
              esp == pain and len(pain) == min(len(mp), 20) or (esp == pain and len(pain) == len(mp)))
         t = tabela(J, "pauHeat")
-        pain = {row[0]: (int_br(row[-2]), int_br(row[-1])) for row in t["rows"]}
+        pain = {row[0]: (int_br(row[-2]) or 0, int_br(row[-1]) or 0) for row in t["rows"]}   # "–" = 0
         pr = defaultdict(lambda: [0, 0])
         for r in dias_b:
-            a = an[id(r)]; x = pr[r["colaborador"]]; x[1] += 1
+            a = an[id(r)]; x = pr[(r["colaborador"], r["matricula"])]; x[1] += 1
             x[0] += bool(a["acima"] or a["sem"] or a["impar"])
-        esp = {k: tuple(pr[k]) for k in pain}
+        por_nome = defaultdict(list)
+        for (nm, mt), v in pr.items(): por_nome[nm].append(tuple(v))
+        esp = {k: (por_nome[k][0] if len(por_nome[k]) == 1 else por_nome[k]) for k in pain}
         item(S, "Batidas: mapa das pausas", "Dias com problema e dias no relatório, por pessoa",
              "Dia com problema = algum trecho acima de 1h40, ou mais de 1h40 de trabalho sem nenhuma pausa térmica, ou "
-             "batida faltando (número ímpar de batidas).", esp, pain, esp == pain and len(pain) == len(pr))
+             "batida faltando (número ímpar de batidas).", esp, pain, esp == pain and len(pain) == len(pr),
+             obs="Uma linha por pessoa (pela matrícula).")
 
     # ---------------------------------------------------------- outros gráficos de pausas, PontoNet e afastamentos
     if res:
@@ -698,10 +708,13 @@ def conferir(J, R):
     if pn:
         pain = tips(J, "chartPnTipo")
         tp_c = Counter(nome_tipo_pn(r["tipo_just"]) for r in cic)
+        tp_bruto = Counter(r["tipo_just"] for r in cic)
         item("PontoNet", "Por motivo", "Aprovados de cada motivo (ciclo escolhido)",
              "Pedidos aprovados do ciclo contados pelo motivo informado no PontoNet.",
              dict(sorted(tp_c.items(), key=lambda x: -x[1])), dict(sorted(pain.items(), key=lambda x: -x[1])),
-             sorted(tp_c.values()) == sorted(pain.values()))
+             tp_c == Counter(pain),
+             obs="Motivos como vêm do sistema: " + "; ".join("%s = %d" % kv for kv in tp_bruto.most_common()) +
+                 ". O painel junta os que falam de esquecimento (inclusive \"esquecimento crachá\") em \"Esquecimento\".")
         pain = {}
         for tp in J["normal"].get("chartPnGestor", {}).get("tips", []):
             m = re.match(r"^(.*?): em média ([\d,]+) dias? para avaliar (\d+)", tp)
@@ -715,14 +728,17 @@ def conferir(J, R):
     S = "Afastamentos"
     leg = {}
     for x in J["normal"].get("chartAbsGrupo", {}).get("legendaMini", []):
-        m = re.match(r"^(.*) (\d+)$", x)
-        if m: leg[m.group(1)] = int(m.group(2))
-    dias_tot = sum(len(v) for v in dias_af.values())
+        m = re.match(r"^(.*) ([\d.]+)$", x)
+        if m: leg[m.group(1)] = int(m.group(2).replace(".", ""))
+    ciclos_tela = {r[0].split(" ")[0] for r in tabela(J, "tableAbsEvolucao")["rows"]}
+    dias_vis = {c: v for c, v in dias_af.items() if rotulo_ciclo(c) in ciclos_tela}
+    dias_tot = sum(len(v) for v in dias_vis.values())
     item(S, "Por gestor (por tipo)", "Soma dos dias de todos os tipos = dias do período",
-         "A legenda soma os dias de cada grupo de afastamento; o total tem que ser igual à soma dos dias dos ciclos.",
+         "A legenda soma os dias de cada grupo de afastamento; o total tem que ser igual à soma dos dias dos ciclos mostrados "
+         "(os 3 últimos ciclos até o fim do cartão ponto; férias já marcadas para depois ficam de fora).",
          dias_tot, sum(leg.values()))
     pain = tips(J, "chartAbsGrupo")
-    esp = Counter(r["gestor"] for c in dias_af.values() for r, _ in c)
+    esp = Counter(r["gestor"] for c in dias_vis.values() for r, _ in c)
     compara_dict(S, "Por gestor (por tipo)", "Dias de afastamento por gestor",
                  "Dias de afastamento (todos os tipos, 3 meses) somados pelo gestor da pessoa.", esp, pain, so_chaves_do_painel=True)
 
@@ -773,6 +789,44 @@ def conferir(J, R):
                  "A conta do saldo tem que fechar: o que a equipe tinha no começo, mais o que fez de extra, menos o que faltou.",
                  dur_txt(ini + sum(r["he"] for r in sel) - sum(r["bh"] for r in sel)), dur_txt(fim),
                  ini + sum(r["he"] for r in sel) - sum(r["bh"] for r in sel) == fim)
+
+    # ---------------------------------------------------------- Banco de horas: conferência cartão ponto x relatório
+    if bd and [r for r in R if r["tipo"] == TIPO_BH]:
+        t = tabela(J, "tableBHConf")
+        if t["rows"]:
+            rel = {}
+            for r in R:
+                if r["tipo"] == TIPO_BH and ciclo(r["dia"]) in ks:
+                    if r["colaborador"] not in rel or r["dia"] > rel[r["colaborador"]]["dia"]: rel[r["colaborador"]] = r
+            calc = defaultdict(lambda: [0, 0])
+            for r in sel:
+                calc[r["colaborador"]][0] += r["he"]; calc[r["colaborador"]][1] += r["bh"]
+            pain, esp = {}, {}
+            for row in t["rows"]:
+                nm = row[0]
+                pain[nm] = (minutos_de(row[2]) if row[2] not in ("–", "") else None, minutos_de(row[4]) if row[4] not in ("–", "") else None,
+                            minutos_de(row[6]) if row[6] not in ("–", "") else None,
+                            minutos_de(row[7]) if row[7] not in ("–", "") else None,
+                            "bate" if "diferen" not in row[8] and "fora" not in row[8].lower() and "não está" not in row[8] else "não bate")
+                rr = rel.get(nm)
+                c = calc.get(nm, [0, 0] if rr else None)   # no relatório e sem nenhum dia no cartão = banco 0
+                saldo_rel = int(rr["bh_ant"] + rr["bh_cred"] - rr["bh_deb"]) if rr else None
+                saldo_calc = int(c[0] - c[1]) if c else None
+                ok_p = rr is not None and c is not None and abs(saldo_rel - saldo_calc) <= 1
+                esp[nm] = (int(c[0]) if c else None, int(c[1]) if c else None, saldo_calc, saldo_rel, "bate" if ok_p else "não bate")
+            # o painel mostra "–" onde a pessoa não tem a informação; compara só o que tem número
+            iguais = all(all(a == b or b is None for a, b in zip(esp[k][:4], pain[k][:4])) and esp[k][4] == pain[k][4] for k in pain)
+            n_bate = sum(1 for v in esp.values() if v[4] == "bate")
+            item("Banco de horas", "Conferência: cartão ponto × relatório de banco de horas",
+                 "Banco de cada pessoa pelas duas contas e se bate (lista inteira)",
+                 "Banco calculado = soma das horas extras − soma das horas falta do cartão ponto, dia a dia, desde o começo do "
+                 "período (zerado). Banco no relatório = saldo anterior + crédito − débito do relatório de banco de horas do "
+                 "sistema. Bate quando a diferença é de até 1 minuto.",
+                 "%d pessoas na tabela; %d batem, %d não batem" % (len(esp), n_bate, len(esp) - n_bate),
+                 "%d pessoas na tabela; %d batem, %d não batem" % (len(pain), sum(1 for v in pain.values() if v[4] == "bate"),
+                                                                     sum(1 for v in pain.values() if v[4] != "bate")),
+                 iguais and len(esp) == len(pain),
+                 obs="Quando não bate, a diferença está nos dados de origem (cartão ponto × relatório do sistema), não numa conta do painel: o RH confere essas pessoas no sistema.")
 
     # ---------------------------------------------------------- Lista de colaboradores
     S = "Lista de colaboradores"

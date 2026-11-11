@@ -3315,7 +3315,11 @@
       // sem o dia anterior no alcance: o "começo" é o saldo antes do movimento do 1º dia
       ini = porPessoa.reduce(function(a, x){ var m = x.p.dias[dias[0]]; return a + (x.s[dias[0]] || 0) - (m ? m.c - m.d : 0); }, 0);
     }
-    var quem = nomeSel || (selEq.value ? "equipe de " + selEq.value + " (" + formatNum(pessoas.length) + " pessoas)" : textoRecorte(pessoas.length));
+    // (11/11) Sem filtro de pessoa, o número é de quem tem banco de horas no arquivo (cartão ponto ou
+    // relatório), que não é o mesmo que a lista de equipes (no arquivo de out/26: 220 x 216). Antes o
+    // texto dizia "220 pessoas na lista de equipes" (achado na conferência).
+    var quem = nomeSel || (selEq.value ? "equipe de " + selEq.value + " (" + formatNum(pessoas.length) + " pessoas)" :
+      (filtroPessoasVazio() ? formatNum(pessoas.length) + " pessoas com banco de horas" : textoRecorte(pessoas.length)));
     state.bhKpiRot = info ? { ini:info.rotIni, fim:info.rotFim } : null;
     $("bhKpis").innerHTML = temBH && dias.length ? (
       kpiTile("Banco no começo", formatSaldo(ini), (info ? escapeHtml(info.rotIni.replace("Banco ", "")) + " &middot; " : "") + escapeHtml(quem), ini > 0 ? "pos" : (ini < 0 ? "neg" : "")) +
