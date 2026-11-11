@@ -3191,6 +3191,8 @@ Private Function GerarAbaCSV_Auto() As String
     GerarAbaCSV_Auto = msgAutoCSV
 End Function
 
+' Versão automática da ExportarCSVPorGestor, usada pela GerarCSVsDaPasta: grava os CSVs
+' direto na pasta informada, sem abrir janela, e devolve o texto do que foi feito.
 Private Function ExportarCSVPorGestor_NaPasta(ByVal pasta As String) As String
     modoAutoCSV = True: msgAutoCSV = "": pastaFixaCSV = pasta
     ExportarCSVPorGestor
@@ -3281,6 +3283,10 @@ End Sub
 ' True quando a GerarCSVsDaPasta está rodando: a aba nova de um relatório SUBSTITUI a
 ' já formatada do mesmo mês/tipo (em vez de ficar como "(novo)").
 
+' MACRO PRINCIPAL. Formata de uma vez todos os relatórios brutos colados na planilha.
+' Para cada aba, reconhece pelo conteúdo que relatório é (cartão ponto, pausas, digitadas,
+' afastamentos, jornada, PontoNet, banco de horas), roda a macro de formatação dele e, no fim,
+' cria a aba "Relatório da preparação" com o que deu certo e o que deu erro.
 Public Sub PrepararAbasDoMes()
     Dim wb As Workbook, abas As Collection, ws As Worksheet
     Dim linhas As Collection, vistos As Object
@@ -3420,6 +3426,7 @@ Private Function TipoDoRelatorioBruto(ws As Worksheet) As String
     End If
 End Function
 
+' Nome do relatório em palavras, para o relatório da preparação (ex.: "cartao" -> "Cartão Ponto").
 Private Function NomeDoTipo(ByVal tipo As String) As String
     Select Case tipo
         Case "cartao": NomeDoTipo = "Cartão Ponto"
@@ -3432,6 +3439,7 @@ Private Function NomeDoTipo(ByVal tipo As String) As String
     End Select
 End Function
 
+' Nome da macro que formata cada tipo de relatório (usada para chamar a macro certa).
 Private Function MacroDoTipo(ByVal tipo As String) As String
     Select Case tipo
         Case "cartao": MacroDoTipo = "ConsolidarCartaoPontoDefinitivo_Auto"
@@ -3639,6 +3647,7 @@ Private Function ExisteAbaFormatada(wb As Workbook, ByVal tipo As String) As Boo
     Next sh
 End Function
 
+' True = já existe uma aba com esse nome na planilha (sem diferenciar maiúscula).
 Private Function AbaExisteAqui(wb As Workbook, ByVal nome As String) As Boolean
     Dim sh As Object
     For Each sh In wb.Sheets
@@ -3646,6 +3655,7 @@ Private Function AbaExisteAqui(wb As Workbook, ByVal nome As String) As Boolean
     Next sh
 End Function
 
+' Nome do mês por extenso (1 = Janeiro ... 12 = Dezembro), usado no nome das abas.
 Private Function NomeDoMesAqui(ByVal m As Long) As String
     NomeDoMesAqui = Choose(m, "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", _
                            "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro")
@@ -3903,6 +3913,7 @@ Private Function RodarEtapaCSV(ByVal macro As String, ByVal pasta As String) As 
     On Error GoTo 0
 End Function
 
+' Abre a janela do Windows para escolher uma pasta; devolve o caminho ("" se cancelar).
 Private Function EscolherPastaAqui(ByVal titulo As String) As String
     Dim fd As Object
     Set fd = Application.FileDialog(4)    ' 4 = escolher pasta
@@ -4012,6 +4023,7 @@ Private Function ApagarAbasQueSeraoSubstituidas(wb As Workbook, paraPreparar As 
     ApagarAbasQueSeraoSubstituidas = t
 End Function
 
+' True = a aba está na lista dada.
 Private Function EstaNaLista(sh As Worksheet, lista As Collection) As Boolean
     Dim x As Variant
     For Each x In lista
@@ -4753,6 +4765,10 @@ Private Function DiaDoMesDaCelula(c As Range) As Integer
     End If
 End Function
 
+' Descobre a data completa de uma linha do cartão ponto. O relatório só traz o DIA (ex.: 28)
+' e o dia da semana (ex.: SEG). Procura, entre as datas do período (dtIni a dtFim), a que tem
+' esse dia do mês E esse dia da semana. Assim o dia 28 de agosto e o dia 28 de setembro, no
+' mesmo relatório, nunca são confundidos.
 Private Function ResolverDataPorDiaSemana(ByVal dia As Integer, ByVal semTexto As String, _
                                           ByVal dtIni As Date, ByVal dtFim As Date) As Date
 
@@ -4966,6 +4982,9 @@ Private Function ConsolidarCartaoPontoDefinitivo_Auto() As String
     ConsolidarCartaoPontoDefinitivo_Auto = msgAuto
 End Function
 
+' Mostra uma mensagem ao usuário (MsgBox). Quando a macro roda sozinha, chamada pela
+' PrepararAbasDoMes/GerarCSVsDaPasta (modoAuto = True), não abre janela: guarda o texto em
+' msgAuto para o relatório da preparação (com "ERRO: " na frente quando é erro) e responde Sim.
 Private Function Aviso(ByVal texto As String, Optional ByVal botoes As Long = vbInformation, Optional ByVal titulo As String = "") As VbMsgBoxResult
     If modoAuto Then
         If (botoes And 16) = 16 Then texto = "ERRO: " & texto
@@ -5314,6 +5333,10 @@ Private Function EhLinhaDeDia(ws As Worksheet, ByVal r As Long) As Boolean
     End If
 End Function
 
+' Lê uma linha de DIA do relatório de pausas (data em A, depois pares horário + letra:
+' P = entrada/saída da jornada, G = refeição, F = pausa térmica, e as exceções "(1) (3)" no
+' fim) e guarda cada batida (matrícula, nome, data, hora, nº da batida, letra) em "batidas",
+' para montar a tabela de batidas da aba.
 Private Sub GuardarBatidasDoDia(ws As Worksheet, ByVal r As Long, ByVal mat As String, ByVal nome As String, batidas As Collection)
     Dim vals As Variant, c As Long, seq As Long, v As Variant, letra As String, excecoes As String
     vals = ws.Range(ws.Cells(r, 1), ws.Cells(r, 45)).Value2
@@ -5410,6 +5433,8 @@ Private Function AbaExiste(wb As Workbook, ByVal nome As String) As Boolean
     AbaExiste = False
 End Function
 
+' Deixa a linha de títulos de uma tabela com cara de cabeçalho: negrito, fundo cinza, borda,
+' centralizado e com quebra de linha.
 Private Sub FormatarCabecalho(rng As Range)
     With rng
         .Font.Bold = True
@@ -5660,6 +5685,9 @@ Private Function FormatarPausasTermicas_Auto() As String
     FormatarPausasTermicas_Auto = msgAuto_Pau
 End Function
 
+' Mostra uma mensagem ao usuário (MsgBox). Quando a macro roda sozinha, chamada pela
+' PrepararAbasDoMes/GerarCSVsDaPasta (modoAuto = True), não abre janela: guarda o texto em
+' msgAuto para o relatório da preparação (com "ERRO: " na frente quando é erro) e responde Sim.
 Private Function Aviso_Pau(ByVal texto As String, Optional ByVal botoes As Long = vbInformation, Optional ByVal titulo As String = "") As VbMsgBoxResult
     If modoAuto_Pau Then
         If (botoes And 16) = 16 Then texto = "ERRO: " & texto
@@ -6048,6 +6076,9 @@ Private Function FormatarMarcacoesDigitadas_Auto() As String
     FormatarMarcacoesDigitadas_Auto = msgAuto_Dig
 End Function
 
+' Mostra uma mensagem ao usuário (MsgBox). Quando a macro roda sozinha, chamada pela
+' PrepararAbasDoMes/GerarCSVsDaPasta (modoAuto = True), não abre janela: guarda o texto em
+' msgAuto para o relatório da preparação (com "ERRO: " na frente quando é erro) e responde Sim.
 Private Function Aviso_Dig(ByVal texto As String, Optional ByVal botoes As Long = vbInformation, Optional ByVal titulo As String = "") As VbMsgBoxResult
     If modoAuto_Dig Then
         If (botoes And 16) = 16 Then texto = "ERRO: " & texto
@@ -6455,6 +6486,9 @@ Private Function FormatarAfastamentos_Auto() As String
     FormatarAfastamentos_Auto = msgAuto_Afa
 End Function
 
+' Mostra uma mensagem ao usuário (MsgBox). Quando a macro roda sozinha, chamada pela
+' PrepararAbasDoMes/GerarCSVsDaPasta (modoAuto = True), não abre janela: guarda o texto em
+' msgAuto para o relatório da preparação (com "ERRO: " na frente quando é erro) e responde Sim.
 Private Function Aviso_Afa(ByVal texto As String, Optional ByVal botoes As Long = vbInformation, Optional ByVal titulo As String = "") As VbMsgBoxResult
     If modoAuto_Afa Then
         If (botoes And 16) = 16 Then texto = "ERRO: " & texto
@@ -7054,6 +7088,9 @@ Private Function FormatarJornada_Auto() As String
     FormatarJornada_Auto = msgAuto_Jor
 End Function
 
+' Mostra uma mensagem ao usuário (MsgBox). Quando a macro roda sozinha, chamada pela
+' PrepararAbasDoMes/GerarCSVsDaPasta (modoAuto = True), não abre janela: guarda o texto em
+' msgAuto para o relatório da preparação (com "ERRO: " na frente quando é erro) e responde Sim.
 Private Function Aviso_Jor(ByVal texto As String, Optional ByVal botoes As Long = vbInformation, Optional ByVal titulo As String = "") As VbMsgBoxResult
     If modoAuto_Jor Then
         If (botoes And 16) = 16 Then texto = "ERRO: " & texto
@@ -7109,6 +7146,11 @@ End Function
 ' ============================================================================
 
 
+' MACRO PRINCIPAL. Rode com a aba do relatório de banco de horas (HRES105, arquivo "BH") ativa.
+' Lê o relatório como ele sai do sistema (páginas de impressão), acha a linha de títulos, pega
+' uma linha por pessoa (matrícula, nome, saldo anterior, crédito, débito, horas anistiadas,
+' horas pagas, saldo final) e reescreve a aba como uma tabela simples chamada "Banco de Horas".
+' Horas negativas do relatório ("25:40-") viram positivas na coluna certa (Débito).
 Private Sub FormatarBancoHoras()
     Dim ws As Worksheet
     Set ws = ActiveSheet
@@ -7364,6 +7406,7 @@ Private Function FechamentosNoPeriodo(ByVal ini As Date, ByVal fim As Date) As L
     Next k
 End Function
 
+' Valor da célula (r, c) da matriz lida da aba; vazio se a posição não existe.
 Private Function Celula_BH(dados As Variant, ByVal r As Long, ByVal c As Long) As Variant
     If c < 1 Or c > UBound(dados, 2) Or r < 1 Or r > UBound(dados, 1) Then
         Celula_BH = Empty
@@ -7372,6 +7415,7 @@ Private Function Celula_BH(dados As Variant, ByVal r As Long, ByVal c As Long) A
     End If
 End Function
 
+' True = a célula tem um número de verdade (não texto, não vazio, não erro).
 Private Function EhNumero_BH(v As Variant) As Boolean
     If IsError(v) Or IsEmpty(v) Then
         EhNumero_BH = False
@@ -7382,12 +7426,14 @@ Private Function EhNumero_BH(v As Variant) As Boolean
     End If
 End Function
 
+' True = o texto da célula pode ser lido como número (ex.: matrícula "97470").
 Private Function PareceNumero_BH(v As Variant) As Boolean
     Dim t As String
     t = TextoCel_BH(v)
     PareceNumero_BH = (t <> "" And IsNumeric(t))
 End Function
 
+' Texto da célula sem espaços nas pontas e sem quebras de linha; erro (#N/A) ou vazio = "".
 Private Function TextoCel_BH(v As Variant) As String
     If IsError(v) Or IsEmpty(v) Then
         TextoCel_BH = ""
@@ -7396,6 +7442,7 @@ Private Function TextoCel_BH(v As Variant) As String
     End If
 End Function
 
+' Texto em MAIÚSCULAS e sem acento, para comparar títulos ("Débito" = "DEBITO").
 Private Function TextoSimples_BH(v As Variant) As String
     Dim t As String, com As String, sem As String, i As Long
     t = UCase$(TextoCel_BH(v))
@@ -7419,6 +7466,9 @@ Private Function FormatarBancoHoras_Auto() As String
     FormatarBancoHoras_Auto = msgAuto_BH
 End Function
 
+' Mostra uma mensagem ao usuário (MsgBox). Quando a macro roda sozinha, chamada pela
+' PrepararAbasDoMes/GerarCSVsDaPasta (modoAuto = True), não abre janela: guarda o texto em
+' msgAuto para o relatório da preparação (com "ERRO: " na frente quando é erro) e responde Sim.
 Private Function Aviso_BH(ByVal texto As String, Optional ByVal botoes As Long = vbInformation, Optional ByVal titulo As String = "") As VbMsgBoxResult
     If modoAuto_BH Then
         If (botoes And 16) = 16 Then texto = "ERRO: " & texto

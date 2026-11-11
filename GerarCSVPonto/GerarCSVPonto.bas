@@ -3107,6 +3107,8 @@ Public Function GerarAbaCSV_Auto() As String
     GerarAbaCSV_Auto = msgAutoCSV
 End Function
 
+' Versão automática da ExportarCSVPorGestor, usada pela GerarCSVsDaPasta: grava os CSVs
+' direto na pasta informada, sem abrir janela, e devolve o texto do que foi feito.
 Public Function ExportarCSVPorGestor_NaPasta(ByVal pasta As String) As String
     modoAutoCSV = True: msgAutoCSV = "": pastaFixaCSV = pasta
     ExportarCSVPorGestor

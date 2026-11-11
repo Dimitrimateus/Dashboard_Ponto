@@ -71,6 +71,10 @@ Private Const NOME_RELATORIO As String = "Relatório da preparação"
 ' já formatada do mesmo mês/tipo (em vez de ficar como "(novo)").
 Private substituirAbas As Boolean
 
+' MACRO PRINCIPAL. Formata de uma vez todos os relatórios brutos colados na planilha.
+' Para cada aba, reconhece pelo conteúdo que relatório é (cartão ponto, pausas, digitadas,
+' afastamentos, jornada, PontoNet, banco de horas), roda a macro de formatação dele e, no fim,
+' cria a aba "Relatório da preparação" com o que deu certo e o que deu erro.
 Sub PrepararAbasDoMes()
     Dim wb As Workbook, abas As Collection, ws As Worksheet
     Dim linhas As Collection, vistos As Object
@@ -210,6 +214,7 @@ Private Function TipoDoRelatorioBruto(ws As Worksheet) As String
     End If
 End Function
 
+' Nome do relatório em palavras, para o relatório da preparação (ex.: "cartao" -> "Cartão Ponto").
 Private Function NomeDoTipo(ByVal tipo As String) As String
     Select Case tipo
         Case "cartao": NomeDoTipo = "Cartão Ponto"
@@ -222,6 +227,7 @@ Private Function NomeDoTipo(ByVal tipo As String) As String
     End Select
 End Function
 
+' Nome da macro que formata cada tipo de relatório (usada para chamar a macro certa).
 Private Function MacroDoTipo(ByVal tipo As String) As String
     Select Case tipo
         Case "cartao": MacroDoTipo = "ConsolidarCartaoPontoDefinitivo_Auto"
@@ -429,6 +435,7 @@ Private Function ExisteAbaFormatada(wb As Workbook, ByVal tipo As String) As Boo
     Next sh
 End Function
 
+' True = já existe uma aba com esse nome na planilha (sem diferenciar maiúscula).
 Private Function AbaExisteAqui(wb As Workbook, ByVal nome As String) As Boolean
     Dim sh As Object
     For Each sh In wb.Sheets
@@ -436,6 +443,7 @@ Private Function AbaExisteAqui(wb As Workbook, ByVal nome As String) As Boolean
     Next sh
 End Function
 
+' Nome do mês por extenso (1 = Janeiro ... 12 = Dezembro), usado no nome das abas.
 Private Function NomeDoMesAqui(ByVal m As Long) As String
     NomeDoMesAqui = Choose(m, "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", _
                            "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro")
@@ -693,6 +701,7 @@ Private Function RodarEtapaCSV(ByVal macro As String, ByVal pasta As String) As 
     On Error GoTo 0
 End Function
 
+' Abre a janela do Windows para escolher uma pasta; devolve o caminho ("" se cancelar).
 Private Function EscolherPastaAqui(ByVal titulo As String) As String
     Dim fd As Object
     Set fd = Application.FileDialog(4)    ' 4 = escolher pasta
@@ -802,6 +811,7 @@ Private Function ApagarAbasQueSeraoSubstituidas(wb As Workbook, paraPreparar As 
     ApagarAbasQueSeraoSubstituidas = t
 End Function
 
+' True = a aba está na lista dada.
 Private Function EstaNaLista(sh As Worksheet, lista As Collection) As Boolean
     Dim x As Variant
     For Each x In lista

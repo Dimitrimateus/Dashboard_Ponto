@@ -397,6 +397,9 @@ Public Function FormatarAfastamentos_Auto() As String
     FormatarAfastamentos_Auto = msgAuto
 End Function
 
+' Mostra uma mensagem ao usuário (MsgBox). Quando a macro roda sozinha, chamada pela
+' PrepararAbasDoMes/GerarCSVsDaPasta (modoAuto = True), não abre janela: guarda o texto em
+' msgAuto para o relatório da preparação (com "ERRO: " na frente quando é erro) e responde Sim.
 Private Function Aviso(ByVal texto As String, Optional ByVal botoes As Long = vbInformation, Optional ByVal titulo As String = "") As VbMsgBoxResult
     If modoAuto Then
         If (botoes And 16) = 16 Then texto = "ERRO: " & texto

@@ -696,6 +696,10 @@ Private Function DiaDoMesDaCelula(c As Range) As Integer
     End If
 End Function
 
+' Descobre a data completa de uma linha do cartão ponto. O relatório só traz o DIA (ex.: 28)
+' e o dia da semana (ex.: SEG). Procura, entre as datas do período (dtIni a dtFim), a que tem
+' esse dia do mês E esse dia da semana. Assim o dia 28 de agosto e o dia 28 de setembro, no
+' mesmo relatório, nunca são confundidos.
 Private Function ResolverDataPorDiaSemana(ByVal dia As Integer, ByVal semTexto As String, _
                                           ByVal dtIni As Date, ByVal dtFim As Date) As Date
 
@@ -909,6 +913,9 @@ Public Function ConsolidarCartaoPontoDefinitivo_Auto() As String
     ConsolidarCartaoPontoDefinitivo_Auto = msgAuto
 End Function
 
+' Mostra uma mensagem ao usuário (MsgBox). Quando a macro roda sozinha, chamada pela
+' PrepararAbasDoMes/GerarCSVsDaPasta (modoAuto = True), não abre janela: guarda o texto em
+' msgAuto para o relatório da preparação (com "ERRO: " na frente quando é erro) e responde Sim.
 Private Function Aviso(ByVal texto As String, Optional ByVal botoes As Long = vbInformation, Optional ByVal titulo As String = "") As VbMsgBoxResult
     If modoAuto Then
         If (botoes And 16) = 16 Then texto = "ERRO: " & texto

@@ -1882,6 +1882,38 @@
 (function(){
   "use strict";
   /* =========================================================
+     GUIA RÁPIDO (para quem nunca mexeu em código)
+     =========================================================
+     - Este arquivo inteiro é o painel. Não precisa instalar nada: abra o
+       index.html no Chrome ou no Edge e escolha o CSV gerado pela planilha.
+     - O que é cada parte: o bloco <style> lá em cima é a APARÊNCIA (cores,
+       tamanhos); o HTML do meio é o TEXTO FIXO da tela (títulos dos cards, as
+       explicações do botão "?"); este bloco <script> são as CONTAS e os
+       GRÁFICOS. Linhas que começam com // (ou ficam dentro de um bloco de
+       comentário como este) são comentários: explicações para pessoas, o navegador ignora.
+     - Mudar um texto da tela: procure (Ctrl+F) o texto como ele aparece no
+       painel e troque entre as aspas ou entre as marcas <...>. Não apague aspas,
+       vírgulas nem chaves { }.
+     - Mudar uma cor: no bloco <style>, na parte ":root", troque o código da cor
+       (ex.: --c-orange:#F7931E).
+     - Mudar um limite de alerta (o número a partir do qual algo fica vermelho):
+         LIMITE_AUDITORIA_EXTRA_FALTA = 10   extra e falta no mesmo dia (3 meses)
+         LIMITE_ESQUECIMENTO = 5             esquecimentos no mês (esquecimento crônico)
+         LIMITE_ACIMA_PCT = 0.30             30% dos trechos acima de 1h40 (pausas)
+         LIMITE_TRABALHO_MIN = 100           1h40 de trabalho sem pausa térmica
+         LIMITE_DIAS_GESTOR = 3              dias do gestor para avaliar no PontoNet
+         DIST_FERIAS_DIAS = 3                atestado a até 3 dias das férias
+         LIMITE_JORNADA_MIN = 600            10h de trabalho no dia
+         LIMITE_LISTA = 20                   quantos nomes as listas mostram antes da tela cheia
+       Procure o nome (Ctrl+F) e troque só o número.
+     - Depois de qualquer mudança: salve, abra o index.html de novo e carregue
+       um CSV. Se a tela ficar em branco, a mudança quebrou algo: desfaça
+       (o histórico de versões está no GitHub, branch main).
+     - Conferir os números: ferramentas/conferir_painel.py (com a planilha) e
+       ferramentas/auditar_csv_painel.py (só com o CSV) refazem as contas por
+       fora e comparam com o que a tela mostra. Ver CLAUDE.md, seção 10.
+
+     =========================================================
      PAINEL DE PONTO — VISÃO GERAL DO ARQUIVO
      =========================================================
      O QUE É: um dashboard de RH que lê, 100% no navegador (sem
@@ -2234,6 +2266,8 @@
     }
     return GRUPOS_AFAST[GRUPOS_AFAST.length - 1].nome;
   }
+  // Cor de um grupo de afastamento (ex.: "Atestado" = vermelho) para gráficos e legendas.
+  // Grupo desconhecido = cinza.
   function corAfast(nome){
     for (var i = 0; i < GRUPOS_AFAST.length; i++) if (GRUPOS_AFAST[i].nome === nome) return GRUPOS_AFAST[i].cor;
     return "#A7A9AC";
@@ -2283,6 +2317,9 @@
     if (!/[ÃÂ]/.test(t)) return t;
     try { return decodeURIComponent(escape(t)); } catch(e){ return t; }
   }
+  // Chave de comparação de um tipo de ocorrência: sem acento, sem maiúscula e só letras e
+  // números. Serve para reconhecer o mesmo tipo escrito de jeitos diferentes no CSV.
+  // semEstranhos = true também ignora letras estragadas ("T?rmica" vira igual a "Térmica").
   function chaveTipo(t, semEstranhos){
     var x = stripAccents(consertarAcentos(String(t||""))).toLowerCase();
     // semEstranhos: tira também "?" e letras que não são a-z (para "T?rmica" casar com "Térmica")
@@ -2290,6 +2327,10 @@
     return x.replace(/[^a-z0-9<%()]/g, "");
   }
   var TIPOS_CONHECIDOS = null;
+  // Troca o tipo lido do CSV pelo nome oficial usado no painel, quando ele é um dos tipos
+  // fixos (resumos, digitadas, pausas, banco de horas...). Ex.: "Pausa TÃ©rmica Dia" -> "Pausa Térmica Dia".
+  // Sem isso, um CSV com acento estragado jogaria essas linhas na seção Ocorrências.
+  // Tipo que não é fixo (as ocorrências da planilha de tratamento) volta como veio.
   function tipoCanonico(t){
     if (!TIPOS_CONHECIDOS){
       TIPOS_CONHECIDOS = {};
@@ -2303,6 +2344,9 @@
     return TIPOS_CONHECIDOS["a:" + chaveTipo(t)] || TIPOS_CONHECIDOS["b:" + chaveTipo(t, true)] || t;
   }
 
+  // true = a linha NÃO é uma ocorrência de ponto (é resumo, curta, hora extra, digitada,
+  // afastamento, jornada, pausa, PontoNet ou banco de horas). Essas linhas ficam fora
+  // dos gráficos e contagens da seção Ocorrências e têm seções próprias.
   function isTipoNaoOcorrencia(tipo){
     return isTipoResumo(tipo) || isTipoCurta(tipo) || isTipoHoraExtra(tipo) || isTipoDigitada(tipo) || isTipoAbsenteismo(tipo) || isTipoJornada(tipo) || isTipoPausaDia(tipo) || isTipoPontoNet(tipo) || isTipoBancoHoras(tipo) || isTipoBHDia(tipo);
   }
@@ -2930,8 +2974,10 @@
   function numCicloBH(d){ return d.getFullYear()*12 + d.getMonth() + 1 + (d.getDate() >= 28 ? 1 : 0); }
   function mesDoCicloBH(n){ return ((n - 1) % 12) + 1; }
   function fimDoCicloBH(n){ return new Date(Math.floor((n - 1) / 12), mesDoCicloBH(n) - 1, 27); }
+  // Primeiro dia (dia 28 do mês anterior) do ciclo número n (ver numCicloBH).
   function inicioDoCicloBH(n){ var f = fimDoCicloBH(n - 1); return new Date(f.getFullYear(), f.getMonth(), 28); }
   var MESES_CURTOS_BH = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  // Nome curto do ciclo n, pelo mês em que ele termina: "Set/26" = 28/08/2026 a 27/09/2026.
   function nomeCicloBH(n){ var f = fimDoCicloBH(n); return MESES_CURTOS_BH[f.getMonth()] + "/" + String(f.getFullYear()).slice(2); }
   // Períodos do banco da Aurora (decisão do RH, 05/11): novembro a fevereiro, março a junho e
   // julho a outubro. O fechamento é no último mês (fevereiro, junho e outubro): quem tem saldo
@@ -2944,6 +2990,7 @@
   function ehFechamentoBH(n){ var m = mesDoCicloBH(n); return m === 2 || m === 6 || m === 10; }
   function nomePeriodoBH(q){ return MESES_CURTOS_BH[mesDoCicloBH(q) - 1] + " a " + nomeCicloBH(q + 3); }
   var DIA_MS = 864e5;
+  // Data sem as horas, como número (milissegundos). Usada como chave de "dia" no banco de horas.
   function diaT(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); }
 
   // ---------- Fechamento do banco (relatório de banco de horas do sistema) ----------
@@ -2964,6 +3011,8 @@
       return p;
     }).sort(function(x, y){ return y.fim - x.fim || (x.ini && y.ini ? x.ini - y.ini : 0); });
   }
+  // Relatório de banco de horas mostrado no card de fechamento: o escolhido no seletor
+  // #bhRelatorio ou, se não houver escolha, o mais recente. null se o arquivo não tem nenhum.
   function periodoBH(){
     var rels = relatoriosBH(); if (!rels.length) return null;
     var esc = $("bhRelatorio") && $("bhRelatorio").value;
@@ -2994,6 +3043,9 @@
     fechado: [["", "Todos (maiores primeiro)"], ["pago", "Só quem teve horas pagas"], ["descontado", "Só quem fechou devendo"], ["zerado", "Só quem fechou zerado"]],
     aberto: [["", "Todos (maiores primeiro)"], ["positivo", "Só saldo positivo"], ["negativo", "Só saldo negativo"], ["zerado", "Só saldo zerado"]]
   };
+  // Desenha o card "Como cada pessoa fechou o banco de horas": resumo em frases, seletor
+  // "Mostrar", busca e as barras (verde = horas extras, vermelho = horas falta; à direita
+  // como a pessoa fechou ou como estava no fim do relatório). Fonte: linhas "Banco de Horas Período".
   function renderFechamentoBH(){
     var card = $("cardFechamentoBH");
     var rels = relatoriosBH();
@@ -3216,6 +3268,8 @@
     }
     return todos.filter(function(n){ return state.bhMeses[n]; });
   }
+  // Lista de todos os dias (diaT) dos meses marcados no quadro laranja do banco de horas,
+  // limitada aos dias que o cartão ponto do arquivo cobre.
   function diasBHEscolhidos(){
     var base = dadosBH(), dias = [];
     mesesBHEscolhidos().forEach(function(n){
@@ -3388,6 +3442,10 @@
       return p.ini && diaT(p.ini) >= qIni && diaT(p.fim) <= qFim;
     }).sort(function(a, b){ return b.fim - a.fim; })[0] || null;
   }
+  // Desenha o card "Conferência: cartão ponto × relatório de banco de horas".
+  // Para cada pessoa: soma as horas extras e horas falta de cada dia (cartão ponto),
+  // partindo do zero no começo do período, e compara com o saldo que o relatório do
+  // sistema informa no último dia dele. Diferença de até 1 minuto = "bate".
   function renderConferenciaBH(){
     var base = dadosBH(), escolhidos = mesesBHEscolhidos(), caixa = $("bhConfResumo");
     var html = '<div class="arc-titulo">Conferência com o relatório de banco de horas</div><ul>';
@@ -3471,6 +3529,7 @@
     { id:"intersem", nome:"Interjornada semanal", arquivo:"Interjornada semanal 3 meses", teste:function(t){ return t === "Interjornada Semanal"; } },
     { id:"org", nome:"Lista de equipes", arquivo:"lista de quem é gestor de quem (planilha do RH)", semPeriodo:true, teste:function(t){ return t === TIPO_CADASTRO_ORG; } }
   ];
+  // Acha a informação (fonte) de FONTES_ARQ pelo id ("cartao", "bh", "dig"...).
   function fonteArq(id){ return FONTES_ARQ.filter(function(f){ return f.id === id; })[0]; }
   var SECOES_FONTES = [
     { pag:"geral", precisa:["trat"], usa:["org"] },
@@ -3485,6 +3544,9 @@
     { pag:"org", precisa:["org"], usa:["trat","dig","cartao"] },
     { pag:"historico", precisa:["trat"], usa:[] }
   ];
+  // Resumo de um conjunto de linhas por informação de origem (seção Arquivos carregados):
+  // para cada fonte, quantas linhas, primeira e última data, meses (ciclos) que aparecem,
+  // relatórios de banco de horas e pessoas da lista de equipes.
   function resumoFontes(records){
     var out = {};
     records.forEach(function(r){
@@ -3506,6 +3568,7 @@
     });
     return out;
   }
+  // Ciclos (números de numCicloBH) de um resumo de fonte, em ordem crescente.
   function listaCiclos(x){ return Object.keys(x.ciclos).map(Number).sort(function(a, b){ return a - b; }); }
   // texto do período de uma informação: "28/07/2026 a 27/10/2026" ou, no banco de horas, os relatórios
   function periodoFonteTxt(id, x){
@@ -3517,6 +3580,8 @@
     }
     return x.min !== null ? formatDateBR(new Date(x.min)) + " a " + formatDateBR(new Date(x.max)) : "";
   }
+  // Texto da coluna "Meses (28 a 27)" da seção Arquivos carregados. Afastamentos e lista de
+  // equipes não mostram meses (férias programadas esticariam as datas; a lista não tem período).
   function mesesFonteTxt(id, x){
     if (id === "org" || id === "afast") return "&ndash;";   // afastamentos: férias programadas esticam as datas
     if (id === "bh"){
@@ -3558,11 +3623,15 @@
     if (geral.bh && !relatorioDoPeriodoBH(q)) out.push("O relatório de banco de horas (arquivo <b>BH</b>) não é do período " + escapeHtml(nomePeriodoBH(q)) + ": não dá para conferir o saldo");
     return out;
   }
+  // Resumo das fontes de TODOS os arquivos abertos juntos (guardado enquanto o arquivo não muda).
   function geralFontes(){
     if (state.arqGeral && state.arqGeral.recs === state.records) return state.arqGeral.r;
     state.arqGeral = { recs:state.records, r:resumoFontes(state.records) };
     return state.arqGeral.r;
   }
+  // Desenha a seção "Arquivos carregados": uma tabela por arquivo (o que veio e de que
+  // período), a tabela "O que cada seção usa" (com o que falta, pelo nome do arquivo) e
+  // o resumo em frases.
   function renderArquivos(){
     var geral = geralFontes(), ref = cicloReferenciaArq(geral), arqs = state.arquivos || [];
     // por arquivo
@@ -3995,18 +4064,22 @@
       return { label: String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0"), value: map[k], recs: lista[k], key: k };
     });
   }
+  // Conta as ocorrências de cada gestor e devolve as barras do maior para o menor
+  // (limit = quantas barras; ex.: 12).
   function ocorrenciasPorGestor(records, limit){
     var map = countBy(records, function(r){ return r.gestor; });
     var arr = Object.keys(map).sort(function(a,b){ return map[b]-map[a]; })
       .map(function(k){ return { label:k, value:map[k], color: colorFor("gestor", k) }; });
     return limit ? arr.slice(0,limit) : arr;
   }
+  // Conta as ocorrências de cada cargo e devolve as barras do maior para o menor.
   function ocorrenciasPorCargo(records, limit){
     var map = countBy(records, function(r){ return r.cargo; });
     var arr = Object.keys(map).sort(function(a,b){ return map[b]-map[a]; })
       .map(function(k){ return { label:k, value:map[k], color: colorFor("cargo", k) }; });
     return limit ? arr.slice(0,limit) : arr;
   }
+  // As n pessoas com mais ocorrências (gráfico "Colaboradores com mais ocorrências").
   function topColaboradores(records, n){
     var map = countBy(records, function(r){ return r.colaborador; });
     return Object.keys(map).sort(function(a,b){ return map[b]-map[a]; }).slice(0,n)
@@ -4204,6 +4277,7 @@
       .sort(function(a,b){ return a.ini - b.ini; })
       .map(function(p){ return "de " + formatDateBR(p.ini) + " a " + formatDateBR(p.fim); });
   }
+  // Monta os avisos amarelos de férias ("⚠ gestor de férias de ... a ...") da demora no PontoNet.
   function avisoFeriasHtml(avisos){
     return avisos.map(function(t){ return '<div class="aviso-ferias">&#9888; ' + escapeHtml(t) + '</div>'; }).join("");
   }
@@ -4267,6 +4341,7 @@
     });
     if (total){ state.diasDados[total.ini] = true; state.diasDados[total.fim] = true; }
   }
+  // Data no formato "aaaa-mm-dd" (o formato dos campos de período escondidos).
   function toISODate(d){
     return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
   }
@@ -4314,6 +4389,7 @@
       msMudou(el);
     });
   }
+  // Filtro de marcar vários: (re)monta a lista de opções com caixinhas e zera o que estava marcado.
   function msCriar(el, opcoes){
     msMontar(el);
     el._opcoes = opcoes;
@@ -4323,12 +4399,14 @@
     }).join("") : '<div class="ms-vazio">Nenhuma opção neste arquivo</div>';
     msAtualizaBotao(el);
   }
+  // Busca dentro da lista de opções do filtro: esconde as que não têm o texto digitado.
   function msFiltrarLista(el, q){
     q = stripAccents(String(q || "").trim().toLowerCase());
     el.querySelectorAll(".ms-op").forEach(function(op){
       op.hidden = !!q && stripAccents(op.textContent.toLowerCase()).indexOf(q) === -1;
     });
   }
+  // Valores marcados num filtro de marcar vários (lista vazia = nenhum = todos).
   function msValores(el){ var s = el && el._sel || {}; return Object.keys(s).filter(function(k){ return s[k]; }); }
   // set {valor: true} dos marcados, ou null quando nada está marcado (= todos)
   function msSetOf(id){
@@ -4337,6 +4415,7 @@
     var set = {}; v.forEach(function(x){ set[x] = true; });
     return set;
   }
+  // Atualiza o texto do botão do filtro: "Todos os gestores", o nome escolhido ou "3 gestores".
   function msAtualizaBotao(el){
     if (!el._montado) return;
     var v = msValores(el), btn = el.querySelector(".ms-btn");
@@ -4344,13 +4423,16 @@
     btn.classList.toggle("tem-sel", v.length > 0);
     btn.title = v.join(", ");
   }
+  // Desmarca tudo num filtro de marcar vários (volta a "todos").
   function msLimpar(el){
     if (!el._montado) return;
     el._sel = {};
     el.querySelectorAll(".ms-op input").forEach(function(cb){ cb.checked = false; });
     msAtualizaBotao(el);
   }
+  // Chamada quando uma caixinha muda: atualiza o botão e redesenha o painel com o filtro novo.
   function msMudou(el){ msAtualizaBotao(el); applyFilters(); }
+  // Fecha as listas abertas dos filtros (clique fora ou tecla Esc).
   function msFecharTodos(){
     document.querySelectorAll(".ms").forEach(function(el){
       var pop = el.querySelector(".ms-pop"), btn = el.querySelector(".ms-btn");
@@ -4389,6 +4471,8 @@
   function filtroPessoas(){
     return { gestor: msSetOf("fGestor"), grupo: msSetOf("fGrupo"), cargo: msSetOf("fCargo"), colab: msSetOf("fColab") };
   }
+  // true = a linha passa nos filtros de pessoa da lateral (gestor, grupo, cargo e colaborador).
+  // f vem de filtroPessoas(); um filtro sem nada marcado não exclui ninguém.
   function passaPessoa(r, f){
     if (f.gestor && !f.gestor[r.gestor]) return false;
     if (f.grupo && !f.grupo[r.grupo]) return false;
@@ -4401,6 +4485,7 @@
     return { ini: $("fDataIni").value ? new Date($("fDataIni").value+"T00:00:00") : null,
              fim: $("fDataFim").value ? new Date($("fDataFim").value+"T23:59:59") : null };
   }
+  // true = a data da linha está dentro do período do filtro (per vem de periodoFiltro()).
   function noPeriodoFiltro(r, per){ return (!per.ini || r.data >= per.ini) && (!per.fim || r.data <= per.fim); }
 
   // Linhas-resumo de um tipo (auditoria, pausas, horas do Cartão, ORG,
@@ -4422,6 +4507,7 @@
       return isTipoDigitada(r.tipo) && passaPessoa(r, f) && (!ciclo || cicloDe(r.data) === ciclo);
     });
   }
+  // Linhas "Auditoria Extra e Falta (3 Meses)" que passam nos filtros de pessoa.
   function getAuditoriaRecords(){ return getResumoRecords(TIPO_AUDITORIA_EXTRA_FALTA); }
   // Pausas térmicas: com a aba de pausas de vários meses (T9), cada mês vem
   // com a sua data (dia 27 do mês). As vistas do mês usam só o mais recente
@@ -4431,7 +4517,9 @@
     state.records.forEach(function(r){ if (r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS && (!max || r.data > max)) max = r.data; });
     return max ? dateKey(max) : null;
   }
+  // Resumo de pausas térmicas de TODOS os meses do arquivo (filtros de pessoa).
   function getPausasTodosMeses(){ return getResumoRecords(TIPO_RESUMO_PAUSAS_TERMICAS); }
+  // Resumo de pausas térmicas só do mês mais recente do arquivo (filtros de pessoa).
   function getPausasTermicasRecords(){
     var k = mesPausasAtual();
     return getPausasTodosMeses().filter(function(r){ return r.dateKey === k; });
@@ -4460,6 +4548,7 @@
     }
     return n;
   }
+  // Mostra o número de filtros ligados na bolinha ao lado de "Filtros".
   function updateFiltersBadge(){
     var n = countActiveFilters();
     var badge = $("filtersBadge");
@@ -4515,6 +4604,7 @@
     });
     (extras || []).forEach(function(r){ if (r.colaborador) chaves[chavePessoa(r)] = true; });
     var n = Object.keys(chaves).length;
+    // Quantos valores estão marcados num filtro (0 se nenhum).
     function qtd(set){ return set ? Object.keys(set).length : 0; }
     var nG = qtd(f.gestor), nGr = qtd(f.grupo), nC = qtd(f.cargo), nCo = qtd(f.colab);
     var rotulo;
@@ -4537,6 +4627,7 @@
     if (/^colaborador/.test(r)) return formatNum(n) + " " + r;
     return formatNum(n) + (n === 1 ? " pessoa " : " pessoas ") + r;
   }
+  // Mesmo que fraseRecorte (nome antigo, mantido para não quebrar quem chama).
   function textoRecorte(n){ return fraseRecorte(n); }
   // Faixa "Mostrando: ..." embaixo do título de cada seção, sempre com o recorte atual.
   function atualizarRecorteSecoes(){
@@ -4580,6 +4671,8 @@
     "Tempo do colaborador para justificar": "Em média, quantos dias o colaborador levou entre o pedido ser aberto e ele escrever a justificativa (contagem do próprio PontoNet, nos pedidos aprovados).",
     "Tempo do gestor para avaliar": "Em média, quantos dias o gestor levou entre a justificativa do colaborador e a avaliação dele (contagem do próprio PontoNet, nos pedidos aprovados). Fica vermelho acima de 3 dias."
   };
+  // Monta um número do topo de seção (rótulo, valor, linha de baixo) com o botão "?" quando
+  // existe explicação em EXPLICA_KPI. cls = "pos" (verde), "neg" (vermelho) ou "alerta".
   function kpiTile(label, valor, sub, cls){
     var ex = EXPLICA_KPI[label], aberto = ex && state.kpiAberto && state.kpiAberto[label];
     return '<div class="colab-kpi' + (cls ? ' ' + cls : '') + (ex ? ' kpi-explica' : '') + (aberto ? ' explica-card' : '') + '">' +
@@ -4595,6 +4688,9 @@
     var tile = b.parentNode, lig = tile.classList.toggle("explica-card");
     state.kpiAberto[b.dataset.kpi] = lig;
   });
+  // Desenha os 2 números do topo da seção Ocorrências: "Colaboradores envolvidos" (pessoas
+  // diferentes com ocorrência no filtro, "de X" = tamanho da equipe do recorte) e
+  // "Ocorrências no período" (sem contar as linhas de hora extra).
   function renderKPIs(records, ocorrenciasRecords){
     var colaboradoresSet = {};
     records.forEach(function(r){ colaboradoresSet[r.colaborador] = true; });
@@ -4656,7 +4752,10 @@
     if (fimCartao && fimCartao.getTime() < fim) fim = fimCartao.getTime();
     return { ini: toISODate(new Date(Math.min.apply(null, dates))), fim: toISODate(new Date(fim)) };
   }
+  // "2026-09-28" -> "28/09/2026".
   function isoParaBR(iso){ return iso ? iso.split("-").reverse().join("/") : ""; }
+  // Atualiza o período da faixa do topo. (Desde 05/11 essa faixa fica escondida a pedido
+  // do RH; a função continua porque outros pontos a chamam.)
   function atualizarPeriodoTopo(){
     var ini = $("fDataIni").value, fim = $("fDataFim").value;
     if (!state.records.length || (!ini && !fim)){ $("topbarPeriod").hidden = true; return; }
@@ -4666,6 +4765,7 @@
     $("topbarPeriodValue").textContent = (ini ? isoParaBR(ini) : "início") + " a " + (fim ? isoParaBR(fim) : "fim");
     $("topbarPeriod").hidden = false;
   }
+  // "primeira data a última data" de uma lista de linhas.
   function formatDateSpan(records){
     var dates = records.map(function(r){ return r.data.getTime(); });
     var minD = new Date(Math.min.apply(null,dates)), maxD = new Date(Math.max.apply(null,dates));
@@ -4685,6 +4785,10 @@
   function colabLink(nome){
     return '<a href="#" class="colab-link" data-colab="'+escapeHtml(nome)+'">'+escapeHtml(nome)+'</a>';
   }
+  // Desenha uma tabela simples. columns = lista de colunas {label (nome), html (cabeçalho
+  // com quebra de linha, opcional), width (largura), render(linha) -> HTML da célula};
+  // rows = as linhas; opts.tableClass / opts.rowClass(linha) = classes extras.
+  // Sem linhas, mostra a mensagem de "sem dados".
   function renderTableSimple(container, columns, rows, opts){
     opts = opts || {};
     if (!rows.length){ container.innerHTML=""; container.appendChild(emptyMsg()); return; }
@@ -4721,6 +4825,8 @@
     });
     return eq;
   }
+  // Gráfico "Ocorrências por gestor": total (12 maiores) ou "por pessoa da equipe"
+  // (ocorrências ÷ pessoas da equipe na lista de equipes). Barras empilhadas por tipo.
   function renderPorGestor(ocGes, tipoDe, corTipo, legenda){
     var temOrg = state.records.some(function(r){ return r.tipo === TIPO_CADASTRO_ORG; });
     var sel = $("gestorMedida");
@@ -4922,8 +5028,12 @@
   var MOTIVO_ESQUECIMENTO = "inclusao por esquecimento";
   function isEsquecimento(r){ return chaveNome(r.situacao).toLowerCase() === MOTIVO_ESQUECIMENTO; }
   function horaMin(d){ return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+  // Chave para agrupar justificativas iguais escritas com ponto final ou espaço a mais.
   function chaveTexto(t){ return chaveNome(t).replace(/[.\s]+$/,"").toLowerCase(); }
 
+  // Desenha a seção "Marcações digitadas" (batidas lançadas à mão): números do topo, motivo,
+  // dia da semana, data, quem mais digitou, por gestor, hora, esquecimento repetido,
+  // justificativas e lista. Segue o seletor de ciclo da seção e os filtros de pessoa.
   function renderDigitadas(ocorrenciasRecords){
     var temDig = state.records.some(function(r){ return isTipoDigitada(r.tipo); });
     $("digSemDados").hidden = temDig;
@@ -5166,6 +5276,7 @@
     if (!out.length && t) out.push({ quando:"", data:null, desc:t });
     return out;
   }
+  // "Seg", "Ter"... de uma data.
   function diaSemanaCurto(d){ return DIAS_LABELS[DIAS_ORDER.indexOf(d.getDay())]; }
   // Nome da folga como o sistema escreve -> em palavras ("DSR" = folga da semana).
   function nomeFolga(t){
@@ -5184,6 +5295,9 @@
     }).join("<br>");
   }
 
+  // Desenha a seção "Afastamentos": seletor de ciclo e de tipo, resumo em frases,
+  // evolução, por gestor, dia da semana, atestados encostados em folga, ranking, mapa
+  // colaborador × dia e sinais de atenção. Cada afastamento vira dias (diasDoAtestado).
   function renderAbsenteismo(){
     state.absPeriodo = null;
     var todos = getAfastamentosBase(false);
@@ -5227,6 +5341,7 @@
     var txtCiclo = function(k){ var fc = cicloInicioFim(k); return "Ciclo " + cicloLabel(k) + ": " + formatDateBR(fc.ini) + " a " + formatDateBR(fc.fim); };
     var txt3m = f3 ? "Últimos 3 meses: " + formatDateBR(f3.ini) + " a " + formatDateBR(f3.fim) : "Últimos 3 meses";
     state.absPeriodo = { tres: txt3m, ciclo: cicloSel ? txtCiclo(cicloSel) : txt3m, mapa: ciclos.length ? txtCiclo(cicloSel || ciclos[0]) : txt3m };
+    // true = a data está no ciclo escolhido (ou, sem escolha, num dos ciclos da seção).
     function noCiclo(d){ var k = cicloDe(d); return cicloSel ? k === cicloSel : ciclos.indexOf(k) > -1; }
 
     // O seletor "Mostrar" escolhe a base das vistas gerais (resumo, evolução,
@@ -5304,6 +5419,7 @@
         var we = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate()+6); if (we > fc.fim) we = new Date(fc.fim);
         semanas.push({ ini: ws, fim: we, dias: 0, label: formatDateBR(ws).slice(0,5) + "–" + formatDateBR(we).slice(0,5) });
       }
+      // Semana do ciclo (barra do gráfico de evolução) em que a data cai.
       function semanaDe(d){ for (var i = 0; i < semanas.length; i++) if (d >= semanas[i].ini && d <= semanas[i].fim) return semanas[i]; return null; }
       pedG.forEach(function(x){ var sm = semanaDe(x.d); if (sm) sm.dias++; });
       $("absEvolHint").textContent = "Ciclo " + cicloLabel(cicloSel) + ": dias de " + nomeBase + " em cada semana · “Últimos 3 meses” no seletor volta para a comparação entre ciclos";
@@ -5463,6 +5579,7 @@
     for (var i = CICLOS_TENDENCIA - 1; i >= 0; i--) out.push(somaCiclo(ult, -i));
     return out;
   }
+  // Linhas que passam no teste dado e nos filtros de pessoa (base dos indicadores de tendência).
   function recsPessoa(teste){
     var f = filtroPessoas();
     return state.records.filter(function(r){ return teste(r) && passaPessoa(r, f); });
@@ -5499,7 +5616,9 @@
     { id:"pauImpar", nome:"Batida de pausa faltando", secao:"Pausas térmicas", pior:"sobe", medida:"pausasMarcacoesImpares",
       itens:function(){ return recsPessoa(function(r){ return r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS; }).map(function(r){ return { r:r, c:cicloDe(r.data), num:r.pausasMarcacoesImpares || 0 }; }); } }
   ];
+  // Acha o indicador de tendência pelo id ("dig", "esq", "atest"...).
   function indicador(id){ for (var i = 0; i < INDICADORES.length; i++) if (INDICADORES[i].id === id) return INDICADORES[i]; return null; }
+  // true = nenhum filtro de pessoa (gestor, grupo, cargo, colaborador) está marcado.
   function filtroPessoasVazio(){ var f = filtroPessoas(); return !f.gestor && !f.grupo && !f.cargo && !f.colab; }
   // Soma os itens por chave (unidade, gestor ou pessoa) e por ciclo.
   // chaveFn(r) -> chave; devolve [{ chave, label, gestor, c: {ciclo: {num, den}} }]
@@ -5749,7 +5868,11 @@
   var COR_PAUSA = { "Certas (20 min)":"#1baf7a", "Curtas (menos de 20 min)":"#E8840C", "Longas (mais de 20 min)":"#2a78d6" };
   function blocosTrabalho(r){ return (r.trabalhoCorreto140 || 0) + (r.trabalhoMaior140 || 0) + (r.trabalhoMenor140 || 0); }
   function pausasTotal(r){ return (r.pausaCorretas || 0) + (r.pausaMenor20 || 0) + (r.pausaMaior20 || 0); }
+  // Fração dos trechos de trabalho da pessoa que passaram de 1h40 sem pausa (0 a 1).
   function pctAcima(r){ var b = blocosTrabalho(r); return b ? (r.trabalhoMaior140 || 0) / b : 0; }
+  // Soma o resumo de pausas de várias pessoas: pessoas, pausas certas, total de pausas,
+  // trechos acima de 1h40, total de trechos, batidas faltando, quem tem batida faltando e
+  // quem passou de 1h40 em mais de 30% dos trechos (LIMITE_ACIMA_PCT).
   function somaPausas(lista){
     var t = { pessoas:lista.length, corretas:0, pausas:0, acima:0, blocos:0, impares:0, comImpar:0, acima30:0 };
     lista.forEach(function(r){
@@ -5770,11 +5893,14 @@
     trabalhoMaior140: { col:"Trechos com mais de 1h40 sem pausa", un:"trecho(s) de trabalho com mais de 1h40 sem pausa" },
     pausasMarcacoesImpares: { col:"Batidas de pausa faltando", un:"batida(s) de pausa faltando" }
   };
+  // Pessoas com valor > 0 numa medida de pausas, marcadas com a medida para a janela "de onde vem".
   function recsMedida(lista, campo){
     var a = lista.filter(function(r){ return (r[campo] || 0) > 0; });
     a.medida = campo;
     return a;
   }
+  // Desenha a seção "Pausas térmicas" do mês mais recente: 4 números do topo, tabela,
+  // trabalho acima de 1h40 por pessoa e por gestor, pausas por gestor/cargo e evolução mês a mês.
   function renderPausas(){
     var mes = getPausasTermicasRecords(), t = somaPausas(mes);
     var tile = kpiTile;
@@ -5867,10 +5993,12 @@
   var COR_DIA_PAUSA = { ok:"#1baf7a", acima:"#F7931E", sem:"#E31E24", impar:"#7B4FB0" };
   var NOME_DIA_PAUSA = { ok:"Dia certo", acima:"Passou de 1h40 sem pausa", sem:"Mais de 1h40 e nenhuma pausa térmica", impar:"Faltou uma batida" };
   var NOME_LETRA = { P:"Entrada ou saída da jornada", G:"Refeição", F:"Pausa térmica" };
+  // Linhas "Pausa Térmica Dia" (batidas de cada dia) que passam nos filtros de pessoa.
   function getPausaDiaRecords(){
     var f = filtroPessoas();
     return state.records.filter(function(r){ return isTipoPausaDia(r.tipo) && passaPessoa(r, f); });
   }
+  // Minutos -> "1h05".
   function hm(min){ min = Math.round(min); return Math.floor(min/60) + "h" + ("0" + (min % 60)).slice(-2); }
   // Lê as batidas do dia e faz as contas (guardadas no próprio registro).
   function analisarDiaPausa(r){
@@ -5927,6 +6055,8 @@
       return Math.floor(h/60) + ":" + ("0" + (h % 60)).slice(-2) + " " + (nome[b.l] || b.l);
     }).join(" · ");
   }
+  // Desenha os cards das batidas das pausas (mês escolhido no seletor): por hora de começo,
+  // por dia da semana, trabalho até a 1ª pausa, dias sem pausa, maior trecho e o mapa.
   function renderPausasBatidas(){
     state.pauBatPeriodo = null;
     var temDia = state.records.some(function(r){ return isTipoPausaDia(r.tipo); });
@@ -6094,10 +6224,14 @@
     var s = String(r.situacao || "").toUpperCase();
     return SIT_PN[s] || (s ? s.charAt(0) + s.slice(1).toLowerCase() : "Sem situação");
   }
+  // Cor de uma situação do PontoNet nos gráficos.
   function corSitPN(n){ return COR_SIT_PN[n] || "#E8840C"; }
   var COR_MOTIVO_PN = { "Problema no relógio de ponto":"#2a78d6", "Atividade externa":"#1baf7a", "Esquecimento":"#E8840C", "Exclusão de batida errada":"#e87ba4" };
+  // Cor de um motivo do PontoNet nos gráficos (motivo desconhecido = cinza).
   function corMotivoPN(n){ return COR_MOTIVO_PN[n] || "#B9BBBE"; }
+  // true = pedido do PontoNet aprovado (situação INTEGRADO). Só esses entram na seção.
   function isAprovadoPN(r){ return String(r.situacao || "").toUpperCase() === "INTEGRADO"; }
+  // Motivo do PontoNet em palavras simples ("dispositivo" -> "Problema no relógio de ponto").
   function nomeTipoPN(t){
     var n = stripAccents(String(t || "")).toLowerCase();
     if (!n) return "Sem motivo";
@@ -6107,10 +6241,12 @@
     if (n.indexOf("exclus") > -1) return "Exclusão de batida errada";
     return t.charAt(0) + t.slice(1).toLowerCase();
   }
+  // Média de um campo de dias numa lista (ignora quem não tem o campo). null se ninguém tem.
   function mediaDias(lista, campo){
     var v = lista.filter(function(r){ return r[campo] != null; });
     return v.length ? v.reduce(function(sm, r){ return sm + r[campo]; }, 0) / v.length : null;
   }
+  // Número de dias em texto: "1 dia", "2,5 dias", "–" quando não há valor.
   function diasTxt(v){ return v == null ? "&ndash;" : formatDec(v).replace(",0", "") + (Math.abs(v - 1) < 0.05 ? " dia" : " dias"); }
   // Só os pedidos aprovados (pedido do RH, 28/10): cancelados e batidas achadas
   // no relógio não entram em nada da seção.
@@ -6136,6 +6272,8 @@
     var c = cicloPontoNet();
     return getPontoNetRecords().filter(function(r){ return !c || cicloDe(r.data) === c; });
   }
+  // Desenha a seção "PontoNet" (pedidos aprovados): 4 números, mês a mês por motivo,
+  // tempos por ciclo, por motivo, tempo do gestor por gestor, tendência, lista e a demora.
   function renderPontoNet(){
     state.pnPeriodo = null;
     var tem = state.records.some(function(r){ return isTipoPontoNet(r.tipo); });
@@ -6345,11 +6483,14 @@
     if (r.tipo === "Intrajornada" && r.minutosTrabalhados != null) return (r.situacao || "Intervalo curto") + " · " + formatHoras(r.minutosTrabalhados) + " de trabalho no dia";
     return r.situacao || "";
   }
+  // Linhas dos 4 relatórios de jornada que passam nos filtros de pessoa.
   function getJornadaRecords(){
     var f = filtroPessoas();
     return state.records.filter(function(r){ return isTipoJornada(r.tipo) && passaPessoa(r, f); });
   }
 
+  // Desenha a seção "Jornada": números do topo, mês a mês por tipo, mais de 10h por pessoa,
+  // por gestor (com % da equipe) e a lista. Segue o seletor de ciclo da seção.
   function renderJornada(){
     state.jorPeriodo = null;
     var temJor = state.records.some(function(r){ return isTipoJornada(r.tipo); });
@@ -6672,6 +6813,10 @@
       reader.readAsText(file, "UTF-8");
     });
   }
+  // Abre um ou vários CSVs escolhidos (adicionar = true junta aos já abertos). Lê todos,
+  // avisa os que não deu para ler, tira as linhas repetidas ENTRE arquivos diferentes
+  // (dentro do mesmo arquivo linhas iguais valem: podem ser dois registros de verdade),
+  // marca de qual arquivo veio cada linha (_arq) e chama abrirDados.
   function handleFiles(files, adicionar){
     files = [].slice.call(files || []);
     if (!files.length) return;
@@ -6720,6 +6865,8 @@
     if (!tem) return records;
     return records.filter(function(r){ return !isTipoPontoNet(r.tipo) || gest[chaveNome(r.gestor)]; });
   }
+  // Coloca as linhas lidas no painel: aplica a regra do PontoNet só de gestores da lista de
+  // equipes, zera cores e filtros, monta os filtros, abre a seção Arquivos carregados e desenha tudo.
   function abrirDados(records){
       records = semPontoNetForaDoORG(records);
       state.records = records;
@@ -6830,10 +6977,12 @@
       $(id === "fDataIni" ? "btnDataIniVal" : "btnDataFimVal").textContent = v ? isoParaBR(v) : (id === "fDataIni" ? "início" : "fim");
     });
   }
+  // Primeiro e último dia com informação (o calendário do período só vai até eles).
   function limitesDias(){
     var k = Object.keys(state.diasDados || {}).sort();
     return k.length ? { min:k[0], max:k[k.length-1] } : null;
   }
+  // Desenha o calendário do período: só os dias com informação são clicáveis.
   function desenharCalendario(){
     var pop = $("calPop"), lim = limitesDias();
     if (!lim){ pop.innerHTML = '<div class="cal-nota">Carregue um arquivo para escolher o período.</div>'; return; }
@@ -6856,6 +7005,7 @@
       '<div class="cal-nota">Só os dias com alguma informação (ocorrência, hora extra, diferença de menos de 15 minutos ou batida digitada) podem ser escolhidos. Os riscados não têm nada.</div>';
     pop.innerHTML = h;
   }
+  // Abre o calendário para escolher "De" ou "Até" (alvo = id do campo).
   function abrirCalendario(alvo){
     var pop = $("calPop");
     if (!pop.hidden && cal.alvo === alvo){ fecharCalendario(); return; }
@@ -6867,6 +7017,7 @@
     pop.hidden = false;
     desenharCalendario();
   }
+  // Fecha o calendário do período.
   function fecharCalendario(){
     $("calPop").hidden = true;
     document.querySelectorAll(".data-btn").forEach(function(b){ b.classList.remove("aberto"); });
@@ -6984,6 +7135,7 @@
     e.preventDefault();
     abrirCardColaborador(el.getAttribute("data-colab"));
   });
+  // Fecha o card (resumo) do colaborador.
   function fecharModalColab(){
     $("colabModalOverlay").hidden = true;
     document.body.style.overflow = "";
@@ -6999,6 +7151,7 @@
   function pausasDoCard(pausa, historico){
     if (!pausa) return "";
     var equipe = state.records.filter(function(r){ return r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS && r.dateKey === pausa.dateKey && r.gestor === pausa.gestor; });
+    // Média de uma medida entre as pessoas da equipe (para comparar a pessoa com a equipe).
     function media(fn){ return equipe.length ? equipe.reduce(function(sm, r){ return sm + fn(r); }, 0) / equipe.length : 0; }
     var pcCerta = function(r){ var t = pausasTotal(r); return t ? (r.pausaCorretas || 0) / t : 0; };
     var linhas = [
@@ -7022,6 +7175,9 @@
     return h;
   }
 
+  // Abre o card (resumo) de uma pessoa: dados de cadastro, números (ocorrências do período,
+  // horas do cartão ponto, banco de horas, extra e falta no mesmo dia, curtas, PontoNet,
+  // pausas), evolução ciclo a ciclo, afastamentos e a lista de ocorrências.
   function abrirCardColaborador(nome){
     if (!nome || !state.records.length) return;
     hideTooltip();
@@ -7035,6 +7191,7 @@
     }
     var dIni = $("fDataIni").value ? new Date($("fDataIni").value+"T00:00:00") : null;
     var dFim = $("fDataFim").value ? new Date($("fDataFim").value+"T23:59:59") : null;
+    // true = a data da linha está no período do filtro (o card da pessoa segue o período).
     function noPeriodo(r){ return (!dIni || r.data >= dIni) && (!dFim || r.data <= dFim); }
 
     var ocorrencias = todas.filter(function(r){ return !isTipoNaoOcorrencia(r.tipo) && noPeriodo(r); })
@@ -7072,6 +7229,7 @@
       return "<span>"+m[0]+": <b>"+escapeHtml(m[1])+"</b></span>";
     }).join("") + (foraOrg ? '<span class="sem-gestor">Não está na lista de equipes</span>' : "");
 
+    // Monta um número do card da pessoa (rótulo, valor e linha de baixo).
     function tile(label, valor, sub, cls){
       return '<div class="colab-kpi'+(cls?' '+cls:'')+'"><div class="ck-label">'+label+'</div><div class="ck-value">'+valor+'</div>'+
              (sub ? '<div class="ck-sub">'+sub+'</div>' : '')+'</div>';
@@ -7218,6 +7376,7 @@
     window.scrollTo({ top:0 });
     if (state.records.length) renderDashboard();
   }
+  // Fecha o menu ☰ das seções.
   function fecharMenuSecoes(){ $("menuSecoes").hidden = true; $("btnMenu").setAttribute("aria-expanded","false"); }
   $("btnMenu").addEventListener("click", function(e){
     e.stopPropagation();
@@ -7298,15 +7457,18 @@
     gestor: { id:"fGestor", nome:"gestor" }, cargo: { id:"fCargo", nome:"cargo" },
     colab: { id:"fColab", nome:"colaborador" }, tipo: { id:"fTipo", nome:"tipo" }, data: { nome:"dia" }
   };
+  // true = dá para aplicar esse filtro a partir do clique no gráfico (o valor existe na lateral).
   function filtroDisponivel(f){
     if (!f || !f.valor || f.valor === ROTULO_OUTROS || !CAMPOS_FILTRO[f.campo]) return false;
     if (f.campo === "data") return /^\d{4}-\d{2}-\d{2}$/.test(f.valor);
     var el = $(CAMPOS_FILTRO[f.campo].id);
     return !!(el && el._opcoes && el._opcoes.indexOf(f.valor) > -1);
   }
+  // Texto do botão "Filtrar o painel: gestor FULANO".
   function rotuloFiltro(f){
     return CAMPOS_FILTRO[f.campo].nome + " " + (f.campo === "data" ? isoParaBR(f.valor) : f.valor);
   }
+  // Marca na lateral os filtros vindos do clique num gráfico e redesenha o painel.
   function aplicarFiltroDoGrafico(lista){
     lista.forEach(function(f){
       if (f.campo === "data"){ $("fDataIni").value = f.valor; $("fDataFim").value = f.valor; return; }
@@ -7332,6 +7494,10 @@
     if (isTipoPontoNet(r.tipo)) return "pontonet";
     return "ocorrencia";
   }
+  // Abre a janela "de onde vem": a lista de registros por trás de um número clicado (barra,
+  // pedaço, fatia, ponto ou quadrado). As colunas mudam conforme o tipo de registro
+  // (ocorrência, digitada, afastamento, jornada, pausa, PontoNet, dia do banco de horas).
+  // Em cima, os nomes viram filtros da lista; embaixo, botões para filtrar o painel.
   function abrirOrigem(titulo, recorte, recs, filtros){
     var tipo = recs.tipoOrigem || tipoDaOrigem(recs[0]), linhas, colunas;
     // botões "Filtrar o painel por ..." (M4): um por filtro e, com dois, os dois juntos
@@ -7478,6 +7644,7 @@
     if (!n) state.origem.sel = {}; else if (sel[n]) delete sel[n]; else sel[n] = true;
     desenharOrigem();
   });
+  // Fecha a janela "de onde vem".
   function fecharOrigem(){ $("origemOverlay").hidden = true; }
   $("origemBusca").addEventListener("input", function(){ if (state.origem) desenharOrigem(); });
   $("origemBusca").addEventListener("click", function(e){ e.stopPropagation(); });
@@ -7519,6 +7686,7 @@
     pnTodos: ["chartPnCiclo"], pnCiclo: ["chartPnTipo","chartPnGestor","tablePnLista","tableDemoraGestor","tableDemoraColaborador"],
     jorTodos: ["chartJorCiclo"], jorCiclo: ["chartJorDezHoras","chartJorGestor","tableJorGestor","tableJorLista"]
   };
+  // "dd/mm/aaaa a dd/mm/aaaa".
   function intervaloBR(ini, fim){ return formatDateBR(ini) + " a " + formatDateBR(fim); }
   // ciclo (28 a 27) das linhas-resumo de um tipo (todas têm a data do fim do ciclo)
   function cicloDoResumo(tipo){
@@ -7526,6 +7694,8 @@
     state.records.forEach(function(x){ if (x.tipo === tipo && x.data && (!r || x.data > r.data)) r = x; });
     return r ? cicloInicioFim(cicloDe(r.data)) : null;
   }
+  // Escreve em cada card o selo 📅 com o período que ele considera (filtro, mês do cartão
+  // ponto, ciclo escolhido, 3 meses...) e a linha 📅 dos números do topo.
   function atualizarPeriodosCards(){
     var per = periodoFiltro(), tot = periodoCompleto();
     var ini = per.ini || (tot && new Date(tot.ini + "T00:00:00")), fim = per.fim || (tot && new Date(tot.fim + "T00:00:00"));
@@ -7599,6 +7769,7 @@
     if (b){ b.innerHTML = "&#x26F6;"; b.title = "Ver em tela cheia"; b.setAttribute("aria-label", b.title); }
     if (state.records.length) renderDashboard();
   }
+  // Abre um card em tela cheia (gráfico 1,5× maior e lista inteira) e redesenha.
   function abrirTelaCheia(card){
     fecharTelaCheia();
     card.classList.add("card-cheia"); document.body.classList.add("tem-cheia");

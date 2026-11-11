@@ -46,6 +46,11 @@ Private msgAuto As String
 Private Const NOME_ABA_SAIDA As String = "Banco de Horas"
 Private Const N_COLS As Long = 16
 
+' MACRO PRINCIPAL. Rode com a aba do relatório de banco de horas (HRES105, arquivo "BH") ativa.
+' Lê o relatório como ele sai do sistema (páginas de impressão), acha a linha de títulos, pega
+' uma linha por pessoa (matrícula, nome, saldo anterior, crédito, débito, horas anistiadas,
+' horas pagas, saldo final) e reescreve a aba como uma tabela simples chamada "Banco de Horas".
+' Horas negativas do relatório ("25:40-") viram positivas na coluna certa (Débito).
 Sub FormatarBancoHoras()
     Dim ws As Worksheet
     Set ws = ActiveSheet
@@ -301,6 +306,7 @@ Private Function FechamentosNoPeriodo(ByVal ini As Date, ByVal fim As Date) As L
     Next k
 End Function
 
+' Valor da célula (r, c) da matriz lida da aba; vazio se a posição não existe.
 Private Function Celula(dados As Variant, ByVal r As Long, ByVal c As Long) As Variant
     If c < 1 Or c > UBound(dados, 2) Or r < 1 Or r > UBound(dados, 1) Then
         Celula = Empty
@@ -309,6 +315,7 @@ Private Function Celula(dados As Variant, ByVal r As Long, ByVal c As Long) As V
     End If
 End Function
 
+' True = a célula tem um número de verdade (não texto, não vazio, não erro).
 Private Function EhNumero(v As Variant) As Boolean
     If IsError(v) Or IsEmpty(v) Then
         EhNumero = False
@@ -319,12 +326,14 @@ Private Function EhNumero(v As Variant) As Boolean
     End If
 End Function
 
+' True = o texto da célula pode ser lido como número (ex.: matrícula "97470").
 Private Function PareceNumero(v As Variant) As Boolean
     Dim t As String
     t = TextoCel(v)
     PareceNumero = (t <> "" And IsNumeric(t))
 End Function
 
+' Texto da célula sem espaços nas pontas e sem quebras de linha; erro (#N/A) ou vazio = "".
 Private Function TextoCel(v As Variant) As String
     If IsError(v) Or IsEmpty(v) Then
         TextoCel = ""
@@ -333,6 +342,7 @@ Private Function TextoCel(v As Variant) As String
     End If
 End Function
 
+' Texto em MAIÚSCULAS e sem acento, para comparar títulos ("Débito" = "DEBITO").
 Private Function TextoSimples(v As Variant) As String
     Dim t As String, com As String, sem As String, i As Long
     t = UCase$(TextoCel(v))
@@ -356,6 +366,9 @@ Public Function FormatarBancoHoras_Auto() As String
     FormatarBancoHoras_Auto = msgAuto
 End Function
 
+' Mostra uma mensagem ao usuário (MsgBox). Quando a macro roda sozinha, chamada pela
+' PrepararAbasDoMes/GerarCSVsDaPasta (modoAuto = True), não abre janela: guarda o texto em
+' msgAuto para o relatório da preparação (com "ERRO: " na frente quando é erro) e responde Sim.
 Private Function Aviso(ByVal texto As String, Optional ByVal botoes As Long = vbInformation, Optional ByVal titulo As String = "") As VbMsgBoxResult
     If modoAuto Then
         If (botoes And 16) = 16 Then texto = "ERRO: " & texto

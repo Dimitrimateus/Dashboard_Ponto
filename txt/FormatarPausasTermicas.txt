@@ -337,6 +337,10 @@ Private Function EhLinhaDeDia(ws As Worksheet, ByVal r As Long) As Boolean
     End If
 End Function
 
+' Lê uma linha de DIA do relatório de pausas (data em A, depois pares horário + letra:
+' P = entrada/saída da jornada, G = refeição, F = pausa térmica, e as exceções "(1) (3)" no
+' fim) e guarda cada batida (matrícula, nome, data, hora, nº da batida, letra) em "batidas",
+' para montar a tabela de batidas da aba.
 Private Sub GuardarBatidasDoDia(ws As Worksheet, ByVal r As Long, ByVal mat As String, ByVal nome As String, batidas As Collection)
     Dim vals As Variant, c As Long, seq As Long, v As Variant, letra As String, excecoes As String
     vals = ws.Range(ws.Cells(r, 1), ws.Cells(r, 45)).Value2
@@ -433,6 +437,8 @@ Private Function AbaExiste(wb As Workbook, ByVal nome As String) As Boolean
     AbaExiste = False
 End Function
 
+' Deixa a linha de títulos de uma tabela com cara de cabeçalho: negrito, fundo cinza, borda,
+' centralizado e com quebra de linha.
 Private Sub FormatarCabecalho(rng As Range)
     With rng
         .Font.Bold = True
@@ -683,6 +689,9 @@ Public Function FormatarPausasTermicas_Auto() As String
     FormatarPausasTermicas_Auto = msgAuto
 End Function
 
+' Mostra uma mensagem ao usuário (MsgBox). Quando a macro roda sozinha, chamada pela
+' PrepararAbasDoMes/GerarCSVsDaPasta (modoAuto = True), não abre janela: guarda o texto em
+' msgAuto para o relatório da preparação (com "ERRO: " na frente quando é erro) e responde Sim.
 Private Function Aviso(ByVal texto As String, Optional ByVal botoes As Long = vbInformation, Optional ByVal titulo As String = "") As VbMsgBoxResult
     If modoAuto Then
         If (botoes And 16) = 16 Then texto = "ERRO: " & texto

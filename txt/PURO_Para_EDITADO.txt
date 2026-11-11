@@ -711,6 +711,7 @@ Private Function ColunaTipoTrabalho(colOrg As Object) As Long
     End If
 End Function
 
+' Valor guardado no dicionário para a chave, ou 0 se a chave não existe.
 Private Function ValorOuZero(d As Object, ByVal chaveBusca As String) As Long
     If d.Exists(chaveBusca) Then ValorOuZero = d(chaveBusca)
 End Function
