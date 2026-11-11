@@ -39,6 +39,10 @@ Private pastaFixaCSV As String
 ' -----------------------------------------------------------------
 ' DE ONDE CADA COISA VEM (abas de entrada, todas na MESMA planilha):
 '
+'   (11/11) NÃO SÃO MAIS LIDAS (ver LER_ABAS_TRATAMENTO, abaixo): o painel
+'     tirou as seções de ocorrências e o histórico, porque essas abas só existem
+'     na planilha de uma unidade. O texto a seguir descreve como era (e como volta
+'     a ser com LER_ABAS_TRATAMENTO = True):
 '   "Tratamento - Internos" e "Tratamento - Externos" (pelo menos uma
 '     obrigatória) — uma linha por ocorrência já revisada pelo RH no
 '     mês atual (atraso, falta, hora extra, etc.), separadas entre
@@ -302,6 +306,14 @@ Private pastaFixaCSV As String
 
 ' ---- Regras configuráveis -------------------------------------------
 Private Const INCLUIR_SEM_ALTERACAO As Boolean = False
+
+' (11/11) O painel deixou de ter as seções de ocorrências e o histórico (pedido do RH: o
+' painel vai ser usado em todas as unidades, e as abas "Tratamento - Internos/Externos" só
+' existem na planilha da unidade de Recife/Cabo). Com False, o macro NÃO lê essas abas: não
+' gera as linhas de ocorrência nem as de "Hora Extra"/"Hora Extra 100%", e funciona numa
+' planilha que não tem nenhuma aba de Tratamento. O gestor de cada pessoa vem da aba ORG.
+' Para voltar ao jeito antigo, troque para True (o código da leitura continua aqui embaixo).
+Private Const LER_ABAS_TRATAMENTO As Boolean = False
 ' "S" = ocorrência sem problema real (confirmado pelo RH); mude para
 ' um array maior se algum dia existir um terceiro valor válido.
 Private Const VALOR_CHECK_IGNORAR As String = "S"
@@ -357,8 +369,12 @@ Public Sub GerarAbaCSV()
     ' (ou só "Tratamento", na planilha antiga) — todas as que começam com
     ' "Tratamento" e têm a coluna "Matricula".
     Dim abasTrat As Collection
-    Set abasTrat = EncontrarAbasTratamento(wbTrat)
-    If abasTrat.Count = 0 Then
+    If LER_ABAS_TRATAMENTO Then
+        Set abasTrat = EncontrarAbasTratamento(wbTrat)
+    Else
+        Set abasTrat = New Collection   ' (11/11) sem as abas de Tratamento: o laço abaixo não roda
+    End If
+    If LER_ABAS_TRATAMENTO And abasTrat.Count = 0 Then
         AvisoCSV "Não encontrei nenhuma aba de Tratamento (ex.: 'Tratamento - Internos' / " & _
             "'Tratamento - Externos') com a coluna 'Matricula' na linha 1.", vbExclamation, "Gerar CSV"
         Exit Sub
@@ -935,7 +951,11 @@ ProximaAbaTratamento:
     ' o que ficou de fora. É a forma de conferir, sem abrir o CSV, se todas as
     ' abas foram encontradas.
     Dim msgAuditoria As String
-    msgAuditoria = vbCrLf & "Abas de Tratamento lidas:" & resumoAbasTrat & vbCrLf
+    If LER_ABAS_TRATAMENTO Then
+        msgAuditoria = vbCrLf & "Abas de Tratamento lidas:" & resumoAbasTrat & vbCrLf
+    Else
+        msgAuditoria = vbCrLf & "Abas de Tratamento: não são lidas (o painel não tem mais a seção de ocorrências)." & vbCrLf
+    End If
     If abasCartao.Count > 0 Then
         msgAuditoria = msgAuditoria & vbCrLf & qtdColaboradoresAuditoria & " colaborador(es) com extra+falta no mesmo dia nos últimos " & _
             abasCartao.Count & " mês(es) (" & nomeAbaAtual & " = mês atual)."

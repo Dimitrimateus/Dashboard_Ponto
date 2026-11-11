@@ -23,16 +23,15 @@ const nOk = RES.filter(r => r.ok).length;
 
 // Texto de abertura de cada seção do painel: o que ela mostra, para quem nunca viu.
 const INTRO = {
-  'Período padrão do painel': 'Ao abrir o arquivo, o painel escolhe sozinho o período mostrado na seção Ocorrências: do primeiro dia com ocorrência até o último dia do cartão ponto (fim do ciclo de 28 a 27).',
-  'Ocorrências': 'Ocorrências de ponto tratadas pelo RH na planilha de tratamento (falta de batida, atraso, marcação ímpar...). Cada linha válida da planilha é uma ocorrência. Hora extra, resumos e relatórios do sistema ficam fora desta contagem e têm seções próprias.',
+  'Período padrão do painel': 'Ao abrir o arquivo, o painel escolhe sozinho o período do filtro: o ciclo (28 a 27) do cartão ponto mais recente. Desde 11/11 ele vale para as ocorrências curtas do cartão ponto; as outras seções têm o seu próprio seletor de mês.',
   'Marcações digitadas': 'Batidas lançadas à mão no sistema de ponto (relatório "Marcações digitadas"), só as de origem "D". A seção mostra todos os ciclos do arquivo.',
   'Afastamentos': 'Afastamentos do relatório "Histórico de Afastamentos" do sistema (férias, atestados, viagens, cursos...). Cada afastamento vira os dias corridos que cobre.',
-  'Jornada': 'Os quatro relatórios de limite de jornada do sistema: horas excedentes (mais de 10h no dia), intrajornada (intervalo curto), interjornada (menos de 11h de descanso) e interjornada semanal (trabalho na folga ou feriado).',
+  'Jornada': 'Os quatro relatórios de limite de jornada do sistema: horas excedentes (mais de 10h no dia), intrajornada (intervalo curto), interjornada (menos de 11h de descanso) e interjornada semanal (trabalho na folga ou feriado). No fim da seção, a parte "Do cartão ponto": extra e falta no mesmo dia (3 meses) e ocorrências curtas (menos de 15 minutos no mês).',
   'Pausas térmicas': 'Pausas de quem trabalha no frio: o resumo por pessoa do relatório do sistema e, dia a dia, as batidas do relógio (trabalho e pausa alternando; trecho de trabalho acima de 1h40 é o alerta).',
   'PontoNet': 'Pedidos de justificativa de batida feitos no PontoNet. O painel usa só os aprovados (situação INTEGRADO) e só de gestores da lista de equipes.',
   'Banco de horas': 'Horas extras (coluna 50% do cartão ponto) e horas falta (coluna BH do cartão ponto), dia a dia, nos meses escolhidos; e o relatório de banco de horas do sistema para conferência.',
   'Tendências': 'Os mesmos assuntos das outras seções, contados ciclo a ciclo nos 3 últimos meses, para ver se melhorou ou piorou.',
-  'Lista de colaboradores': 'A lista de equipes (colaborador × gestor) com o número de ocorrências e de batidas digitadas de cada pessoa.',
+  'Lista de colaboradores': 'A lista de equipes do jeito que está no cadastro: matrícula, colaborador, área, cargo e gestor.',
   'Painel inteiro': 'Funcionamento geral: o painel não pode ter nenhum erro de programa ao abrir o arquivo e desenhar todas as seções.'
 };
 
@@ -94,7 +93,7 @@ corpo.push(new Table({ width: { size: 9900, type: WidthType.DXA }, columnWidths:
 ] }));
 corpo.push(p('', { spacing: { after: 200 } }));
 corpo.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [run('Correção feita durante a conferência')] }));
-corpo.push(p('A primeira rodada achou uma diferença real no painel, já corrigida: no número "Colaboradores envolvidos — de N pessoas", uma pessoa que está na lista de equipes SEM matrícula (a lista às vezes traz "#N/A" na matrícula) e que tem ocorrência COM matrícula era contada duas vezes, aumentando o tamanho da equipe em 1. Agora o painel reconhece que é a mesma pessoa pelo nome. Não mudava nenhum número de ocorrência, só o "de N pessoas".'));
+corpo.push(p('A primeira rodada achou uma diferença real no painel, já corrigida: no tamanho da equipe ("de N pessoas", usado nos números do topo e na faixa "Mostrando" de cada seção), uma pessoa que está na lista de equipes SEM matrícula (a lista às vezes traz "#N/A" na matrícula) e que tem ocorrência COM matrícula era contada duas vezes, aumentando o tamanho da equipe em 1. Agora o painel reconhece que é a mesma pessoa pelo nome. Não mudava nenhuma contagem, só o "de N pessoas".'));
 corpo.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [run('Pontos de atenção (não são erros, mas é bom saber como lê)')] }));
 [
   'Afastamentos, "Ranking de atestados": a coluna Dias soma os dias de ausência informados pelo sistema. No gráfico de evolução e no mapa, todo afastamento conta no mínimo 1 dia (um registro com 0 dias aparece como 1 dia). Por isso, se o sistema mandar um atestado com 0 dias, o ranking e a evolução podem diferir em 1.',

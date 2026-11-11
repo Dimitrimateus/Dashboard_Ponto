@@ -405,7 +405,7 @@ Private Sub EscreverRelatorio(wb As Workbook, linhas As Collection, vistos As Ob
         End If
         r = r + 1
     Next i
-    ws.Cells(r, 1).Value = "Também precisam estar na planilha: a RE, o ORG e as abas Tratamento - Internos/Externos (essas não são mexidas)."
+    ws.Cells(r, 1).Value = "Também precisam estar na planilha: a RE e o ORG (não são mexidas). As abas de Tratamento não são mais usadas pelo painel."
 
     ws.Columns("A").ColumnWidth = 28
     ws.Columns("B").ColumnWidth = 30
@@ -474,7 +474,7 @@ End Function
 '   5) roda a GerarAbaCSV e grava os CSVs na pasta escolhida: um por gestor, com o
 '      NOME DO GESTOR no começo ("<GESTOR>.csv", 04/11), + "TODOS OS GESTORES.csv";
 '   6) deixa a aba "Relatório da preparação" com tudo o que aconteceu.
-' Ficam na planilha (não vêm da pasta): ORG e as abas Tratamento - Internos/Externos.
+' Ficam na planilha (não vêm da pasta): a RE e o ORG. (11/11) As abas de Tratamento não são mais lidas.
 ' A RE pode vir na pasta: entra como "RE dd.mm" (data do arquivo) ANTES das REs que
 ' já existem, e o GerarCSV passa a usar a nova (as antigas não são apagadas, porque
 ' fórmulas da planilha podem apontar para elas).

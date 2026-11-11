@@ -28,6 +28,8 @@ const fs = require('fs');
   await p.setInputFiles('#fileInput', csvs[0]);
   await p.waitForTimeout(1200);
   if (csvs.length > 1) { await p.setInputFiles('#fileInputAdd', csvs.slice(1)); await p.waitForTimeout(1200); }
+  // (11/11) fecha o aviso do botão "?" que aparece ao abrir o arquivo
+  await p.evaluate(() => { const o = document.getElementById('avisoAjudaOverlay'); if (o) o.hidden = true; });
   // "Todas as seções numa página só": tudo desenhado com largura real
   await p.evaluate(() => document.querySelector('#menuSecoes button[data-pagina="todas"]').click());
   await p.waitForTimeout(800);
@@ -75,12 +77,11 @@ const fs = require('fs');
     const out = {};
     const raiz = somenteCard ? document.querySelector('.card-cheia') : document;
     if (!raiz) return out;
-    raiz.querySelectorAll('#dashboardBody [id], #kpiRow [id], #kpiRow').forEach(el => {
+    raiz.querySelectorAll('#dashboardBody [id]').forEach(el => {
       if (somenteCard && !raiz.contains(el)) return;
       if (/^(btn|f[A-Z]|chartTooltip)/.test(el.id)) return;
       out[el.id] = info(el);
     });
-    if (!somenteCard) out.kpiRow = info(document.getElementById('kpiRow'));
     return out;
   }, somenteCard);
 
@@ -103,11 +104,6 @@ const fs = require('fs');
     await p.waitForTimeout(150);
   }
 
-  // Histórico: o total e a 1ª página (20 por página, mais recentes primeiro)
-  dados.historico = await p.evaluate(() => ({
-    total: (document.getElementById('historyCount') || {}).textContent,
-    linhas: [...document.querySelectorAll('#historyBody tr')].map(tr => [...tr.children].map(td => td.innerText.trim()))
-  }));
   // Período do filtro em que o painel abriu e os seletores padrão de cada seção
   dados.estado = await p.evaluate(() => {
     const v = id => (document.getElementById(id) || {}).value;

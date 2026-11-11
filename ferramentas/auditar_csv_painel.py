@@ -126,6 +126,8 @@ def ler_csv(caminho):
         if not colab or not dt: continue
         tipo = tipo_canonico(pega(r, "tipo_ocorrencia").strip())
         if norm(tipo) in ("problema_horario", "jussara"): continue
+        # (11/11) as linhas da planilha de tratamento (ocorrências e "Hora Extra") não são mais usadas
+        if tipo not in NAO_OCORRENCIA or tipo in TIPOS_HE: continue
         if tipo == TIPO_DIG and texto(pega(r, "origem_marcacao")).upper() == "E": continue
         vazio_none = lambda nome: None if texto(pega(r, nome)) == "" else numero(pega(r, nome))
         out.append(dict(
@@ -314,93 +316,21 @@ def conferir(J, R):
 
     # ---------------------------------------------------------- período padrão
     S = "Período padrão do painel"
-    base_ini = [r["dia"] for r in R if r["tipo"] not in NAO_OCORRENCIA or r["tipo"] in TIPOS_CURTAS or r["tipo"] in TIPOS_HE]
     fim_cartao = [r["dia"] for r in R if r["tipo"] in (TIPO_RES_HORAS, TIPO_AUD)]
-    esp_ini = min(base_ini) if base_ini else None
-    esp_fim = max(fim_cartao) if fim_cartao else max(base_ini)
+    esp_fim = max(fim_cartao)
+    esp_ini = ciclo_ini_fim(ciclo(esp_fim))[0]
     item(S, "Filtro de período (lateral)", "Data inicial",
-         "Primeira data entre as ocorrências da planilha de tratamento, as ocorrências curtas e as horas extras.",
+         "Dia 28 do mês anterior ao fim do cartão ponto mais recente (começo do ciclo de 28 a 27).",
          esp_ini.strftime("%d/%m/%Y"), p_ini.strftime("%d/%m/%Y"))
     item(S, "Filtro de período (lateral)", "Data final",
-         "Último dia do cartão ponto (data das linhas de resumo do cartão = fim do ciclo 28 a 27).",
+         "Último dia do cartão ponto mais recente (data das linhas de resumo do cartão, dia 27).",
          esp_fim.strftime("%d/%m/%Y"), p_fim.strftime("%d/%m/%Y"))
     no_periodo = lambda r: p_ini <= r["dia"] <= p_fim
-
-    # ---------------------------------------------------------- Ocorrências
-    S = "Ocorrências"
-    oc = [r for r in R if r["tipo"] not in NAO_OCORRENCIA and no_periodo(r)]
-    he = [r for r in R if r["tipo"] in TIPOS_HE and no_periodo(r)]
-    kp = numeros(J, "kpiRow")
-    item(S, "Números do topo", "Ocorrências no período",
-         "Linhas da planilha de tratamento dentro do período (cada linha válida = 1 ocorrência; linhas com Check \"S\", "
-         "\"Sem alteração\" e \"Problema horário\" já não vêm no arquivo). Hora extra não conta como ocorrência.",
-         len(oc), int_br(kp.get("OCORRÊNCIAS NO PERÍODO", ("?",))[0]))
-    pessoas = {r["colaborador"] for r in oc + he}
-    item(S, "Números do topo", "Colaboradores envolvidos",
-         "Pessoas diferentes (pelo nome) com ao menos uma ocorrência ou hora extra no período.",
-         len(pessoas), int_br(kp.get("COLABORADORES ENVOLVIDOS", ("?",))[0]))
+    oc = []   # (11/11) as ocorrências da planilha de tratamento não são mais usadas pelo painel
     org = {}
     for r in R:
         if r["tipo"] == TIPO_ORG and (r["matricula"] or r["colaborador"]) not in org:
             org[r["matricula"] or r["colaborador"]] = r
-    nomes_org = {r["colaborador"] for r in org.values()}
-    fora = {r["matricula"] or r["colaborador"] for r in oc + he if r["colaborador"] not in nomes_org and r["matricula"] not in org}
-    equipe = len(org) + len(fora)
-    sub = kp.get("COLABORADORES ENVOLVIDOS", ("", ""))[1]
-    item(S, "Números do topo", "\"de N pessoas\" (tamanho da equipe)",
-         "Pessoas da lista de equipes (uma por matrícula) + quem tem ocorrência e não está na lista.",
-         equipe, int_br(re.sub(r"^\D*", "", sub)) if sub else None)
-    leg = {a: int_br(b) for a, b in (J["normal"]["chartTipo"].get("legenda") or [])}
-    por_tipo = Counter(r["tipo"] for r in oc)
-    top = [k for k, _ in sorted(Counter(r["tipo"] for r in R if r["tipo"] not in NAO_OCORRENCIA).items(), key=lambda x: -x[1])][:5]
-    esp = {k: v for k, v in por_tipo.items() if k in top}
-    outros = sum(v for k, v in por_tipo.items() if k not in top)
-    if outros: esp["Outros"] = outros
-    compara_dict(S, "Ocorrências por tipo (rosca)", "Quantidade de cada tipo",
-                 "Ocorrências do período contadas por tipo (Situação da planilha). Os 5 tipos mais comuns do arquivo têm cor "
-                 "própria; o resto soma em \"Outros\".", esp, leg)
-    compara_dict(S, "Ocorrências por dia da semana", "Quantidade em cada dia",
-                 "Ocorrências do período agrupadas pelo dia da semana da data da ocorrência.",
-                 {d: c for d, c in Counter(DIAS[r["dia"].weekday()] for r in oc).items()},
-                 {k: v for k, v in tips(J, "chartDiaSemana").items() if v})
-    compara_dict(S, "Ocorrências por data", "Quantidade em cada dia do período",
-                 "Ocorrências do período agrupadas pela data (dd/mm).",
-                 Counter(r["dia"].strftime("%d/%m") for r in oc), {k: v for k, v in tips(J, "chartPorData").items() if v})
-    compara_dict(S, "Ocorrências por gestor", "Quantidade por gestor (os 12 maiores)",
-                 "Ocorrências do período agrupadas pelo gestor da pessoa.", Counter(r["gestor"] for r in oc),
-                 tips(J, "chartPorGestor"), so_chaves_do_painel=True)
-    compara_dict(S, "Ocorrências por cargo", "Quantidade por cargo (os 12 maiores)",
-                 "Ocorrências do período agrupadas pelo cargo.", Counter(r["cargo"] for r in oc),
-                 tips(J, "chartPorCargo"), so_chaves_do_painel=True)
-    compara_dict(S, "Colaboradores com mais ocorrências", "Quantidade por pessoa (os 10 maiores)",
-                 "Ocorrências do período por pessoa.", Counter(r["colaborador"] for r in oc),
-                 tips(J, "chartTopColaboradores"), so_chaves_do_painel=True)
-    aud = {}
-    for r in R:
-        if r["tipo"] == TIPO_AUD: aud[r["colaborador"]] = (int(r["mes"]), int(r["tres"]))
-    t = tabela(J, "tableExtraFalta")
-    pain = {row[0]: (int_br(row[2]), int_br(row[3])) for row in t["rows"]}
-    esp = {k: aud.get(k) for k in pain}
-    maiores = sorted(aud.values(), key=lambda x: (-x[1], -x[0]))[:len(pain)]
-    ok = esp == pain and sorted(pain.values(), key=lambda x: (-x[1], -x[0])) == maiores
-    alerta_ok = all(("⚠" in row[3]) == (int_br(row[3]) >= 10) for row in t["rows"])
-    item(S, "Extra e falta no mesmo dia", "Este mês e 3 meses, por pessoa (os 10 maiores)",
-         "Do cartão ponto: dias em que a pessoa teve hora extra e banco de horas (falta) no mesmo dia, no mês atual e "
-         "somando os 3 últimos cartões. O alerta ⚠ aparece a partir de 10 na soma dos 3 meses.",
-         esp, pain, ok and alerta_ok)
-    cur = defaultdict(lambda: [0, 0])
-    for r in R:
-        if r["tipo"] in TIPOS_CURTAS and no_periodo(r):
-            cur[r["colaborador"]][0 if r["tipo"].startswith("Falta") else 1] += 1
-    t = tabela(J, "tableCurtas")
-    pain = {row[0]: (int_br(row[1]), int_br(row[2]), int_br(row[3])) for row in t["rows"]}
-    esp = {k: (v[0], v[1], v[0] + v[1]) for k, v in cur.items()}
-    item(S, "Ocorrências curtas (menos de 15 min)", "Faltas, extras e total por pessoa (lista inteira)",
-         "Do cartão ponto do mês: dias com falta ou extra de menos de 15 minutos (tolerância), contados por pessoa.",
-         esp, pain)
-    item(S, "Histórico", "Total de ocorrências na lista",
-         "Mesma base dos números do topo: as ocorrências do período, uma por linha.",
-         len(oc), int_br(J["historico"]["total"]))
 
     # ---------------------------------------------------------- Marcações digitadas
     S = "Marcações digitadas"
@@ -412,6 +342,10 @@ def conferir(J, R):
     item(S, "Números do topo", "Colaboradores",
          "Pessoas diferentes com ao menos uma batida digitada.",
          len({r["colaborador"] for r in dig}), int_br(kp.get("COLABORADORES", ("?",))[0]))
+    sub = kp.get("COLABORADORES", ("", ""))[1]
+    item(S, "Números do topo", "\"de N pessoas na lista de equipes\"",
+         "Tamanho da equipe do recorte: pessoas da lista de equipes (uma por matrícula).",
+         len(org), int_br((re.search(r"de ([\d.]+)", sub) or [0, "0"])[1]))
     esq = [r for r in dig if norm(r["situacao"]) == "inclusao_por_esquecimento"]
     k_esq = [k for k in kp if "ESQUEC" in k]
     if k_esq:
@@ -542,6 +476,30 @@ def conferir(J, R):
     esp = {k: tuple(dez[k]) for k in pain}
     item(S, "Mais de 10h no dia, por pessoa", "Dias e minutos acima de 10h por pessoa",
          "Por pessoa: dias com horas excedentes e soma do que passou de 10h.", esp, pain)
+
+    aud = {}
+    for r in R:
+        if r["tipo"] == TIPO_AUD: aud[r["colaborador"]] = (int(r["mes"]), int(r["tres"]))
+    t = tabela(J, "tableExtraFalta")
+    pain = {row[0]: (int_br(row[2]), int_br(row[3])) for row in t["rows"]}
+    esp = {k: aud.get(k) for k in pain}
+    maiores = sorted(aud.values(), key=lambda x: (-x[1], -x[0]))[:len(pain)]
+    ok = esp == pain and sorted(pain.values(), key=lambda x: (-x[1], -x[0])) == maiores
+    alerta_ok = all(("⚠" in row[3]) == (int_br(row[3]) >= 10) for row in t["rows"])
+    item("Jornada", "Do cartão ponto: extra e falta no mesmo dia", "Este mês e 3 meses, por pessoa (os 10 maiores)",
+         "Do cartão ponto: dias em que a pessoa teve hora extra e banco de horas (falta) no mesmo dia, no mês atual e "
+         "somando os 3 últimos cartões. O alerta ⚠ aparece a partir de 10 na soma dos 3 meses.",
+         esp, pain, ok and alerta_ok)
+    cur = defaultdict(lambda: [0, 0])
+    for r in R:
+        if r["tipo"] in TIPOS_CURTAS and no_periodo(r):
+            cur[r["colaborador"]][0 if r["tipo"].startswith("Falta") else 1] += 1
+    t = tabela(J, "tableCurtas")
+    pain = {row[0]: (int_br(row[1]), int_br(row[2]), int_br(row[3])) for row in t["rows"]}
+    esp = {k: (v[0], v[1], v[0] + v[1]) for k, v in cur.items()}
+    item("Jornada", "Do cartão ponto: ocorrências curtas (menos de 15 min)", "Faltas, extras e total por pessoa (lista inteira)",
+         "Do cartão ponto do mês: dias com falta ou extra de menos de 15 minutos (tolerância), contados por pessoa.",
+         esp, pain)
 
     # ---------------------------------------------------------- Pausas térmicas
     S = "Pausas térmicas"
@@ -821,12 +779,12 @@ def conferir(J, R):
     t = tabela(J, "tableOrg")
     item(S, "Lista de colaboradores", "Pessoas na lista",
          "Uma linha por pessoa da lista de equipes (matrícula repetida conta uma vez).", len(org), len(t["rows"]))
-    oc_p = Counter(r["matricula"] or r["colaborador"] for r in oc)
-    dig_p = Counter(r["matricula"] or r["colaborador"] for r in dig)
-    pain = {row[1] or row[0]: (int_br(row[5]) or 0, int_br(row[6]) or 0) for row in t["rows"]}
-    esp = {k: (oc_p.get(k, 0), dig_p.get(k, 0)) for k in pain}
-    item(S, "Lista de colaboradores", "Ocorrências e digitadas por pessoa",
-         "Ocorrências do período e batidas digitadas de cada pessoa, casadas pela matrícula.", esp, pain)
+    pain = {(row[0] if row[0] != "–" else "") + "|" + row[1].replace("sem matrícula", "").strip(): tuple(row[2:5]) for row in t["rows"]}
+    esp = {(r["matricula"]) + "|" + r["colaborador"]: (r["situacao"], "" if r["cargo"] == "Sem cargo" else r["cargo"],
+           "Sem gestor" if r["gestor"] == "Sem gestor" else r["gestor"]) for r in org.values()}
+    item(S, "Lista de colaboradores", "Matrícula, nome, área, cargo e gestor de cada pessoa",
+         "As colunas são as da lista de equipes, sem nenhuma conta (desde 11/11 a lista não mostra ocorrências, digitadas "
+         "nem saldo de horas).", esp, pain)
 
     # ---------------------------------------------------------- erros de JavaScript
     item("Painel inteiro", "Funcionamento", "Erros de programa ao abrir e desenhar tudo",

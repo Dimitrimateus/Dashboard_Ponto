@@ -34,6 +34,19 @@ do `.bas`. Colar é mais seguro que **Arquivo > Importar**: os arquivos estão e
 importador do VBA lê em ANSI, o que estraga os acentos das mensagens e dos cabeçalhos
 (e, com isso, a busca de colunas como "Matrícula" e "Situação").
 
+## Painel para todas as unidades (11/11)
+
+- Saíram as seções **Ocorrências**, **Colaboradores em destaque** e **Histórico**: dependiam da planilha de
+  tratamento, que só existe na unidade de Recife/Cabo. Saíram também os filtros de **grupo** e de **tipo de
+  ocorrência** e, no resumo da pessoa, o que vinha das ocorrências.
+- "Extra e falta no mesmo dia" e "Ocorrências curtas" (vêm do cartão ponto) estão agora no fim da seção **Jornada**.
+- A **Lista de colaboradores** mostra só o cadastro, como está na lista de equipes: matrícula, colaborador, área,
+  cargo e gestor.
+- Ao abrir um arquivo, o painel vai para **Arquivos carregados** e mostra um aviso: cada quadro tem um botão **?**
+  com a explicação ("Não mostrar de novo" vale para aquele computador).
+- Macro **GerarCSVPonto**: não lê mais as abas "Tratamento - Internos/Externos" (constante `LER_ABAS_TRATAMENTO`,
+  `True` volta ao jeito antigo). Funciona numa planilha sem essas abas. Cole de novo o `txt/PainelPonto_TudoEmUm.txt`.
+
 ## Conferência completa do painel (11/11)
 
 Para provar que cada número do painel está certo, sem depender do código do painel:

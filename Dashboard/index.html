@@ -702,6 +702,20 @@
     box-shadow:0 4px 14px rgba(0,0,0,.22);
   }
 
+  /* ---------- Aviso do botão "?" ao abrir um arquivo (11/11) ---------- */
+  .modal-panel.aviso-ajuda{ width:min(520px, 94vw); }
+  .modal-body.aviso-ajuda-corpo{ padding:22px 24px 18px; overflow-y:auto; }
+  .aviso-ajuda-corpo p{ font-size:13.5px; line-height:1.5; margin:10px 0; color:var(--c-ink, #1A1A1A); }
+  .aviso-ajuda-q{ display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 6px;
+    border-radius:10px; background:#F7931E; color:#fff; font-weight:700; font-size:12px; vertical-align:middle; }
+  .aviso-ajuda-larga{ border-radius:6px; font-weight:600; }
+  .aviso-ajuda-nao{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--c-muted); margin-top:14px; }
+  .aviso-ajuda-botoes{ display:flex; justify-content:flex-end; margin-top:14px; }
+  .btn-primary-aviso{ background:#F7931E; color:#fff; border:0; border-radius:8px; padding:9px 22px; font-weight:700; font-size:14px; cursor:pointer; }
+  .btn-primary-aviso:hover{ background:#e0820f; }
+  @media (max-width:768px){ .modal-overlay .modal-panel.aviso-ajuda{ width:94vw; height:auto; max-height:90vh; border-radius:12px; } #avisoAjudaOverlay{ padding:12px; } }
+  .subsecao-titulo{ font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:var(--c-muted); margin:22px 0 10px; }
+
   /* ---------- Modal (Pausas Térmicas) ---------- */
   .modal-overlay{
     position:fixed; inset:0; z-index:300;
@@ -943,7 +957,7 @@
        aqui + uma <div class="pagina" data-pagina="..."> no conteúdo. -->
   <nav class="menu-secoes" id="menuSecoes" hidden aria-label="Seções do painel">
     <div class="menu-titulo">Seções do painel</div>
-    <button type="button" data-pagina="arquivos">Arquivos carregados</button><button type="button" data-pagina="geral">Ocorrências</button><button type="button" data-pagina="digitadas">Marcações digitadas</button><button type="button" data-pagina="afastamentos">Afastamentos</button><button type="button" data-pagina="jornada">Jornada</button><button type="button" data-pagina="destaque">Colaboradores em destaque</button><button type="button" data-pagina="bancohoras">Banco de horas</button><button type="button" data-pagina="pausas">Pausas térmicas</button><button type="button" data-pagina="demora">PontoNet</button><button type="button" data-pagina="tendencias">Tendências</button><button type="button" data-pagina="org">Lista de colaboradores</button><button type="button" data-pagina="historico">Histórico</button>
+    <button type="button" data-pagina="arquivos">Arquivos carregados</button><button type="button" data-pagina="digitadas">Marcações digitadas</button><button type="button" data-pagina="afastamentos">Afastamentos</button><button type="button" data-pagina="jornada">Jornada</button><button type="button" data-pagina="bancohoras">Banco de horas</button><button type="button" data-pagina="pausas">Pausas térmicas</button><button type="button" data-pagina="demora">PontoNet</button><button type="button" data-pagina="tendencias">Tendências</button><button type="button" data-pagina="org">Lista de colaboradores</button>
     <button type="button" data-pagina="todas" class="menu-todas">Todas as seções numa página só</button>
   </nav>
 
@@ -969,36 +983,18 @@
       <section class="empty-state" id="emptyState">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <h2>Nenhum dado carregado</h2>
-        <p>Use o bloco <strong>“Carregar dados”</strong> (à direita; no celular, no alto da tela) para abrir o arquivo CSV com as ocorrências de ponto. Sem o arquivo, este painel permanece vazio: ele nunca contém dados por padrão.</p>
+        <p>Use o bloco <strong>“Carregar dados”</strong> (à direita; no celular, no alto da tela) para abrir o arquivo CSV do mês, que o RH prepara com os relatórios do sistema de ponto. Sem o arquivo, este painel permanece vazio: ele nunca contém dados por padrão.</p>
         <div class="como-usar">
           <h3>Como usar o painel</h3>
           <ol>
             <li><strong>Pegue o arquivo do mês.</strong> O RH envia um arquivo com o <strong>seu nome</strong> (<code>&lt;seu nome&gt;.csv</code>, só a sua equipe) ou o <code>TODOS OS GESTORES.csv</code> (todas as equipes). Salve no computador ou no celular; não precisa abrir no Excel.</li>
             <li><strong>Abra o arquivo aqui.</strong> No bloco “Carregar dados” (à direita; no celular, no alto da tela), clique para escolher o arquivo ou arraste-o para cima do bloco. Dá para abrir <strong>mais de um arquivo de uma vez</strong> (por exemplo, o de dois gestores): o painel junta os dois, e o filtro de gestor mostra os dois para você escolher um ou ambos. Depois de aberto, “Juntar mais um arquivo” acrescenta outro. O arquivo é lido só no seu navegador: nada é enviado para a internet.</li>
-            <li><strong>Escolha a seção.</strong> O botão <strong>&#9776;</strong> no canto superior esquerdo troca de seção: Ocorrências, Marcações digitadas, Afastamentos, Jornada, Colaboradores em destaque, Pausas térmicas, PontoNet, Tendências, Lista de colaboradores e Histórico. A última opção mostra tudo numa página só.</li>
-            <li><strong>Filtre.</strong> Em “Filtros” escolha gestor, cargo, colaborador, tipo de ocorrência ou período. Tudo no painel muda junto. “Limpar filtros” volta ao arquivo inteiro; “Esconder filtros”, no topo, dá mais espaço aos gráficos.</li>
+            <li><strong>Escolha a seção.</strong> O painel abre em <strong>Arquivos carregados</strong>, que mostra o que veio no arquivo e se falta alguma coisa. O botão <strong>&#9776;</strong> no canto superior esquerdo troca de seção: Arquivos carregados, Marcações digitadas, Afastamentos, Jornada, Banco de horas, Pausas térmicas, PontoNet, Tendências e Lista de colaboradores. A última opção mostra tudo numa página só.</li>
+            <li><strong>Filtre.</strong> Em “Filtros” escolha gestor, cargo ou colaborador: todas as seções mudam junto. Cada seção tem o seu seletor de mês (ciclo de 28 a 27). “Limpar filtros” volta ao arquivo inteiro; “Esconder filtros”, no topo, dá mais espaço aos gráficos.</li>
             <li><strong>Use os gráficos.</strong> Clique num item da legenda (as bolinhas coloridas em cima do gráfico) para ver só aquele tipo; clique em outros para somar e em “Mostrar todos” para voltar; cada gráfico tem o seu filtro. O botão <strong>&#x26F6;</strong> no canto de cada card abre o gráfico em tela cheia (Esc fecha); as listas longas aparecem inteiras só em tela cheia. A etiqueta amarela 📅 embaixo do título diz qual período aquele card considera.</li>
-            <li><strong>Veja uma pessoa.</strong> Clique no nome de qualquer colaborador (gráficos e tabelas) para abrir o card dele, com ocorrências, horas, pausas, batidas digitadas e afastamentos.</li>
-            <li><strong>Dúvida sobre um número?</strong> Depois de abrir o arquivo, o botão <strong>“?”</strong> no canto de cada gráfico mostra, só naquele gráfico, de onde vem a informação e como ela é calculada.</li>
+            <li><strong>Veja uma pessoa.</strong> Clique no nome de qualquer colaborador (gráficos e tabelas) para abrir o resumo dele, com horas do cartão ponto, banco de horas, pausas, batidas digitadas e afastamentos.</li>
+            <li><strong>Dúvida sobre um número?</strong> Depois de abrir o arquivo, o botão <strong>“?”</strong> no canto de cada quadro (gráfico, tabela ou número) mostra, ali mesmo, de onde vem a informação e como ela é calculada; no título de cada seção, <strong>“? Entenda esta seção”</strong> explica a seção inteira.</li>
           </ol>
-        </div>
-      </section>
-
-      <!-- Cards de número (KPIs), preenchidos por renderKPIs. Só aparecem na seção
-           "Ocorrências" (o da demora fica na seção PontoNet). Cada .card-fonte dentro de um card é o texto "De onde vem"
-           do modo explicação. -->
-      <section class="kpis" id="kpiRow" hidden>
-        <div class="kpi-tile k-navy">
-          <div class="kpi-label">Colaboradores envolvidos</div>
-          <div class="kpi-value" id="kpiColaboradores">0</div>
-          <div class="kpi-sub" id="kpiColaboradoresSub"></div>
-          <div class="card-fonte"><span class="fonte-origem">De onde vem: o arquivo que o RH preparou para o painel</span><p>Quantas pessoas <strong>diferentes</strong> tiveram pelo menos uma ocorrência de ponto no período escolhido. Ocorrência é um problema no registro de ponto do dia: uma batida que faltou, um dia sem nenhuma batida, uma batida repetida etc. O número menor embaixo é o tamanho da equipe: sem filtro, todas as pessoas da empresa que estão no arquivo; escolhendo um ou mais gestores, só as pessoas das equipes deles (o mesmo vale para grupo e cargo). Assim dá para ler, por exemplo, “6 de 22 pessoas da equipe tiveram ocorrência”.</p></div>
-        </div>
-        <div class="kpi-tile">
-          <div class="kpi-label">Ocorrências no período</div>
-          <div class="kpi-value" id="kpiOcorrencias">0</div>
-          <div class="kpi-sub" id="kpiOcorrenciasSub"></div>
-          <div class="card-fonte"><span class="fonte-origem">De onde vem: as ocorrências de ponto do mês, conferidas pelo RH</span><p>Quantas ocorrências de ponto aconteceram no período. Todo mês o RH recebe do sistema de ponto a lista de dias com problema (batida faltando, dia sem batida, batida repetida…) e confere um por um. Ficam <strong>de fora</strong> os casos que o RH conferiu e viu que não eram problema, e os dias sem alteração. Hora extra e atrasos pequenos (menos de 15 minutos) têm cards próprios e não entram nesta conta.</p></div>
         </div>
       </section>
 
@@ -1029,44 +1025,6 @@
             <div class="card-body" id="arqPorSecao"></div>
           </div>
         </section>
-      </div>
-      <div class="pagina" data-pagina="geral">
-        <h3 class="section-title">Ocorrências</h3>
-        <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: as ocorrências de ponto do mês, conferidas pelo RH</span><p>Ocorrência é um dia em que o ponto de alguém teve um problema: faltou a batida de entrada ou de saída, o dia ficou sem nenhuma batida, a batida saiu repetida e assim por diante. Todo mês o RH recebe essa lista do sistema de ponto e confere cada caso. Esta seção mostra quantas foram, de que tipo, em que dias, em que equipes e em que cargos. Segue todos os filtros da direita, inclusive o de período.</p></div>
-        <!-- Seção "Visão geral": gráficos de ocorrências da Tratamento. -->
-        <section class="grid">
-          <div class="card">
-            <div class="card-title">Ocorrências por tipo</div>
-            <div class="card-hint">Distribuição das ocorrências registradas por tipo</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: as ocorrências de ponto do mês</span><p>Cada fatia é um tipo de problema no ponto (faltou a batida de saída, dia sem nenhuma batida, batida repetida…). O número no meio é o total. <strong>Clique numa fatia</strong> para ver quem teve aquele tipo de ocorrência e em que dia. Clique nos nomes da legenda para mostrar só alguns tipos.</p></div>
-            <div class="card-body donut-wrap" id="chartTipo"></div>
-          </div>
-          <div class="card">
-            <div class="card-title">Ocorrências por dia da semana</div>
-            <div class="card-hint">Em qual dia da semana as ocorrências mais acontecem</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: a data de cada ocorrência</span><p>Cada ocorrência tem uma data; o painel descobre o dia da semana dela e conta quantas caem em cada dia. Ajuda a ver se os problemas se concentram, por exemplo, na sexta ou na segunda. <strong>Clique</strong> numa barra (ou num pedaço colorido dela) para ver a lista de pessoas e registros que formam aquele número.</p></div>
-            <div class="card-body" id="chartDiaSemana"></div>
-          </div>
-          <div class="card wide">
-            <div class="card-title">Ocorrências por data</div>
-            <div class="card-hint">Evolução diária no período filtrado</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: a data de cada ocorrência</span><p>Quantas ocorrências aconteceram em cada dia do período. Passe o mouse num ponto para ver o número daquele dia; <strong>clique no ponto</strong> para ver quem foi.</p></div>
-            <div class="card-body" id="chartPorData"></div>
-          </div>
-          <div class="card">
-            <div class="card-title">Ocorrências por gestor: <select id="gestorMedida" class="sel-titulo" aria-label="Medida do gráfico por gestor"><option value="">total</option><option value="pessoa">por pessoa da equipe</option></select></div>
-            <div class="card-hint" id="hintPorGestor">Volume de ocorrências das equipes de cada gestor</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: a lista de quem é gestor de quem</span><p>Cada pessoa é ligada ao seu gestor pela lista de equipes que o RH mantém. A barra mostra quantas ocorrências a equipe de cada gestor teve, separadas por tipo (uma cor por tipo). “Sem gestor” = pessoa que não está nessa lista. Aparecem os 12 gestores com mais ocorrências. <strong>Clique</strong> numa barra (ou num pedaço colorido dela) para ver a lista de pessoas e registros que formam aquele número.</p></div>
-            <div class="card-body" id="chartPorGestor"></div>
-          </div>
-          <div class="card">
-            <div class="card-title">Ocorrências por cargo</div>
-            <div class="card-hint">Volume de ocorrências por cargo/função</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: o cadastro de cada colaborador</span><p>O cargo de cada pessoa vem do cadastro dos colaboradores. A barra mostra quantas ocorrências houve em cada cargo, separadas por tipo. Aparecem os 12 cargos com mais ocorrências. <strong>Clique</strong> numa barra (ou num pedaço colorido dela) para ver a lista de pessoas e registros que formam aquele número.</p></div>
-            <div class="card-body" id="chartPorCargo"></div>
-          </div>
-        </section>
-
       </div>
       <!-- Seção "Marcações digitadas" (renderDigitadas). digSemDados aparece quando
            o CSV não tem linhas "Marcação Digitada". -->
@@ -1147,7 +1105,7 @@
           <div class="card wide">
               <div class="card-title">Todas as marcações digitadas</div>
               <div class="card-hint" id="digListaHint">Lista completa do filtro atual</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de batidas digitadas</span><p>Uma linha por batida digitada, com dia, hora, motivo e justificativa. “Ocorrência no dia” = a pessoa também teve uma ocorrência de ponto nesse mesmo dia.</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de batidas digitadas</span><p>Uma linha por batida digitada, com dia, hora, motivo e justificativa.</p></div>
               <div class="org-toolbar"><input type="text" id="digBusca" placeholder="Buscar por colaborador, gestor, motivo, justificativa..."><span id="digCount" style="font-size:12px;color:var(--c-muted);"></span></div>
               <div class="card-body" id="tableDigLista"></div>
             </div>
@@ -1172,7 +1130,7 @@
         <h3 class="section-title">Afastamentos</h3>
         <div id="absSemDados" class="card wide" hidden><div class="chart-empty">Este arquivo não traz os afastamentos. O RH inclui esse relatório quando gera o arquivo do painel.</div></div>
         <div id="absCorpo">
-          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: o relatório de afastamentos do sistema</span><p>Afastamento é qualquer período em que a pessoa não esteve trabalhando no lugar de sempre e isso foi registrado no sistema: atestado médico, férias, viagem a serviço, reunião, curso, saída para consulta, licença etc. Cada registro tem uma data de início e uma de fim. Os gráficos mostram <strong>todos os tipos</strong>, cada um com uma cor (atestado sempre em vermelho); em “Mostrar” dá para ver só atestados ou só um tipo (por exemplo, só doação de sangue ou só férias). Saídas de poucas horas (consulta médica, horas de falta) não contam como dia: aparecem no resumo, em horas. Os dias são contados do início ao fim, incluindo fim de semana. O mês aqui é o <strong>ciclo do ponto</strong>, que vai do dia 28 de um mês ao dia 27 do mês seguinte; escolha o ciclo no seletor. Segue os filtros de gestor, grupo, cargo e colaborador; o filtro de período não vale aqui.</p></div>
+          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: o relatório de afastamentos do sistema</span><p>Afastamento é qualquer período em que a pessoa não esteve trabalhando no lugar de sempre e isso foi registrado no sistema: atestado médico, férias, viagem a serviço, reunião, curso, saída para consulta, licença etc. Cada registro tem uma data de início e uma de fim. Os gráficos mostram <strong>todos os tipos</strong>, cada um com uma cor (atestado sempre em vermelho); em “Mostrar” dá para ver só atestados ou só um tipo (por exemplo, só doação de sangue ou só férias). Saídas de poucas horas (consulta médica, horas de falta) não contam como dia: aparecem no resumo, em horas. Os dias são contados do início ao fim, incluindo fim de semana. O mês aqui é o <strong>ciclo do ponto</strong>, que vai do dia 28 de um mês ao dia 27 do mês seguinte; escolha o ciclo no seletor. Segue os filtros de gestor, cargo e colaborador; o filtro de período não vale aqui.</p></div>
           <div class="abs-toolbar">
             <label for="absCiclo" style="font-size:11.5px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:.04em;">Ciclo</label>
             <select id="absCiclo"></select>
@@ -1271,7 +1229,7 @@
         <h3 class="section-title">Jornada</h3>
         <div id="jorSemDados" class="card wide" hidden><div class="chart-empty">Este arquivo não traz os relatórios de jornada (intervalo de almoço, descanso entre dias, trabalho na folga e mais de 10h). O RH inclui esse relatório quando gera o arquivo do painel.</div></div>
         <div id="jorCorpo">
-          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: os relatórios de limites de jornada do sistema de ponto</span><p>A lei põe limites na jornada de trabalho, e o sistema de ponto aponta quando eles não foram respeitados. São quatro situações: <strong>intervalo de almoço curto</strong> (a pessoa não fez a pausa mínima para refeição, ou não fez pausa nenhuma), <strong>menos de 11h de descanso</strong> entre o fim de um dia e o começo do outro, <strong>trabalho na folga ou feriado</strong> (trabalhou no dia de descanso da semana) e <strong>mais de 10h no dia</strong> (8h normais + o máximo de 2h extras). Cada uma pode virar processo trabalhista. Os números contam dias (uma ocorrência por pessoa por dia). O mês aqui é o <strong>ciclo do ponto</strong> (dia 28 a 27); escolha o ciclo no seletor. Segue os filtros de gestor, grupo, cargo e colaborador; o filtro de período não vale aqui.</p></div>
+          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: os relatórios de limites de jornada do sistema de ponto</span><p>A lei põe limites na jornada de trabalho, e o sistema de ponto aponta quando eles não foram respeitados. São quatro situações: <strong>intervalo de almoço curto</strong> (a pessoa não fez a pausa mínima para refeição, ou não fez pausa nenhuma), <strong>menos de 11h de descanso</strong> entre o fim de um dia e o começo do outro, <strong>trabalho na folga ou feriado</strong> (trabalhou no dia de descanso da semana) e <strong>mais de 10h no dia</strong> (8h normais + o máximo de 2h extras). Cada uma pode virar processo trabalhista. Os números contam dias (uma ocorrência por pessoa por dia). O mês aqui é o <strong>ciclo do ponto</strong> (dia 28 a 27); escolha o ciclo no seletor. Segue os filtros de gestor, cargo e colaborador; o filtro de período não vale aqui. No fim da seção, a parte <strong>Do cartão ponto</strong> traz dois quadros que vêm do cartão ponto: <strong>extra e falta no mesmo dia</strong> (3 meses) e <strong>ocorrências curtas</strong> (diferenças de menos de 15 minutos no mês, que seguem o filtro de período).</p></div>
           <div class="abs-toolbar">
             <label for="jorCiclo" style="font-size:11.5px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:.04em;">Ciclo</label>
             <select id="jorCiclo"></select>
@@ -1331,18 +1289,11 @@
             
           </section>
         </div>
-      </div>
-      <!-- Seção "Colaboradores em destaque": top, extra e falta, curtas, horas. -->
-      <div class="pagina" data-pagina="destaque">
-        <h3 class="section-title">Colaboradores em destaque</h3>
-        <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: as ocorrências do mês e o cartão ponto</span><p>As pessoas que mais aparecem: quem teve mais ocorrências, quem teve hora extra e falta no mesmo dia e quem tem muitas diferenças pequenas de menos de 15 minutos. O banco de horas tem uma seção própria, “Banco de horas”. Clique no nome de qualquer pessoa para ver o resumo completo dela.</p></div>
+        <!-- (11/11) Vieram da seção "Colaboradores em destaque", que saiu: os dois cards são do
+             cartão ponto (não dos relatórios de jornada), então ficam fora do #jorCorpo e
+             aparecem mesmo num arquivo sem os relatórios de jornada. -->
+        <h4 class="subsecao-titulo">Do cartão ponto</h4>
         <section class="grid">
-          <div class="card">
-            <div class="card-title">Colaboradores com mais ocorrências</div>
-            <div class="card-hint">Top 10 no período filtrado</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: as ocorrências de ponto do mês</span><p>As pessoas com mais ocorrências no período, contadas do mesmo jeito que o card “Ocorrências no período”. <strong>Clique no nome</strong> para abrir o resumo completo da pessoa; clique na barra para ver cada ocorrência dela.</p></div>
-            <div class="card-body" id="chartTopColaboradores"></div>
-          </div>
           <div class="card">
             <div class="card-title">Extra e falta no mesmo dia</div>
             <div class="card-hint">Este mês e total dos últimos 3 meses &middot; linhas em vermelho atingiram 10+ ocorrências na soma dos 3 meses (é o limite que a auditoria do ponto considera)</div>
@@ -1357,9 +1308,7 @@
             <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="curtas" id="btnCurtasTodos" hidden>Mostrar todos</button></div>
           </div>
         </section>
-
       </div>
-
       <!-- Seção "Banco de horas" (05/11, pedido do RH, com base na "Análise de compensação do
            BH" que ele mandou): o saldo do banco dia a dia, por equipe ou por pessoa, nos meses
            escolhidos, e os cards de banco de horas que antes ficavam em "Colaboradores em
@@ -1472,7 +1421,7 @@
               <select id="pauBatCiclo"></select>
               <span class="grupo-sel-aviso"><b>Tudo dentro desta caixa</b> olha as batidas de cada dia do mês escolhido aqui: horário, dia da semana, primeira pausa, dias sem pausa, maior tempo sem pausa e o mapa. <span id="pauBatResumo"></span></span>
             </div>
-            <div class="card-fonte" style="margin-bottom:12px"><span class="fonte-origem">De onde vem: as batidas de cada dia do relatório de pausas térmicas</span><p>Até aqui, os números vêm do total do mês de cada pessoa. Daqui para baixo, o painel olha <strong>cada batida</strong> de cada dia: a entrada e a saída da jornada, a saída e a volta da refeição e a saída e a volta de cada pausa térmica. Com isso dá para ver <strong>em que hora</strong> e <strong>em que dia da semana</strong> o trabalho no frio passa de 1h40, quem ficou o dia inteiro sem pausa, quanto tempo se trabalha até a primeira pausa e quem passou mais tempo sem pausa. A refeição também conta como pausa para a conta de 1h40 (o trecho de trabalho é o tempo entre uma pausa e outra). Como a conta aqui é refeita batida por batida, ela pode diferir em poucos trechos do total que o sistema dá no relatório (por exemplo, em dias com batida faltando). Escolha o mês (ciclo do ponto, dia 28 a 27) no seletor; segue os filtros de gestor, grupo, cargo e colaborador.</p></div>
+            <div class="card-fonte" style="margin-bottom:12px"><span class="fonte-origem">De onde vem: as batidas de cada dia do relatório de pausas térmicas</span><p>Até aqui, os números vêm do total do mês de cada pessoa. Daqui para baixo, o painel olha <strong>cada batida</strong> de cada dia: a entrada e a saída da jornada, a saída e a volta da refeição e a saída e a volta de cada pausa térmica. Com isso dá para ver <strong>em que hora</strong> e <strong>em que dia da semana</strong> o trabalho no frio passa de 1h40, quem ficou o dia inteiro sem pausa, quanto tempo se trabalha até a primeira pausa e quem passou mais tempo sem pausa. A refeição também conta como pausa para a conta de 1h40 (o trecho de trabalho é o tempo entre uma pausa e outra). Como a conta aqui é refeita batida por batida, ela pode diferir em poucos trechos do total que o sistema dá no relatório (por exemplo, em dias com batida faltando). Escolha o mês (ciclo do ponto, dia 28 a 27) no seletor; segue os filtros de gestor, cargo e colaborador.</p></div>
             <section class="grid">
           <div class="card wide">
             <div class="card-title">Horário em que mais se passa de 1h40 sem pausa</div>
@@ -1550,7 +1499,7 @@
            aviso de férias. -->
       <div class="pagina" data-pagina="demora">
         <h3 class="section-title">PontoNet</h3>
-        <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: o relatório de justificativas do PontoNet</span><p>Quando falta uma batida no ponto, o PontoNet abre um <strong>pedido de justificativa</strong>: o colaborador escreve o motivo, o <strong>gestor avalia</strong> e o RH confere. Aqui entram só os pedidos <strong>aprovados</strong> (os cancelados e os que o próprio sistema resolveu, achando a batida guardada no relógio de ponto, ficam de fora). Os tempos são os que o PontoNet conta, em dias: do pedido aberto até o colaborador justificar, e da justificativa até o gestor avaliar. A demora, embaixo, conta do dia da batida que faltou até a aprovação. Escolha o mês (ciclo do ponto, dia 28 a 27) no seletor; tudo nesta seção segue esse mês e os filtros de gestor, grupo, cargo e colaborador.</p></div>
+        <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: o relatório de justificativas do PontoNet</span><p>Quando falta uma batida no ponto, o PontoNet abre um <strong>pedido de justificativa</strong>: o colaborador escreve o motivo, o <strong>gestor avalia</strong> e o RH confere. Aqui entram só os pedidos <strong>aprovados</strong> (os cancelados e os que o próprio sistema resolveu, achando a batida guardada no relógio de ponto, ficam de fora). Os tempos são os que o PontoNet conta, em dias: do pedido aberto até o colaborador justificar, e da justificativa até o gestor avaliar. A demora, embaixo, conta do dia da batida que faltou até a aprovação. Escolha o mês (ciclo do ponto, dia 28 a 27) no seletor; tudo nesta seção segue esse mês e os filtros de gestor, cargo e colaborador.</p></div>
         <div id="pnSemDados" class="card wide" hidden><div class="chart-empty">Este arquivo não traz as justificativas do PontoNet. O RH inclui esse relatório quando gera o arquivo do painel.</div></div>
         <div id="pnCorpo">
           <div class="abs-toolbar">
@@ -1603,7 +1552,7 @@
             <div class="card-hint">Tempo entre o dia da batida que faltou e a aprovação, por gestor, no ciclo escolhido lá em cima &middot; linhas em amarelo: o gestor esteve de férias enquanto as ocorrências esperavam tratativa</div>
             <p class="resumo-linha" id="demoraGeral">Média de todos: <b id="kpiDemora">&ndash;</b> <span id="kpiDemoraSub"></span></p>
             <div class="card-hint" id="hintDemoraFerias" hidden style="color:#7A5A00">Este arquivo não traz os afastamentos, então o aviso de férias do gestor não aparece. O RH inclui esse relatório quando gera o arquivo do painel.</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: o PontoNet, onde o gestor aprova as justificativas</span><p>Para cada justificativa aprovada no ciclo escolhido, o painel conta o tempo entre o dia (e a hora) da batida que faltou e o momento em que ela foi aprovada. Aqui esse tempo é separado por gestor: quantas foram aprovadas, a demora média e a maior. A linha “Média de todos”, em cima, é a média de todas as aprovadas do ciclo (respeitando os filtros de gestor, grupo, cargo e colaborador). <strong>Aviso de férias:</strong> se o gestor esteve de férias entre a primeira ocorrência e a última aprovação da equipe, a linha fica amarela com as datas, porque nesse tempo ele não tinha como aprovar. A demora continua contada do mesmo jeito; o aviso é para não ler esse número como descuido.</p></div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: o PontoNet, onde o gestor aprova as justificativas</span><p>Para cada justificativa aprovada no ciclo escolhido, o painel conta o tempo entre o dia (e a hora) da batida que faltou e o momento em que ela foi aprovada. Aqui esse tempo é separado por gestor: quantas foram aprovadas, a demora média e a maior. A linha “Média de todos”, em cima, é a média de todas as aprovadas do ciclo (respeitando os filtros de gestor, cargo e colaborador). <strong>Aviso de férias:</strong> se o gestor esteve de férias entre a primeira ocorrência e a última aprovação da equipe, a linha fica amarela com as datas, porque nesse tempo ele não tinha como aprovar. A demora continua contada do mesmo jeito; o aviso é para não ler esse número como descuido.</p></div>
             <div class="card-body" id="tableDemoraGestor"></div>
           </div>
           <div class="card wide">
@@ -1622,7 +1571,7 @@
         <h3 class="section-title">Tendências</h3>
         <div id="tendSemDados" class="card wide" hidden><div class="chart-empty">Este arquivo não traz nenhum assunto com mais de um mês (batidas digitadas, afastamentos, jornada ou pausas de mais de um ciclo). Com os relatórios de 3 meses, esta seção mostra se a unidade, as equipes e as pessoas estão melhorando ou piorando.</div></div>
         <div id="tendCorpo">
-          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: todos os relatórios que o RH traz com mais de um mês</span><p>Para cada assunto (batidas digitadas, esquecimentos, dias de atestado, jornada e pausas térmicas), o painel soma o que aconteceu em cada um dos 3 últimos ciclos do ponto (dia 28 a 27) e compara o último com o anterior. As ocorrências do mês não entram aqui porque a planilha delas tem um mês só. Segue os filtros de gestor, grupo, cargo e colaborador: com um gestor escolhido, tudo vira a tendência da equipe dele. O filtro de período não vale aqui.</p></div>
+          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: todos os relatórios que o RH traz com mais de um mês</span><p>Para cada assunto (batidas digitadas, esquecimentos, dias de atestado, jornada e pausas térmicas), o painel soma o que aconteceu em cada um dos 3 últimos ciclos do ponto (dia 28 a 27) e compara o último com o anterior. Segue os filtros de gestor, cargo e colaborador: com um gestor escolhido, tudo vira a tendência da equipe dele. O filtro de período não vale aqui.</p></div>
           <section class="grid">
             <div class="card wide">
               <div class="card-title">A unidade, ciclo a ciclo</div>
@@ -1667,7 +1616,7 @@
       <div class="pagina" data-pagina="org">
         <h3 class="section-title">Lista de colaboradores</h3>
         <section class="card wide" id="orgSection">
-          <div class="card-fonte"><span class="fonte-origem">De onde vem: a lista de equipes que o RH mantém (quem é gestor de quem)</span><p>Todas as pessoas da lista de equipes, com o gestor de cada uma. Para cada pessoa, o painel junta as ocorrências do filtro, as batidas digitadas e as horas do mês. O seletor ao lado da busca ajuda a achar cadastros incompletos (sem matrícula, sem gestor, sem cargo ou sem área). Quem aparece no arquivo mas não está na lista de equipes não aparece aqui; o resumo dessa pessoa avisa “Não está na lista de equipes”. Clique no nome para abrir o resumo.</p></div>
+          <div class="card-fonte"><span class="fonte-origem">De onde vem: a lista de equipes que o RH mantém (quem é gestor de quem)</span><p>Todas as pessoas da lista de equipes, do jeito que estão nela: matrícula, nome, área, cargo e gestor. Clique no nome para ver o resumo da pessoa. O seletor ao lado da busca ajuda a achar cadastros incompletos (sem matrícula, sem gestor, sem cargo ou sem área). Quem aparece no arquivo mas não está na lista de equipes não aparece aqui; o resumo dessa pessoa avisa “Não está na lista de equipes”. Clique no nome para abrir o resumo.</p></div>
           <div class="org-resumo" id="orgResumo"></div>
           <div class="org-toolbar">
             <input type="text" id="orgBusca" placeholder="Buscar por nome, matrícula, gestor, cargo...">
@@ -1684,36 +1633,6 @@
         </section>
 
       </div>
-      <!-- Seção "Histórico": tabela com busca, ordenação e páginas (seção 7 do JS). -->
-      <div class="pagina" data-pagina="historico">
-        <h3 class="section-title">Histórico de ocorrências</h3>
-        <section class="card wide" id="historySection">
-          <div class="card-fonte"><span class="fonte-origem">De onde vem: as ocorrências de ponto do mês + o PontoNet</span><p>Todas as ocorrências do filtro, uma por linha: as mesmas contadas no card “Ocorrências no período”. A coluna de situação mostra a justificativa aprovada no PontoNet quando já existe.</p></div>
-          <div class="history-toolbar">
-            <input type="text" id="historySearch" placeholder="Buscar por colaborador, gestor, setor...">
-            <span id="historyCount" style="font-size:12px;color:var(--c-muted);"></span>
-          </div>
-          <div class="table-scroll">
-            <table class="data-table" id="historyTable">
-              <colgroup>
-                <col style="width:12%"><col style="width:21%"><col style="width:17%">
-                <col style="width:14%"><col style="width:14%"><col style="width:22%">
-              </colgroup>
-              <thead><tr>
-                <th data-key="data">Data</th>
-                <th data-key="colaborador">Colaborador</th>
-                <th data-key="gestor">Gestor</th>
-                <th data-key="setor">Setor</th>
-                <th data-key="tipo">Tipo</th>
-                <th data-key="situacao">Situação</th>
-              </tr></thead>
-              <tbody id="historyBody"></tbody>
-            </table>
-          </div>
-          <div class="pagination" id="historyPagination"></div>
-        </section>
-      </div>
-
       </div>
     </main>
 
@@ -1779,7 +1698,10 @@
                 <span class="filter-label" id="lblColab">Colaborador</span>
                 <div class="ms" id="fColab" data-todos="Todos os colaboradores" data-unidade="colaboradores" data-busca="1" aria-labelledby="lblColab"></div>
               </div>
-              <div class="filter-group">
+              <!-- (11/11) Grupo (internos/externos) e tipo de ocorrência saíram do painel: vinham
+                   da planilha de tratamento, que o painel não usa mais. Os dois ficam sempre
+                   escondidos (o código que os lê continua, sem efeito). -->
+              <div class="filter-group" id="fTipoGroup" hidden>
                 <span class="filter-label" id="lblTipo">Tipo de ocorrência</span>
                 <div class="ms" id="fTipo" data-todos="Todos os tipos" data-unidade="tipos" aria-labelledby="lblTipo"></div>
               </div>
@@ -1804,7 +1726,7 @@
                 <div class="cal-pop" id="calPop" hidden role="dialog" aria-label="Escolher o dia"></div>
               </div>
               <button class="btn-ghost btn-block" id="clearFilters">Limpar filtros</button>
-              <p class="side-note">Os filtros afetam todos os gráficos, tabelas e o histórico abaixo. O filtro de gestor é o mais usado quando este mesmo arquivo é enviado ao supervisor geral com a base completa.</p>
+              <p class="side-note">Os filtros de pessoa (gestor, cargo, colaborador) valem para todas as seções. O período vale para as ocorrências curtas do cartão ponto; as outras seções têm o seu próprio seletor de mês. O filtro de gestor é o mais usado quando este mesmo arquivo é enviado ao supervisor geral com a base completa.</p>
             </div>
           </details>
         </div>
@@ -1865,6 +1787,21 @@
       </div>
     </div>
   </div>
+  <!-- (11/11, pedido do RH) Aviso que aparece ao abrir um arquivo: cada quadro tem um botão "?"
+       com a explicação. "Não mostrar de novo" fica guardado só neste navegador. -->
+  <div class="modal-overlay" id="avisoAjudaOverlay" hidden>
+    <div class="modal-panel aviso-ajuda" role="dialog" aria-modal="true" aria-labelledby="avisoAjudaTitulo">
+      <div class="modal-body aviso-ajuda-corpo">
+        <h2 class="modal-title" id="avisoAjudaTitulo">Arquivo aberto. Uma dica antes de começar</h2>
+        <p>Cada <strong>quadro</strong> do painel (gráfico, tabela ou número) tem um botão <span class="aviso-ajuda-q">?</span> no canto. Clique nele para ver, ali mesmo, <strong>de onde vem a informação e como ela é calculada</strong>. Clique de novo para esconder.</p>
+        <p>No título de cada seção, o botão <span class="aviso-ajuda-q aviso-ajuda-larga">? Entenda esta seção</span> explica a seção inteira.</p>
+        <p>Você está em <strong>Arquivos carregados</strong>: aqui aparece o que veio no arquivo e se falta alguma coisa. Para ir às outras seções, use o botão <strong>&#9776;</strong> no canto de cima.</p>
+        <label class="aviso-ajuda-nao"><input type="checkbox" id="avisoAjudaNao"> Não mostrar de novo neste computador</label>
+        <div class="aviso-ajuda-botoes"><button type="button" class="btn-primary-aviso" id="avisoAjudaOk">Entendi</button></div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="colabModalOverlay" hidden>
     <div class="modal-panel colab-panel" role="dialog" aria-modal="true" aria-labelledby="colabModalTitle">
       <div class="modal-header">
@@ -1987,29 +1924,34 @@
        Horas Período", isTipoBancoHoras, 04/11). Todas entram em
        isTipoNaoOcorrencia e ficam fora dos gráficos gerais.
      
+     ATUALIZAÇÃO (11/11, pedido do RH): o painel vai para TODAS as unidades, e a planilha de
+       tratamento (de onde vinham as ocorrências do mês e as linhas "Hora Extra") só existe numa.
+       Saíram as seções "Ocorrências", "Colaboradores em destaque" e "Histórico", os números do
+       topo de ocorrências, o filtro de grupo (internos/externos) e o de tipo de ocorrência, as
+       colunas de ocorrências/digitadas/saldo da lista de colaboradores e as partes do card da
+       pessoa que dependiam das ocorrências. recordsFromCSV descarta essas linhas ao ler (um CSV
+       antigo abre igual a um novo). "Extra e falta no mesmo dia" e "Ocorrências curtas" (que
+       vêm do cartão ponto) foram para a seção "Jornada", parte "Do cartão ponto". O período
+       padrão (periodoCompleto) passou a ser o ciclo do cartão ponto mais recente. Ao abrir um
+       arquivo aparece o aviso do botão "?" (mostrarAvisoAjuda, #avisoAjudaOverlay).
+
      O QUE APARECE NA TELA -> QUEM DESENHA -> DE ONDE VÊM OS DADOS
        (cada .pagina[data-pagina] do HTML é uma seção do menu ☰)
-       Cards do topo (#kpiRow) ......... renderKPIs ............. getFilteredRecords
-         (só na seção "Ocorrências"; a demora média virou a linha #demoraGeral da seção
-          "PontoNet", no card "Média e maior demora por gestor", 29/10)
-       Ordem das seções (26/10): Ocorrências, digitadas, afastamentos, jornada, destaque,
-         tendências, pausas, PontoNet, lista de colaboradores, histórico. Sem status.
+       Ordem das seções (11/11): Arquivos carregados, digitadas, afastamentos, jornada, banco de
+         horas, pausas, PontoNet, tendências, lista de colaboradores. Sem status.
        "?" em cada card (.btn-explica-card): mostra só a explicação daquele card.
          Os números do topo das seções (kpiTile) também têm "?" (EXPLICA_KPI) e uma linha 📅
          com o período (atualizarPeriodosCards, KPI_PERIODO) desde 29/10.
        Período da lateral: calendário próprio (abrirCalendario/desenharCalendario, #calPop):
          só os dias de state.diasDados podem ser clicados (29/10).
-       "destaque": saldo do mês (extra − banco): chartSaldoPositivo/chartSaldoNegativo e a
-         busca #bancoBusca no banco de horas (29/10).
        "de onde vem" das pausas: recsMedida/MEDIDAS_PAUSA (cada pedaço abre só quem teve
          aquilo, com a coluna em destaque); dias de afastamento contados em dias (29/10).
        Legenda clicável (filtro dentro do gráfico) ... legendaSerie/filtrarSerie,
-         state.serieSel (tipo na "geral", motivo nas digitadas, afast nos afastamentos);
+         state.serieSel (motivo nas digitadas, afast nos afastamentos...);
          cores fixas por tipo: prepararCoresSeries/serieDe/corSerie (5 cores + "Outros")
        Selo 📅 de período de cada card ... atualizarPeriodosCards (PERIODO_DOS_CARDS)
        Botão ⛶ (tela cheia) ............ abrirTelaCheia/fecharTelaCheia (.card-cheia)
        Porcentagem do total em barras e fatias (M7) ... opts.total / pctTxt
-       "Por gestor": total ou por pessoa da equipe (M3) ... renderPorGestor / tamanhoEquipes
        Clique numa barra/fatia/ponto/quadrado ("de onde vem") ... abrirOrigem; dentro dela,
          "Filtrar o painel por ..." (M4) ... aplicarFiltroDoGrafico (opts.filtro/filtroSeg)
          (registros guardados por empilhar/anexarOrigem/legendaSerie/ocorrenciasPorData,
@@ -2019,13 +1961,11 @@
        "arquivos" (05/11) .............. renderArquivos .......... o que veio em cada arquivo aberto (state.arquivos[i].fontes =
                  resumoFontes por arquivo; _arq em cada linha), o que cada seção usa (SECOES_FONTES) e o
                  que falta, com o nome do arquivo do sistema (FONTES_ARQ, problemasFonte, problemasBH)
-       "geral": por tipo/dia/data/gestor/cargo  renderDonut/BarV/Line/BarH + ocorrenciasPor*
-                                                 ................. getFilteredRecords sem Hora Extra
        "tendencias" .................... renderTendencias ........ INDICADORES (ciclosTendencia: 3 ciclos)
                  tendência dentro das seções  renderTendenciaSecao; no card: tendenciaDoCard
-       "destaque": top colaboradores ... topColaboradores ....... idem
+       "jornada", parte "Do cartão ponto" (11/11, veio de "Colaboradores em destaque"):
                    extra e falta ........ extraFaltaAuditoria ..... linhas "Auditoria Extra e Falta"
-                   ocorrências curtas ... curtasPorColaborador .... getCurtasRecords
+                   ocorrências curtas ... curtasPorColaborador .... getCurtasRecords (segue o período)
        "bancohoras" (05/11) ............ renderBancoHoras ........ "BH Dia" (crédito 50% / débito BH de cada dia)
                                                                   + "Banco de Horas Período" (relatório do sistema)
                  seletores #bhEquipe/#bhColab/#bhMeses (state.bhMeses), números #bhKpis, linha do saldo
@@ -2051,9 +1991,8 @@
        "jornada" (J1/J2/J7) ............ renderJornada ........... getJornadaRecords (seletor #jorCiclo)
        "demora" (menu: PontoNet): pedidos de justificativa de 3 meses (27/10) renderPontoNet
                                          ("Justificativa PontoNet", seletor #pnCiclo, situacaoPN, nomeTipoPN)
-         + a demora das ocorrências do mês demoraStats + feriasPorPessoa  getFilteredRecords + "Afastamento"
-       "org" ........................... renderListaORG .......... "Cadastro ORG" + ocorrências/digitadas/horas
-       "historico" ..................... renderHistory/drawHistory  getFilteredRecords sem Hora Extra
+         + a demora (batida que faltou -> aprovação) demoraStats + feriasPorPessoa  baseDemora + "Afastamento"
+       "org" ........................... renderListaORG .......... "Cadastro ORG" (só o cadastro, 11/11)
        Card do colaborador (modal) ..... abrirCardColaborador .... todas as linhas da pessoa
        O texto "De onde vem" de cada card está no próprio HTML (.card-fonte) e
        só aparece no modo "Entenda o painel" (setModoExplicacao).
@@ -2072,8 +2011,7 @@
        5. Filtros — leem os controles do DOM e filtram state.records.
        6. Renderização geral do dashboard — o maestro (renderDashboard)
           e as tabelas/KPIs simples.
-       7. Histórico — a única tabela com busca/ordenação/paginação
-          própria.
+       7. (Histórico — retirado em 11/11.)
        8. Carregamento de arquivo e eventos — entrada de dados.
        9. Responsivo — orientação de tela, resize, modal, barra mobile.
   ========================================================= */
@@ -2359,7 +2297,7 @@
   // filtros nunca modificam isto, só leem). colorMaps: cache de
   // "categoria -> cor já atribuída" (ver colorFor abaixo), reiniciado a
   // cada arquivo pra não misturar cores de um arquivo anterior.
-  // historySort/historyPage/historyPageSize: estado de UI só da tabela
+  // (o histórico saiu em 11/11; o estado dele também)
   // de Histórico (seção 7), que é a única com paginação própria.
   var state = {
     records: [],
@@ -2369,9 +2307,6 @@
     // chave = id do gráfico: {série: true} = só essas aparecem; vazio = todas.
     series: { tipo:{}, motivo:{} },
     serieSel: {},
-    historySort: { key:"data", dir:"desc" },
-    historyPage: 1,
-    historyPageSize: 25,
     bancoMostrarTodos: false,
     mostrarTodos: {}   // (não usado desde 13/10: a lista inteira só aparece em tela cheia)
   };
@@ -2640,6 +2575,11 @@
       var tratativaRaw = idx.tratativa != null ? r[idx.tratativa] : "";
       var tipoRaw = idx.tipo != null ? tipoCanonico((r[idx.tipo]||"").trim()) : "";
       if (isTipoIgnorado(tipoRaw)) continue;
+      // (11/11, pedido do RH) As linhas que vêm da planilha de tratamento (as ocorrências do
+      // mês e as de "Hora Extra") não são mais usadas: essa planilha só existe numa unidade e o
+      // painel vai para todas. Um CSV antigo, que ainda as traz, abre igual a um novo.
+      // (isTipoNaoOcorrencia = é uma das linhas fixas que o macro gera dos relatórios do sistema.)
+      if (!isTipoNaoOcorrencia(tipoRaw) || isTipoHoraExtra(tipoRaw)) continue;
       // marcação digitada com Origem "E" não entra (pedido do RH; o GerarCSV
       // atual já não grava essas linhas — isto protege contra um CSV antigo)
       if (tipoRaw === TIPO_MARCACAO_DIGITADA && idx.origemMarcacao != null &&
@@ -3245,7 +3185,7 @@
     return { saldo:out, ancoras:tipos };
   }
   // Pessoas da seção: as que têm banco de horas no arquivo, com os filtros da lateral
-  // (gestor, grupo, cargo, colaborador) e os seletores da seção (equipe e colaborador).
+  // (gestor, cargo, colaborador) e os seletores da seção (equipe e colaborador).
   function pessoasBH(comSelecao){
     var base = dadosBH(), f = filtroPessoas();
     var eq = comSelecao ? $("bhEquipe").value : "", col = comSelecao ? $("bhColab").value : "";
@@ -3516,7 +3456,6 @@
   // meses de 28 a 27); SECOES_FONTES diz o que cada seção precisa. meses3 = relatório de 3
   // meses: o painel confere se veio cada um dos 3 meses que terminam no mês do cartão ponto.
   var FONTES_ARQ = [
-    { id:"trat", nome:"Ocorrências do mês", arquivo:"planilha de ocorrências do RH (internos e externos)", teste:function(t){ return !isTipoNaoOcorrencia(t) || isTipoHoraExtra(t); } },
     { id:"cartao", nome:"Cartão ponto", arquivo:"Cartão ponto (um por mês)", meses3:true, teste:function(t){ return isTipoBHDia(t) || t === TIPO_RESUMO_HORAS_CARTAO || t === TIPO_AUDITORIA_EXTRA_FALTA || isTipoCurta(t) || t === TIPO_ABSENTEISMO; } },
     { id:"bh", nome:"Banco de horas", arquivo:"BH", teste:isTipoBancoHoras },
     { id:"pausas", nome:"Pausas térmicas", arquivo:"Pausas térmicas 3 meses", meses3:true, teste:function(t){ return t === TIPO_RESUMO_PAUSAS_TERMICAS || isTipoPausaDia(t); } },
@@ -3532,17 +3471,14 @@
   // Acha a informação (fonte) de FONTES_ARQ pelo id ("cartao", "bh", "dig"...).
   function fonteArq(id){ return FONTES_ARQ.filter(function(f){ return f.id === id; })[0]; }
   var SECOES_FONTES = [
-    { pag:"geral", precisa:["trat"], usa:["org"] },
-    { pag:"digitadas", precisa:["dig"], usa:["trat"] },
+    { pag:"digitadas", precisa:["dig"], usa:[] },
     { pag:"afastamentos", precisa:["afast"], usa:["cartao"] },
-    { pag:"jornada", precisa:["exced","intra","inter","intersem"], usa:["org"] },
-    { pag:"destaque", precisa:["cartao"], usa:["trat"] },
+    { pag:"jornada", precisa:["exced","intra","inter","intersem"], usa:["org","cartao"] },
     { pag:"bancohoras", precisa:["cartao","bh"], usa:[] },
     { pag:"pausas", precisa:["pausas"], usa:[] },
-    { pag:"demora", precisa:["pontonet"], usa:["afast","org","trat"] },
-    { pag:"tendencias", precisa:[], usa:["trat","dig","afast","exced","intra","inter","intersem","pausas","pontonet"] },
-    { pag:"org", precisa:["org"], usa:["trat","dig","cartao"] },
-    { pag:"historico", precisa:["trat"], usa:[] }
+    { pag:"demora", precisa:["pontonet"], usa:["afast","org"] },
+    { pag:"tendencias", precisa:[], usa:["dig","afast","exced","intra","inter","intersem","pausas","pontonet"] },
+    { pag:"org", precisa:["org"], usa:[] }
   ];
   // Resumo de um conjunto de linhas por informação de origem (seção Arquivos carregados):
   // para cada fonte, quantas linhas, primeira e última data, meses (ciclos) que aparecem,
@@ -4039,14 +3975,6 @@
     return map;
   }
 
-  // Cada função abaixo alimenta UM gráfico da "Visão geral" (e algumas também
-  // as seções de digitadas e afastamentos). Devolvem [{label, value, color}],
-  // ordenado do maior para o menor; "limit"/"n" cortam no top N.
-  function ocorrenciasPorTipo(records){
-    var map = countBy(records, function(r){ return r.tipo; });
-    return Object.keys(map).sort(function(a,b){ return map[b]-map[a]; })
-      .map(function(k){ return { label:k, value:map[k], color: corSerie("tipo", serieDe("tipo", k)) }; });
-  }
   // Sempre devolve os 7 dias (seg..dom), mesmo com zero, para o eixo ficar fixo.
   // Rótulo do dia da semana de um registro ("Seg".."Dom"), igual ao de ocorrenciasPorDiaSemana.
   function diaSemanaRotulo(r){ return DIAS_LABELS[DIAS_ORDER.indexOf(r.data.getDay())]; }
@@ -4071,19 +3999,6 @@
     var arr = Object.keys(map).sort(function(a,b){ return map[b]-map[a]; })
       .map(function(k){ return { label:k, value:map[k], color: colorFor("gestor", k) }; });
     return limit ? arr.slice(0,limit) : arr;
-  }
-  // Conta as ocorrências de cada cargo e devolve as barras do maior para o menor.
-  function ocorrenciasPorCargo(records, limit){
-    var map = countBy(records, function(r){ return r.cargo; });
-    var arr = Object.keys(map).sort(function(a,b){ return map[b]-map[a]; })
-      .map(function(k){ return { label:k, value:map[k], color: colorFor("cargo", k) }; });
-    return limit ? arr.slice(0,limit) : arr;
-  }
-  // As n pessoas com mais ocorrências (gráfico "Colaboradores com mais ocorrências").
-  function topColaboradores(records, n){
-    var map = countBy(records, function(r){ return r.colaborador; });
-    return Object.keys(map).sort(function(a,b){ return map[b]-map[a]; }).slice(0,n)
-      .map(function(k){ return { label:k, value:map[k], color:"var(--c-orange)" }; });
   }
   // Fallback do navegador quando o CSV não tem as linhas de auditoria
   // do macro (ver extraFaltaAuditoria abaixo): agrupa por colaborador+
@@ -4320,7 +4235,7 @@
     // "grupo" preenchida (planilhas com "Tratamento - Internos"/"Externos").
     var grupos = uniqueSorted(state.records.filter(function(r){ return r.grupo; }), function(r){ return r.grupo; });
     msCriar($("fGrupo"), grupos);
-    $("fGrupoGroup").hidden = grupos.length === 0;
+    $("fGrupoGroup").hidden = true;   // (11/11) grupo saiu dos filtros (pedido do RH)
     msCriar($("fCargo"), cargos);
     msCriar($("fColab"), colaboradores);
     msCriar($("fTipo"), tipos);
@@ -4466,12 +4381,12 @@
     });
   }
 
-  // Filtros de pessoa (gestor, grupo, cargo, colaborador), lidos uma vez:
+  // Filtros de pessoa (gestor, cargo, colaborador), lidos uma vez:
   // cada um é null (nada marcado = todos) ou um set {valor: true}.
   function filtroPessoas(){
     return { gestor: msSetOf("fGestor"), grupo: msSetOf("fGrupo"), cargo: msSetOf("fCargo"), colab: msSetOf("fColab") };
   }
-  // true = a linha passa nos filtros de pessoa da lateral (gestor, grupo, cargo e colaborador).
+  // true = a linha passa nos filtros de pessoa da lateral (gestor, cargo e colaborador).
   // f vem de filtroPessoas(); um filtro sem nada marcado não exclui ninguém.
   function passaPessoa(r, f){
     if (f.gestor && !f.gestor[r.gestor]) return false;
@@ -4700,44 +4615,6 @@
     var tile = b.parentNode, lig = tile.classList.toggle("explica-card");
     state.kpiAberto[b.dataset.kpi] = lig;
   });
-  // Desenha os 2 números do topo da seção Ocorrências: "Colaboradores envolvidos" (pessoas
-  // diferentes com ocorrência no filtro, "de X" = tamanho da equipe do recorte) e
-  // "Ocorrências no período" (sem contar as linhas de hora extra).
-  function renderKPIs(records, ocorrenciasRecords){
-    var colaboradoresSet = {};
-    records.forEach(function(r){ colaboradoresSet[r.colaborador] = true; });
-    var totalColaboradores = Object.keys(colaboradoresSet).length;
-    // "de X ..." embaixo = tamanho da equipe do recorte de pessoas do filtro
-    // (gestor, grupo, cargo, colaborador), não das ocorrências: filtrando um
-    // gestor, X é quantas pessoas a equipe dele tem (pedido do RH, 11/10).
-    // Não depende do período nem do tipo/status: se o filtro zera as
-    // ocorrências, X continua mostrando a equipe real, não 0.
-    var eq = equipeDoFiltro(records);
-
-    $("kpiColaboradores").textContent = formatNum(totalColaboradores);
-    $("kpiColaboradoresSub").textContent = "de " + formatNum(eq.n) + " " + eq.rotulo;
-
-    $("kpiOcorrencias").textContent = formatNum(ocorrenciasRecords.length);
-    // o período fica na linha 📅 do card (atualizarPeriodosCards); aqui, a 1ª e a última data com ocorrência
-    $("kpiOcorrenciasSub").textContent = ocorrenciasRecords.length ? "1ª e última ocorrência: " + formatDateSpan(ocorrenciasRecords) : "nenhuma ocorrência no recorte";
-
-    var demoras = [];
-    baseDemora(records).forEach(function(r){
-      if (r.tratativa && r.data){
-        var h = (r.tratativa.getTime()-r.data.getTime())/3600000;
-        if (h >= 0) demoras.push(h);
-      }
-    });
-    if (demoras.length){
-      var media = demoras.reduce(function(s,v){ return s+v; },0)/demoras.length;
-      $("kpiDemora").innerHTML = formatDelay(media);
-      $("kpiDemoraSub").textContent = "(" + formatNum(demoras.length) + (state.records.some(function(r){ return isTipoPontoNet(r.tipo); })
-        ? " justificativa(s) aprovada(s), do dia da batida que faltou até a aprovação)" : " ocorrências tratadas)");
-    } else {
-      $("kpiDemora").innerHTML = "&ndash;";
-      $("kpiDemoraSub").textContent = "(nenhuma aprovação no recorte)";
-    }
-  }
   // Período em destaque na faixa preta do topo: é o período do filtro
   // (o mesmo dos campos de data), então muda junto quando o usuário
   // filtra. Rótulo "Período filtrado" quando difere do período inteiro
@@ -4747,22 +4624,22 @@
   // dia do Cartão atual, o fim do ciclo, ex.: 27/09). Fica de fora só o
   // resumo de pausas, cuja data cai em "hoje" quando não há Cartão.
   function periodoCompleto(){
-    // o absenteísmo, a jornada, as pausas e as digitadas podem cobrir 3 meses:
-    // ficam fora do período padrão, que é o mês das ocorrências (o mês atual).
-    // Sem nenhuma ocorrência no arquivo, as digitadas voltam a valer (CSV só de digitadas).
-    var fora = function(r){ return r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS || isTipoPausaDia(r.tipo) || isTipoPontoNet(r.tipo) || isTipoAbsenteismo(r.tipo) || isTipoJornada(r.tipo) || isTipoBancoHoras(r.tipo) || isTipoBHDia(r.tipo); };
+    // (11/11) Sem as ocorrências da planilha de tratamento, o período padrão é o ciclo (28 a 27)
+    // do cartão ponto mais recente: do dia 28 do mês anterior até o fim do cartão (data das
+    // linhas-resumo do cartão, dia 27). É o mês das ocorrências curtas e o que define os 3
+    // ciclos das tendências.
+    var fimCartao = null;
+    state.records.forEach(function(r){ if ((r.tipo === TIPO_RESUMO_HORAS_CARTAO || r.tipo === TIPO_AUDITORIA_EXTRA_FALTA) && (!fimCartao || r.data > fimCartao)) fimCartao = r.data; });
+    if (fimCartao) return { ini: toISODate(cicloInicioFim(cicloDe(fimCartao)).ini), fim: toISODate(fimCartao) };
+    // Sem cartão ponto no arquivo: da 1ª à última data das linhas que não são de 3 meses
+    // (as de 3 meses — afastamentos, jornada, pausas, PontoNet, banco de horas, digitadas —
+    // ficam fora; sem nenhuma outra linha, as digitadas voltam a valer).
+    var fora = function(r){ return r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS || isTipoPausaDia(r.tipo) || isTipoPontoNet(r.tipo) || isTipoAbsenteismo(r.tipo) || isTipoJornada(r.tipo) || isTipoBancoHoras(r.tipo) || isTipoBHDia(r.tipo) || r.tipo === TIPO_CADASTRO_ORG; };
     var recs = state.records.filter(function(r){ return !fora(r) && !isTipoDigitada(r.tipo); });
     if (!recs.length) recs = state.records.filter(function(r){ return !fora(r); });
     if (!recs.length) return null;
     var dates = recs.map(function(r){ return r.data.getTime(); });
-    var fim = Math.max.apply(null, dates);
-    // (31/10) o fim nunca passa do fim do cartão ponto (data das linhas-resumo do Cartão,
-    // dia 27): a planilha de outubro trouxe ocorrências de 28/10, que já são do ciclo seguinte,
-    // e com elas o período, os ciclos dos afastamentos e as tendências pulavam para novembro.
-    var fimCartao = null;
-    state.records.forEach(function(r){ if ((r.tipo === TIPO_RESUMO_HORAS_CARTAO || r.tipo === TIPO_AUDITORIA_EXTRA_FALTA) && (!fimCartao || r.data > fimCartao)) fimCartao = r.data; });
-    if (fimCartao && fimCartao.getTime() < fim) fim = fimCartao.getTime();
-    return { ini: toISODate(new Date(Math.min.apply(null, dates))), fim: toISODate(new Date(fim)) };
+    return { ini: toISODate(new Date(Math.min.apply(null, dates))), fim: toISODate(new Date(Math.max.apply(null, dates))) };
   }
   // "2026-09-28" -> "28/09/2026".
   function isoParaBR(iso){ return iso ? iso.split("-").reverse().join("/") : ""; }
@@ -4837,34 +4714,6 @@
     });
     return eq;
   }
-  // Gráfico "Ocorrências por gestor": total (12 maiores) ou "por pessoa da equipe"
-  // (ocorrências ÷ pessoas da equipe na lista de equipes). Barras empilhadas por tipo.
-  function renderPorGestor(ocGes, tipoDe, corTipo, legenda){
-    var temOrg = state.records.some(function(r){ return r.tipo === TIPO_CADASTRO_ORG; });
-    var sel = $("gestorMedida");
-    sel.querySelector('option[value="pessoa"]').disabled = !temOrg;
-    if (!temOrg) sel.value = "";
-    var chave = function(r){ return r.gestor; };
-    if (sel.value !== "pessoa"){
-      var itGestor = ocorrenciasPorGestor(ocGes, 12);
-      empilhar(itGestor, ocGes, chave, tipoDe, corTipo);
-      $("hintPorGestor").textContent = "Volume de ocorrências das equipes de cada gestor" + (temOrg ? " · troque para “por pessoa da equipe” para comparar equipes de tamanhos diferentes" : "");
-      renderBarH($("chartPorGestor"), itGestor, { legenda: legenda, total: ocGes.length, filtro:"gestor", filtroSeg:"tipo" });
-      return;
-    }
-    var eq = tamanhoEquipes(), cont = countBy(ocGes, chave), semEquipe = [];
-    var itens = Object.keys(cont).filter(function(g){ if (!eq[g]){ semEquipe.push(g); return false; } return true; }).map(function(g){
-      var v = cont[g] / eq[g];
-      return { label:g, value:v, qtd:cont[g], n:eq[g], texto: formatDec(v) + " por pessoa",
-               dica: g + ": " + formatNum(cont[g]) + " ocorrência(s) para " + formatNum(eq[g]) + " pessoa(s) na equipe = " + formatDec(v) + " por pessoa" };
-    }).sort(function(a,b){ return b.value - a.value || a.label.localeCompare(b.label,"pt-BR"); }).slice(0, 12);
-    empilhar(itens, ocGes, chave, tipoDe, corTipo);
-    // os pedaços também viram "por pessoa" (a quantidade real fica em sg.qtd, para o balão)
-    itens.forEach(function(it){ it.segs.forEach(function(sg){ sg.qtd = sg.value; sg.value = sg.value / it.n; }); });
-    $("hintPorGestor").textContent = "Ocorrências divididas pelo número de pessoas da equipe na lista de equipes · 12 maiores" +
-      (semEquipe.length ? " · " + semEquipe.length + " gestor(es) sem equipe na lista ficam de fora" : "");
-    renderBarH($("chartPorGestor"), itens, { legenda: legenda, rightW: 112, filtro:"gestor", filtroSeg:"tipo" });
-  }
 
   // Maestro + o selo de período de cada card (atualizarPeriodosCards), que
   // depende do que o miolo calculou (ex.: o ciclo dos afastamentos).
@@ -4873,44 +4722,15 @@
     renderDashboardMiolo(); atualizarPeriodosCards(); atualizarBotoesData(); atualizarRecorteSecoes();
   }
   function renderDashboardMiolo(){
+    // (11/11) As seções "Ocorrências", "Colaboradores em destaque" e "Histórico" saíram
+    // (pedido do RH: o painel vai para todas as unidades e a planilha de tratamento, de
+    // onde vinham as ocorrências, só existe numa). records continua existindo só para as
+    // partes que aceitam um CSV antigo (banco de horas e demora sem PontoNet); num CSV novo
+    // ele vem vazio, porque as linhas da tratamento são descartadas na leitura.
     var records = getFilteredRecords();
-    // hora extra continua nas horas (KPI, banco de horas) mas não entra
-    // na CONTAGEM de ocorrências (gráficos "Ocorrências por...",
-    // "Colaboradores com mais ocorrências", histórico) — pedido do RH.
-    var ocorrenciasRecords = records.filter(function(r){ return !isTipoHoraExtra(r.tipo); });
 
-    renderKPIs(records, ocorrenciasRecords);
-
-    // Gráficos por tipo de ocorrência: uma cor por tipo (os 5 maiores; o resto
-    // em "Outros"). legTipo = legenda clicável (filtro dentro do gráfico);
-    // ocG = as ocorrências que sobram depois desse filtro. Os números do topo
-    // (renderKPIs) não mudam com ele.
-    var corTipo = function(t){ return corSerie("tipo", t); }, tipoDe = function(r){ return serieDe("tipo", r.tipo); };
-    // Filtro dentro do gráfico: cada gráfico tem o seu (a chave é o id do
-    // gráfico). leg(id) = legenda clicável dele; rec(id) = as ocorrências que
-    // sobram depois do filtro dele. Os números do topo (renderKPIs) não mudam.
-    var leg = function(id){ return legendaSerie(id, ocorrenciasRecords, tipoDe, corTipo); };
-    var rec = function(id){ return filtrarSerie(id, ocorrenciasRecords, tipoDe); };
-    // opts.total = % de cada barra sobre o total do gráfico (M7); opts.filtro/
-    // filtroSeg = o filtro da lateral que a barra/o pedaço representam, para o
-    // botão "Filtrar o painel por ..." da janela "de onde vem" (M4).
-    renderDonut($("chartTipo"), leg("chartTipo"), { filtro:"tipo" });
-    var ocDia = rec("chartDiaSemana"), itDia = ocorrenciasPorDiaSemana(ocDia);
-    empilhar(itDia, ocDia, diaSemanaRotulo, tipoDe, corTipo);
-    renderBarV($("chartDiaSemana"), itDia, { legenda: leg("chartDiaSemana"), total: ocDia.length, filtroSeg:"tipo" });
-    renderLine($("chartPorData"), ocorrenciasPorData(rec("chartPorData")), { legenda: leg("chartPorData"), filtro:"data" });
-    var ocGes = rec("chartPorGestor");
-    renderPorGestor(ocGes, tipoDe, corTipo, leg("chartPorGestor"));
-    var ocCar = rec("chartPorCargo"), itCargo = ocorrenciasPorCargo(ocCar, 12);
-    empilhar(itCargo, ocCar, function(r){ return r.cargo; }, tipoDe, corTipo);
-    renderBarH($("chartPorCargo"), itCargo, { legenda: leg("chartPorCargo"), total: ocCar.length, filtro:"cargo", filtroSeg:"tipo" });
-
-    // Seção "Colaboradores em destaque": top 10 por ocorrências, extra e
-    // falta no mesmo dia (auditoria de 3 meses), curtas e banco de horas.
-    var ocTop = rec("chartTopColaboradores"), itTop = topColaboradores(ocTop, 10);
-    empilhar(itTop, ocTop, function(r){ return r.colaborador; }, tipoDe, corTipo);
-    renderBarH($("chartTopColaboradores"), itTop, { colab:true, legenda: leg("chartTopColaboradores"), total: ocTop.length, filtro:"colab", filtroSeg:"tipo" });
-
+    // Seção "Jornada", parte "Do cartão ponto": extra e falta no mesmo dia (auditoria
+    // de 3 meses) e ocorrências curtas (menos de 15 minutos).
     renderTableSimple($("tableExtraFalta"),
       [{label:"Colaborador", render:function(r){return colabLink(r.colaborador);}},
        {label:"Gestor", render:function(r){return escapeHtml(r.gestor);}},
@@ -5010,7 +4830,7 @@
 
     // Seções com função própria (cada uma lê os seus dados e desenha tudo dela),
     // depois o topo (período), o contador de filtros e a dica de rolagem lateral.
-    renderDigitadas(ocorrenciasRecords);
+    renderDigitadas();
     renderAbsenteismo();
     renderJornada();
     renderPausas();
@@ -5025,8 +4845,7 @@
     renderTendenciaSecao("tableJorTendGestor", "jor", "gestor");
     renderTendenciaSecao("tableJorTendPessoa", "he", "pessoa", { btnId:"btnJorTendTodos" });
     renderTendenciaSecao("tablePnTendGestor", "pnGestor", "gestor");
-    renderListaORG(ocorrenciasRecords);
-    renderHistory(ocorrenciasRecords);
+    renderListaORG();
     atualizarPeriodoTopo();
     updateFiltersBadge();
     setTimeout(updateScrollHints, 0);
@@ -5046,7 +4865,7 @@
   // Desenha a seção "Marcações digitadas" (batidas lançadas à mão): números do topo, motivo,
   // dia da semana, data, quem mais digitou, por gestor, hora, esquecimento repetido,
   // justificativas e lista. Segue o seletor de ciclo da seção e os filtros de pessoa.
-  function renderDigitadas(ocorrenciasRecords){
+  function renderDigitadas(){
     var temDig = state.records.some(function(r){ return isTipoDigitada(r.tipo); });
     $("digSemDados").hidden = temDig;
     $("digCorpo").hidden = !temDig;
@@ -5068,10 +4887,6 @@
     // dig = batidas digitadas que passam nos filtros de pessoa (gestor, grupo, cargo,
     // colaborador) e no ciclo escolhido. Tudo abaixo é calculado sobre esta lista.
     var dig = getDigitadasRecords();
-
-    var diasComOcorrencia = {};
-    ocorrenciasRecords.forEach(function(r){ diasComOcorrencia[chavePessoa(r) + "|" + r.dateKey] = true; });
-    dig.forEach(function(r){ r.temOcorrenciaNoDia = !!diasComOcorrencia[chavePessoa(r) + "|" + r.dateKey]; });
 
     // KPIs da seção: total de batidas, pessoas diferentes (e % da equipe do filtro) e quantas
     // foram por esquecimento (os cards "No dia de uma ocorrência" e "Horário
@@ -5173,8 +4988,7 @@
        {label:"Colaborador", width:"18%", render:function(r){ return colabLink(r.colaborador); }},
        {label:"Gestor", width:"14%", render:function(r){ return escapeHtml(r.gestor); }},
        {label:"Motivo", width:"16%", render:function(r){ return escapeHtml(r.situacao); }},
-       {label:"Justificativa", render:function(r){ return '<span title="'+escapeHtml(r.justificativaMarcacao)+'">'+escapeHtml(r.justificativaMarcacao)+'</span>'; }},
-       {label:"Ocorrência no dia", width:"84px", render:function(r){ return r.temOcorrenciaNoDia ? "Sim" : "&ndash;"; }}],
+       {label:"Justificativa", render:function(r){ return '<span title="'+escapeHtml(r.justificativaMarcacao)+'">'+escapeHtml(r.justificativaMarcacao)+'</span>'; }}],
       lista);
   }
   $("digBusca").addEventListener("input", debounce(applyFilters, 200));
@@ -5567,7 +5381,6 @@
     }
   }
   $("absCiclo").addEventListener("change", applyFilters);
-  $("gestorMedida").addEventListener("change", applyFilters);
   /* ---------- Tendências (ciclo a ciclo) ----------
      Pedido do RH (18/10): ver se a unidade, cada equipe e cada pessoa está
      melhorando ou piorando. Tudo que o arquivo traz em mais de um ciclo (28 a
@@ -5575,7 +5388,7 @@
      de ocorrências tem um mês só, então as ocorrências não têm tendência).
      INDICADORES: cada um diz de onde vêm os registros (itens), quanto cada um
      vale (num; den para os que são porcentagem) e se "subir" é piorar (pior).
-     Seguem os filtros de pessoa (gestor, grupo, cargo, colaborador), nunca o de
+     Seguem os filtros de pessoa (gestor, cargo, colaborador), nunca o de
      período: com o filtro de um gestor, a tendência é a da equipe dele. */
   var CICLOS_TENDENCIA = 3;
   function somaCiclo(k, n){
@@ -5630,7 +5443,7 @@
   ];
   // Acha o indicador de tendência pelo id ("dig", "esq", "atest"...).
   function indicador(id){ for (var i = 0; i < INDICADORES.length; i++) if (INDICADORES[i].id === id) return INDICADORES[i]; return null; }
-  // true = nenhum filtro de pessoa (gestor, grupo, cargo, colaborador) está marcado.
+  // true = nenhum filtro de pessoa (gestor, cargo, colaborador) está marcado.
   function filtroPessoasVazio(){ var f = filtroPessoas(); return !f.gestor && !f.grupo && !f.cargo && !f.colab; }
   // Soma os itens por chave (unidade, gestor ou pessoa) e por ciclo.
   // chaveFn(r) -> chave; devolve [{ chave, label, gestor, c: {ciclo: {num, den}} }]
@@ -6465,7 +6278,7 @@
   /* ---------- Jornada (J1, J2, J7) ----------
      Linhas "Intrajornada", "Interjornada", "Interjornada Semanal" e "Horas
      Excedentes" (uma por pessoa por dia com problema). Seguem os filtros de
-     pessoa (gestor, grupo, cargo, colaborador), não o de período: o arquivo
+     pessoa (gestor, cargo, colaborador), não o de período: o arquivo
      traz 3 ciclos e a seção tem o seu seletor de ciclo (#jorCiclo). Na tela
      os tipos aparecem com nomes simples (JORNADA_INFO), sem os termos da lei. */
   var JORNADA_INFO = {
@@ -6623,7 +6436,7 @@
      ORG); quem não tem matrícula no ORG (#N/A) é casado pelo nome. */
   function chaveNome(nome){ return stripAccents(String(nome||"")).toUpperCase().replace(/\s+/g," ").trim(); }
   function chavePessoa(r){ return r.matricula ? "M:" + r.matricula : "N:" + chaveNome(r.colaborador); }
-  function renderListaORG(ocorrenciasRecords){
+  function renderListaORG(){
     var org = getResumoRecords(TIPO_CADASTRO_ORG);
     var temOrg = state.records.some(function(r){ return r.tipo === TIPO_CADASTRO_ORG; });
     if (!temOrg){
@@ -6631,22 +6444,13 @@
       $("tableOrg").innerHTML = ""; $("tableOrg").appendChild(emptyMsg("Este arquivo não traz a lista de equipes. O RH inclui esse relatório quando gera o arquivo do painel."));
       return;
     }
-    // Para cada pessoa (chavePessoa = matrícula, ou o nome se não houver),
-    // conta ocorrências do filtro, batidas digitadas e pega as horas do Cartão.
-    var ocPorPessoa = {};
-    ocorrenciasRecords.forEach(function(r){ var k = chavePessoa(r); ocPorPessoa[k] = (ocPorPessoa[k]||0) + 1; });
-    var horasPorPessoa = {};
-    state.records.forEach(function(r){ if (r.tipo === TIPO_RESUMO_HORAS_CARTAO) horasPorPessoa[chavePessoa(r)] = r; });
-    var digPorPessoa = {};
-    getDigitadasRecords().forEach(function(r){ var k = chavePessoa(r); digPorPessoa[k] = (digPorPessoa[k]||0) + 1; });
-
-    // Uma linha da tabela por pessoa do ORG. "Sem gestor"/"Sem cargo" (valores
-    // padrão do leitor de CSV) viram vazio para os filtros de cadastro.
+    // (11/11, pedido do RH) A lista mostra só o cadastro, como está na lista de equipes:
+    // matrícula, colaborador, área, cargo e gestor. Saíram as colunas de ocorrências,
+    // digitadas e saldo de horas. "Sem gestor"/"Sem cargo" (valores padrão do leitor de
+    // CSV) viram vazio para os filtros de cadastro.
     var linhas = org.map(function(r){
-      var k = chavePessoa(r), h = horasPorPessoa[k];
       return { colaborador:r.colaborador, matricula:r.matricula, gestor:r.gestor === "Sem gestor" ? "" : r.gestor,
-               cargo:r.cargo === "Sem cargo" ? "" : r.cargo, area:r.situacao, ocorrencias: ocPorPessoa[k] || 0, digitadas: digPorPessoa[k] || 0,
-               extra: h ? h.minHoraExtraCartao : null, banco: h ? h.minBancoHorasCartao : null };
+               cargo:r.cargo === "Sem cargo" ? "" : r.cargo, area:r.situacao };
     });
 
     var semGestor = linhas.filter(function(l){ return !l.gestor; }).length;
@@ -6661,7 +6465,7 @@
       '<span class="org-pill"><b>' + formatNum(semArea) + '</b> sem área</span>';
 
     // Busca livre (#orgBusca) + seletor de cadastro (#orgMostrar: sem matrícula,
-    // sem gestor, sem cargo, sem área). Ordena por quem tem mais ocorrências.
+    // sem gestor, sem cargo, sem área). Em ordem alfabética de nome.
     var busca = stripAccents($("orgBusca").value.trim().toLowerCase());
     var modo = $("orgMostrar").value;
     var vis = linhas.filter(function(l){
@@ -6674,129 +6478,24 @@
         if (hay.indexOf(busca) === -1) return false;
       }
       return true;
-    }).sort(function(a,b){ return b.ocorrencias - a.ocorrencias || a.colaborador.localeCompare(b.colaborador, "pt-BR"); });
+    }).sort(function(a,b){ return a.colaborador.localeCompare(b.colaborador, "pt-BR"); });
     $("orgCount").textContent = formatNum(vis.length) + " de " + formatNum(linhas.length);
 
     renderTableSimple($("tableOrg"),
-      [{label:"Colaborador", width:"20%", render:function(l){ return colabLink(l.colaborador) + (l.matricula ? "" : '<span class="tag-mini">sem matrícula</span>'); }},
-       {label:"Matrícula", width:"9%", render:function(l){ return escapeHtml(l.matricula || "–"); }},
-       {label:"Gestor", width:"20%", render:function(l){ return l.gestor ? escapeHtml(l.gestor) : '<span class="sem-gestor">Sem gestor</span>'; }},
-       {label:"Cargo", width:"16%", render:function(l){ return escapeHtml(l.cargo); }},
-       {label:"Área", width:"12%", render:function(l){ return escapeHtml(l.area); }},
-       {label:"Ocorrências", width:"8%", render:function(l){ return l.ocorrencias ? "<strong>"+l.ocorrencias+"</strong>" : "0"; }},
-       {label:"Digitadas", width:"7%", render:function(l){ return l.digitadas ? "<strong>"+l.digitadas+"</strong>" : "0"; }},
-       {label:"Saldo de horas", width:"10%", render:function(l){
-          if (l.extra == null) return "&ndash;";
-          var sd = l.extra - l.banco;
-          return '<span class="'+(sd > 0 ? "saldo-pos" : (sd < 0 ? "saldo-neg" : ""))+'" title="Extra '+formatHoras(l.extra)+' · Banco '+formatHoras(l.banco)+'">'+formatSaldo(sd)+'</span>';
-        }}],
+      [{label:"Matrícula", width:"11%", render:function(l){ return escapeHtml(l.matricula || "–"); }},
+       {label:"Colaborador", width:"27%", render:function(l){ return colabLink(l.colaborador) + (l.matricula ? "" : '<span class="tag-mini">sem matrícula</span>'); }},
+       {label:"Área", width:"18%", render:function(l){ return escapeHtml(l.area); }},
+       {label:"Cargo", width:"20%", render:function(l){ return escapeHtml(l.cargo); }},
+       {label:"Gestor", width:"24%", render:function(l){ return l.gestor ? escapeHtml(l.gestor) : '<span class="sem-gestor">Sem gestor</span>'; }}],
       vis);
   }
   $("orgBusca").addEventListener("input", debounce(applyFilters, 200));
   $("orgMostrar").addEventListener("change", applyFilters);
 
   /* =========================================================
-     7. HISTÓRICO (tabela com busca, ordenação e paginação)
-     Única tabela do painel com busca/ordenação/paginação próprias (as
-     outras usam renderTableSimple, seção 6, que é só leitura). Por
-     isso guarda estado próprio fora de `state.records`:
-     historyRecordsCache é o conjunto já filtrado pelos filtros GERAIS
-     do painel (gestor/cargo/período/tipo/status — o mesmo que os
-     gráficos usam); busca de texto, ordenação de coluna e página atual
-     são um filtro/reordenação SEGUNDO, aplicado por cima disso, então
-     não precisam recalcular getFilteredRecords() a cada tecla digitada
-     na busca.
+     7. HISTÓRICO — retirado em 11/11 (pedido do RH): era a lista das ocorrências da
+     planilha de tratamento, que o painel não usa mais.
   ========================================================= */
-  var historyRecordsCache = [];
-
-  // Chamado por renderDashboard toda vez que os filtros gerais mudam:
-  // troca o cache e volta pra página 1 (uma busca/ordenação antiga não
-  // faz sentido pro novo conjunto filtrado).
-  function renderHistory(records){
-    historyRecordsCache = records;
-    state.historyPage = 1;
-    drawHistory();
-  }
-
-  // Aplica busca de texto + ordenação + paginação sobre
-  // historyRecordsCache e redesenha só o <tbody>/paginação (não mexe
-  // nos gráficos) — chamado a cada tecla na busca, clique de coluna ou
-  // troca de página, então precisa ser rápido; por isso opera sobre o
-  // cache já filtrado, não sobre state.records inteiro.
-  function drawHistory(){
-    var search = stripAccents($("historySearch").value.trim().toLowerCase());
-    var rows = historyRecordsCache.filter(function(r){
-      if (!search) return true;
-      var hay = stripAccents((r.colaborador+" "+r.gestor+" "+r.setor+" "+r.tipo+" "+r.situacao+" "+r.status).toLowerCase());
-      return hay.indexOf(search) > -1;
-    });
-
-    var key = state.historySort.key, dir = state.historySort.dir;
-    rows = rows.slice().sort(function(a,b){
-      var va, vb;
-      if (key === "data"){ va=a.data.getTime(); vb=b.data.getTime(); }
-      else { va=(a[key]||"").toLowerCase(); vb=(b[key]||"").toLowerCase(); }
-      if (va < vb) return dir === "asc" ? -1 : 1;
-      if (va > vb) return dir === "asc" ? 1 : -1;
-      return 0;
-    });
-
-    $("historyCount").textContent = formatNum(rows.length) + " ocorrência(s)";
-
-    var pageSize = state.historyPageSize;
-    var totalPages = Math.max(1, Math.ceil(rows.length/pageSize));
-    if (state.historyPage > totalPages) state.historyPage = totalPages;
-    var start = (state.historyPage-1)*pageSize;
-    var pageRows = rows.slice(start, start+pageSize);
-
-    var body = $("historyBody");
-    if (!pageRows.length){
-      body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--c-muted-2);padding:20px;">Nenhuma ocorrência encontrada.</td></tr>';
-    } else {
-      body.innerHTML = pageRows.map(function(r){
-        return "<tr>"+
-          "<td data-label=\"Data\">"+formatDateBR(r.data)+"</td>"+
-          "<td data-label=\"Colaborador\">"+colabLink(r.colaborador)+"</td>"+
-          "<td data-label=\"Gestor\">"+escapeHtml(r.gestor)+"</td>"+
-          "<td data-label=\"Setor\">"+escapeHtml(r.setor)+"</td>"+
-          "<td data-label=\"Tipo\">"+escapeHtml(r.tipo)+"</td>"+
-          "<td data-label=\"Situação\">"+escapeHtml(r.situacao)+"</td>"+
-        "</tr>";
-      }).join("");
-    }
-
-    document.querySelectorAll("#historyTable th").forEach(function(th){
-      th.classList.remove("sorted-asc","sorted-desc");
-      if (th.dataset.key === key) th.classList.add(dir==="asc"?"sorted-asc":"sorted-desc");
-    });
-
-    var pag = $("historyPagination");
-    pag.innerHTML = "";
-    var info = document.createElement("span");
-    info.textContent = "Página " + state.historyPage + " de " + totalPages;
-    var prev = document.createElement("button");
-    prev.textContent = "‹ Anterior"; prev.disabled = state.historyPage<=1;
-    prev.addEventListener("click", function(){ state.historyPage--; drawHistory(); });
-    var next = document.createElement("button");
-    next.textContent = "Próxima ›"; next.disabled = state.historyPage>=totalPages;
-    next.addEventListener("click", function(){ state.historyPage++; drawHistory(); });
-    pag.appendChild(prev); pag.appendChild(info); pag.appendChild(next);
-  }
-
-  document.querySelectorAll("#historyTable th").forEach(function(th){
-    th.addEventListener("click", function(){
-      var key = th.dataset.key;
-      if (state.historySort.key === key){
-        state.historySort.dir = state.historySort.dir === "asc" ? "desc" : "asc";
-      } else {
-        state.historySort.key = key;
-        state.historySort.dir = key === "data" ? "desc" : "asc";
-      }
-      state.historyPage = 1;
-      drawHistory();
-    });
-  });
-  $("historySearch").addEventListener("input", function(){ state.historyPage = 1; drawHistory(); });
 
   /* =========================================================
      8. CARREGAMENTO DE ARQUIVO E EVENTOS
@@ -6902,7 +6601,6 @@
       if (!orientationDismissed) $("orientationBanner").hidden = false;
 
       $("emptyState").hidden = true;
-      $("kpiRow").hidden = false;
       $("dashboardBody").hidden = false;
       $("btnMenu").hidden = false;
 
@@ -6913,7 +6611,31 @@
       aplicarPagina();
       window.scrollTo({ top:0 });
       renderDashboard();
+      mostrarAvisoAjuda();
   }
+
+  // (11/11, pedido do RH) Ao abrir um arquivo, o painel vai para "Arquivos carregados" e
+  // mostra um aviso: cada quadro tem um botão "?" com a explicação. Quem marcar "Não mostrar
+  // de novo" não vê mais o aviso naquele navegador (fica guardado no localStorage).
+  function mostrarAvisoAjuda(){
+    var nao = false;
+    try { nao = localStorage.getItem("painelPonto.semAvisoAjuda") === "1"; } catch(e){}
+    if (nao) return;
+    $("avisoAjudaNao").checked = false;
+    $("avisoAjudaOverlay").hidden = false;
+    setTimeout(function(){ $("avisoAjudaOk").focus(); }, 50);
+  }
+  // Fecha o aviso; se "Não mostrar de novo" estiver marcado, guarda a escolha.
+  function fecharAvisoAjuda(){
+    if ($("avisoAjudaNao").checked){ try { localStorage.setItem("painelPonto.semAvisoAjuda", "1"); } catch(e){} }
+    $("avisoAjudaOverlay").hidden = true;
+  }
+  $("avisoAjudaOk").addEventListener("click", fecharAvisoAjuda);
+  $("avisoAjudaOverlay").addEventListener("click", function(e){ if (e.target === this) fecharAvisoAjuda(); });
+  // Esc fecha o aviso antes de qualquer outra janela (fase de captura)
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape" && !$("avisoAjudaOverlay").hidden){ e.stopPropagation(); e._tratado = true; fecharAvisoAjuda(); }
+  }, true);
 
   // Duas formas de abrir o arquivo: clicar e escolher (fileInput) ou arrastar
   // para o bloco "Carregar dados" (dropZone). As duas chamam handleFile.
@@ -6957,7 +6679,6 @@
     state.arquivos = []; state.repetidas = 0;
     $("filtersBlock").hidden = true;
     $("emptyState").hidden = false;
-    $("kpiRow").hidden = true;
     $("dashboardBody").hidden = true;
     $("btnMenu").hidden = true; fecharMenuSecoes();   // sem arquivo, não há seções (26/10)
     $("mobileBar").hidden = true;
@@ -7068,13 +6789,11 @@
     var total = periodoCompleto();
     $("fDataIni").value = total ? total.ini : "";
     $("fDataFim").value = total ? total.fim : "";
-    $("historySearch").value = ""; $("bancoBusca").value = ""; $("bhBusca").value = ""; $("bhMostrar").value = "";
+    $("bancoBusca").value = ""; $("bhBusca").value = ""; $("bhMostrar").value = "";
     $("bhEquipe").value = ""; $("bhColab").value = ""; state.bhMeses = null; state.bhDados = null;
     $("orgBusca").value = ""; $("orgMostrar").value = ""; $("digBusca").value = "";
     $("absCiclo").value = ""; $("absAgrupar").value = "gestor"; $("absMostrar").value = "";
-    $("jorCiclo").value = ""; $("digCiclo").value = ""; $("gestorMedida").value = ""; $("pauAgrupar").value = "gestor"; $("tendIndicador").value = "";
-    state.historySort = { key:"data", dir:"desc" };
-    state.historyPage = 1;
+    $("jorCiclo").value = ""; $("digCiclo").value = ""; $("pauAgrupar").value = "gestor"; $("tendIndicador").value = "";
     state.bancoMostrarTodos = false;
     state.mostrarTodos = {};
     state.serieSel = {};   // filtros dentro dos gráficos (um por gráfico)
@@ -7206,8 +6925,6 @@
     // true = a data da linha está no período do filtro (o card da pessoa segue o período).
     function noPeriodo(r){ return (!dIni || r.data >= dIni) && (!dFim || r.data <= dFim); }
 
-    var ocorrencias = todas.filter(function(r){ return !isTipoNaoOcorrencia(r.tipo) && noPeriodo(r); })
-      .sort(function(a,b){ return b.data - a.data; });
     var curtas = todas.filter(function(r){ return isTipoCurta(r.tipo) && noPeriodo(r); });
     var horas = todas.filter(function(r){ return r.tipo === TIPO_RESUMO_HORAS_CARTAO; })[0];
     var aud = todas.filter(function(r){ return r.tipo === TIPO_AUDITORIA_EXTRA_FALTA; })[0];
@@ -7221,19 +6938,12 @@
     var temAfArquivo = state.records.some(function(r){ return r.tipo === TIPO_AFASTAMENTO; });
     var atestados = todas.filter(function(r){ return temAfArquivo ? r.tipo === TIPO_AFASTAMENTO : r.tipo === TIPO_ABSENTEISMO; })
       .sort(function(a,b){ return b.data - a.data; });
-    var demoras = [];
-    todas.forEach(function(r){
-      if (r.tratativa && noPeriodo(r) && !isTipoNaoOcorrencia(r.tipo)){
-        var h = (r.tratativa - r.data)/3600000; if (h >= 0) demoras.push(h);
-      }
-    });
 
     // Cabeçalho do card: matrícula, gestor, cargo, setor, grupo, área do ORG e,
     // se o arquivo tem ORG mas a pessoa não está nele, o aviso "Não está no ORG".
     $("colabModalTitle").textContent = nome;
     var meta = [["Matrícula", primeiro("matricula")], ["Gestor", primeiro("gestor","Sem gestor") || "Sem gestor"],
-                ["Cargo", primeiro("cargo","Sem cargo") || "Sem cargo"], ["Setor", primeiro("setor","Sem setor") || "Sem setor"],
-                ["Grupo", primeiro("grupo")]];
+                ["Cargo", primeiro("cargo","Sem cargo") || "Sem cargo"], ["Setor", primeiro("setor","Sem setor") || "Sem setor"]];
     var linhaOrg = todas.filter(function(r){ return r.tipo === TIPO_CADASTRO_ORG; })[0];
     if (linhaOrg && linhaOrg.situacao) meta.push(["Área", linhaOrg.situacao]);
     var foraOrg = !linhaOrg && state.records.some(function(r){ return r.tipo === TIPO_CADASTRO_ORG; });
@@ -7246,7 +6956,6 @@
       return '<div class="colab-kpi'+(cls?' '+cls:'')+'"><div class="ck-label">'+label+'</div><div class="ck-value">'+valor+'</div>'+
              (sub ? '<div class="ck-sub">'+sub+'</div>' : '')+'</div>';
     }
-    var periodoTxt = (dIni ? formatDateBR(dIni) : "início") + " a " + (dFim ? formatDateBR(dFim) : "fim");
     var saldo = horas ? (horas.minHoraExtraCartao - horas.minBancoHorasCartao) : 0;
     var cFaltas = curtas.filter(function(r){ return r.tipo === "Falta < 15min"; }).length;
     // banco de horas do período (04/11): como a pessoa fechou (ou o saldo até agora)
@@ -7270,11 +6979,11 @@
         bhCls = bh.bhSaldoFinal > 0 ? "pos" : (bh.bhSaldoFinal < 0 ? "neg" : "");
       }
     }
-    // Corpo do card: mini-cards de números (ocorrências, horas do Cartão, saldo,
-    // extra e falta, curtas, demora, pausas) e, abaixo, as tabelas de
-    // afastamentos, digitadas e ocorrências da pessoa.
+    // Corpo do card: mini-cards de números (horas do cartão ponto, saldo, banco de horas,
+    // extra e falta, curtas, pausas) e, abaixo, as tabelas de afastamentos e digitadas.
+    // (11/11) Saíram o número de ocorrências, a demora e as tabelas de ocorrências: o
+    // painel não usa mais a planilha de tratamento (só existe numa unidade).
     var html = '<div class="colab-kpis">' +
-      tile("Ocorrências", formatNum(ocorrencias.length), periodoTxt) +
       tile("Hora extra", horas ? formatHoras(horas.minHoraExtraCartao) : "&ndash;", "cartão ponto do mês") +
       tile("Banco de horas", horas ? formatHoras(horas.minBancoHorasCartao) : "&ndash;", "cartão ponto do mês") +
       tile("Saldo", horas ? formatSaldo(saldo) : "&ndash;", "extra &minus; banco", horas ? (saldo > 0 ? "pos" : (saldo < 0 ? "neg" : "")) : "") +
@@ -7284,8 +6993,6 @@
       tile("Extra e falta no mesmo dia", aud ? (aud.extraFaltaMesAtual + " / " + aud.extraFaltaTotal3Meses) : "0", "este mês / 3 meses",
            aud && aud.extraFaltaTotal3Meses >= LIMITE_AUDITORIA_EXTRA_FALTA ? "alerta" : "") +
       tile("Ocorrências curtas", formatNum(curtas.length), cFaltas + " falta(s) &middot; " + (curtas.length - cFaltas) + " extra(s)") +
-      tile("Demora no PontoNet", demoras.length ? formatDelay(demoras.reduce(function(a,b){return a+b;},0)/demoras.length) : "&ndash;",
-           demoras.length ? formatNum(demoras.length) + " tratada(s), média" : "nenhuma tratativa") +
       tile("Pausas térmicas", pausa ? formatNum(pausa.pausaCorretas) : "&ndash;",
            pausa ? "corretas &middot; " + pausa.pausaMenor20 + " curta(s) &middot; " + pausa.pausasMarcacoesImpares + " marcação(ões) ímpar(es)" : "fora do relatório",
            pausa && pausa.pausasMarcacoesImpares > 0 ? "alerta" : "") +
@@ -7317,23 +7024,6 @@
         }).join("") + '</tbody></table></div>';
     }
 
-    var porTipo = ocorrenciasPorTipo(ocorrencias);
-    if (porTipo.length){
-      html += '<h3 class="colab-section">Ocorrências por tipo</h3><div class="colab-tags">' +
-        porTipo.map(function(t){ return '<span class="colab-tag">'+escapeHtml(t.label)+'<b>'+t.value+'</b></span>'; }).join("") + '</div>';
-    }
-    html += '<h3 class="colab-section">Ocorrências no período ('+periodoTxt+')</h3>';
-    if (ocorrencias.length){
-      html += '<div class="table-scroll colab-tab colab-tab-livre"><table class="data-table"><colgroup><col style="width:92px"><col><col><col style="width:84px"></colgroup>' +
-        '<thead><tr><th>Data</th><th>Tipo</th><th>Situação</th><th>Falta</th></tr></thead><tbody>' +
-        ocorrencias.map(function(r){
-          return '<tr><td data-label="Data">'+formatDateBR(r.data)+'</td><td data-label="Tipo">'+escapeHtml(r.tipo)+'</td>'+
-                 '<td data-label="Situação" title="'+escapeHtml(r.situacao)+'">'+escapeHtml(r.situacao)+'</td>'+
-                 '<td data-label="Falta">'+(r.duracao < 0 ? formatHoras(r.duracao) : "&ndash;")+'</td></tr>';
-        }).join("") + '</tbody></table></div>';
-    } else {
-      html += '<div class="chart-empty">Nenhuma ocorrência da Tratamento neste período.</div>';
-    }
     $("colabModalBody").innerHTML = html;
     $("colabModalOverlay").hidden = false;
     $("colabModalBody").scrollTop = 0;
@@ -7358,11 +7048,11 @@
 
   /* ---------- Seções do painel (menu "sanduíche") ----------
      O painel é dividido em seções (.pagina[data-pagina]); só a escolhida
-     aparece, e os cards de KPI só na "Visão geral". "Todas" mostra tudo numa
+     aparece. "Todas" mostra tudo numa
      página, como antes. A escolha fica guardada no navegador. Ao trocar de
      seção os gráficos são redesenhados, porque a largura deles é medida em
      pixels e uma seção escondida não tem largura. */
-  var paginaAtual = "geral";
+  var paginaAtual = "arquivos";
   function nomePagina(id){
     var b = document.querySelector('#menuSecoes button[data-pagina="' + id + '"]');
     return id === "todas" ? "Todas as seções" : (b ? b.textContent : "");
@@ -7373,14 +7063,13 @@
     document.querySelectorAll(".pagina").forEach(function(p){
       p.classList.toggle("fora", paginaAtual !== "todas" && p.getAttribute("data-pagina") !== paginaAtual);
     });
-    $("kpiRow").classList.toggle("fora", paginaAtual !== "todas" && paginaAtual !== "geral");
     document.querySelectorAll("#menuSecoes button").forEach(function(b){ b.classList.toggle("ativo", b.getAttribute("data-pagina") === paginaAtual); });
     $("btnMenuTxt").textContent = nomePagina(paginaAtual);
   }
   // Troca de seção: guarda a escolha no navegador (localStorage) e redesenha,
   // porque os gráficos da seção que estava escondida não tinham largura.
   function irParaPagina(id){
-    if (!document.querySelector('.pagina[data-pagina="' + id + '"]') && id !== "todas") id = "geral";
+    if (!document.querySelector('.pagina[data-pagina="' + id + '"]') && id !== "todas") id = "arquivos";
     paginaAtual = id;
     try { localStorage.setItem("painelPonto.pagina", id); } catch(e){}
     aplicarPagina();
@@ -7404,7 +7093,7 @@
   });
   // Ao abrir o painel, volta para a última seção usada neste navegador.
   try { var pg = localStorage.getItem("painelPonto.pagina"); if (pg) paginaAtual = pg; } catch(e){}
-  if (!document.querySelector('.pagina[data-pagina="' + paginaAtual + '"]') && paginaAtual !== "todas") paginaAtual = "geral";
+  if (!document.querySelector('.pagina[data-pagina="' + paginaAtual + '"]') && paginaAtual !== "todas") paginaAtual = "arquivos";
   aplicarPagina();
 
 
@@ -7683,8 +7372,7 @@
      escolhido nos afastamentos. O tipo de cada card vem de PERIODO_DOS_CARDS
      (pelo id do gráfico/tabela que fica dentro dele). */
   var PERIODO_DOS_CARDS = {
-    filtro: ["chartTipo","chartDiaSemana","chartPorData","chartPorGestor","chartPorCargo","chartTopColaboradores","tableCurtas",
-             "historySection"],
+    filtro: ["tableCurtas"],
     digCiclo: ["chartDigMotivo","chartDigDiaSemana","chartDigData","chartDigTop","chartDigGestor","chartDigHora",
              "tableDigJust","tableDigLista"],
     cartao: [], cartao3: ["tableExtraFalta"], bh: ["chartFechamentoBH"], bhConf: ["tableBHConf"],
@@ -7748,7 +7436,7 @@
     // Números do topo das seções (pedido do RH, 29/10: "deixe claro a que período o
     // número se refere"): uma linha 📅 dentro de cada número, sem o "(não segue o
     // filtro de período)", que fica no "?".
-    var KPI_PERIODO = { kpiRow:"filtro", digKpis:"digCiclo", jorKpis:"jorCiclo", pauKpis:"pausas", pnKpis:"pnCiclo", bhKpis:"bhSel" };
+    var KPI_PERIODO = { digKpis:"digCiclo", jorKpis:"jorCiclo", pauKpis:"pausas", pnKpis:"pnCiclo", bhKpis:"bhSel" };
     Object.keys(KPI_PERIODO).forEach(function(id){
       var t = textos[KPI_PERIODO[id]];
       t = t ? t.replace(/ \(não segue o filtro de período\)/, "") : "";

@@ -269,6 +269,11 @@ conteúdo num módulo.
   1,5% abaixo. Versão Python: `formatar_pausas.por_ciclo`.
 
 ### 5.4 GerarCSVPonto
+> **(11/11) As abas de Tratamento NÃO são mais lidas** (`LER_ABAS_TRATAMENTO = False`): o painel tirou as
+> seções de ocorrências (o painel vai para todas as unidades e só a de Recife/Cabo tem essas abas). Sem elas não
+> saem as linhas de ocorrência nem as "Hora Extra"/"Hora Extra 100%"; o gestor vem do ORG; `grupo` fica vazio.
+> As regras 1–7 abaixo só valem com `True`. O simulador segue igual (`LER_TRATAMENTO=1` para o jeito antigo).
+
 **Entradas (achadas por nome/cabeçalho, nunca por posição):**
 - Abas cujo nome começa com **"Tratamento"** e que têm a coluna `Matricula` na linha 1:
   `Tratamento - Internos` / `Tratamento - Externos` (planilha nova) ou `Tratamento` (antiga).
@@ -388,6 +393,18 @@ PontoNet"); 28/29 na "Absenteísmo" e na "Afastamento"; 30/31/32 nas 4 de jornad
 > contrato acima, que é o que o GerarCSV e o index usam de fato.
 
 ## 6. O painel (Dashboard/index.html)
+
+> **(11/11) Mudança grande:** saíram as seções **Ocorrências**, **Colaboradores em destaque** e **Histórico**, os
+> números do topo de ocorrências (`#kpiRow`, `renderKPIs`), o filtro de **grupo** e o de **tipo de ocorrência**
+> (escondidos para sempre), as colunas de ocorrências/digitadas/saldo da lista de colaboradores (agora só
+> Matrícula, Colaborador, Área, Cargo, Gestor, em ordem alfabética) e, no card da pessoa, o número de ocorrências,
+> a demora e as tabelas de ocorrências. `recordsFromCSV` descarta toda linha que não é tipo fixo
+> (`!isTipoNaoOcorrencia`) e as "Hora Extra": CSV antigo abre igual. "Extra e falta no mesmo dia" e "Ocorrências
+> curtas" foram para o fim da seção **Jornada** ("Do cartão ponto", fora do `#jorCorpo`). `periodoCompleto` = ciclo
+> do cartão ponto mais recente (28 do mês anterior → fim do cartão); o filtro de período só mexe nas curtas.
+> Ao abrir arquivo: vai para "Arquivos carregados" e mostra o aviso do "?" (`mostrarAvisoAjuda`,
+> `#avisoAjudaOverlay`, "Não mostrar de novo" em `localStorage painelPonto.semAvisoAjuda`). Partes abaixo que
+> falam dessas seções ficaram como histórico.
 
 - JS puro numa IIFE, seções numeradas 0–9 no comentário do topo. `state.records` é a única fonte
   de dados; cada mudança de filtro refaz tudo (`renderDashboard`).
@@ -720,7 +737,7 @@ BH_PKL=bh.pkl PYTHONPATH=ferramentas python3 ferramentas/conferir_painel.py pain
 python3 ferramentas/checar_colisoes_vba.py */*.bas                         # antes de entregar VBA
 # (11/11) conferência COMPLETA, só com o CSV (não precisa da planilha): lê a tela inteira e refaz tudo em Python
 NODE_PATH=$(npm root -g) node ferramentas/extrair_tudo_painel.js "$PWD/Dashboard/index.html" tela.json "TODOS OS GESTORES.csv"
-python3 ferramentas/auditar_csv_painel.py tela.json "TODOS OS GESTORES.csv" --json aud.json   # OK/FALHA (82 itens no teste)
+python3 ferramentas/auditar_csv_painel.py tela.json "TODOS OS GESTORES.csv" --json aud.json   # OK/FALHA (73 itens no teste desde 11/11)
 node ferramentas/relatorio_conferencia.js aud.json "Conferencia.docx" "nome do arquivo" "N linhas"  # relatório Word; PDF: soffice --convert-to pdf
 ```
 Os scripts foram escritos para a planilha de 28/08 a 27/09 (nomes de aba fixos: "Tratamento",
@@ -1029,6 +1046,14 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   "Últimos 3 meses" pode ter 4 ciclos; tempo do gestor por gestor mostra 0 sem dado. **Falta rodar com o CSV
   real dele** (a sessão só tinha dados inventados) para a versão final do relatório.
 
+- 11/11 (depois): pedido do Dimitri (foto): painel para todas as unidades → fora as seções Ocorrências,
+  Colaboradores em destaque e Histórico, os filtros de grupo e tipo, as colunas de ocorrências/digitadas/saldo da
+  lista de colaboradores e as partes do card da pessoa que dependiam das ocorrências (ver nota no topo da seção 6);
+  extra e falta + curtas na Jornada; aviso do "?" ao abrir arquivo; guia "Como usar o painel" reescrito; GerarCSV
+  sem as abas de Tratamento (`LER_ABAS_TRATAMENTO`), PrepararAbas com o texto novo, simulador e ferramentas de
+  conferência ajustados. Teste com o CSV inventado: 73/73 no `auditar_csv_painel.py`; varredura sem erro de JS, NaN
+  ou rolagem lateral (1400/390/360 px); card da pessoa e "Não mostrar de novo" testados. Macro não rodou no Excel.
+
 ## 12. Estado atual e como continuar (05/11/2026)
 
 **Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`, branch **`main`** (desde 04/11 tudo
@@ -1080,7 +1105,11 @@ reunião é por gestor ou com todos e se pode usar salário (só o total da equi
   Afastamentos mostram todos os tipos por cor; "Mostrar": todos, só atestados ou só um tipo
   (doação de sangue é grupo próprio, 19/10).
 - O relatório de digitadas não diz quem digitou (colaborador × RH).
-- Filtros da lateral sempre visíveis ao abrir; arquivo carregado abre em **"Arquivos carregados"** (05/11).
+- Filtros da lateral sempre visíveis ao abrir; arquivo carregado abre em **"Arquivos carregados"** (05/11) com o
+  aviso do botão "?" (11/11).
+- (11/11) **Sem ocorrências da planilha de tratamento** em lugar nenhum (seções Ocorrências, Destaque e Histórico
+  retiradas; filtros de grupo e tipo retirados; lista de colaboradores só com o cadastro do ORG). Motivo: painel
+  para todas as unidades. GerarCSV não lê as abas de Tratamento (`LER_ABAS_TRATAMENTO = False`).
 - (05/11) Sem período no topo (logo no meio). "Cartão ponto", nunca "espelho de ponto". Banco de horas: "horas
   extras"/"horas falta", sem crédito/débito, sem o resultado extra − falta, sem falar em desconto ("fecharam
   devendo"); meses sempre seguidos; textos dizem se é o período inteiro ou parte dele. Toda seção diz o recorte
@@ -1099,9 +1128,8 @@ reunião é por gestor ou com todos e se pode usar salário (só o total da equi
 - Sem status (Regularizado/Pendente): o painel é feito depois do fim do mês.
 - Sem "Entenda o painel" no topo; "?" em cada card e "Entenda esta seção". Topo: ☰ + logo |
   período no meio | nome do painel + "Esconder filtros" (abaixo de 1180 px vira uma fila).
-- Ordem do menu: **Arquivos carregados** (05/11), Ocorrências, Marcações digitadas, Afastamentos, Jornada, Colaboradores em
-  destaque, **Banco de horas** (05/11), Pausas térmicas, PontoNet, Tendências, Lista de colaboradores,
-  Histórico, Todas.
+- Ordem do menu (11/11): Arquivos carregados, Marcações digitadas, Afastamentos, Jornada (com "Do cartão ponto"),
+  Banco de horas, Pausas térmicas, PontoNet, Tendências, Lista de colaboradores, Todas.
 - (05/11) Banco de horas: períodos fixos nov–fev, mar–jun, jul–out, fechamento no último mês;
   crédito = hora extra 50%, débito = BH; PontoNet só de gestores do ORG; botões "?" laranja.
 - (05/11 depois) Banco de horas: todo mundo começa o período ZERADO; o saldo vem só dos espelhos de ponto

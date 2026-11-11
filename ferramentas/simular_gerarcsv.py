@@ -88,7 +88,11 @@ for r in P[1:]:
 # apontar, com a quantidade do Cartão; sem falta, a ocorrência entra com duração 0.
 # (31/10) todas as abas que começam com "Tratamento" e têm Matricula (Internos/Externos ou a
 # antiga única); grupo = Interno/Externo pelo nome da aba (GrupoDaAba).
-ABAS_TRAT=[n for n in d if n.startswith('Tratamento') and d[n] and 'Matricula' in hdrmap(d[n][0])]
+# (11/11) Igual ao GerarCSVPonto (LER_ABAS_TRATAMENTO = False): as abas de Tratamento NÃO são
+# lidas (o painel tirou as seções de ocorrências). Para simular o jeito antigo: LER_TRATAMENTO=1.
+import os as _os
+LER_ABAS_TRATAMENTO = _os.environ.get('LER_TRATAMENTO') == '1'
+ABAS_TRAT=[n for n in d if n.startswith('Tratamento') and d[n] and 'Matricula' in hdrmap(d[n][0])] if LER_ABAS_TRATAMENTO else []
 out=[]; gestorPor={}; grupoPor={}
 def W(dt,nome,mat,gestor,setor,cargo,tipo,sit,status,dur,trat=None,**kw):
     out.append(dict(data=dt,colaborador=nome,matricula=mat,gestor=gestor,setor=setor,cargo=cargo,tipo=tipo,situacao=sit,status=status,duracao=dur,tratativa=trat,**kw))

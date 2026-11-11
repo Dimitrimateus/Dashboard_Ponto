@@ -41,29 +41,34 @@ def tips(lst):  # ignora os complementos " (...)" e " · clique para ver o colab
     lst=[t.split(' · ')[0].rsplit(': ',1) for t in lst]
     return {n: int(v.split(' (')[0].replace('.','')) for n,v in lst}
 kp={k[0]:k for k in ui['kpis']}
-chk('KPI Ocorrências no período', kp['Ocorrências no período'][1]==str(len(E)), f"painel {kp['Ocorrências no período'][1]} / fonte {len(E)}")
-chk('KPI Colaboradores envolvidos', kp['Colaboradores envolvidos'][1]==str(len({e['nome'] for e in E})), f"painel {kp['Colaboradores envolvidos'][1]} / fonte {len({e['nome'] for e in E})}")
-exp=C(e['sit'] for e in E); got={a:int(b) for a,b in ui['tipo']}
-chk('Ocorrências por tipo', got==dict(exp), f"painel {got} / fonte {dict(exp)}" if got!=dict(exp) else str(dict(exp)))
-lab=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom']; exp={lab[e['data'].weekday()]:0 for e in E}
-expd=C(lab[e['data'].weekday()] for e in E); got=tips(ui['diaSemana']); got={k:v for k,v in got.items() if v}
-chk('Ocorrências por dia da semana', got==dict(expd), str(dict(expd)))
-expd=C(e['data'].strftime('%d/%m') for e in E); got=tips(ui['porData'])
-chk('Ocorrências por data', got==dict(expd), f"{len(got)} dias, soma {sum(got.values())}")
-def top(counter,n):
-    items=counter.most_common(); 
-    if len(items)<=n: return dict(items)
-    cut=items[n-1][1]; return {k:v for k,v in items if v>cut}, cut
-def cmp_top(nome,got,counter,n):
-    gotd=tips(got); full=dict(counter)
-    ok = all(full.get(k)==v for k,v in gotd.items()) and len(gotd)==min(n,len(full))
-    mins=min(gotd.values()) if gotd else 0
-    ok = ok and all(v<=mins for k,v in full.items() if k not in gotd)
-    chk(nome, ok, f"top {len(gotd)} confere com a fonte" if ok else f"painel {gotd} / fonte {counter.most_common(n+2)}")
-cmp_top('Ocorrências por gestor (top 12)', ui['gestor'], C(e['gestor'] for e in E), 12)
-cmp_top('Ocorrências por cargo (top 12)', ui['cargo'], C(e['cargo'] for e in E), 12)
-cmp_top('Colaboradores com mais ocorrências (top 10)', ui['top'], C(e['nome'] for e in E), 10)
-chk('Histórico (nº de linhas)', ui['histCount'].startswith(str(len(E))+' '), ui['histCount'])
+# (11/11) O painel não tem mais as seções de ocorrências (pedido do RH): estes itens só
+# rodam num painel antigo, que ainda mostra os números de ocorrências.
+if 'Ocorrências no período' in kp:
+    chk('KPI Ocorrências no período', kp['Ocorrências no período'][1]==str(len(E)), f"painel {kp['Ocorrências no período'][1]} / fonte {len(E)}")
+    chk('KPI Colaboradores envolvidos', kp['Colaboradores envolvidos'][1]==str(len({e['nome'] for e in E})), f"painel {kp['Colaboradores envolvidos'][1]} / fonte {len({e['nome'] for e in E})}")
+    exp=C(e['sit'] for e in E); got={a:int(b) for a,b in ui['tipo']}
+    chk('Ocorrências por tipo', got==dict(exp), f"painel {got} / fonte {dict(exp)}" if got!=dict(exp) else str(dict(exp)))
+    lab=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom']; exp={lab[e['data'].weekday()]:0 for e in E}
+    expd=C(lab[e['data'].weekday()] for e in E); got=tips(ui['diaSemana']); got={k:v for k,v in got.items() if v}
+    chk('Ocorrências por dia da semana', got==dict(expd), str(dict(expd)))
+    expd=C(e['data'].strftime('%d/%m') for e in E); got=tips(ui['porData'])
+    chk('Ocorrências por data', got==dict(expd), f"{len(got)} dias, soma {sum(got.values())}")
+    def top(counter,n):
+        items=counter.most_common(); 
+        if len(items)<=n: return dict(items)
+        cut=items[n-1][1]; return {k:v for k,v in items if v>cut}, cut
+    def cmp_top(nome,got,counter,n):
+        gotd=tips(got); full=dict(counter)
+        ok = all(full.get(k)==v for k,v in gotd.items()) and len(gotd)==min(n,len(full))
+        mins=min(gotd.values()) if gotd else 0
+        ok = ok and all(v<=mins for k,v in full.items() if k not in gotd)
+        chk(nome, ok, f"top {len(gotd)} confere com a fonte" if ok else f"painel {gotd} / fonte {counter.most_common(n+2)}")
+    cmp_top('Ocorrências por gestor (top 12)', ui['gestor'], C(e['gestor'] for e in E), 12)
+    cmp_top('Ocorrências por cargo (top 12)', ui['cargo'], C(e['cargo'] for e in E), 12)
+    cmp_top('Colaboradores com mais ocorrências (top 10)', ui['top'], C(e['nome'] for e in E), 10)
+    chk('Histórico (nº de linhas)', ui['histCount'].startswith(str(len(E))+' '), ui['histCount'])
+else:
+    print('(itens de ocorrências pulados: o painel não tem mais essas seções desde 11/11)')
 # banco de horas / hora extra: minutos de extra (Cartão 50%+100% quando existir, senão Tratamento)
 cur=d['Cartão atual']; ch=hdrmap(cur[1]); cart=collections.defaultdict(lambda:[0,0,0])
 for r in cur[2:]:
