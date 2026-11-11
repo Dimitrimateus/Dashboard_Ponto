@@ -718,6 +718,10 @@ PYTHONPATH=ferramentas python3 ferramentas/formatar_bh.py "BH.xlsx" bh.pkl     #
 BH_PKL=bh.pkl python3 ferramentas/simular_gerarcsv.py                    # simulador com as linhas de banco de horas
 BH_PKL=bh.pkl PYTHONPATH=ferramentas python3 ferramentas/conferir_painel.py painel.json   # OK/FALHA item a item (hoje 34 itens)
 python3 ferramentas/checar_colisoes_vba.py */*.bas                         # antes de entregar VBA
+# (11/11) conferência COMPLETA, só com o CSV (não precisa da planilha): lê a tela inteira e refaz tudo em Python
+NODE_PATH=$(npm root -g) node ferramentas/extrair_tudo_painel.js "$PWD/Dashboard/index.html" tela.json "TODOS OS GESTORES.csv"
+python3 ferramentas/auditar_csv_painel.py tela.json "TODOS OS GESTORES.csv" --json aud.json   # OK/FALHA (82 itens no teste)
+node ferramentas/relatorio_conferencia.js aud.json "Conferencia.docx" "nome do arquivo" "N linhas"  # relatório Word; PDF: soffice --convert-to pdf
 ```
 Os scripts foram escritos para a planilha de 28/08 a 27/09 (nomes de aba fixos: "Tratamento",
 "RE 08.09", "Pontonet", "Pausas Térmicas", "Cartão atual/Agosto/Julho"). Ajuste os nomes para
@@ -1012,6 +1016,18 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
 - 05/11 (depois 3): pedidos do Dimitri (foto, 12 itens; ver seção 6). Testado com o CSV inventado: varredura
   sem erro de JS, NaN ou rolagem lateral (1400/390/360 px), 25 janelas "de onde vem" + card da pessoa sem
   texto cortado. `conferir_painel.py` ajustado aos nomes novos do fechamento (não rodou: sem planilha).
+
+- 11/11: pedido do Dimitri (relatório para o supervisor da unidade provando cada cálculo, em Word e PDF, e
+  código comentado para leigos e para quem for mexer). Feito: comentário em toda função do painel e em toda
+  rotina das macros + "GUIA RÁPIDO" no topo do script do index (limites que o RH pode mudar); conferência
+  independente (`extrair_tudo_painel.js` lê a tela inteira, inclusive listas em tela cheia;
+  `auditar_csv_painel.py` refaz as contas do CSV sem usar o código do painel, inclusive a análise das batidas
+  das pausas e as tendências; `relatorio_conferencia.js` monta o Word). Com o CSV de teste (2.229 linhas):
+  **82/82**, também com dois arquivos iguais juntos. Achado e corrigido: `equipeDoFiltro` contava 2 vezes quem
+  está no ORG sem matrícula (#N/A) e tem ocorrência com matrícula ("de N pessoas" +1). Pontos de atenção
+  (não mudados, ditos no relatório): ranking de atestados soma os dias brutos (evolução conta mínimo 1);
+  "Últimos 3 meses" pode ter 4 ciclos; tempo do gestor por gestor mostra 0 sem dado. **Falta rodar com o CSV
+  real dele** (a sessão só tinha dados inventados) para a versão final do relatório.
 
 ## 12. Estado atual e como continuar (05/11/2026)
 

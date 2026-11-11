@@ -4602,7 +4602,19 @@
       if (temOrg && r.tipo !== TIPO_CADASTRO_ORG) return;
       if (r.colaborador && passaPessoa(r, f)) chaves[chavePessoa(r)] = true;
     });
-    (extras || []).forEach(function(r){ if (r.colaborador) chaves[chavePessoa(r)] = true; });
+    // Quem tem ocorrência e não está na lista de equipes soma 1. (11/11) Se a pessoa está na
+    // lista SEM matrícula (o "#N/A" da coluna de matrícula) e a ocorrência traz a matrícula,
+    // é a mesma pessoa: casa pelo nome para não contar duas vezes (achado na conferência).
+    var nomesSemMat = {};
+    if (temOrg) state.records.forEach(function(r){
+      if (r.tipo === TIPO_CADASTRO_ORG && !r.matricula && r.colaborador) nomesSemMat[chaveNome(r.colaborador)] = true;
+    });
+    (extras || []).forEach(function(r){
+      if (!r.colaborador) return;
+      var k = chavePessoa(r);
+      if (!chaves[k] && nomesSemMat[chaveNome(r.colaborador)] && chaves["N:" + chaveNome(r.colaborador)]) return;
+      chaves[k] = true;
+    });
     var n = Object.keys(chaves).length;
     // Quantos valores estão marcados num filtro (0 se nenhum).
     function qtd(set){ return set ? Object.keys(set).length : 0; }

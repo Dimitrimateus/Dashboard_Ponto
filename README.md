@@ -34,6 +34,17 @@ do `.bas`. Colar é mais seguro que **Arquivo > Importar**: os arquivos estão e
 importador do VBA lê em ANSI, o que estraga os acentos das mensagens e dos cabeçalhos
 (e, com isso, a busca de colunas como "Matrícula" e "Situação").
 
+## Conferência completa do painel (11/11)
+
+Para provar que cada número do painel está certo, sem depender do código do painel:
+
+1. `ferramentas/extrair_tudo_painel.js` abre o painel no navegador, carrega o CSV e anota tudo o que a tela mostra.
+2. `ferramentas/auditar_csv_painel.py` refaz cada conta direto do CSV, em Python, e compara (OK/FALHA, item a item).
+3. `ferramentas/relatorio_conferencia.js` monta o relatório em Word, seção por seção (o PDF sai do Word).
+
+Os comandos estão no CLAUDE.md, seção 10. Todo o código (painel e macros) tem comentários em português simples;
+no começo do script do painel há um "Guia rápido" com os limites que o RH pode mudar.
+
 ## O que mudou nesta versão
 
 ### Cartão Ponto: horário de cada dia
