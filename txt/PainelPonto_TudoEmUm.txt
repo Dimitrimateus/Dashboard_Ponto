@@ -1027,6 +1027,11 @@ ProximaAbaTratamento:
     GerarLinhasORG listaORG, dictRE, dictGrupoPorMatricula, wsCSV, linhaSaida, _
         IIf(Not wsCartao Is Nothing, dataAtualCartao, Date), qtdORG
 
+    ' (13/11) Acerto final das linhas já escritas: gestor de quem está no ORG sem matrícula
+    ' (pelo nome) e "Desligado" no setor de quem não está na RE (regra do RH).
+    Dim qtdGestorPorNome As Long, qtdDesligados As Long
+    AcertarGestorEDesligados wsCSV, linhaSaida, listaORG, dictRE, qtdGestorPorNome, qtdDesligados
+
     ' Fecha o arquivo do PontoNet se ele foi aberto à parte (sem salvar nada nele).
     If Not wbAus Is Nothing Then wbAus.Close SaveChanges:=False
 
@@ -1034,10 +1039,15 @@ ProximaAbaTratamento:
     ' o que ficou de fora. É a forma de conferir, sem abrir o CSV, se todas as
     ' abas foram encontradas.
     Dim msgAuditoria As String
+    msgAuditoria = ""
+    If qtdDesligados > 0 Or qtdGestorPorNome > 0 Then
+        msgAuditoria = msgAuditoria & vbCrLf & qtdDesligados & " linha(s) de pessoas que não estão na RE (marcadas como desligadas); " & _
+            qtdGestorPorNome & " linha(s) com o gestor achado pelo nome (pessoa no ORG sem matrícula)." & vbCrLf
+    End If
     If LER_ABAS_TRATAMENTO Then
-        msgAuditoria = vbCrLf & "Abas de Tratamento lidas:" & resumoAbasTrat & vbCrLf
+        msgAuditoria = msgAuditoria & vbCrLf & "Abas de Tratamento lidas:" & resumoAbasTrat & vbCrLf
     Else
-        msgAuditoria = vbCrLf & "Abas de Tratamento: não são lidas (o painel não tem mais a seção de ocorrências)." & vbCrLf
+        msgAuditoria = msgAuditoria & vbCrLf & "Abas de Tratamento: não são lidas (o painel não tem mais a seção de ocorrências)." & vbCrLf
     End If
     If abasCartao.Count > 0 Then
         msgAuditoria = msgAuditoria & vbCrLf & qtdColaboradoresAuditoria & " colaborador(es) com extra+falta no mesmo dia nos últimos " & _
@@ -2687,6 +2697,43 @@ Private Function MontarDicionarioRE(ws As Worksheet) As Object
     Next r
     Set MontarDicionarioRE = dict
 End Function
+
+' (13/11, pedidos do RH) Passa por todas as linhas já escritas na aba CSV e acerta duas coisas:
+'   1) Gestor vazio de uma pessoa que está no ORG SEM matrícula (a matrícula do ORG deu #N/A):
+'      o gestor é procurado pelo NOME no ORG. Antes essas pessoas saíam "sem gestor".
+'   2) Quem tem matrícula e NÃO está na RE é uma pessoa desligada (regra do RH): o setor da
+'      linha vira "Desligado". O painel mostra essas pessoas como desligadas.
+' Colunas da aba CSV usadas: 2 = colaborador, 3 = matrícula, 4 = gestor, 5 = setor.
+Private Sub AcertarGestorEDesligados(wsCSV As Worksheet, ByVal linhaSaida As Long, listaORG As Collection, _
+    dictRE As Object, ByRef qtdGestorPorNome As Long, ByRef qtdDesligados As Long)
+    Dim gestorPorNome As Object, itemORG As Variant, chave As String
+    Set gestorPorNome = CreateObject("Scripting.Dictionary")
+    For Each itemORG In listaORG
+        If CStr(itemORG(0)) = "" And CStr(itemORG(4)) <> "" Then
+            chave = UCase$(SemAcento(Trim$(CStr(itemORG(1)))))
+            If Not gestorPorNome.Exists(chave) Then gestorPorNome.Add chave, CStr(itemORG(4))
+        End If
+    Next itemORG
+
+    Dim r As Long, mat As String
+    qtdGestorPorNome = 0: qtdDesligados = 0
+    For r = 2 To linhaSaida - 1
+        If TextoLimpo(wsCSV.Cells(r, 4).Value) = "" Then
+            chave = UCase$(SemAcento(Trim$(TextoLimpo(wsCSV.Cells(r, 2).Value))))
+            If gestorPorNome.Exists(chave) Then
+                wsCSV.Cells(r, 4).Value = gestorPorNome(chave)
+                qtdGestorPorNome = qtdGestorPorNome + 1
+            End If
+        End If
+        mat = TextoLimpo(wsCSV.Cells(r, 3).Value)
+        If mat <> "" And dictRE.Count > 0 Then
+            If Not dictRE.Exists(mat) Then
+                wsCSV.Cells(r, 5).Value = "Desligado"
+                qtdDesligados = qtdDesligados + 1
+            End If
+        End If
+    Next r
+End Sub
 
 ' Lookup simples no dicionário montado por MontarDicionarioRE. ByRef
 ' porque o chamador já tem setorNome/cargoNome com valores default (ou

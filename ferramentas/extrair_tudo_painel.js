@@ -112,6 +112,19 @@ const fs = require('fs');
              jorCiclo: t('jorCiclo'), pauBatCiclo: t('pauBatCiclo'), pnCiclo: t('pnCiclo'), tendIndicador: t('tendIndicador'),
              bhMeses: [...document.querySelectorAll('#bhMeses input')].map(i => [i.parentElement.textContent.trim(), i.checked]) };
   });
+  // Etiquetas 📅 de cada quadro (o período que ele considera), pelo id do gráfico/tabela de dentro
+  dados.selos = await p.evaluate(() => {
+    const out = {};
+    document.querySelectorAll('.card-periodo').forEach(s => {
+      const card = s.closest('.card'); if (!card || s.hidden || !s.textContent.trim()) return;
+      card.querySelectorAll('[id]').forEach(el => { if (/^(chart|table)/.test(el.id) || el.id === 'absHeat' || el.id === 'pauHeat' || el.id === 'orgSection') out[el.id] = s.textContent.trim(); });
+      if (card.id) out[card.id] = s.textContent.trim();
+    });
+    document.querySelectorAll('.kpi-tile .kpi-periodo, .colab-kpi .ck-periodo').forEach(p => {
+      const sec = p.closest('[id$="Kpis"]'); if (sec) (out[sec.id] = out[sec.id] || []).push(p.textContent.trim());
+    });
+    return out;
+  });
   dados.erros = erros;
   fs.writeFileSync(saida, JSON.stringify(dados));
   console.log('ok:', Object.keys(dados.normal).length, 'elementos lidos;', nCards, 'listas lidas em tela cheia; erros de JS:', erros.length);

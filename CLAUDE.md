@@ -737,7 +737,10 @@ BH_PKL=bh.pkl PYTHONPATH=ferramentas python3 ferramentas/conferir_painel.py pain
 python3 ferramentas/checar_colisoes_vba.py */*.bas                         # antes de entregar VBA
 # (11/11) conferência COMPLETA, só com o CSV (não precisa da planilha): lê a tela inteira e refaz tudo em Python
 NODE_PATH=$(npm root -g) node ferramentas/extrair_tudo_painel.js "$PWD/Dashboard/index.html" tela.json "TODOS OS GESTORES.csv"
-python3 ferramentas/auditar_csv_painel.py tela.json "TODOS OS GESTORES.csv" --json aud.json   # OK/FALHA (73 itens no teste desde 11/11)
+python3 ferramentas/auditar_csv_painel.py tela.json "TODOS OS GESTORES.csv" --json aud.json   # OK/FALHA (141 itens com o CSV real de out/26; chama auditar_mais.py)
+# (13/11) o que só aparece depois de um clique: resumo de cada pessoa, filtro de cada gestor, cada opção dos seletores, janelas "de onde vem"
+NODE_PATH=$(npm root -g) node ferramentas/extrair_extra_painel.js "$PWD/Dashboard/index.html" extra.json "TODOS OS GESTORES.csv"   # ~10 min; PARTES=cards,gestores,estados,origem
+python3 ferramentas/auditar_extra.py extra.json "TODOS OS GESTORES.csv" --json aud_extra.json   # junte aud.json + aud_extra.json para o relatório
 node ferramentas/relatorio_conferencia.js aud.json "Conferencia.docx" "nome do arquivo" "N linhas"  # relatório Word; PDF: soffice --convert-to pdf
 node ferramentas/relatorio_supervisor.js aud.json "Relatorio.docx" "mês de referência" "dados conferidos"  # (13/11) versão SEM termos técnicos e sem nomes, para o supervisor
 ```
@@ -1069,6 +1072,18 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   `TEXTOS`, só quantidades, sem nomes; resumo, como foi feito, seção por seção, ajustes, pontos de atenção,
   glossário). Gerado com o CSV real de out/26: 74/74, 9 páginas.
 
+- 13/11 (depois): pedidos do Dimitri: "esquecimento crachá" é motivo diferente de esquecimento (PontoNet);
+  filtro de período retirado; PontoNet só aprovados (já era); quem não está na RE = desligado (macro
+  `AcertarGestorEDesligados` põe setor "Desligado" e acha o gestor pelo nome de quem está no ORG sem
+  matrícula; painel `marcarDesligados`, grupo "Desligados" no filtro de gestor); **conferência ampliada** de todo
+  o painel: `auditar_mais.py` (tendências, afastamentos, banco de horas dia a dia, listas completas, PontoNet,
+  pausas, arquivos, etiquetas 📅), `extrair_extra_painel.js` + `auditar_extra.py` (resumo de cada uma das 223
+  pessoas, os 22 gestores, 37 opções de seletor, 585 cliques "de onde vem"). Resultado com o CSV real: **202/202
+  itens (7.248 contas nas rodadas por gestor/seletor)**. Defeitos achados e corrigidos no painel: "Média de todos"
+  da demora sumida desde 11/11; "1%" em vez de "<1%" nos pedaços de barra; mapa de afastamentos quebrava (e
+  parava o resto do painel) com "Só saída médica e horas" sem nenhum dia inteiro (só no CSV de teste).
+  Relatório do supervisor (`relatorio_supervisor.js`) sem nomes, com as rodadas resumidas.
+
 ## 12. Estado atual e como continuar (05/11/2026)
 
 **Onde está o código.** Repositório `dimitrimateus/dashboard_ponto`, branch **`main`** (desde 04/11 tudo
@@ -1122,6 +1137,8 @@ reunião é por gestor ou com todos e se pode usar salário (só o total da equi
 - O relatório de digitadas não diz quem digitou (colaborador × RH).
 - Filtros da lateral sempre visíveis ao abrir; arquivo carregado abre em **"Arquivos carregados"** (05/11) com o
   aviso do botão "?" (11/11).
+- (13/11) Sem filtro de período; "Esquecimento do crachá" ≠ "Esquecimento"; fora da RE = desligado; PontoNet só
+  aprovados.
 - (11/11) **Sem ocorrências da planilha de tratamento** em lugar nenhum (seções Ocorrências, Destaque e Histórico
   retiradas; filtros de grupo e tipo retirados; lista de colaboradores só com o cadastro do ORG). Motivo: painel
   para todas as unidades. GerarCSV não lê as abas de Tratamento (`LER_ABAS_TRATAMENTO = False`).

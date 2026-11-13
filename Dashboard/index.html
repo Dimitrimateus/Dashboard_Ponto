@@ -1041,7 +1041,7 @@
           <section class="grid">
             <div class="card wide">
               <div class="card-title">Batidas digitadas ciclo a ciclo, por motivo</div>
-              <div class="card-hint">Todas as batidas digitadas de cada ciclo (28 a 27) do arquivo &middot; não segue o filtro de período</div>
+              <div class="card-hint">Todas as batidas digitadas de cada ciclo (28 a 27) do arquivo</div>
               <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de batidas digitadas de 3 meses</span><p>Quantas batidas foram digitadas em cada ciclo do ponto, separadas pelo motivo. Mostra se a unidade (ou a equipe do filtro) está digitando mais ou menos batidas com o tempo. <strong>Clique</strong> numa barra para ver quem.</p></div>
               <div class="card-body" id="chartDigCiclo"></div>
             </div>
@@ -1085,7 +1085,7 @@
           <div class="card">
               <div class="card-title">Esquecimento crônico</div>
               <div class="card-hint" id="digEsqHint">Batidas digitadas por esquecimento, por pessoa, em cada ciclo &middot; linhas em vermelho: 5 ou mais no último ciclo</div>
-              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de batidas digitadas, só o motivo “esquecimento”</span><p>Só as batidas digitadas porque a pessoa esqueceu de bater o ponto, contadas por pessoa em cada ciclo do ponto (dia 28 a 27). Com mais de um ciclo no arquivo, a coluna “Comparado ao mês anterior” diz quantas vezes a mais (em vermelho) ou a menos (em verde) a pessoa esqueceu em relação ao mês anterior. Esquecer de vez em quando é normal; o sinal é esquecer sempre. Vermelho = 5 ou mais esquecimentos no último ciclo. Não segue o filtro de período, para poder comparar os ciclos.</p></div>
+              <div class="card-fonte"><span class="fonte-origem">De onde vem: o relatório de batidas digitadas, só o motivo “esquecimento”</span><p>Só as batidas digitadas porque a pessoa esqueceu de bater o ponto, contadas por pessoa em cada ciclo do ponto (dia 28 a 27). Com mais de um ciclo no arquivo, a coluna “Comparado ao mês anterior” diz quantas vezes a mais (em vermelho) ou a menos (em verde) a pessoa esqueceu em relação ao mês anterior. Esquecer de vez em quando é normal; o sinal é esquecer sempre. Vermelho = 5 ou mais esquecimentos no último ciclo.</p></div>
               <div class="card-body" id="tableDigEsquecimento"></div>
               <div class="card-toolbar"><button type="button" class="btn-ghost btn-todos" data-todos="digEsq" id="btnDigEsqTodos" hidden>Mostrar todos</button></div>
             </div>
@@ -1130,7 +1130,7 @@
         <h3 class="section-title">Afastamentos</h3>
         <div id="absSemDados" class="card wide" hidden><div class="chart-empty">Este arquivo não traz os afastamentos. O RH inclui esse relatório quando gera o arquivo do painel.</div></div>
         <div id="absCorpo">
-          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: o relatório de afastamentos do sistema</span><p>Afastamento é qualquer período em que a pessoa não esteve trabalhando no lugar de sempre e isso foi registrado no sistema: atestado médico, férias, viagem a serviço, reunião, curso, saída para consulta, licença etc. Cada registro tem uma data de início e uma de fim. Os gráficos mostram <strong>todos os tipos</strong>, cada um com uma cor (atestado sempre em vermelho); em “Mostrar” dá para ver só atestados ou só um tipo (por exemplo, só doação de sangue ou só férias). Saídas de poucas horas (consulta médica, horas de falta) não contam como dia: aparecem no resumo, em horas. Os dias são contados do início ao fim, incluindo fim de semana. O mês aqui é o <strong>ciclo do ponto</strong>, que vai do dia 28 de um mês ao dia 27 do mês seguinte; escolha o ciclo no seletor. Segue os filtros de gestor, cargo e colaborador; o filtro de período não vale aqui.</p></div>
+          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: o relatório de afastamentos do sistema</span><p>Afastamento é qualquer período em que a pessoa não esteve trabalhando no lugar de sempre e isso foi registrado no sistema: atestado médico, férias, viagem a serviço, reunião, curso, saída para consulta, licença etc. Cada registro tem uma data de início e uma de fim. Os gráficos mostram <strong>todos os tipos</strong>, cada um com uma cor (atestado sempre em vermelho); em “Mostrar” dá para ver só atestados ou só um tipo (por exemplo, só doação de sangue ou só férias). Saídas de poucas horas (consulta médica, horas de falta) não contam como dia: aparecem no resumo, em horas. Os dias são contados do início ao fim, incluindo fim de semana. O mês aqui é o <strong>ciclo do ponto</strong>, que vai do dia 28 de um mês ao dia 27 do mês seguinte; escolha o ciclo no seletor. Segue os filtros de gestor, cargo e colaborador.</p></div>
           <div class="abs-toolbar">
             <label for="absCiclo" style="font-size:11.5px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:.04em;">Ciclo</label>
             <select id="absCiclo"></select>
@@ -1229,7 +1229,7 @@
         <h3 class="section-title">Jornada</h3>
         <div id="jorSemDados" class="card wide" hidden><div class="chart-empty">Este arquivo não traz os relatórios de jornada (intervalo de almoço, descanso entre dias, trabalho na folga e mais de 10h). O RH inclui esse relatório quando gera o arquivo do painel.</div></div>
         <div id="jorCorpo">
-          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: os relatórios de limites de jornada do sistema de ponto</span><p>A lei põe limites na jornada de trabalho, e o sistema de ponto aponta quando eles não foram respeitados. São quatro situações: <strong>intervalo de almoço curto</strong> (a pessoa não fez a pausa mínima para refeição, ou não fez pausa nenhuma), <strong>menos de 11h de descanso</strong> entre o fim de um dia e o começo do outro, <strong>trabalho na folga ou feriado</strong> (trabalhou no dia de descanso da semana) e <strong>mais de 10h no dia</strong> (8h normais + o máximo de 2h extras). Cada uma pode virar processo trabalhista. Os números contam dias (uma ocorrência por pessoa por dia). O mês aqui é o <strong>ciclo do ponto</strong> (dia 28 a 27); escolha o ciclo no seletor. Segue os filtros de gestor, cargo e colaborador; o filtro de período não vale aqui. No fim da seção, a parte <strong>Do cartão ponto</strong> traz dois quadros que vêm do cartão ponto: <strong>extra e falta no mesmo dia</strong> (3 meses) e <strong>ocorrências curtas</strong> (diferenças de menos de 15 minutos no mês, que seguem o filtro de período).</p></div>
+          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: os relatórios de limites de jornada do sistema de ponto</span><p>A lei põe limites na jornada de trabalho, e o sistema de ponto aponta quando eles não foram respeitados. São quatro situações: <strong>intervalo de almoço curto</strong> (a pessoa não fez a pausa mínima para refeição, ou não fez pausa nenhuma), <strong>menos de 11h de descanso</strong> entre o fim de um dia e o começo do outro, <strong>trabalho na folga ou feriado</strong> (trabalhou no dia de descanso da semana) e <strong>mais de 10h no dia</strong> (8h normais + o máximo de 2h extras). Cada uma pode virar processo trabalhista. Os números contam dias (uma ocorrência por pessoa por dia). O mês aqui é o <strong>ciclo do ponto</strong> (dia 28 a 27); escolha o ciclo no seletor. Segue os filtros de gestor, cargo e colaborador. No fim da seção, a parte <strong>Do cartão ponto</strong> traz dois quadros que vêm do cartão ponto: <strong>extra e falta no mesmo dia</strong> (3 meses) e <strong>ocorrências curtas</strong> (diferenças de menos de 15 minutos no mês do cartão ponto).</p></div>
           <div class="abs-toolbar">
             <label for="jorCiclo" style="font-size:11.5px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:.04em;">Ciclo</label>
             <select id="jorCiclo"></select>
@@ -1297,7 +1297,7 @@
           <div class="card">
             <div class="card-title">Extra e falta no mesmo dia</div>
             <div class="card-hint">Este mês e total dos últimos 3 meses &middot; linhas em vermelho atingiram 10+ ocorrências na soma dos 3 meses (é o limite que a auditoria do ponto considera)</div>
-            <div class="card-fonte"><span class="fonte-origem">De onde vem: o cartão ponto deste mês e dos 2 meses anteriores</span><p>O cartão ponto é o relatório do sistema com todos os dias de cada pessoa: as batidas, as horas trabalhadas, as horas extras e as horas tiradas do banco de horas. Aqui contamos os dias em que a mesma pessoa, <strong>no mesmo dia</strong>, fez hora extra e também teve horas descontadas do banco (por atraso ou saída antes). Isso costuma indicar horário trocado ou batida no horário errado. <strong>Este mês</strong> = só o mês atual; <strong>3 meses</strong> = a soma dos 3 últimos. Com 10 ou mais na soma, a linha fica vermelha. Não muda com o filtro de período.</p></div>
+            <div class="card-fonte"><span class="fonte-origem">De onde vem: o cartão ponto deste mês e dos 2 meses anteriores</span><p>O cartão ponto é o relatório do sistema com todos os dias de cada pessoa: as batidas, as horas trabalhadas, as horas extras e as horas tiradas do banco de horas. Aqui contamos os dias em que a mesma pessoa, <strong>no mesmo dia</strong>, fez hora extra e também teve horas descontadas do banco (por atraso ou saída antes). Isso costuma indicar horário trocado ou batida no horário errado. <strong>Este mês</strong> = só o mês atual; <strong>3 meses</strong> = a soma dos 3 últimos. Com 10 ou mais na soma, a linha fica vermelha.</p></div>
             <div class="card-body" id="tableExtraFalta"></div>
           </div>
           <div class="card">
@@ -1571,7 +1571,7 @@
         <h3 class="section-title">Tendências</h3>
         <div id="tendSemDados" class="card wide" hidden><div class="chart-empty">Este arquivo não traz nenhum assunto com mais de um mês (batidas digitadas, afastamentos, jornada ou pausas de mais de um ciclo). Com os relatórios de 3 meses, esta seção mostra se a unidade, as equipes e as pessoas estão melhorando ou piorando.</div></div>
         <div id="tendCorpo">
-          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: todos os relatórios que o RH traz com mais de um mês</span><p>Para cada assunto (batidas digitadas, esquecimentos, dias de atestado, jornada e pausas térmicas), o painel soma o que aconteceu em cada um dos 3 últimos ciclos do ponto (dia 28 a 27) e compara o último com o anterior. Segue os filtros de gestor, cargo e colaborador: com um gestor escolhido, tudo vira a tendência da equipe dele. O filtro de período não vale aqui.</p></div>
+          <div class="card-fonte" style="margin-bottom:14px"><span class="fonte-origem">De onde vem: todos os relatórios que o RH traz com mais de um mês</span><p>Para cada assunto (batidas digitadas, esquecimentos, dias de atestado, jornada e pausas térmicas), o painel soma o que aconteceu em cada um dos 3 últimos ciclos do ponto (dia 28 a 27) e compara o último com o anterior. Segue os filtros de gestor, cargo e colaborador: com um gestor escolhido, tudo vira a tendência da equipe dele.</p></div>
           <section class="grid">
             <div class="card wide">
               <div class="card-title">A unidade, ciclo a ciclo</div>
@@ -1711,7 +1711,10 @@
                 <span class="filter-label" id="lblStatus">Status</span>
                 <div class="ms" id="fStatus" data-todos="Todos os status" data-unidade="status" aria-labelledby="lblStatus"></div>
               </div>
-              <div class="filter-group">
+              <!-- (13/11, pedido do RH) O filtro de período saiu da tela: cada seção tem o seu seletor
+                   de mês. Os campos escondidos fDataIni/fDataFim continuam e ficam sempre no mês do
+                   cartão ponto mais recente (periodoCompleto), que é o que as ocorrências curtas usam. -->
+              <div class="filter-group" id="fPeriodoGroup" hidden>
                 <!-- Período (29/10): em vez do calendário do navegador, um calendário
                      próprio (abrirCalendario) em que só os dias com alguma informação
                      podem ser clicados. Os valores ficam nos campos escondidos
@@ -1726,7 +1729,7 @@
                 <div class="cal-pop" id="calPop" hidden role="dialog" aria-label="Escolher o dia"></div>
               </div>
               <button class="btn-ghost btn-block" id="clearFilters">Limpar filtros</button>
-              <p class="side-note">Os filtros de pessoa (gestor, cargo, colaborador) valem para todas as seções. O período vale para as ocorrências curtas do cartão ponto; as outras seções têm o seu próprio seletor de mês. O filtro de gestor é o mais usado quando este mesmo arquivo é enviado ao supervisor geral com a base completa.</p>
+              <p class="side-note">Os filtros (gestor, cargo, colaborador) valem para todas as seções. Para escolher o mês, use o seletor de mês de cada seção. O filtro de gestor é o mais usado quando este mesmo arquivo é enviado ao supervisor geral com a base completa.</p>
             </div>
           </details>
         </div>
@@ -1934,6 +1937,14 @@
        vêm do cartão ponto) foram para a seção "Jornada", parte "Do cartão ponto". O período
        padrão (periodoCompleto) passou a ser o ciclo do cartão ponto mais recente. Ao abrir um
        arquivo aparece o aviso do botão "?" (mostrarAvisoAjuda, #avisoAjudaOverlay).
+
+     ATUALIZAÇÃO (13/11, pedidos do RH + conferência ampliada): saiu o filtro de período (fDataIni/
+       fDataFim ficam fixos no mês do cartão ponto, #fPeriodoGroup escondido; textos "não segue o filtro
+       de período" retirados); "Esquecimento do crachá" é motivo próprio no PontoNet (nomeTipoPN);
+       quem não está na RE é DESLIGADO (marcarDesligados: setor "Desligado" vindo da macro, ou sem setor
+       num CSV antigo; sem gestor -> grupo "Desligados"); a "Média de todos" da demora voltou
+       (#kpiDemora, calculada junto com as tabelas de demora); pedaços de barra com menos de 1%
+       mostram "<1%"; o mapa de afastamentos não quebra mais quando o recorte não tem nenhum dia.
 
      O QUE APARECE NA TELA -> QUEM DESENHA -> DE ONDE VÊM OS DADOS
        (cada .pagina[data-pagina] do HTML é uma seção do menu ☰)
@@ -2825,7 +2836,7 @@
           if (!sg.value) return;
           var ws = max ? (sg.value/max) * plotW : 0;
           var r = svgEl("rect", { x:xs, y:y, width:Math.max(ws, 1), height:rowH, fill: sg.color, class:"chart-bar seg" + (sg.recs ? " drill" : ""),
-            "data-tooltip": it.label + " · " + sg.label + ": " + formatNum(sg.qtd != null ? sg.qtd : sg.value) + " (" + Math.round(sg.value*100/it.value) + "%)" + (sg.recs ? " · clique para ver quem" : "") });
+            "data-tooltip": it.label + " · " + sg.label + ": " + formatNum(sg.qtd != null ? sg.qtd : sg.value) + " (" + pctTxt(sg.value, it.value) + ")" + (sg.recs ? " · clique para ver quem" : "") });
           if (sg.recs) r.setAttribute("data-drill", idx + ":" + it.segs.indexOf(sg));
           svg.appendChild(r); segEls.push(r); xs += ws;
         });
@@ -3004,7 +3015,7 @@
     card.hidden = false;
     var fechado = per.fechado;
     var perTxt = (per.ini ? formatDateBR(per.ini) + " a " : "até ") + formatDateBR(per.fim);
-    state.bhPeriodo = "Relatório de banco de horas: " + perTxt + " (não segue o filtro de período)";
+    state.bhPeriodo = "Relatório de banco de horas: " + perTxt + "";
     // pessoas do relatório escolhido, com os filtros de gestor/grupo/cargo/colaborador
     var linhas = getResumoRecords(TIPO_BANCO_HORAS).filter(function(r){
       return r.data.getTime() === per.fim.getTime() && (!per.ini || (r.bhInicio && r.bhInicio.getTime() === per.ini.getTime()));
@@ -3406,7 +3417,7 @@
       renderTableSimple($("tableBHConf"), [], []); $("btnBHConfTodos").hidden = true; return;
     }
     var tIni = diaT(rel.ini), tFim = diaT(rel.fim), qIni = inicioDoCicloBH(q).getTime();
-    state.bhConfPeriodo = "Relatório de banco de horas: " + formatDateBR(rel.ini) + " a " + formatDateBR(rel.fim) + " (não segue o filtro de período)";
+    state.bhConfPeriodo = "Relatório de banco de horas: " + formatDateBR(rel.ini) + " a " + formatDateBR(rel.fim) + "";
     var falta = ciclosFaltandoBH(q, numCicloBH(rel.fim), base);
     html += '<li>Período do banco: <b>' + escapeHtml(nomePeriodoBH(q)) + '</b>, começando zerado em ' + formatDateBR(new Date(qIni)) +
       '. Relatório de banco de horas usado: <b>' + formatDateBR(rel.ini) + ' a ' + formatDateBR(rel.fim) + '</b>.</li>';
@@ -3777,7 +3788,7 @@
           var hs = max ? (sg.value/max)*plotH : 0;
           yb -= hs;
           var pd = svgEl("rect", { x:x, y:yb, width:w, height:Math.max(hs, 0.5), fill: sg.color, class:"chart-bar seg" + (sg.recs ? " drill" : ""),
-            "data-tooltip": it.label + " · " + sg.label + ": " + formatNum(sg.value) + " (" + Math.round(sg.value*100/it.value) + "%)" + (sg.recs ? " · clique para ver quem" : "") });
+            "data-tooltip": it.label + " · " + sg.label + ": " + formatNum(sg.value) + " (" + pctTxt(sg.value, it.value) + ")" + (sg.recs ? " · clique para ver quem" : "") });
           if (sg.recs) pd.setAttribute("data-drill", idx + ":" + it.segs.indexOf(sg));
           svg.appendChild(pd);
         });
@@ -4802,6 +4813,21 @@
     // avisoFeriasHtml.
     var fer = feriasPorPessoa();
     var baseDem = baseDemora(records);
+    // Média de todos (linha #demoraGeral do card por gestor): do dia e hora da batida que faltou
+    // até a aprovação, nos pedidos aprovados do mês escolhido na seção. (13/11) Esta conta ficava
+    // na função dos números da antiga seção Ocorrências e sumiu com ela em 11/11 (a linha mostrava
+    // "–"); a conferência ampliada achou e ela voltou para cá.
+    var demorasTodas = [];
+    baseDem.forEach(function(r){
+      if (r.tratativa && r.data){ var h = (r.tratativa.getTime() - r.data.getTime())/3600000; if (h >= 0) demorasTodas.push(h); }
+    });
+    if (demorasTodas.length){
+      $("kpiDemora").innerHTML = formatDelay(demorasTodas.reduce(function(s, v){ return s + v; }, 0)/demorasTodas.length);
+      $("kpiDemoraSub").textContent = "(" + formatNum(demorasTodas.length) + " justificativa(s) aprovada(s), do dia da batida que faltou até a aprovação)";
+    } else {
+      $("kpiDemora").innerHTML = "&ndash;";
+      $("kpiDemoraSub").textContent = "(nenhuma aprovação no recorte)";
+    }
     var linhasDemoraGestor = demoraStats(baseDem, function(r){ return r.gestor; });
     linhasDemoraGestor.forEach(function(l){
       var f = feriasNaJanela(feriasDoNome(fer, l.label), l.ini, l.fim);
@@ -4886,8 +4912,8 @@
     if (selDig.innerHTML !== optsDig){ selDig.innerHTML = optsDig; selDig.value = ciclosDig.indexOf(atualDig) > -1 ? atualDig : ""; }
     var fTodosDig = ciclosDig.length ? { ini: cicloInicioFim(ciclosDig[ciclosDig.length-1]).ini, fim: cicloInicioFim(ciclosDig[0]).fim } : null;
     state.digPeriodo = selDig.value
-      ? "Ciclo " + cicloLabel(selDig.value) + ": " + intervaloBR(cicloInicioFim(selDig.value).ini, cicloInicioFim(selDig.value).fim) + " (não segue o filtro de período)"
-      : (fTodosDig ? "Todos os ciclos do arquivo: " + intervaloBR(fTodosDig.ini, fTodosDig.fim) + " (não segue o filtro de período)" : null);
+      ? "Ciclo " + cicloLabel(selDig.value) + ": " + intervaloBR(cicloInicioFim(selDig.value).ini, cicloInicioFim(selDig.value).fim) + ""
+      : (fTodosDig ? "Todos os ciclos do arquivo: " + intervaloBR(fTodosDig.ini, fTodosDig.fim) + "" : null);
     // dig = batidas digitadas que passam nos filtros de pessoa (gestor, grupo, cargo,
     // colaborador) e no ciclo escolhido. Tudo abaixo é calculado sobre esta lista.
     var dig = getDigitadasRecords();
@@ -5058,7 +5084,7 @@
     renderTableSimple($("tableDigEsquecimento"), cols, limitarLista(linhas, "digEsq", 15, "btnDigEsqTodos"),
       { rowClass:function(r){ return (r.n[ultimo] || 0) >= LIMITE_ESQUECIMENTO ? "row-alert" : ""; } });
     state.digEsqPeriodo = ciclos.length ? (ciclos.length > 1 ? "Ciclos " + ciclos.map(cicloLabel).join(", ") : "Ciclo " + cicloLabel(ultimo)) + ": " +
-      intervaloBR(cicloInicioFim(ciclos[0]).ini, cicloInicioFim(ultimo).fim) + " (não segue o filtro de período)" : null;
+      intervaloBR(cicloInicioFim(ciclos[0]).ini, cicloInicioFim(ultimo).fim) + "" : null;
   }
 
 
@@ -5326,6 +5352,15 @@
 
     // 7. mapa colaborador x dia (ciclo escolhido; "3 meses" = o mais recente)
     var cicloMapa = cicloSel || ciclos[0];
+    // (13/11) Sem nenhum dia de afastamento no recorte (ex.: "Só saída médica e horas" quando todas
+    // são de poucas horas), não há mês para o mapa. Antes isso dava erro e o resto do painel
+    // (jornada, banco de horas...) deixava de ser desenhado. Achado na conferência ampliada.
+    if (!cicloMapa){
+      $("absHeatHint").textContent = "Nenhum dia de " + nomeBase + " no recorte escolhido.";
+      $("absHeatLeg").innerHTML = "";
+      $("absHeat").innerHTML = ""; $("absHeat").appendChild(emptyMsg("Nenhum dia de " + nomeBase + " no recorte escolhido (as saídas de poucas horas não ocupam o dia inteiro)."));
+      return;
+    }
     var f = cicloInicioFim(cicloMapa), diasMapa = [];
     for (var d = new Date(f.ini); d <= f.fim; d = new Date(d.getFullYear(), d.getMonth(), d.getDate()+1)) diasMapa.push(d);
     // todo mundo que teve atestado em algum momento dos 3 meses aparece no
@@ -5599,7 +5634,7 @@
     $("tendSemDados").hidden = temDados;
     $("tendCorpo").hidden = !temDados;
     state.tendPeriodo = ciclos.length ? "Ciclos " + ciclos.map(cicloLabel).join(", ") + ": " +
-      intervaloBR(cicloInicioFim(ciclos[0]).ini, cicloInicioFim(ciclos[ciclos.length-1]).fim) + " (não segue o filtro de período)" : null;
+      intervaloBR(cicloInicioFim(ciclos[0]).ini, cicloInicioFim(ciclos[ciclos.length-1]).fim) + "" : null;
     if (!temDados) return;
     var eq = equipeDoFiltro();
     $("tendUnidadeHint").textContent = "Cada linha é um assunto; os números são de cada ciclo (28 a 27) · " +
@@ -5904,7 +5939,7 @@
     if (sel.innerHTML !== opts) sel.innerHTML = opts;
     sel.value = ciclos.indexOf(atual) > -1 ? atual : ciclos[0];
     var ciclo = sel.value, fc = cicloInicioFim(ciclo);
-    state.pauBatPeriodo = "Batidas do ciclo " + cicloLabel(ciclo) + ": " + intervaloBR(fc.ini, fc.fim) + " (não segue o filtro de período)";
+    state.pauBatPeriodo = "Batidas do ciclo " + cicloLabel(ciclo) + ": " + intervaloBR(fc.ini, fc.fim) + "";
     var dias = getPausaDiaRecords().filter(function(r){ return cicloDe(r.data) === ciclo; })
       .sort(function(a,b){ return a.data - b.data || a.colaborador.localeCompare(b.colaborador,"pt-BR"); });
     var pessoas = {};
@@ -6055,7 +6090,7 @@
   }
   // Cor de uma situação do PontoNet nos gráficos.
   function corSitPN(n){ return COR_SIT_PN[n] || "#E8840C"; }
-  var COR_MOTIVO_PN = { "Problema no relógio de ponto":"#2a78d6", "Atividade externa":"#1baf7a", "Esquecimento":"#E8840C", "Exclusão de batida errada":"#e87ba4" };
+  var COR_MOTIVO_PN = { "Problema no relógio de ponto":"#2a78d6", "Atividade externa":"#1baf7a", "Esquecimento":"#E8840C", "Esquecimento do crachá":"#9b6fd1", "Exclusão de batida errada":"#e87ba4" };
   // Cor de um motivo do PontoNet nos gráficos (motivo desconhecido = cinza).
   function corMotivoPN(n){ return COR_MOTIVO_PN[n] || "#B9BBBE"; }
   // true = pedido do PontoNet aprovado (situação INTEGRADO). Só esses entram na seção.
@@ -6066,6 +6101,8 @@
     if (!n) return "Sem motivo";
     if (n.indexOf("dispositivo") > -1) return "Problema no relógio de ponto";
     if (n.indexOf("externa") > -1) return "Atividade externa";
+    // (13/11, decisão do RH) esquecimento do crachá é um motivo diferente de esquecimento
+    if (n.indexOf("esquec") > -1 && n.indexOf("crach") > -1) return "Esquecimento do crachá";
     if (n.indexOf("esquec") > -1) return "Esquecimento";
     if (n.indexOf("exclus") > -1) return "Exclusão de batida errada";
     return t.charAt(0) + t.slice(1).toLowerCase();
@@ -6124,7 +6161,7 @@
     var cicloSel = sel.value === "todos" ? null : sel.value;
     var fTodos = ciclos.length ? { ini: cicloInicioFim(ciclos[ciclos.length-1]).ini, fim: cicloInicioFim(ciclos[0]).fim } : null;
     var txtTodos = fTodos ? "Todos os ciclos do arquivo: " + intervaloBR(fTodos.ini, fTodos.fim) : "Todos os ciclos do arquivo";
-    state.pnPeriodo = { todos: txtTodos, ciclo: cicloSel ? "Ciclo " + cicloLabel(cicloSel) + ": " + intervaloBR(cicloInicioFim(cicloSel).ini, cicloInicioFim(cicloSel).fim) + " (não segue o filtro de período)" : txtTodos };
+    state.pnPeriodo = { todos: txtTodos, ciclo: cicloSel ? "Ciclo " + cicloLabel(cicloSel) + ": " + intervaloBR(cicloInicioFim(cicloSel).ini, cicloInicioFim(cicloSel).fim) + "" : txtTodos };
     var rec = cicloSel ? todos.filter(function(r){ return cicloDe(r.data) === cicloSel; }) : todos;
     var aprov = rec;   // só há aprovados aqui (getPontoNetRecords)
 
@@ -6178,7 +6215,7 @@
     var recLista = filtrarSerie("tablePnLista", rec, motivoPN);
     var legPn = $("pnListaLeg"); legPn.innerHTML = "";
     legPn.appendChild(legendaMini(legendaSerie("tablePnLista", rec, motivoPN, corMotivoPN)));
-    $("pnListaHint").textContent = formatNum(recLista.length) + " justificativa(s) aprovada(s) · da mais recente para a mais antiga · os 20 primeiras (a lista inteira abre em tela cheia)";
+    $("pnListaHint").textContent = formatNum(recLista.length) + " justificativa(s) aprovada(s) · da mais recente para a mais antiga · as 20 primeiras (a lista inteira abre em tela cheia)";
     var dn = function(v){ return v == null ? "&ndash;" : formatNum(v); };
     renderTableSimple($("tablePnLista"),
       [{label:"Batida que faltou", width:"118px", render:function(r){ return formatDateBR(r.data) + (horaMin(r.data) !== "00:00" ? " " + horaMin(r.data) : ""); }},
@@ -6582,8 +6619,20 @@
   }
   // Coloca as linhas lidas no painel: aplica a regra do PontoNet só de gestores da lista de
   // equipes, zera cores e filtros, monta os filtros, abre a seção Arquivos carregados e desenha tudo.
+  // (13/11, regra do RH) Quem não está na RE (o cadastro dos ativos) é uma pessoa DESLIGADA.
+  // A macro marca essas linhas com o setor "Desligado". Num arquivo gerado antes disso, a pessoa
+  // sem setor (o setor vem da RE) e com matrícula é tratada do mesmo jeito. Quem é desligado e
+  // não tem gestor vai para o grupo "Desligados" do filtro de gestor (antes: "Sem gestor").
+  function marcarDesligados(records){
+    var temMarca = records.some(function(r){ return r.setor === "Desligado"; });
+    records.forEach(function(r){
+      r.desligado = r.setor === "Desligado" || (!temMarca && r.matricula && r.setor === "Sem setor" && r.tipo !== TIPO_CADASTRO_ORG);
+      if (r.desligado){ r.setor = "Desligado"; if (r.gestor === "Sem gestor") r.gestor = "Desligados"; }
+    });
+    return records;
+  }
   function abrirDados(records){
-      records = semPontoNetForaDoORG(records);
+      records = marcarDesligados(semPontoNetForaDoORG(records));
       state.records = records;
       state.colorMaps = { gestor:{}, setor:{}, cargo:{}, tipo:{}, status:{}, motivo:{} };
       prepararCoresSeries();
@@ -6936,7 +6985,8 @@
     var pausasPessoa = todas.filter(function(r){ return r.tipo === TIPO_RESUMO_PAUSAS_TERMICAS; }).sort(function(a,b){ return a.data - b.data; });
     var pausa = pausasPessoa.filter(function(r){ return r.dateKey === mesPausasAtual(); })[0];
 
-    var digitadas = todas.filter(function(r){ return isTipoDigitada(r.tipo) && noPeriodo(r); })
+    // (13/11) sem o filtro de período, as digitadas do card são todas as do arquivo (3 meses)
+    var digitadas = todas.filter(function(r){ return isTipoDigitada(r.tipo); })
       .sort(function(a,b){ return b.data - a.data; });
     // afastamentos do relatório do sistema (todos os tipos); sem ele, os atestados do Cartão
     var temAfArquivo = state.records.some(function(r){ return r.tipo === TIPO_AFASTAMENTO; });
@@ -6947,13 +6997,14 @@
     // se o arquivo tem ORG mas a pessoa não está nele, o aviso "Não está no ORG".
     $("colabModalTitle").textContent = nome;
     var meta = [["Matrícula", primeiro("matricula")], ["Gestor", primeiro("gestor","Sem gestor") || "Sem gestor"],
-                ["Cargo", primeiro("cargo","Sem cargo") || "Sem cargo"], ["Setor", primeiro("setor","Sem setor") || "Sem setor"]];
+                ["Cargo", primeiro("cargo","Sem cargo") || "Sem cargo"], ["Setor", primeiro("setor","Sem setor") || "Sem setor"]].filter(function(m){ return m[1] !== "Desligado"; });
     var linhaOrg = todas.filter(function(r){ return r.tipo === TIPO_CADASTRO_ORG; })[0];
     if (linhaOrg && linhaOrg.situacao) meta.push(["Área", linhaOrg.situacao]);
     var foraOrg = !linhaOrg && state.records.some(function(r){ return r.tipo === TIPO_CADASTRO_ORG; });
     $("colabModalMeta").innerHTML = meta.filter(function(m){ return m[1]; }).map(function(m){
       return "<span>"+m[0]+": <b>"+escapeHtml(m[1])+"</b></span>";
-    }).join("") + (foraOrg ? '<span class="sem-gestor">Não está na lista de equipes</span>' : "");
+    }).join("") + (foraOrg ? '<span class="sem-gestor">Não está na lista de equipes</span>' : "") +
+      (todas.some(function(r){ return r.desligado; }) ? '<span class="sem-gestor">Desligado (não está no cadastro de ativos)</span>' : "");
 
     // Monta um número do card da pessoa (rótulo, valor e linha de baixo).
     function tile(label, valor, sub, cls){
@@ -7019,7 +7070,7 @@
     }
     if (digitadas.length){
       var dEsq = digitadas.filter(isEsquecimento).length;
-      html += '<h3 class="colab-section">Marcações digitadas no período ('+digitadas.length+' &middot; '+dEsq+' por esquecimento)</h3>' +
+      html += '<h3 class="colab-section">Marcações digitadas nos meses do arquivo ('+digitadas.length+' &middot; '+dEsq+' por esquecimento)</h3>' +
         '<div class="table-scroll colab-tab"><table class="data-table"><colgroup><col style="width:92px"><col style="width:60px"><col style="width:30%"><col></colgroup>' +
         '<thead><tr><th>Data</th><th>Hora</th><th>Motivo</th><th>Justificativa</th></tr></thead><tbody>' +
         digitadas.map(function(r){
@@ -7376,10 +7427,10 @@
      escolhido nos afastamentos. O tipo de cada card vem de PERIODO_DOS_CARDS
      (pelo id do gráfico/tabela que fica dentro dele). */
   var PERIODO_DOS_CARDS = {
-    filtro: ["tableCurtas"],
+    filtro: [],
     digCiclo: ["chartDigMotivo","chartDigDiaSemana","chartDigData","chartDigTop","chartDigGestor","chartDigHora",
              "tableDigJust","tableDigLista"],
-    cartao: [], cartao3: ["tableExtraFalta"], bh: ["chartFechamentoBH"], bhConf: ["tableBHConf"],
+    cartao: ["tableCurtas"], cartao3: ["tableExtraFalta"], bh: ["chartFechamentoBH"], bhConf: ["tableBHConf"],
     bhSel: ["chartBHLinha","tableBHPessoas","chartBancoHoras"], pausas: ["tablePausasTermicas","chartPauAcima","tablePauAcimaGestor","chartPauGrupo"],
     pausasMeses: ["chartPauEvolucao"],
     pauBat: ["chartPauHora","chartPauDiaSemana","chartPauPrimeira","chartPauSemPausa","chartPauMaior","pauHeat"],
@@ -7408,15 +7459,15 @@
     var ab = state.absPeriodo || {};
     var textos = {
       filtro: ini && fim ? "Período do filtro: " + intervaloBR(ini, fim) : "Período: todo o arquivo",
-      cartao: cart ? "Mês do cartão ponto: " + intervaloBR(cart.ini, cart.fim) + " (não segue o filtro de período)" : "Mês atual do cartão ponto",
-      cartao3: cart ? "Mês do cartão ponto: " + intervaloBR(cart.ini, cart.fim) + " + os 2 meses anteriores (não segue o filtro de período)" : "Mês atual do cartão ponto e os 2 anteriores",
-      pausas: paus ? "Relatório de pausas do mês: " + intervaloBR(paus.ini, paus.fim) + " (não segue o filtro de período)" : "Relatório de pausas do mês",
+      cartao: cart ? "Mês do cartão ponto: " + intervaloBR(cart.ini, cart.fim) + "" : "Mês atual do cartão ponto",
+      cartao3: cart ? "Mês do cartão ponto: " + intervaloBR(cart.ini, cart.fim) + " + os 2 meses anteriores" : "Mês atual do cartão ponto e os 2 anteriores",
+      pausas: paus ? "Relatório de pausas do mês: " + intervaloBR(paus.ini, paus.fim) + "" : "Relatório de pausas do mês",
       pausasMeses: "Todos os meses de pausas que estão no arquivo",
       pauBat: state.pauBatPeriodo,
       absEvol: ab.ciclo, absCiclo: ab.ciclo, abs3m: ab.tres, absMapa: ab.mapa,
       cadastro: "Lista de equipes atual (não depende de período)",
       tend: (function(){ var c = ciclosTendencia(); return c.length ? "Ciclos " + c.map(cicloLabel).join(", ") + ": " +
-        intervaloBR(cicloInicioFim(c[0]).ini, cicloInicioFim(c[c.length-1]).fim) + " (não segue o filtro de período)" : null; })(),
+        intervaloBR(cicloInicioFim(c[0]).ini, cicloInicioFim(c[c.length-1]).fim) + "" : null; })(),
       pnTodos: state.pnPeriodo && state.pnPeriodo.todos, pnCiclo: state.pnPeriodo && state.pnPeriodo.ciclo,
       jorTodos: state.jorPeriodo && state.jorPeriodo.todos, jorCiclo: state.jorPeriodo && state.jorPeriodo.ciclo,
       digCiclo: state.digPeriodo,

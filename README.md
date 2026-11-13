@@ -34,6 +34,18 @@ do `.bas`. Colar é mais seguro que **Arquivo > Importar**: os arquivos estão e
 importador do VBA lê em ANSI, o que estraga os acentos das mensagens e dos cabeçalhos
 (e, com isso, a busca de colunas como "Matrícula" e "Situação").
 
+## Ajustes e conferência ampliada (13/11)
+
+- Saiu o filtro de período (cada seção tem o seu seletor de mês).
+- No PontoNet, "Esquecimento do crachá" é um motivo separado de "Esquecimento".
+- Quem não está na RE (cadastro de ativos) aparece como **desligado**; sem gestor, fica no grupo "Desligados" do
+  filtro de gestor. A macro GerarCSV marca essas linhas e acha o gestor pelo nome de quem está no ORG sem matrícula.
+- Corrigidos: a "Média de todos" da demora no PontoNet; "<1%" nos pedaços de barra; o mapa de afastamentos com
+  "Só saída médica e horas" sem nenhum dia inteiro.
+- A conferência agora cobre o painel inteiro, inclusive o resumo de cada pessoa, cada gestor, cada mês dos
+  seletores e as janelas "de onde vem" (ferramentas `auditar_mais.py`, `extrair_extra_painel.js`, `auditar_extra.py`).
+  Cole de novo o `txt/PainelPonto_TudoEmUm.txt`.
+
 ## Painel para todas as unidades (11/11)
 
 - Saíram as seções **Ocorrências**, **Colaboradores em destaque** e **Histórico**: dependiam da planilha de

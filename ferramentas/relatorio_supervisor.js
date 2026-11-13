@@ -19,6 +19,14 @@ const [,, entrada, saida, mesRef, periodo] = process.argv;
 const RES = JSON.parse(fs.readFileSync(entrada, 'utf8'));
 const LARANJA = 'F7931E', PRETO = '1A1A1A', CINZA = '5F6368', VERDE = '1B8A5A', VERMELHO = 'C62828';
 const nOk = RES.filter(r => r.ok).length;
+// volume da conferência, tirado do próprio resultado (para a capa e o resumo)
+const achar = (secao) => RES.filter(r => r.secao === secao);
+const nPessoas = (achar('Resumo de cada pessoa')[0] || { esperado: '0' }).esperado.split(' ')[0];
+const nGestores = achar('Visão de cada gestor (filtro)').length;
+const nOpcoes = achar('Outros meses e opções dos seletores').length;
+const nCliques = ((achar('Janelas "de onde vem"')[0] || { esperado: '0' }).esperado.match(/^(\d+)/) || [0, '0'])[1];
+const conf = RES.find(r => /cartão ponto × relatório/.test(r.card));
+const confTxt = conf ? conf.esperado : '';
 
 // Texto de cada item conferido, em palavras simples. [o que o painel mostra, como o número é obtido, unidade]
 // A unidade diz o que foi conferido quando o item é uma lista ("pessoas", "gestores", "dias"...).
@@ -109,12 +117,24 @@ const SECOES = {
   'Banco de horas': ['Banco de horas', 'Horas extras e horas de falta de cada pessoa e o saldo do banco no período de 4 meses.'],
   'Tendências': ['Tendências', 'A comparação de cada assunto mês a mês, para ver se melhorou ou piorou.'],
   'Lista de colaboradores': ['Lista de colaboradores', 'A lista de equipes da unidade: quem é gestor de quem.'],
+  'Arquivos carregados': ['Arquivos carregados', 'A primeira tela do painel: o que veio no arquivo e se falta alguma coisa.'],
+  'Etiquetas de período (📅)': ['Período de cada quadro', 'Embaixo do título de cada quadro, a etiqueta 📅 diz qual período ele considera.'],
+  'Resumo de cada pessoa': ['Resumo de cada pessoa', 'A janela que abre ao clicar no nome de alguém: os números da pessoa, a evolução mês a mês, os afastamentos e as batidas digitadas.'],
+  'Visão de cada gestor (filtro)': ['O painel visto por cada gestor', 'O painel inteiro com o filtro de cada gestor: o gestor vê só a equipe dele, e todas as contas foram refeitas para cada equipe.'],
+  'Outros meses e opções dos seletores': ['Outros meses e opções', 'Cada seção tem um seletor de mês (ou de tipo). Todas as contas foram refeitas para cada opção de cada seletor.'],
+  'Janelas "de onde vem"': ['Janelas "de onde vem"', 'Ao clicar numa barra de um gráfico, abre uma janela com os registros que formam aquele número.'],
   'Painel inteiro': ['Funcionamento geral', 'O painel abrindo e mostrando tudo.']
 };
 
 // Valor curto para a coluna "Resultado do mês": número único, ou "N pessoas conferidas" para listas.
 function valorCurto(r, unidade, modelo) {
   const v = r.esperado;
+  // listas com nomes (de pessoas ou gestores) nunca aparecem: só a quantidade conferida
+  if (!unidade && !modelo && (v.indexOf(' = ') > -1 || /^\(/.test(v))) {
+    let n = v.split('; ').length; const mais = /\(\+(\d+)\)$/.exec(v); if (mais) n = n - 1 + Number(mais[1]);
+    return n.toLocaleString('pt-BR') + ' itens, cada um conferido';
+  }
+  if (!unidade && !modelo && /^\d+ \w+ iguais$/.test(v)) return v.replace(' iguais', ', cada um conferido');
   if (modelo) { const p = v.split('; '); return modelo.replace(/\{(\d)\}/g, (m, i) => p[+i] || ''); }
   if (unidade) {
     let n = v.split('; ').length;
@@ -154,12 +174,14 @@ const caixa = new Table({ width: { size: 9600, type: WidthType.DXA }, columnWidt
   new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 140 }, children: [run(nOk === RES.length ? 'Todas estão corretas.' : 'Há informações com diferença: veja a seção 4.', { size: 24 })] })
 ], 9600, { shading: { fill: 'FFF4E5', type: ShadingType.CLEAR, color: 'auto' } })] })] });
 corpo.push(new Paragraph({ spacing: { before: 400 }, children: [] }), caixa);
+corpo.push(par([run('Além do painel como ele abre, foram conferidos: o resumo de ' + nPessoas + ' pessoas, a visão de cada uma das ' + nGestores +
+  ' equipes, ' + nOpcoes + ' outras opções dos seletores de mês e de tipo e ' + Number(nCliques).toLocaleString('pt-BR') + ' cliques nos gráficos.', { color: CINZA })], { spacing: { before: 200 } }));
 corpo.push(new Paragraph({ children: [new PageBreak()] }));
 
 // 1. resumo
 corpo.push(h1('1. Em resumo'));
 corpo.push(par('O Painel de Ponto reúne, em um só lugar, os relatórios de ponto do mês: batidas digitadas, afastamentos, jornada, pausas térmicas, justificativas do PontoNet, banco de horas e a lista de equipes. Este documento mostra que os números que aparecem no painel estão corretos.'));
-corpo.push(par([run('O que foi feito: ', { bold: true }), run('cada número, gráfico e tabela do painel foi conferido com uma segunda contagem, feita de forma totalmente separada, a partir do mesmo arquivo do mês. É como conferir o caixa duas vezes, com duas pessoas diferentes: se as duas chegam ao mesmo valor, o valor está certo.')]));
+corpo.push(par([run('O que foi feito: ', { bold: true }), run('cada número, gráfico e tabela do painel foi conferido com uma segunda contagem, feita de forma totalmente separada, a partir do mesmo arquivo do mês. É como conferir o caixa duas vezes, com duas pessoas diferentes: se as duas chegam ao mesmo valor, o valor está certo. A conferência não ficou só na tela de abertura: o painel foi usado como um gestor usaria (clicando no nome de cada pessoa, filtrando cada equipe, trocando o mês de cada seção e clicando nas barras dos gráficos), e tudo o que apareceu foi conferido.')]));
 corpo.push(par([run('O resultado: ', { bold: true }), run(nOk + ' de ' + RES.length + ' informações conferidas deram exatamente o mesmo número nas duas contagens.')]));
 corpo.push(par([run('O que isso garante: ', { bold: true }), run('o painel soma, conta, separa por mês, por equipe e por pessoa, e calcula médias e porcentagens sem erro. O que ele mostra é fiel ao que está nos relatórios do sistema de ponto.')]));
 corpo.push(par([run('O que isso não garante: ', { bold: true }), run('que o próprio sistema de ponto esteja certo na origem (por exemplo, uma batida lançada errado no sistema aparece errada no painel também). Para isso, o painel tem avisos próprios, explicados na seção 5.')]));
@@ -170,6 +192,7 @@ corpo.push(h1('2. Como a conferência foi feita'));
  ['Passo 2 — refazer as contas separadamente.', ' Um segundo programa, feito à parte e que não usa nenhuma parte do painel, leu o mesmo arquivo e refez todas as contas do zero, seguindo as mesmas regras do RH (o mês do ponto vai do dia 28 ao dia 27; só entram as batidas digitadas pelo sistema; só as justificativas aprovadas; e assim por diante).'],
  ['Passo 3 — comparar.', ' Cada número do painel foi comparado com o número da segunda contagem. "Confere" quer dizer que os dois são iguais. Nas listas (por pessoa, por equipe, por dia), a comparação foi feita item por item.']]
   .forEach(([a, b]) => corpo.push(bullet([run(a, { bold: true }), run(b)])));
+corpo.push(bullet([run('Passo 4 — usar o painel como um gestor.', { bold: true }), run(' Um programa clicou no nome de cada pessoa e conferiu a janela de resumo dela; filtrou o painel por cada gestor e refez todas as contas só com a equipe dele; escolheu cada mês e cada tipo nos seletores das seções e refez as contas; e clicou nas barras dos gráficos para conferir se a janela "de onde vem" lista exatamente os registros do número.')]));
 corpo.push(par('Durante a conferência, os nomes das pessoas foram comparados um a um, mas este documento mostra só as quantidades, para poder ser compartilhado.'));
 
 // 3. seção por seção
@@ -178,14 +201,35 @@ corpo.push(h1('3. O que foi conferido, seção por seção'));
 corpo.push(par([run('Cada tabela mostra uma informação do painel, como ela é obtida e o resultado da conferência. "✓ Confere" quer dizer que o número do painel é igual ao da segunda contagem.', { color: CINZA })]));
 const W = [2550, 3750, 2100, 1200];
 const ordem = Object.keys(SECOES).filter(s => RES.some(r => r.secao === s));
+function agrupa(itens, s) {
+  if (s === 'Visão de cada gestor (filtro)') {
+    const ok = itens.filter(r => r.ok).length;
+    const contas = itens.reduce((a, r) => a + (Number((/^(\d+)/.exec(r.esperado) || [0, 0])[1])), 0);
+    return [{ card: 'Filtro de gestor', item: 'Todas as equipes', ok: ok === itens.length, secao: s,
+      esperado: itens.length + ' gestores · ' + contas.toLocaleString('pt-BR') + ' contas refeitas, ' + (ok === itens.length ? 'todas iguais' : (itens.length - ok) + ' gestor(es) com diferença'),
+      como: 'Para cada gestor, o painel foi filtrado pela equipe dele e a conferência completa foi refeita só com essas pessoas.' }];
+  }
+  if (s === 'Outros meses e opções dos seletores') {
+    const grupos = {};
+    itens.forEach(r => { const g = r.card.split(':')[0]; (grupos[g] = grupos[g] || []).push(r); });
+    return Object.keys(grupos).map(g => {
+      const l = grupos[g], ok = l.filter(r => r.ok).length;
+      const contas = l.reduce((a, r) => a + (Number((/^(\d+)/.exec(r.esperado) || [0, 0])[1])), 0);
+      return { card: g, item: 'Cada opção do seletor', ok: ok === l.length, secao: s,
+        esperado: l.length + ' opções · ' + contas.toLocaleString('pt-BR') + ' contas refeitas, ' + (ok === l.length ? 'todas iguais' : (l.length - ok) + ' com diferença'),
+        como: 'Para cada opção do seletor (cada mês ou tipo), a conferência completa foi refeita com a opção escolhida.' };
+    });
+  }
+  return itens;
+}
 ordem.forEach((s, i) => {
   const [nome, desc] = SECOES[s];
-  const itens = RES.filter(r => r.secao === s);
+  const itens = agrupa(RES.filter(r => r.secao === s), s);
   const ok = itens.filter(r => r.ok).length;
   corpo.push(h2('3.' + (i + 1) + ' ' + nome + ' — ' + ok + ' de ' + itens.length + ' conferem'));
   corpo.push(par([run(desc, { color: CINZA })]));
   corpo.push(tabela(W, [cab(['Informação do painel', 'Como o número é obtido', 'Resultado do mês', ''], W)].concat(itens.map(r => {
-    const t = TEXTOS[r.card + '|' + r.item] || [r.card + ' — ' + r.item, r.como];
+    const t = TEXTOS[r.card + '|' + r.item] || [r.card + (r.item ? ' — ' + r.item : ''), r.como];
     return new TableRow({ cantSplit: true, children: [
       cel([peq(t[0], { bold: true })], W[0]), cel([peq(t[1])], W[1]), cel([peq(valorCurto(r, t[2], t[3]))], W[2]),
       cel([peq(r.ok ? '✓ Confere' : '✗ Diferente', { bold: true, color: r.ok ? VERDE : VERMELHO })], W[3])] });
@@ -195,16 +239,23 @@ ordem.forEach((s, i) => {
 
 // 4. correções
 corpo.push(h1('4. Ajustes feitos durante a conferência'));
-corpo.push(par('A conferência também serve para achar e corrigir detalhes. Dois foram encontrados e já estão corrigidos no painel; nenhum deles mudava as quantidades principais:'));
+corpo.push(par('A conferência também serve para achar e corrigir detalhes. Estes foram encontrados e já estão corrigidos no painel:'));
 corpo.push(bullet([run('Tamanho da equipe. ', { bold: true }), run('Quando uma pessoa estava na lista de equipes sem a matrícula preenchida, ela podia ser contada duas vezes no "de N pessoas". Corrigido.')]));
 corpo.push(bullet([run('Texto do banco de horas. ', { bold: true }), run('O painel dizia "220 pessoas na lista de equipes". O número 220 estava certo, mas é a quantidade de pessoas com banco de horas (a lista de equipes tem 216). O texto agora diz "220 pessoas com banco de horas".')]));
+corpo.push(bullet([run('Média de demora no PontoNet. ', { bold: true }), run('A linha "Média de todos" da demora até a aprovação tinha deixado de aparecer (mostrava "–") depois de uma mudança no painel; as tabelas por gestor e por pessoa estavam certas. A média voltou.')]));
+corpo.push(bullet([run('Porcentagem nas barras. ', { bold: true }), run('Um pedaço de barra com menos de 1% aparecia como "1%"; agora aparece "<1%", como no resto do painel.')]));
+corpo.push(h2('Mudanças pedidas pelo RH nesta versão'));
+corpo.push(bullet('Saíram as partes que dependiam da planilha de tratamento de uma unidade só (ocorrências, colaboradores em destaque e histórico), para o painel servir a todas as unidades.'));
+corpo.push(bullet('Saiu o filtro de período: cada seção tem o seu seletor de mês.'));
+corpo.push(bullet('"Esquecimento do crachá" é um motivo diferente de "esquecimento" no PontoNet.'));
+corpo.push(bullet('Quem não está no cadastro de ativos da unidade aparece como desligado.'));
 
 // 5. o que olhar
 corpo.push(h1('5. Pontos de atenção e avisos do próprio painel'));
 corpo.push(par('Não são erros do painel, mas ajudam a ler os números corretamente:'));
-corpo.push(bullet([run('Banco de horas que não bate com o sistema. ', { bold: true }), run('O painel calcula o banco de cada pessoa pelo cartão ponto e compara com o relatório de banco de horas do sistema. Neste mês, a maioria bate; as pessoas que não batem aparecem em vermelho na seção Banco de horas. Nesses casos a diferença está entre o cartão ponto e o relatório do sistema, e o RH confere cada uma no sistema.')]));
+corpo.push(bullet([run('Banco de horas que não bate com o sistema. ', { bold: true }), run('O painel calcula o banco de cada pessoa pelo cartão ponto e compara com o relatório de banco de horas do sistema. Neste mês, ' + ((confTxt.match(/(\d+) batem, (\d+) não batem/) || []).slice(1).join(' pessoas batem e ') || '') + ' não batem (entre elas, as que estão no cartão ponto mas não no relatório do sistema). As que não batem aparecem em vermelho na seção Banco de horas. Nesses casos a diferença está entre o cartão ponto e o relatório do sistema, e o RH confere cada uma no sistema.')]));
 corpo.push(bullet([run('Arquivos que faltam. ', { bold: true }), run('Ao abrir o arquivo, a primeira tela do painel ("Arquivos carregados") mostra o que veio e avisa em vermelho se faltar algum relatório ou algum mês. Neste mês, nada faltou.')]));
-corpo.push(bullet([run('Motivos do PontoNet. ', { bold: true }), run('Os pedidos por "esquecimento crachá" são somados aos de "esquecimento".')]));
+corpo.push(bullet([run('Pessoas desligadas. ', { bold: true }), run('Quem aparece nos relatórios mas não está no cadastro de ativos da unidade é mostrado como desligado. Os números dessas pessoas (batidas, banco de horas, afastamentos dos meses em que trabalhavam) continuam contando.')]));
 corpo.push(bullet([run('Afastamentos. ', { bold: true }), run('Férias já marcadas para depois do fim do mês não entram nos números do mês. Um atestado que atravessa a virada do mês tem os dias divididos entre os dois meses.')]));
 corpo.push(bullet([run('Cada número diz o seu período. ', { bold: true }), run('Embaixo de cada número e gráfico há uma etiqueta 📅 com o período considerado, e o botão "?" explica de onde vem a informação.')]));
 

@@ -403,6 +403,15 @@ def exportar_csv(linhas, caminho='dados_TODOS.csv'):
         out.append(','.join(q(t(x)) for x in v))
     open(caminho,'w',encoding='utf-8-sig').write('\n'.join(out)+'\n')
 
+# (13/11) igual ao AcertarGestorEDesligados da macro: gestor pelo nome de quem está no ORG sem
+# matrícula, e setor "Desligado" para quem tem matrícula e não está na RE.
+def acertar_gestor_e_desligados(linhas):
+    gpn={semac(nm).strip():g for m,nm,_a,_c,g in listaORG if not m and g}
+    for o in linhas:
+        if not o.get('gestor') and semac(o['colaborador']).strip() in gpn: o['gestor']=gpn[semac(o['colaborador']).strip()]
+        if o.get('matricula') and dictRE and o['matricula'] not in dictRE: o['setor']='Desligado'
+acertar_gestor_e_desligados(out)
+
 if __name__=='__main__':
     exportar_csv(out)
     print('dados_TODOS.csv gerado com', len(out), 'linhas')

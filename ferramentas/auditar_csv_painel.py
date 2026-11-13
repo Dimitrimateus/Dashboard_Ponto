@@ -23,7 +23,7 @@ Para um leigo: pense numa calculadora separada, feita por outra pessoa, que refa
 as contas a partir do mesmo arquivo. Se as duas chegam no mesmo número, o painel está
 certo. Se não chegam, o item aparece como FALHA com os dois valores lado a lado.
 """
-import csv, io, json, re, sys, unicodedata
+import csv, io, json, math, re, sys, unicodedata
 from collections import Counter, defaultdict, OrderedDict
 from datetime import date, datetime, timedelta
 
@@ -143,7 +143,7 @@ def ler_csv(caminho):
             he=numero(pega(r, "minutos_hora_extra_cartao")), bh=numero(pega(r, "minutos_banco_horas_cartao")),
             just=texto(pega(r, "justificativa_marcacao")), origem=texto(pega(r, "origem_marcacao")),
             dias_aus=numero(pega(r, "dias_ausencia")), emenda=texto(pega(r, "emenda_folga")),
-            min_trab=vazio_none("minutos_trabalhados"), marc=texto(pega(r, "marcacoes_dia")),
+            min_trab=vazio_none("minutos_trabalhados"), min_desc=vazio_none("minutos_descanso"), marc=texto(pega(r, "marcacoes_dia")),
             tipo_just=texto(pega(r, "tipo_justificativa")), dias_col=vazio_none("dias_colaborador"),
             dias_gest=vazio_none("dias_gestor"),
             bh_ini=data(pega(r, "bh_inicio_periodo")), bh_ant=numero(pega(r, "bh_saldo_anterior_minutos")),
@@ -155,7 +155,11 @@ def ler_csv(caminho):
 
 
 def ler_varios(caminhos):
-    """Junta vários CSVs: linha idêntica que aparece em arquivos DIFERENTES conta uma vez."""
+    """Junta vários CSVs: linha idêntica que aparece em arquivos DIFERENTES conta uma vez.
+    Depois aplica as duas regras de abertura do RH (as mesmas que o painel aplica):
+    1) PontoNet só de gestores que estão na lista de equipes;
+    2) quem não está na RE (setor "Desligado", ou sem setor num arquivo antigo) é desligado;
+       desligado sem gestor vai para o grupo "Desligados"."""
     vistos, todos = {}, []
     for i, c in enumerate(caminhos):
         for rec in ler_csv(c):
@@ -164,6 +168,16 @@ def ler_varios(caminhos):
             vistos[rec["_linha"]] = i
             rec["_arq"] = i
             todos.append(rec)
+    chave_nome = lambda t: re.sub(r"\s+", " ", sem_acento(t or "")).upper().strip()
+    gest = {chave_nome(r["gestor"]) for r in todos if r["tipo"] == TIPO_ORG and r["gestor"] != "Sem gestor"}
+    if gest:
+        todos = [r for r in todos if r["tipo"] != TIPO_PN or chave_nome(r["gestor"]) in gest]
+    tem_marca = any(r["setor"] == "Desligado" for r in todos)
+    for r in todos:
+        r["desligado"] = r["setor"] == "Desligado" or (not tem_marca and bool(r["matricula"]) and r["setor"] == "Sem setor" and r["tipo"] != TIPO_ORG)
+        if r["desligado"]:
+            r["setor"] = "Desligado"
+            if r["gestor"] == "Sem gestor": r["gestor"] = "Desligados"
     return todos
 
 
@@ -196,7 +210,15 @@ def int_br(s):
 
 
 def fmt_dec(x):
-    return ("%.1f" % x).replace(".", ",")
+    """Uma casa decimal como a tela (arredonda 0,25 para 0,3, como o navegador)."""
+    v = math.floor(x * 10 + 0.5) / 10
+    return ("%.1f" % v).replace(".", ",")
+
+
+def dias_txt(v):
+    """Média em dias como a tela: '1 dia', '2,3 dias', '3 dias' (sem ',0')."""
+    if v is None: return "–"
+    return fmt_dec(v).replace(",0", "", 1) + (" dia" if abs(v - 1) < 0.05 else " dias")
 
 
 def dur_txt(m):
@@ -257,9 +279,11 @@ def nome_tipo_pn(t):
     batida errada'; o resto com a 1ª letra maiúscula."""
     n = sem_acento(t or "").lower()
     if not n.strip(): return "Sem motivo"
-    for chave, nome in (("dispositivo", "Problema no relógio de ponto"), ("externa", "Atividade externa"),
-                        ("esquec", "Esquecimento"), ("exclus", "Exclusão de batida errada")):
-        if chave in n: return nome
+    if "dispositivo" in n: return "Problema no relógio de ponto"
+    if "externa" in n: return "Atividade externa"
+    if "esquec" in n and "crach" in n: return "Esquecimento do crachá"   # (13/11) motivo diferente de esquecimento
+    if "esquec" in n: return "Esquecimento"
+    if "exclus" in n: return "Exclusão de batida errada"
     t = t.strip(); return t[:1].upper() + t[1:].lower()
 
 # ------------------------------------------------------------------ 3. registro dos resultados
@@ -286,8 +310,8 @@ def resumo(v):
 def compara_dict(secao, card, o_que, como, esperado, painel, so_chaves_do_painel=False, obs=""):
     """Compara contagens por nome. so_chaves_do_painel: o gráfico mostra só os primeiros."""
     if so_chaves_do_painel:
-        dif = {k: (esperado.get(k), v) for k, v in painel.items() if esperado.get(k) != v}
-        ok = not dif and bool(painel)
+        dif = {k: (esperado.get(k, 0), v) for k, v in painel.items() if esperado.get(k, 0) != v}   # barra sem nada = 0
+        ok = not dif and (bool(painel) or not any(esperado.values()))
         # os que ficaram de fora não podem ter número maior que o menor mostrado
         if painel:
             menor = min(painel.values())
@@ -299,30 +323,59 @@ def compara_dict(secao, card, o_que, como, esperado, painel, so_chaves_do_painel
              dict(sorted(painel.items(), key=lambda x: -x[1])), esperado == painel, obs)
 
 
+def V(J, id_):
+    """Elemento da leitura normal da tela, só se estiver visível."""
+    return visivel(J["normal"].get(id_))
+
+
+def visivel(o):
+    """Elemento que está na tela (um quadro escondido guarda o conteúdo antigo e não conta)."""
+    return o if (o and not o.get("escondido")) else {}
+
+
 def tabela(J, id_, cheia=True):
     """Tabela de um card; com cheia=True prefere a leitura em tela cheia (lista inteira)."""
-    fonte = (J["telaCheia"].get(id_) if cheia else None) or J["normal"].get(id_) or {}
+    fonte = (visivel(J["telaCheia"].get(id_)) if cheia else None) or visivel(J["normal"].get(id_)) or {}
     t = (fonte.get("tabelas") or [None])[0]
     return t or {"head": [], "rows": []}
 
 
 def tips(J, id_):
-    return tips_dict(((J["telaCheia"].get(id_) or {}).get("tips")) or (J["normal"].get(id_) or {}).get("tips"))
+    return tips_dict((visivel(J["telaCheia"].get(id_)).get("tips")) or visivel(J["normal"].get(id_)).get("tips"))
 
 
 def numeros(J, id_):
-    return {n[0].upper(): (n[1], n[2]) for n in (J["normal"].get(id_) or {}).get("numeros", [])}
+    return {n[0].upper(): (n[1], n[2]) for n in visivel(J["normal"].get(id_)).get("numeros", [])}
 
 
 # ------------------------------------------------------------------ 4. as conferências
-def conferir(J, R):
+R_FULL = []   # (13/11) todas as linhas do arquivo, mesmo quando R vem filtrado por gestor
+
+
+def ciclo_de_rotulo(rot):
+    """'Ago/26' -> '2026-08'."""
+    m, a = rot.split("/")[:2]
+    return "20%s-%02d" % (a[:2], MESES.index(m[:3].title()) + 1)
+
+
+def sel_ciclo(J, chave, ciclos):
+    """Ciclo escolhido no seletor de uma seção (None = 'todos os ciclos')."""
+    rot = (J["estado"].get(chave) or "").split(" ")[0]
+    return next((c for c in ciclos if rotulo_ciclo(c) == rot), None)
+
+
+def conferir(J, R, R_full=None):
+    """R = as linhas que o painel usa no recorte (filtradas por gestor quando há filtro);
+    R_full = o arquivo inteiro (meses de cada seletor, período padrão, arquivos carregados)."""
+    global R_FULL
+    R_FULL = R_full if R_full is not None else R
     est = J["estado"]
     p_ini = datetime.strptime(est["periodoIni"], "%Y-%m-%d").date()
     p_fim = datetime.strptime(est["periodoFim"], "%Y-%m-%d").date()
 
     # ---------------------------------------------------------- período padrão
     S = "Período padrão do painel"
-    fim_cartao = [r["dia"] for r in R if r["tipo"] in (TIPO_RES_HORAS, TIPO_AUD)]
+    fim_cartao = [r["dia"] for r in R_FULL if r["tipo"] in (TIPO_RES_HORAS, TIPO_AUD)]
     esp_fim = max(fim_cartao)
     esp_ini = ciclo_ini_fim(ciclo(esp_fim))[0]
     item(S, "Filtro de período (lateral)", "Data inicial",
@@ -340,24 +393,28 @@ def conferir(J, R):
 
     # ---------------------------------------------------------- Marcações digitadas
     S = "Marcações digitadas"
-    dig = [r for r in R if r["tipo"] == TIPO_DIG]
+    dig_todas = [r for r in R if r["tipo"] == TIPO_DIG]
+    c_dig = sel_ciclo(J, "digCiclo", sorted({ciclo(r["dia"]) for r in R_FULL if r["tipo"] == TIPO_DIG}))
+    dig = [r for r in dig_todas if not c_dig or ciclo(r["dia"]) == c_dig]
     kp = numeros(J, "digKpis")
     item(S, "Números do topo", "Marcações digitadas",
          "Batidas lançadas à mão no sistema (só as de origem \"D\"), em todos os ciclos do arquivo (seletor padrão).",
          len(dig), int_br(kp.get("MARCAÇÕES DIGITADAS", ("?",))[0]))
     item(S, "Números do topo", "Colaboradores",
          "Pessoas diferentes com ao menos uma batida digitada.",
-         len({r["colaborador"] for r in dig}), int_br(kp.get("COLABORADORES", ("?",))[0]))
+         len({r["matricula"] or r["colaborador"] for r in dig}), int_br(kp.get("COLABORADORES", ("?",))[0]))
     sub = kp.get("COLABORADORES", ("", ""))[1]
     item(S, "Números do topo", "\"de N pessoas na lista de equipes\"",
          "Tamanho da equipe do recorte: pessoas da lista de equipes (uma por matrícula).",
-         len(org), int_br((re.search(r"de ([\d.]+)", sub) or [0, "0"])[1]))
+         len(set(org) | {r["matricula"] or r["colaborador"] for r in dig
+                         if (r["matricula"] or r["colaborador"]) not in org and r["colaborador"] not in {o["colaborador"] for o in org.values() if not o["matricula"]}}),
+         int_br((re.search(r"de ([\d.]+)", sub) or [0, "0"])[1]))
     esq = [r for r in dig if norm(r["situacao"]) == "inclusao_por_esquecimento"]
     k_esq = [k for k in kp if "ESQUEC" in k]
     if k_esq:
         item(S, "Números do topo", "Por esquecimento", "Batidas cujo motivo é \"Inclusão por esquecimento\".",
              len(esq), int_br(kp[k_esq[0]][0]))
-    leg = {a: int_br(b) for a, b in (J["normal"]["chartDigMotivo"].get("legenda") or [])}
+    leg = {a: int_br(b) for a, b in (V(J, "chartDigMotivo").get("legenda") or [])}
     m = Counter(r["situacao"] for r in dig)
     top = [k for k, _ in m.most_common()][:5]
     esp = {k: v for k, v in m.items() if k in top}
@@ -365,7 +422,7 @@ def conferir(J, R):
     compara_dict(S, "Por motivo (rosca)", "Quantidade por motivo", "Batidas digitadas contadas pelo motivo informado.", esp, leg)
     compara_dict(S, "Mês a mês", "Batidas por ciclo",
                  "Batidas digitadas agrupadas pelo ciclo 28 a 27 da data da batida (últimos 3 ciclos).",
-                 Counter(rotulo_ciclo(ciclo(r["dia"])) for r in dig), tips(J, "chartDigCiclo"), so_chaves_do_painel=True)
+                 Counter(rotulo_ciclo(ciclo(r["dia"])) for r in dig_todas), tips(J, "chartDigCiclo"), so_chaves_do_painel=True)
     compara_dict(S, "Por dia da semana", "Batidas em cada dia", "Batidas digitadas pelo dia da semana.",
                  Counter(DIAS[r["dia"].weekday()] for r in dig), {k: v for k, v in tips(J, "chartDigDiaSemana").items() if v})
     compara_dict(S, "Por data", "Batidas em cada dia", "Batidas digitadas pela data.",
@@ -377,22 +434,27 @@ def conferir(J, R):
     compara_dict(S, "Quem mais teve batidas digitadas", "Batidas por pessoa (lista inteira em tela cheia)",
                  "Batidas digitadas por pessoa.", Counter(r["colaborador"] for r in dig), tips(J, "chartDigTop"))
     t = tabela(J, "tableDigJust")
+    chave_txt = lambda x: re.sub(r"[.\s]+$", "", re.sub(r"\s+", " ", sem_acento(x or "")).upper().strip()).lower()
     js = defaultdict(lambda: [0, set()])
     for r in dig:
         if r["just"]:
-            k = re.sub(r"\s+", " ", sem_acento(r["just"]).lower().strip(" .;,"))
-            js[k][0] += 1; js[k][1].add(r["colaborador"])
-    esp = sorted([(v[0], len(v[1])) for v in js.values()], reverse=True)[:len(t["rows"])]
-    pain = sorted([(int_br(x[1]), int_br(x[2])) for x in t["rows"]], reverse=True)
+            js[chave_txt(r["just"])][0] += 1; js[chave_txt(r["just"])][1].add(r["matricula"] or r["colaborador"])
+    pain = {chave_txt(x[0]): (int_br(x[1]), int_br(x[2])) for x in t["rows"]}
+    esp = {k: (js[k][0], len(js[k][1])) for k in pain}
+    menor = min((v[0] for v in pain.values()), default=0)
+    fora = [k for k, v in js.items() if k not in pain and v[0] > menor]
     item(S, "Justificativas mais usadas", "Batidas e pessoas de cada texto",
-         "Textos de justificativa iguais (ignorando maiúscula, acento e pontuação no fim) somados.", esp, pain)
+         "Textos de justificativa iguais (ignorando maiúscula, acento, espaço e ponto final) somados; nenhum texto mais usado pode ficar de fora.",
+         esp, pain, esp == pain and not fora)
     item(S, "Lista de batidas", "Quantidade de linhas", "Uma linha por batida digitada.", len(dig), len(tabela(J, "tableDigLista")["rows"]))
     ciclos3 = sorted({ciclo(r["dia"]) for r in R if r["tipo"] in (TIPO_RES_HORAS, TIPO_AUD)})
     fim_k = ciclo(p_fim)
-    todos_k = sorted({ciclo(r["dia"]) for r in R})
+    todos_k = sorted({ciclo(r["dia"]) for r in R_FULL})
     c3 = [k for k in todos_k if k <= fim_k][-3:]
+    c3 = sorted({ciclo(r["dia"]) for r in R_FULL if r["tipo"] == TIPO_DIG})[-3:]   # os 3 últimos meses com digitadas
+    esq_todas = [r for r in dig_todas if norm(r["situacao"]) == "inclusao_por_esquecimento"]
     por = defaultdict(Counter)
-    for r in esq: por[r["colaborador"]][ciclo(r["dia"])] += 1
+    for r in esq_todas: por[r["colaborador"]][ciclo(r["dia"])] += 1
     t = tabela(J, "tableDigEsquecimento")
     pain = {row[0]: tuple(int_br(x) for x in row[2:2 + len(c3)]) for row in t["rows"]}
     esp = {k: tuple(por[k][c] for c in c3) for k in pain}
@@ -401,12 +463,19 @@ def conferir(J, R):
 
     # ---------------------------------------------------------- Afastamentos
     S = "Afastamentos"
-    af = [r for r in R if r["tipo"] == TIPO_AFAST] or [r for r in R if r["tipo"] == TIPO_ABS]
+    af_todos = [r for r in R if r["tipo"] == TIPO_AFAST] or [r for r in R if r["tipo"] == TIPO_ABS]
     por_horas = lambda r: r["tipo"] == TIPO_AFAST and r["duracao"] > 0 and "atest" not in norm(r["situacao"])
+    # seletor "Mostrar": todos, só atestados ou só um tipo
+    import auditar_mais as _am
+    _am.A = sys.modules[__name__]
+    mostrar = J["estado"].get("absMostrar") or "Todos os afastamentos"
+    if mostrar == "Só atestados": af = [r for r in af_todos if "atest" in norm(r["situacao"]) or r["tipo"] == TIPO_ABS]
+    elif mostrar.startswith("Só "): af = [r for r in af_todos if _am.grupo_afast(r).lower() == mostrar[3:].lower()]
+    else: af = af_todos
     dias_af = defaultdict(list)          # ciclo -> [(pessoa, dia)]
     for r in af:
         if por_horas(r): continue
-        n = max(1, int(round(r["dias_aus"] or 0)))
+        n = max(1, int(math.floor((r["dias_aus"] or 1) + 0.5)))
         for i in range(n):
             d = r["dia"] + timedelta(days=i)
             dias_af[ciclo(d)].append((r, d))
@@ -415,8 +484,7 @@ def conferir(J, R):
     for row in t["rows"]:
         k = row[0].split(" ")[0]
         pain[k] = tuple(int_br(x) for x in row[1:5])
-        c = [x for x in set(dias_af) | {ciclo(r["dia"]) for r in af} if rotulo_ciclo(x) == k]
-        c = c[0] if c else None
+        c = ciclo_de_rotulo(k)
         comeca = [r for r in af if not por_horas(r) and ciclo(r["dia"]) == c]
         esp[k] = (len(dias_af.get(c, [])), len(comeca), sum(1 for r in comeca if "atest" in norm(r["situacao"])),
                   len({r["matricula"] or r["colaborador"] for r, _ in dias_af.get(c, [])}))
@@ -424,7 +492,7 @@ def conferir(J, R):
          "Dias: cada afastamento vira os dias corridos que cobre (data de início + dias de ausência; mínimo 1 dia) e cada dia "
          "cai no ciclo 28 a 27 em que está. Afastamentos e atestados: contados no ciclo em que COMEÇAM. Pessoas: quem tem ao "
          "menos um dia afastado no ciclo. Afastamento por horas (saída médica, reunião curta) fica fora.", esp, pain)
-    at = [r for r in af if "atest" in norm(r["situacao"])]
+    at = [r for r in af_todos if "atest" in norm(r["situacao"])]   # o ranking é sempre de atestados, qualquer que seja o tipo escolhido
     rk = defaultdict(lambda: [0, 0.0, set(), 0])
     for r in at:
         x = rk[r["colaborador"]]
@@ -440,7 +508,9 @@ def conferir(J, R):
 
     # ---------------------------------------------------------- Jornada
     S = "Jornada"
-    jor = [r for r in R if r["tipo"] in TIPOS_JORNADA]
+    jor_todos = [r for r in R if r["tipo"] in TIPOS_JORNADA]
+    c_jor = sel_ciclo(J, "jorCiclo", sorted({ciclo(r["dia"]) for r in R_FULL if r["tipo"] in TIPOS_JORNADA}))
+    jor = [r for r in jor_todos if not c_jor or ciclo(r["dia"]) == c_jor]
     kp = numeros(J, "jorKpis")
     nomes = {"Horas Excedentes": "HORAS EXCEDENTES", "Intrajornada": "INTRAJORNADA",
              "Interjornada Semanal": "INTERJORNADA SEMANAL", "Interjornada": "INTERJORNADA"}
@@ -457,7 +527,7 @@ def conferir(J, R):
          "Para cada dia de horas excedentes: total de horas do dia (coluna Total do sistema) menos 10h; somado.",
          dur_txt(acima), (re.search(r"·\s*(.*?) acima", sub) or [None, ""])[1])
     compara_dict(S, "Mês a mês", "Ocorrências por ciclo", "Ocorrências de jornada pelo ciclo 28 a 27 da data.",
-                 Counter(rotulo_ciclo(ciclo(r["dia"])) for r in jor), tips(J, "chartJorCiclo"), so_chaves_do_painel=True)
+                 Counter(rotulo_ciclo(ciclo(r["dia"])) for r in jor_todos), tips(J, "chartJorCiclo"), so_chaves_do_painel=True)
     compara_dict(S, "Por gestor", "Ocorrências por gestor", "Ocorrências de jornada pelo gestor da pessoa.",
                  Counter(r["gestor"] for r in jor), tips(J, "chartJorGestor"), so_chaves_do_painel=True)
     t = tabela(J, "tableJorGestor")
@@ -476,7 +546,7 @@ def conferir(J, R):
     for r in he_l:
         dez[r["colaborador"]][0] += 1; dez[r["colaborador"]][1] += int(max(0, (r["min_trab"] or 0) - 600))
     pain = {}
-    for tp in ((J["telaCheia"].get("chartJorDezHoras") or {}).get("tips") or J["normal"]["chartJorDezHoras"].get("tips") or []):
+    for tp in (visivel(J["telaCheia"].get("chartJorDezHoras")).get("tips") or V(J, "chartJorDezHoras").get("tips") or []):
         m = re.match(r"^(.*?): (\d+) dias? acima de 10h, (.*?) além", tp)
         if m: pain[m.group(1)] = (int(m.group(2)), minutos_de(m.group(3)))
     esp = {k: tuple(dez[k]) for k in pain}
@@ -510,7 +580,7 @@ def conferir(J, R):
     # ---------------------------------------------------------- Pausas térmicas
     S = "Pausas térmicas"
     res = [r for r in R if r["tipo"] == TIPO_RES_PAU]
-    meses_p = sorted({ciclo(r["dia"]) for r in res})
+    meses_p = sorted({ciclo(r["dia"]) for r in R_FULL if r["tipo"] == TIPO_RES_PAU})
     if res:
         atual = [r for r in res if ciclo(r["dia"]) == meses_p[-1]]
         kp = numeros(J, "pauKpis")
@@ -547,8 +617,10 @@ def conferir(J, R):
     S = "PontoNet"
     pn = [r for r in R if r["tipo"] == TIPO_PN and norm(r["situacao"]) == "integrado"]
     if pn:
-        k_atual = max(ciclo(r["dia"]) for r in pn)
-        cic = [r for r in pn if ciclo(r["dia"]) == k_atual]
+        cs_pn = sorted({ciclo(r["dia"]) for r in R_FULL if r["tipo"] == TIPO_PN})
+        todos_pn = (J["estado"].get("pnCiclo") or "").startswith("Todos")
+        k_atual = None if todos_pn else (sel_ciclo(J, "pnCiclo", cs_pn) or cs_pn[-1])
+        cic = [r for r in pn if k_atual is None or ciclo(r["dia"]) == k_atual]
         kp = numeros(J, "pnKpis")
         item(S, "Números do topo", "Justificativas aprovadas",
              "Pedidos do PontoNet com situação INTEGRADO (aprovados), no ciclo mais recente (seletor padrão).",
@@ -558,11 +630,11 @@ def conferir(J, R):
         compara_dict(S, "Mês a mês", "Aprovados por ciclo", "Pedidos aprovados pelo ciclo da batida que faltou.",
                      Counter(rotulo_ciclo(ciclo(r["dia"])) for r in pn), tips(J, "chartPnCiclo"), so_chaves_do_painel=True)
         t = tabela(J, "tablePnTempos")
-        pain = {row[0]: (int_br(row[1]), row[2], row[3]) for row in t["rows"]}
+        pain = {row[0].split(" ⚠")[0]: (int_br(row[1]), row[2], row[3]) for row in t["rows"]}   # o nome pode vir com o aviso de férias
         esp = {}
         for row in t["rows"]:
             l = [r for r in pn if rotulo_ciclo(ciclo(r["dia"])) == row[0]]
-            md = lambda vs: (fmt_dec(sum(vs) / len(vs)) + " dias") if vs else "–"
+            md = lambda vs: dias_txt(sum(vs) / len(vs)) if vs else "–"
             esp[row[0]] = (len(l), md([r["dias_col"] for r in l if r["dias_col"] is not None]),
                            md([r["dias_gest"] for r in l if r["dias_gest"] is not None]))
         item(S, "Tempos por ciclo", "Aprovados, tempo médio do colaborador e do gestor",
@@ -570,14 +642,16 @@ def conferir(J, R):
              "só nos aprovados.", esp, pain)
         item(S, "Lista de aprovados", "Quantidade de linhas", "Um pedido aprovado do ciclo por linha.",
              len(cic), len(tabela(J, "tablePnLista")["rows"]))
-        dem = defaultdict(list)
+        dem = defaultdict(list)   # em HORAS, como a tela (a média em horas é dividida por 24 depois)
         for r in cic:
             if r["tratativa"]:
-                h = (r["tratativa"] - r["data"]).total_seconds() / 86400
+                h = (r["tratativa"] - r["data"]).total_seconds() / 3600
                 if h >= 0: dem[r["gestor"]].append(h)
         t = tabela(J, "tableDemoraGestor")
-        pain = {row[0]: (int_br(row[1]), row[2], row[3]) for row in t["rows"]}
-        dtxt = lambda dd: fmt_dec(dd * 24) + "h" if dd < 1 else fmt_dec(dd) + " dias"   # menos de 1 dia: em horas
+        pain = {row[0].split(" ⚠")[0]: (int_br(row[1]), row[2], row[3]) for row in t["rows"]}   # o nome pode vir com o aviso de férias
+        from decimal import Decimal, ROUND_HALF_UP
+        tf = lambda x: str(Decimal(x).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)).replace(".", ",")
+        dtxt = lambda h: tf(h) + "h" if h < 24 else tf(h / 24) + " dias"   # menos de 1 dia: em horas (toFixed do navegador)
         esp = {g: (len(dem[g]), dtxt(sum(dem[g]) / len(dem[g])), dtxt(max(dem[g]))) if dem[g] else None for g in pain}
         item(S, "Demora por gestor", "Aprovadas, demora média e maior demora",
              "Do dia e hora da batida que faltou até a data em que o pedido foi aprovado, em dias, no ciclo escolhido.", esp, pain)
@@ -587,7 +661,7 @@ def conferir(J, R):
     bd = [r for r in R if r["tipo"] == TIPO_BH_DIA]
     if bd:
         meses = [m for m, marc in est["bhMeses"] if marc]
-        ks = [k for k in sorted({ciclo(r["dia"]) for r in bd}) if rotulo_ciclo(k) in [m.split(" ")[0] for m in meses]]
+        ks = [k for k in sorted({ciclo(r["dia"]) for r in R_FULL if r["tipo"] == TIPO_BH_DIA}) if rotulo_ciclo(k) in [m.split(" ")[0] for m in meses]]
         sel = [r for r in bd if ciclo(r["dia"]) in ks]
         kp = numeros(J, "bhKpis")
         item(S, "Números do topo", "Horas extras",
@@ -620,15 +694,16 @@ def conferir(J, R):
     S = "Pausas térmicas"
     pdias = [r for r in R if r["tipo"] == TIPO_PAU_DIA]
     if pdias:
-        k_b = max(ciclo(r["dia"]) for r in pdias)
+        cs_b = sorted({ciclo(r["dia"]) for r in R_FULL if r["tipo"] == TIPO_PAU_DIA})
+        k_b = sel_ciclo(J, "pauBatCiclo", cs_b) or cs_b[-1]
         dias_b = [r for r in pdias if ciclo(r["dia"]) == k_b]
         an = {id(r): analisa_batidas(r["marc"]) for r in dias_b}
         n_ac = sum(1 for r in dias_b if an[id(r)]["acima"])
-        txt_r = J["normal"].get("pauBatResumo", {}).get("texto", "")
+        txt_r = V(J, "pauBatResumo").get("texto", "")
         item(S, "Batidas: resumo do mês", "Dias trabalhados, pessoas e dias com trecho acima de 1h40",
              "Uma linha por pessoa e dia com as batidas do relógio. Entre batidas, os trechos alternam trabalho e pausa "
              "(1ª→2ª trabalho, 2ª→3ª pausa...). Trecho de trabalho acima de 1h40 (100 min) = acima do limite.",
-             "%d dias trabalhados de %d pessoa(s) · %d dia(s) com algum trecho acima de 1h40" % (len(dias_b), len({r["matricula"] or r["colaborador"] for r in dias_b}), n_ac),
+             "%s dias trabalhados de %d pessoa(s) · %s dia(s) com algum trecho acima de 1h40" % ("{:,}".format(len(dias_b)).replace(",", "."), len({r["matricula"] or r["colaborador"] for r in dias_b}), "{:,}".format(n_ac).replace(",", ".")),
              txt_r.split(" (")[0])
         hrs = defaultdict(lambda: [0, 0])
         for r in dias_b:
@@ -636,7 +711,7 @@ def conferir(J, R):
                 h = (ini % 1440) // 60; hrs[h][0] += 1; hrs[h][1] += dur > 100
         esp = {"%dh" % h: "%d de %d" % (v[1], v[0]) for h, v in hrs.items() if v[0] >= 10}
         pain = {}
-        for tp in J["normal"].get("chartPauHora", {}).get("tips", []):
+        for tp in V(J, "chartPauHora").get("tips", []):
             m = re.match(r"^(\d+h): (\d+) de (\d+)", tp)
             if m: pain[m.group(1)] = "%s de %s" % (m.group(2), m.group(3))
         item(S, "Batidas: por hora de começo do trecho", "Trechos acima de 1h40 / trechos que começaram em cada hora",
@@ -646,7 +721,7 @@ def conferir(J, R):
             x = dsem[DIAS[r["dia"].weekday()]]; x[0] += 1; x[1] += bool(an[id(r)]["acima"])
         esp = {k: "%d de %d" % (v[1], v[0]) for k, v in dsem.items()}
         pain = {}
-        for tp in J["normal"].get("chartPauDiaSemana", {}).get("tips", []):
+        for tp in V(J, "chartPauDiaSemana").get("tips", []):
             m = re.match(r"^(\w+): (\d+) de (\d+)", tp)
             if m and m.group(3) != "0": pain[m.group(1)] = "%s de %s" % (m.group(2), m.group(3))
         item(S, "Batidas: por dia da semana", "Dias com trecho acima de 1h40 / dias trabalhados",
@@ -659,7 +734,7 @@ def conferir(J, R):
             cnt[next(l for l, mx in fx if p1 <= mx)] += 1
         esp = {l: cnt[l] for l, _ in fx}
         pain = {}
-        for tp in J["normal"].get("chartPauPrimeira", {}).get("tips", []):
+        for tp in V(J, "chartPauPrimeira").get("tips", []):
             m = re.match(r"^(.*?) de trabalho até a 1ª pausa: (\d+)", tp)
             if m: pain[m.group(1)] = int(m.group(2))
         item(S, "Batidas: trabalho até a 1ª pausa térmica", "Dias em cada faixa",
@@ -671,7 +746,7 @@ def conferir(J, R):
             x = mp.setdefault(r["colaborador"], [0, 0])
             x[0] = max(x[0], max(d for _, d in a["trab"])); x[1] += 1
         pain = {}
-        for tp in (J["telaCheia"].get("chartPauMaior") or J["normal"].get("chartPauMaior", {})).get("tips", []):
+        for tp in (visivel(J["telaCheia"].get("chartPauMaior")) or V(J, "chartPauMaior")).get("tips", []):
             m = re.match(r"^(.*?): maior trecho sem pausa de (\d+)h(\d+) .*?· (\d+) dia", tp)
             if m: pain[m.group(1)] = (int(m.group(2)) * 60 + int(m.group(3)), int(m.group(4)))
         esp = {k: tuple(mp.get(k, (None, None))) for k in pain}
@@ -699,7 +774,7 @@ def conferir(J, R):
         item("Pausas térmicas", "Pausas por gestor", "Total de pausas da equipe (certas + curtas + longas)",
              "Mês mais recente: soma das pausas de cada pessoa da equipe.", esp, pain)
         pain = {}
-        for tp in (J["telaCheia"].get("chartPauAcima") or J["normal"].get("chartPauAcima", {})).get("tips", []):
+        for tp in (visivel(J["telaCheia"].get("chartPauAcima")) or V(J, "chartPauAcima")).get("tips", []):
             m = re.match(r"^(.*?): (\d+) de (\d+) trechos", tp)
             if m: pain[m.group(1)] = (int(m.group(2)), int(m.group(3)))
         esp = {r["colaborador"]: (int(r["tM"]), int(r["tc"] + r["tM"] + r["tm"])) for r in atual if r["colaborador"] in pain}
@@ -714,9 +789,9 @@ def conferir(J, R):
              dict(sorted(tp_c.items(), key=lambda x: -x[1])), dict(sorted(pain.items(), key=lambda x: -x[1])),
              tp_c == Counter(pain),
              obs="Motivos como vêm do sistema: " + "; ".join("%s = %d" % kv for kv in tp_bruto.most_common()) +
-                 ". O painel junta os que falam de esquecimento (inclusive \"esquecimento crachá\") em \"Esquecimento\".")
+                 ". \"Esquecimento crachá\" é um motivo à parte (decisão do RH, 13/11).")
         pain = {}
-        for tp in J["normal"].get("chartPnGestor", {}).get("tips", []):
+        for tp in V(J, "chartPnGestor").get("tips", []):
             m = re.match(r"^(.*?): em média ([\d,]+) dias? para avaliar (\d+)", tp)
             if m: pain[m.group(1)] = (m.group(2), int(m.group(3)))
         esp = {}
@@ -727,10 +802,12 @@ def conferir(J, R):
              "Média dos dias que o gestor levou para avaliar (contagem do PontoNet), nos aprovados do ciclo.", esp, pain)
     S = "Afastamentos"
     leg = {}
-    for x in J["normal"].get("chartAbsGrupo", {}).get("legendaMini", []):
+    for x in V(J, "chartAbsGrupo").get("legendaMini", []):
         m = re.match(r"^(.*) ([\d.]+)$", x)
         if m: leg[m.group(1)] = int(m.group(2).replace(".", ""))
     ciclos_tela = {r[0].split(" ")[0] for r in tabela(J, "tableAbsEvolucao")["rows"]}
+    sel_abs = (J["estado"].get("absCiclo") or "").split(" ")[0]
+    if sel_abs and sel_abs != "Últimos": ciclos_tela = {sel_abs}   # mês escolhido no seletor
     dias_vis = {c: v for c, v in dias_af.items() if rotulo_ciclo(c) in ciclos_tela}
     dias_tot = sum(len(v) for v in dias_vis.values())
     item(S, "Por gestor (por tipo)", "Soma dos dias de todos os tipos = dias do período",
@@ -758,16 +835,16 @@ def conferir(J, R):
     dias_at = [d for r in at for d in [r["dia"] + timedelta(days=i) for i in range(max(1, int(round(r["dias_aus"] or 1))))]]
     gm = lambda k: [r["dias_gest"] for r in pn if ciclo(r["dia"]) == k and r["dias_gest"] is not None]
     esp_t = {
-        "Batidas digitadas": cnt(dig), "Batidas digitadas por esquecimento": cnt(esq),
+        "Batidas digitadas": cnt(dig_todas), "Batidas digitadas por esquecimento": cnt([r for r in dig_todas if norm(r["situacao"]) == "inclusao_por_esquecimento"]),
         "Dias de atestado": tuple(Counter(ciclo(d) for d in dias_at)[k] for k in cks),
-        "Horas excedentes (dias com mais de 10h)": cnt([r for r in jor if r["tipo"] == "Horas Excedentes"]),
-        "Intrajornada (intervalo de almoço curto)": cnt([r for r in jor if r["tipo"] == "Intrajornada"]),
-        "Interjornada semanal (trabalho na folga ou feriado)": cnt([r for r in jor if r["tipo"] == "Interjornada Semanal"]),
-        "Interjornada (menos de 11h de descanso)": cnt([r for r in jor if r["tipo"] == "Interjornada"]),
+        "Horas excedentes (dias com mais de 10h)": cnt([r for r in jor_todos if r["tipo"] == "Horas Excedentes"]),
+        "Intrajornada (intervalo de almoço curto)": cnt([r for r in jor_todos if r["tipo"] == "Intrajornada"]),
+        "Interjornada semanal (trabalho na folga ou feriado)": cnt([r for r in jor_todos if r["tipo"] == "Interjornada Semanal"]),
+        "Interjornada (menos de 11h de descanso)": cnt([r for r in jor_todos if r["tipo"] == "Interjornada"]),
         "Pausas certas (20 min)": pau_c(lambda r: r["pc"], lambda r: r["pc"] + r["pm"] + r["pM"]),
         "Trabalho acima de 1h40 sem pausa": pau_c(lambda r: r["tM"], lambda r: r["tc"] + r["tM"] + r["tm"]),
         "Justificativas aprovadas no PontoNet": cnt(pn),
-        "Dias para o gestor avaliar (média)": tuple((fmt_dec(sum(gm(k)) / len(gm(k))).replace(",0", "") + " dias") if gm(k) else "–" for k in cks),
+        "Dias para o gestor avaliar (média)": tuple(dias_txt(sum(gm(k)) / len(gm(k))) if gm(k) else "–" for k in cks),
         "Batida de pausa faltando": tuple(int(sum(r["imp"] for r in res if ciclo(r["dia"]) == k)) for k in cks),
     }
     for row in t["rows"]:
@@ -794,13 +871,19 @@ def conferir(J, R):
     if bd and [r for r in R if r["tipo"] == TIPO_BH]:
         t = tabela(J, "tableBHConf")
         if t["rows"]:
-            rel = {}
-            for r in R:
-                if r["tipo"] == TIPO_BH and ciclo(r["dia"]) in ks:
-                    if r["colaborador"] not in rel or r["dia"] > rel[r["colaborador"]]["dia"]: rel[r["colaborador"]] = r
+            import auditar_mais as _am
+            _am.A = sys.modules[__name__]
+            # o relatório do período do último mês escolhido (o que termina mais tarde) e as contas
+            # do cartão ponto do começo do período (zerado) até o fim desse relatório
+            n_ult = _am.num_ciclo(ciclo_ini_fim(ks[-1])[1])
+            q = _am.ini_periodo(n_ult); q_ini, q_fim = _am.ini_ciclo(q), _am.fim_ciclo(q + 3)
+            rels_p = [r for r in R_FULL if r["tipo"] == TIPO_BH and r["bh_ini"] and q_ini <= r["bh_ini"].date() and r["dia"] <= q_fim]
+            t_fim = max(r["dia"] for r in rels_p); t_ini = max(r["bh_ini"].date() for r in rels_p if r["dia"] == t_fim)
+            rel = {r["colaborador"]: r for r in R if r["tipo"] == TIPO_BH and r["dia"] == t_fim and r["bh_ini"] and r["bh_ini"].date() == t_ini}
             calc = defaultdict(lambda: [0, 0])
-            for r in sel:
-                calc[r["colaborador"]][0] += r["he"]; calc[r["colaborador"]][1] += r["bh"]
+            for r in R:
+                if r["tipo"] == TIPO_BH_DIA and q_ini <= r["dia"] <= t_fim:
+                    calc[r["colaborador"]][0] += r["he"]; calc[r["colaborador"]][1] += r["bh"]
             pain, esp = {}, {}
             for row in t["rows"]:
                 nm = row[0]
@@ -839,6 +922,12 @@ def conferir(J, R):
     item(S, "Lista de colaboradores", "Matrícula, nome, área, cargo e gestor de cada pessoa",
          "As colunas são as da lista de equipes, sem nenhuma conta (desde 11/11 a lista não mostra ocorrências, digitadas "
          "nem saldo de horas).", esp, pain)
+
+    # ---------------------------------------------------------- conferência ampliada (13/11): todo o resto da tela
+    import os as _os
+    sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+    import auditar_mais
+    auditar_mais.conferir_mais(J, R, sys.modules[__name__])
 
     # ---------------------------------------------------------- erros de JavaScript
     item("Painel inteiro", "Funcionamento", "Erros de programa ao abrir e desenhar tudo",
