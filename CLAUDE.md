@@ -739,6 +739,7 @@ python3 ferramentas/checar_colisoes_vba.py */*.bas                         # ant
 NODE_PATH=$(npm root -g) node ferramentas/extrair_tudo_painel.js "$PWD/Dashboard/index.html" tela.json "TODOS OS GESTORES.csv"
 python3 ferramentas/auditar_csv_painel.py tela.json "TODOS OS GESTORES.csv" --json aud.json   # OK/FALHA (73 itens no teste desde 11/11)
 node ferramentas/relatorio_conferencia.js aud.json "Conferencia.docx" "nome do arquivo" "N linhas"  # relatório Word; PDF: soffice --convert-to pdf
+node ferramentas/relatorio_supervisor.js aud.json "Relatorio.docx" "mês de referência" "dados conferidos"  # (13/11) versão SEM termos técnicos e sem nomes, para o supervisor
 ```
 Os scripts foram escritos para a planilha de 28/08 a 27/09 (nomes de aba fixos: "Tratamento",
 "RE 08.09", "Pontonet", "Pausas Térmicas", "Cartão atual/Agosto/Julho"). Ajuste os nomes para
@@ -1062,6 +1063,11 @@ outras planilhas. Para comparar com uma aba CSV gerada pelo Excel, leia a aba "C
   ("–" = 0, "08min", demora < 1 dia em horas, milhar na legenda, só os ciclos mostrados nos afastamentos, motivos
   do PontoNet com a regra `nomeTipoPN`, que junta "Esquecimento crachá" em "Esquecimento"). Relatório em Word/PDF
   entregue a ele (com nomes: fica fora do repositório). Varredura sem erro de JS/NaN/rolagem com o CSV real.
+
+- 13/11: pedido do Dimitri: relatório para o supervisor **sem termos técnicos**, provando que dá para confiar
+  nos dados, em Word + PDF num zip. Novo `ferramentas/relatorio_supervisor.js` (textos simples por item em
+  `TEXTOS`, só quantidades, sem nomes; resumo, como foi feito, seção por seção, ajustes, pontos de atenção,
+  glossário). Gerado com o CSV real de out/26: 74/74, 9 páginas.
 
 ## 12. Estado atual e como continuar (05/11/2026)
 
